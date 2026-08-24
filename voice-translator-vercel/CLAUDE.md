@@ -214,6 +214,12 @@ qualunque refactoring. Non si propone di rimandarlo.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.458** (push #749) — IL MENU DEL «+» PERDE TRE TASTI: chat di
+  gruppo e invita una persona aprivano la stessa cosa del barcode (una
+  stanza, da cui si invita chiunque), e TaxiTalk esiste gia in Home come
+  «Parla ora». Il barcode adesso dice «Parla con chi VUOI». E in «Parla ora»
+  il bersaglio diventa l'icona GIALLA DEL TAXI, che dice a colpo d'occhio a
+  cosa serve: dire dove vuoi andare e mandarci il tassista col QR.
 - Versione: **b.457** (push #748) — LA LINGUA DI ARRIVO DIVENTA UNA
   PREFERENZA, condivisa fra Home e «Parla ora»: era la radice del difetto
   incontrato tre volte, perche viveva chiusa dentro una schermata e la Home

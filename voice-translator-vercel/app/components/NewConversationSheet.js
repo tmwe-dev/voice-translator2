@@ -6,7 +6,6 @@ import useSheetA11y from '../hooks/useSheetA11y.js';
 import { PALETTE } from '../lib/palette.js';
 import { useApp } from '../contexts/AppContext.js';
 import Icon from './Icon.js';
-import { IconCar } from './Icons.js';
 
 // ═══════════════════════════════════════════════════════════════
 // Pannello del tasto "+" — b.93
@@ -26,10 +25,15 @@ import { IconCar } from './Icons.js';
 // b.442 — in testa le porte per parlare, arrivate dalla Home (il template
 // non le mostra piu li). Il gestore in page.js le instradava gia da b.93
 // come «voci storiche»: qui vengono solo rese visibili.
+// b.458, collaudo di Luca. Sono spariti tre tasti, e ognuno per un motivo
+// suo:
+//   «Chat di gruppo» e «Invita una persona» → aprivano la STESSA cosa che
+//   apre il barcode qui sopra: una stanza, e da li si invita chi si vuole,
+//   quante persone si vuole. Tre porte per una stanza sola. Ne resta una.
+//   «TaxiTalk» → esiste gia in Home: e «Parla ora», che si ribalta verso
+//   chi hai davanti e sa dire dove vuoi andare. Una seconda porta per la
+//   stessa cosa fa solo dubitare che siano due cose diverse.
 const OPTIONS = [
-  { id: 'videocall', icona: 'video', titleKey: 'actRoomTitle', descKey: 'actRoomDesc' },
-  { id: 'invite', icona: 'share', titleKey: 'actInviteTitle', descKey: 'actInviteDesc' },
-  { id: 'taxitalk', speciale: 'car', title: 'TaxiTalk', descKey: 'actTaxiDesc' },
   { id: 'entra-codice', icona: 'doorOpen', titleKey: 'optCodeTitle', descKey: 'optCodeDesc' },
   { id: 'stanza-community', icona: 'globe', titleKey: 'optPublicTitle', descKey: 'optPublicDesc' },
   { id: 'contatti', icona: 'user', titleKey: 'optContactsTitle', descKey: 'optContactsDesc' },
@@ -141,9 +145,7 @@ const NewConversationSheet = ({ open, onClose, onSelect }) => {
               onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
             >
               <span style={{ lineHeight: 0, flexShrink: 0, color: (S.colors?.accent2 || '#38e1ff') }}>
-                {opt.speciale === 'car'
-                  ? <span style={{ color: C.goldAccent || '#ffc44d', lineHeight: 0 }}><IconCar size={24} /></span>
-                  : <Icon name={opt.icona} size={24} color={C.accent1 || '#5b8cff'} />}
+                <Icon name={opt.icona} size={24} color={C.accent1 || '#5b8cff'} />
               </span>
               <div>
                 <div style={{
@@ -151,7 +153,7 @@ const NewConversationSheet = ({ open, onClose, onSelect }) => {
                   color: C.text || '#fff', marginBottom: '2px',
                   fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
                 }}>
-                  {opt.title || L(opt.titleKey)}
+                  {L(opt.titleKey)}
                 </div>
                 <div style={{
                   fontSize: '13px', color: C.textMuted || 'rgba(255,255,255,0.5)',

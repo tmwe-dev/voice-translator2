@@ -5,6 +5,7 @@ import { memDel, memSet } from '../lib/memoria.js';
 import { LANGS, getLang, FONT, vibrate } from '../lib/constants.js';
 import { t as tLingua, preloadLang } from '../lib/i18n.js';
 import Icon from './Icon.js';
+import { IconCar } from './Icons.js';
 // b.424 — LA STESSA IDENTICA LISTA DELLA HOME (ordine di Luca: «crea una
 // lista come quella della home, esattamente identica»). Non se ne scrive
 // una seconda: si usa quella. Era una fila di pillole fatta da me, ed era
@@ -920,7 +921,15 @@ export default function PrimaProva({ onChiudi }) {
         <button onClick={() => { vibrate(6); setScegliDove((v) => !v); setScegliLingua(false); }}
           aria-pressed={scegliDove} aria-label={L('taxiWhereTo')} title={L('taxiWhereTo')}
           style={tondino(scegliDove)}>
-          <Icon name="target" size={19} color={scegliDove ? (C.accent || '#5b8cff') : C.textMuted} />
+          {/* b.458, ordine di Luca: «basta usare l'icona gialla di taxi e non
+              di target nell'angolo». Il bersaglio non diceva niente a
+              nessuno; il taxi dice a colpo d'occhio a cosa serve quel tasto
+              — dire dove vuoi andare, e mandarci il tassista col QR. Ed e
+              lui che rende inutile la voce TaxiTalk nel menu del piu: la
+              stessa cosa, ma qui, dove si sta gia parlando. */}
+          <span style={{ color: scegliDove ? (S?.colors?.goldAccent || '#ffc44d') : C.textMuted, lineHeight: 0 }}>
+            <IconCar size={21} />
+          </span>
         </button>
         <button onClick={() => { vibrate(6); setCapovolto((v) => !v); }}
           aria-pressed={capovolto} aria-label={L('faceToFaceWord')} title={L('faceToFaceWord')}

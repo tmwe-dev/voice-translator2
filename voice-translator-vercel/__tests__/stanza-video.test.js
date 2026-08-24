@@ -163,11 +163,18 @@ describe('la schermata', () => {
     // a tutta pagina col barcode. La prova guardava il posto vecchio e
     // sarebbe rimasta rossa pur essendo la stanza raggiungibile: quello che
     // conta e che una porta ci sia, non in quale schermata.
-    expect(leggi('components/NewConversationSheet.js'),
-      'la porta e nel tasto «+»').toMatch(/id: 'videocall'/);
-    expect(leggi('page.js'), 'e il tasto «+» la instrada')
-      .toMatch(/case 'videocall':/);
-    expect(leggi('page.js')).toMatch(/view === 'stanza-video'/);
+    // b.458 — la voce «Chat di gruppo» non sta piu nemmeno nel «+»: apriva
+    // la STESSA cosa del barcode (si crea una stanza, e da li si invita
+    // chi si vuole). La porta per il video di gruppo e rimasta UNA, ed e
+    // quella giusta: la sala d'attesa, dove la stanza esiste gia e c'e il
+    // codice da condividere. Il «+» instrada ancora videocall per chi
+    // arriva da un link vecchio.
+    expect(leggi('components/LobbyView.js'), 'la porta e nella sala d\'attesa')
+      .toMatch(/setView\('stanza-video'\)/);
+    expect(leggi('page.js'), 'e la schermata esiste')
+      .toMatch(/view === 'stanza-video'/);
+    expect(leggi('page.js'), 'e si arriva alla sala creando una stanza')
+      .toMatch(/case 'face-to-face':/);
   });
 
   it('il pulsante sta DENTRO la scheda della stanza, non appiccicato fuori', () => {

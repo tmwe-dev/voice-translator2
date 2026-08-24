@@ -232,17 +232,7 @@ const HomeView = memo(function HomeView({ selectedMode, setSelectedMode,
             rilascio nell'angolo, e la striscia dei fatti sale in cima. */}
         <div style={{ marginBottom: 8, position: 'relative', width: '100%', flexShrink: 0 }}>
           {/* b.265 — numero di rilascio, nell'angolo in alto a sinistra */}
-          <span
-            aria-label={`rilascio numero ${PUSH}`}
-            style={{
-              position: 'absolute', top: 0, left: 0, zIndex: 3,
-              fontFamily: FONT, fontSize: 11, fontWeight: 600, lineHeight: 1,
-              color: C.accent, background: C.cardBg,
-              border: `1px solid ${C.accent}40`, borderRadius: 8,
-              padding: '5px 7px', letterSpacing: 0.3,
-              userSelect: 'text',
-            }}
-          >#{PUSH}</span>
+
           {/* b.457 — LE BANDIERE TORNANO IN ALTO (ordine di Luca), e stavolta
               dicono una cosa vera: da che lingua parli tu, a quale ti
               sentono. Prima ci avevo messo «myLang -> prefs.lang», che sono
@@ -255,7 +245,7 @@ const HomeView = memo(function HomeView({ selectedMode, setSelectedMode,
             onClick={() => { vibrate(); riapriPrimaProva(); setMostraPrimaProva(true); }}
             aria-label={`${getLang(prefs.lang)?.name || prefs.lang} → ${getLang(metaScelta(prefs))?.name || metaScelta(prefs)}`}
             style={{
-              position: 'absolute', top: 30, left: 0, zIndex: 3,
+              position: 'absolute', top: 0, left: 0, zIndex: 3,
               display: 'inline-flex', alignItems: 'center', gap: 8,
               height: 44, padding: '0 14px', borderRadius: 999,
               border: `1px solid ${C.cardBorder}`, background: 'rgba(255,255,255,0.04)',
@@ -278,12 +268,26 @@ const HomeView = memo(function HomeView({ selectedMode, setSelectedMode,
               ripeteva la lingua che il carosello dice gia due righe sotto. */}
           {/* b.442 — IL MARCHIO, centrato in testata come nel template.
               «Talk» in accent1: il blu e l'applicazione. Niente grassetto. */}
+          {/* b.458, ordine di Luca: «sposta il numero versione esattamente
+              sotto il logo BarTalk e metti in posizione nell'angolo le
+              bandiere delle lingue». Prima stavano tutti e due in alto a
+              sinistra, uno sopra l'altro, e si contendevano l'angolo.
+              Adesso: le bandiere nell'angolo, il numero centrato sotto il
+              marchio — dove serve a Luca per sapere in un colpo d'occhio
+              quale versione ha in mano. */}
           <div style={{
             textAlign: 'center', fontFamily: FONT, fontSize: 30, lineHeight: 1,
             letterSpacing: 0.2, color: C.textPrimary, padding: '3px 0',
           }}>
             Bar<span style={{ color: C.accent }}>Talk</span>
           </div>
+          <div
+            aria-label={`rilascio numero ${PUSH}`}
+            style={{
+              textAlign: 'center', fontFamily: FONT, fontSize: 11, lineHeight: 1,
+              color: C.textMuted, letterSpacing: 0.6, marginTop: 5, userSelect: 'text',
+            }}
+          >#{PUSH}</div>
           {/* b.360 — la batteria e passata verticale sopra la linguetta a
               sinistra; il titolo e la striscia dei fatti («44 lingue ·
               Crittografia E2E · Voce naturale») sono stati tolti su richiesta
