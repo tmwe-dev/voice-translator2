@@ -105,6 +105,8 @@ export default function BatteryPill({ utente, verticale = false }) {
 
   if (!utente || !dati) return null;
   const colore = COLORI[dati.colore] || COLORI.verde;
+  // b.457 — il fulmine e sempre giallo: e un simbolo, non un indicatore.
+  const ORO = S?.colors?.goldAccent || '#ffc44d';
 
   // Ricarica: chiedi il link a Stripe e vai
   async function ricarica(pacchettoId) {
@@ -247,15 +249,19 @@ export default function BatteryPill({ utente, verticale = false }) {
           background: 'none', border: 'none', padding: 0, fontFamily: 'inherit',
           WebkitTapHighlightColor: 'transparent',
         }}>
-          {/* il polo, in alto */}
-          <span style={{ width: 5, height: 2, borderRadius: 1, background: colore }} />
-          {/* corpo pila, in piedi: il credito riempie dal basso */}
-          <span style={{ position: 'relative', width: 12, height: 20, borderRadius: 3,
-            border: `1.5px solid ${colore}`, display: 'block' }}>
-            <span style={{ position: 'absolute', left: 1, right: 1, bottom: 1,
-              height: `calc(${Math.max(8, dati.percento)}% - 2px)`, maxHeight: 'calc(100% - 2px)',
-              background: colore, borderRadius: 1.5 }} />
-          </span>
+          {/* b.457, ordine di Luca: «la batteria e quella vecchia, cambia
+              l'icona con un fulmine giallo». Via il disegno della pila —
+              polo, corpo e riempimento — e al suo posto il FULMINE, che dice
+              «energia» senza somigliare alla batteria del telefono: quella
+              e a due centimetri di distanza, sulla barra di sistema, e due
+              batterie vicine si confondono.
+              Il fulmine e sempre GIALLO, non segue piu il colore del
+              credito: e un simbolo, e un simbolo che cambia colore smette
+              di essere riconoscibile. Quanto credito resta lo dice il numero
+              qui sotto, che il colore ce l'ha ancora. */}
+          <svg width="20" height="26" viewBox="0 0 24 24" fill={ORO} stroke="none" aria-hidden>
+            <path d="M13 2L4.5 13.2h5.6L10.4 22l9-11.6h-5.7z" />
+          </svg>
           <span style={{ fontSize: 8, fontWeight: 800, color: colore, lineHeight: 1.05, textAlign: 'center' }}>{dati.testo}</span>
         </button>
         {aperto && popup}

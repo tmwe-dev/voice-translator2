@@ -14,7 +14,7 @@ import CarouselLingue from './CarouselLingue.js';
 // con freccia in alto per tornare»). E lo stesso foglio che gira sulle
 // news: non se ne scrive un secondo.
 import Ribalta from './ui/Ribalta.js';
-import PrimaProva, { riapriPrimaProva } from './PrimaProva.js'; // b.96 → b.356 "Parla ora"
+import PrimaProva, { riapriPrimaProva, metaScelta } from './PrimaProva.js'; // b.96 → b.356 "Parla ora"
 import { memGet, memSet } from '../lib/memoria.js';
 
 // ═══════════════════════════════════════
@@ -243,6 +243,29 @@ const HomeView = memo(function HomeView({ selectedMode, setSelectedMode,
               userSelect: 'text',
             }}
           >#{PUSH}</span>
+          {/* b.457 — LE BANDIERE TORNANO IN ALTO (ordine di Luca), e stavolta
+              dicono una cosa vera: da che lingua parli tu, a quale ti
+              sentono. Prima ci avevo messo «myLang -> prefs.lang», che sono
+              LA STESSA COSA, e mostrava due volte la stessa bandiera: e per
+              quello l'avevo tolta. Adesso la lingua di arrivo e una
+              preferenza vera, condivisa con «Parla ora», e non coincide mai
+              con la tua. Toccandola si apre «Parla ora», che e il posto dove
+              quella coppia si cambia. */}
+          <button
+            onClick={() => { vibrate(); riapriPrimaProva(); setMostraPrimaProva(true); }}
+            aria-label={`${getLang(prefs.lang)?.name || prefs.lang} → ${getLang(metaScelta(prefs))?.name || metaScelta(prefs)}`}
+            style={{
+              position: 'absolute', top: 30, left: 0, zIndex: 3,
+              display: 'inline-flex', alignItems: 'center', gap: 8,
+              height: 44, padding: '0 14px', borderRadius: 999,
+              border: `1px solid ${C.cardBorder}`, background: 'rgba(255,255,255,0.04)',
+              fontFamily: FONT, fontSize: 24, color: C.textPrimary, whiteSpace: 'nowrap',
+              cursor: 'pointer', WebkitTapHighlightColor: 'transparent',
+            }}>
+            <span>{getLang(prefs.lang)?.flag || String(prefs.lang).toUpperCase()}</span>
+            <span style={{ color: C.textMuted, fontSize: 18 }}>&rarr;</span>
+            <span>{getLang(metaScelta(prefs))?.flag || String(metaScelta(prefs)).toUpperCase()}</span>
+          </button>
           {/* b.444 — LA PILLOLA DELLE LINGUE E' STATA TOLTA, ed era un mio
               difetto (collaudo di Luca: «i selettori della lingua associano a
               tutti e due gli utenti la stessa lingua»). Aveva ragione:

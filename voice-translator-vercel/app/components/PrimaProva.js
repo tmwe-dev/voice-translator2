@@ -79,12 +79,37 @@ export function riapriPrimaProva() {
 // rispondeva IN ITALIANO con voce italiana, in silenzio.
 const RAPIDE = ['en', 'es', 'fr', 'de', 'zh', 'ja', 'ar', 'ru', 'pt'];
 
+/**
+ * b.457 — LA LINGUA DI ARRIVO, una sola per tutta l'applicazione.
+ * Quella scelta dall'utente se c'e ED E' DIVERSA dalla sua; se no la prima
+ * lingua rapida diversa. Non torna mai la lingua che l'utente parla gia:
+ * una traduzione verso se stessa non e una traduzione.
+ */
+export function metaScelta(prefs) {
+  const radice = (x) => String(x || '').split('-')[0];
+  const mia = radice(prefs?.lang || 'it');
+  const voluta = prefs?.meta;
+  if (voluta && radice(voluta) !== mia) return voluta;
+  return RAPIDE.find((m) => radice(m) !== mia)
+    || LANGS.find((l) => radice(l.code) !== mia)?.code
+    || 'en';
+}
+
 export default function PrimaProva({ onChiudi }) {
   const { L, S, prefs, savePrefs, setView } = useApp();
   const C = S?.colors || {};
 
   const miaLingua = prefs?.lang || 'it';
-  const [meta, setMeta] = useState(() => (RAPIDE.find((m) => m.split('-')[0] !== (prefs?.lang || 'it').split('-')[0]) || 'en'));
+  // b.457 — LA META E' UNA PREFERENZA, non piu uno stato chiuso qui dentro.
+  // Era la radice di un difetto che Luca ha incontrato tre volte: la lingua
+  // di ARRIVO viveva solo dentro questa schermata, quindi la Home non aveva
+  // una coppia vera da mostrare e ogni tentativo di disegnarla finiva col
+  // ripetere due volte la stessa bandiera. Adesso sta nelle preferenze:
+  // una sola verita, letta da tutti, e sopravvive alla chiusura.
+  const meta = metaScelta(prefs);
+  const setMeta = useCallback((codice) => {
+    savePrefs?.({ ...prefs, meta: codice });
+  }, [prefs, savePrefs]);
   const [testo, setTesto] = useState('');
   // b.356 — i messaggi SI SUSSEGUONO, non scompaiono (collaudo di Luca):
   // ogni frase tradotta resta nel registro, la nuova si accoda sotto.
@@ -309,33 +334,10 @@ export default function PrimaProva({ onChiudi }) {
   // disegno e cambierebbe sotto gli occhi un attimo dopo.
   useEffect(() => { try { preloadLang(String(meta).split('-')[0]); } catch { /* il pacchetto arrivera al prossimo disegno */ } }, [meta]);
 
-  // ═══════════════════════════════════════════════════════════════
-  // b.456 — LA META NON PUO' ESSERE LA LINGUA CHE PARLI GIA.
-  //
-  // Collaudo di Luca: «hai ricreato l'errore di prima, che aggiorna
-  // simultaneamente la lingua da tradurre e quella dell'utente».
-  //
-  // Non si aggiornavano insieme: DIVENTAVANO uguali. La meta viene scelta
-  // diversa dalla tua lingua UNA VOLTA SOLA, quando la schermata nasce
-  // (RAPIDE.find piu sopra). Da li in poi resta ferma. Ma la tua lingua si
-  // puo cambiare dopo, dal carosello della Home — e se la porti proprio
-  // sulla lingua che era gia la meta, le due coincidono: la targhetta
-  // mostra due volte la stessa bandiera e la traduzione va dall'italiano
-  // all'italiano.
-  //
-  // Adesso il controllo non e piu solo alla nascita: se le due si
-  // sovrappongono, la meta si sposta da sola sulla prima lingua rapida
-  // diversa. Una traduzione verso se stessa non e una traduzione.
-  // ═══════════════════════════════════════════════════════════════
-  useEffect(() => {
-    const radice = (x) => String(x || '').split('-')[0];
-    if (radice(meta) !== radice(miaLingua)) return;
-    const altra = RAPIDE.find((m) => radice(m) !== radice(miaLingua))
-      || LANGS.find((l) => radice(l.code) !== radice(miaLingua))?.code
-      || 'en';
-    setMeta(altra);
-  }, [miaLingua, meta]);
-
+  // b.457 — qui c'era l'effetto di b.456 che spostava la meta quando
+  // finiva sulla lingua gia parlata. Non serve piu: adesso lo decide
+  // metaScelta, che e la sola porta da cui la meta esce — quindi la regola
+  // vale sempre, non solo quando un effetto fa in tempo a scattare.
   useEffect(() => { testoRef.current = testo; }, [testo]);
 
   // Appena smetti di scrivere, la frase parte da sola.

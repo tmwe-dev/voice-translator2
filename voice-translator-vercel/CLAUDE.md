@@ -214,6 +214,11 @@ qualunque refactoring. Non si propone di rimandarlo.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.457** (push #748) — LA LINGUA DI ARRIVO DIVENTA UNA
+  PREFERENZA, condivisa fra Home e «Parla ora»: era la radice del difetto
+  incontrato tre volte, perche viveva chiusa dentro una schermata e la Home
+  non aveva una coppia vera da mostrare. Ora le bandiere tornano in alto a
+  sinistra e dicono una cosa vera. E la pila diventa un FULMINE GIALLO.
 - Versione: **b.455** (push #746) — VIA L'OMBRA SCURA DIETRO LE IMMAGINI in
   acciaio (ordine di Luca). Era ombraAcciaio: uno stacco nero pieno pensato
   per il fondo scuro, che sul tema chiaro diventa una macchia dietro
