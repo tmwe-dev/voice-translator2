@@ -77,7 +77,19 @@ describe('si apre con una cosa sola a schermo', () => {
     expect(iLettura, "l'area di lettura esiste").toBeGreaterThan(0);
     expect(iVoce, 'la riga della voce esiste').toBeGreaterThan(iLettura);
     expect(src.slice(iLettura, iVoce), 'cio che si legge si gira').toContain('rotate(180deg)');
-    expect(src.slice(iVoce), 'ne la voce ne il testo si girano mai').not.toContain('rotate(180deg)');
+    // b.445 — la guardia diventa PRECISA. Prima diceva «da bloccoVoce in
+    // poi nessuno si gira», e prendeva dentro anche tutto il corpo della
+    // pagina. Ma il tasto dell'ospite, aggiunto in b.445, DEVE girarsi: e
+    // roba che legge lui, ed e esattamente la stessa regola. Cio che non
+    // si gira mai sono la VOCE e il CAMPO PER SCRIVERE, che sono miei.
+    const iTesto = src.indexOf('const bloccoTesto');
+    const iRitorno = src.indexOf('\n  return (', iTesto);
+    expect(iTesto, 'la riga per scrivere esiste').toBeGreaterThan(iVoce);
+    expect(src.slice(iVoce, iRitorno > 0 ? iRitorno : undefined),
+      'ne la voce ne il campo per scrivere si girano mai').not.toContain('rotate(180deg)');
+    // e il tasto dell'ospite invece SI gira, se no lui se lo trova sottosopra
+    expect(src, "il tasto dell'ospite segue il ribaltone")
+      .toMatch(/transform: capovolto \? 'rotate\(180deg\)' : 'none'/);
   });
 
   it('e una PAGINA INTERA, non piu un riquadro dentro la home', () => {

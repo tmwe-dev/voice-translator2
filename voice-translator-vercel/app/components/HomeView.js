@@ -239,22 +239,16 @@ const HomeView = memo(function HomeView({ selectedMode, setSelectedMode,
               userSelect: 'text',
             }}
           >#{PUSH}</span>
-          {/* b.442 — LA PILLOLA DELLE LINGUE, in alto a sinistra come nel
-              template: da che lingua parli, a quale ti sentono. I dati sono
-              veri (myLang e la lingua scelta nel carosello), non inventati.
-              Per ora DICE soltanto: non ha un tocco, perche il template non
-              dichiara cosa debba fare toccandola. */}
-          <span style={{
-            position: 'absolute', top: 30, left: 0, zIndex: 3,
-            display: 'inline-flex', alignItems: 'center', gap: 7,
-            height: 44, padding: '0 14px', borderRadius: 999,
-            border: `1px solid ${C.cardBorder}`, background: 'rgba(255,255,255,0.04)',
-            fontFamily: FONT, fontSize: 24, color: C.textPrimary, whiteSpace: 'nowrap',
-          }}>
-            {getLang(myLang).flag}
-            <span style={{ color: C.textMuted, fontSize: 18 }}>&rarr;</span>
-            {getLang(prefs.lang).flag}
-          </span>
+          {/* b.444 — LA PILLOLA DELLE LINGUE E' STATA TOLTA, ed era un mio
+              difetto (collaudo di Luca: «i selettori della lingua associano a
+              tutti e due gli utenti la stessa lingua»). Aveva ragione:
+              mostrava «myLang -> prefs.lang» come se fossero due lingue
+              diverse, ma useInitializeApp fa setMyLang(p.lang) — sono LA
+              STESSA COSA, e la pillola disegnava due volte la stessa
+              bandiera. Al livello Home una seconda lingua NON esiste: la
+              destinazione vive dentro «Parla ora» (lo stato meta) e non
+              esce di li. Inventarla qui era un'informazione falsa; e in piu
+              ripeteva la lingua che il carosello dice gia due righe sotto. */}
           {/* b.442 — IL MARCHIO, centrato in testata come nel template.
               «Talk» in accent1: il blu e l'applicazione. Niente grassetto. */}
           <div style={{

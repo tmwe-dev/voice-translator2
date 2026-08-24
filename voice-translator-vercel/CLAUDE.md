@@ -214,6 +214,13 @@ qualunque refactoring. Non si propone di rimandarlo.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.445** (push #736) — PARLA ORA VA NEI DUE SENSI: un tasto in
+  alto centrato, con la bandiera dell'ospite e «tieni premuto per parlare»
+  scritto NELLA SUA LINGUA, gli permette di rispondere — tiene premuto,
+  parla, e la frase arriva tradotta nella mia lingua, in un colore diverso.
+  Il microfono diventa uguale a quello della Home, con l'icona bianca. Via
+  il segnaposto «Qui la traduzione, testo e voce». E riparata la pillola
+  delle lingue in Home, che mostrava due volte la stessa lingua.
 - Versione: **b.443** (push #735) — LE MISURE CHE LUCA HA CHIESTO: BarTalk a
   30, la pillola delle bandiere con la freccia grandi, il carosello piu
   piccolo, il tastone del microfono a 168, le righe della lista piu grandi

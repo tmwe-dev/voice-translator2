@@ -3,6 +3,7 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import { useApp } from '../contexts/AppContext.js';
 import { memDel, memSet } from '../lib/memoria.js';
 import { LANGS, getLang, FONT, vibrate } from '../lib/constants.js';
+import { t as tLingua, preloadLang } from '../lib/i18n.js';
 import Icon from './Icon.js';
 // b.424 — LA STESSA IDENTICA LISTA DELLA HOME (ordine di Luca: «crea una
 // lista come quella della home, esattamente identica»). Non se ne scrive
@@ -91,6 +92,12 @@ export default function PrimaProva({ onChiudi }) {
   const [stato, setStato] = useState('quieto'); // quieto | traduco | parlo | errore | muto (b.417: la traduzione c'e, la voce no)
   const [capovolto, setCapovolto] = useState(false); // FACCIA A FACCIA
   const [detto, setDetto] = useState(false);         // microfono acceso
+  // b.445 — IL TURNO DELL'OSPITE. Chi hai davanti tiene premuto, parla nella
+  // SUA lingua, e la frase arriva tradotta nella MIA. Prima si poteva solo
+  // parlare noi: l'altro doveva rispondere a gesti.
+  const [ospiteParla, setOspiteParla] = useState(false);
+  const recOspiteRef = useRef(null);
+  const testoOspiteRef = useRef('');
   // b.422 — LA PAGINA HA UNA COSA SOLA A SCHERMO (disegno approvato da Luca,
   // template/parla-ora.html, strada A). Chi apre trova un microfono e due
   // bandiere. Le lingue si aprono quando servono, e prendono SEMPRE lo
@@ -152,12 +159,17 @@ export default function PrimaProva({ onChiudi }) {
   //  3. QUANDO NON PARLA, LO DICE. Prima restava muta in silenzio, e questa
   //     e la PRIMA cosa che tocca chi apre l'app: la traduzione compare nel
   //     registro e la voce non arriva mai, senza una parola.
-  const parla = useCallback(async (daLeggere) => {
+  // b.445 — la voce accetta la LINGUA in cui leggere. Serviva perche adesso
+  // le frasi viaggiano nei due sensi: quelle mie vanno lette nella lingua
+  // dell'ospite, quelle dell'ospite nella mia. Senza il parametro, la
+  // risposta all'ospite sarebbe stata letta con la voce sbagliata.
+  const parla = useCallback(async (daLeggere, linguaVoce) => {
     const t = String(daLeggere || '').trim();
     if (!t) return;
     setStato('parlo');
-    const tgt = getLang(meta);
-    const lingua = tgt?.speech || meta;
+    const codice = linguaVoce || meta;
+    const tgt = getLang(codice);
+    const lingua = tgt?.speech || codice;
 
     // Chiede una voce a una rotta. Torna il suono, oppure null quando non
     // c'e NIENTE DA SUONARE — che comprende il caso «200 con zero byte».
@@ -292,6 +304,11 @@ export default function PrimaProva({ onChiudi }) {
       if (mio === numeroRef.current) setStato('errore'); }
   }, [miaLingua, meta, parla]);
 
+  // b.445 — il pacchetto della lingua dell'ospite si carica appena la si
+  // sceglie: senza, la scritta del suo tasto uscirebbe in inglese al primo
+  // disegno e cambierebbe sotto gli occhi un attimo dopo.
+  useEffect(() => { try { preloadLang(String(meta).split('-')[0]); } catch { /* il pacchetto arrivera al prossimo disegno */ } }, [meta]);
+
   useEffect(() => { testoRef.current = testo; }, [testo]);
 
   // Appena smetti di scrivere, la frase parte da sola.
@@ -307,6 +324,90 @@ export default function PrimaProva({ onChiudi }) {
     const el = registroRef.current;
     if (el) el.scrollTop = el.scrollHeight;
   }, [storia, stato]);
+
+  // ═══════════════════════════════════════════════════════════════
+  // b.445 — IL SENSO CONTRARIO: parla l'ospite.
+  //
+  // Ordine di Luca: «deve funzionare all'opposto, cioe deve poter parlare e
+  // cosi tradurre e mostrare nel container nella mia lingua, con colore
+  // diverso».
+  //
+  // E' una via SEPARATA da quella mia, non un interruttore su quella che
+  // c'era: la frase dell'ospite non deve finire nel campo di scrittura (che
+  // e mio) ne cancellarlo mentre sto scrivendo. Percio ha il suo
+  // riconoscimento, il suo accumulatore e la sua chiamata.
+  // ═══════════════════════════════════════════════════════════════
+  const traduciOspite = useCallback(async (grezzo) => {
+    const t = String(grezzo || '').trim();
+    if (!t) return;
+    setStato('traduco');
+    const mio = ++numeroRef.current;
+    try {
+      const r = await fetch('/api/translate', { signal: AbortSignal.timeout(30000),
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text: t, sourceLang: meta, targetLang: miaLingua,
+          sourceLangName: getLang(meta)?.name || meta,
+          targetLangName: getLang(miaLingua)?.name || miaLingua,
+        }),
+      });
+      const d = await r.json().catch(() => null);
+      // stessa regola della via mia: se non c'e traduzione non si finge
+      if (!d?.translated || d.validationFailed) {
+        if (mio === numeroRef.current) setStato('errore');
+        return;
+      }
+      setStoria((prima) => [...prima, { n: mio, detto: t, resa: d.translated, inverso: true }]
+        .sort((a, b) => a.n - b.n));
+      if (mio === numeroRef.current) setStato('quieto');
+      // la risposta e nella MIA lingua: si legge con la MIA voce
+      parla(d.translated, miaLingua);
+    } catch (e) {
+      if (e?.name !== 'AbortError') console.warn('[b.445] /api/translate ospite:', e?.message || e);
+      if (mio === numeroRef.current) setStato('errore');
+    }
+  }, [meta, miaLingua, parla]);
+
+  // Si tiene premuto: si apre parlando, si chiude lasciando. E' il gesto
+  // piu chiaro per chi non ha mai visto l'app — e chi hai davanti non l'ha
+  // mai vista.
+  const ospiteGiu = useCallback(() => {
+    if (ospiteParla) return;
+    const SR = typeof window !== 'undefined' && (window.SpeechRecognition || window.webkitSpeechRecognition);
+    if (!SR) return;
+    try {
+      const rec = new SR();
+      rec.lang = meta;
+      rec.interimResults = true;
+      rec.continuous = true;
+      testoOspiteRef.current = '';
+      let definitivo = '';
+      rec.onresult = (ev) => {
+        for (let k = ev.resultIndex; k < ev.results.length; k++) {
+          const r = ev.results[k];
+          if (r.isFinal) definitivo += r[0].transcript + ' ';
+        }
+        testoOspiteRef.current = definitivo;
+      };
+      rec.onend = () => {
+        setOspiteParla(false);
+        const raccolto = testoOspiteRef.current;
+        testoOspiteRef.current = '';
+        if (raccolto.trim()) traduciOspite(raccolto);
+      };
+      rec.onerror = () => { setOspiteParla(false); };
+      recOspiteRef.current = rec;
+      rec.start();
+      setOspiteParla(true);
+      vibrate(8);
+    } catch { setOspiteParla(false); }
+  }, [ospiteParla, meta, traduciOspite]);
+
+  const ospiteSu = useCallback(() => {
+    if (!ospiteParla) return;
+    try { recOspiteRef.current?.stop(); }
+    catch { /* il riconoscimento era gia fermo: fermarlo due volte non e un guasto */ }
+  }, [ospiteParla]);
 
   // ── LA DETTATURA (trascrizione dal vivo, stessa via di b.352) ──
   const detta = useCallback(() => {
@@ -361,6 +462,7 @@ export default function PrimaProva({ onChiudi }) {
 
   useEffect(() => () => {
     try { recRef.current?.stop(); } catch { /* il riconoscimento era gia fermo: fermarlo due volte non e un guasto */ }
+    try { recOspiteRef.current?.stop(); } catch { /* b.445 — anche quello dell'ospite */ }
     try { audioRef.current?.pause(); } catch { /* la voce era gia ferma: fermarla due volte non e un guasto */ }
     clearTimeout(timerRef.current);
   }, []);
@@ -622,12 +724,11 @@ export default function PrimaProva({ onChiudi }) {
     }}>
       <div aria-hidden style={{ marginTop: 'auto' }} />
 
-      {vuoto && (
-        <span style={{ color: C.textMuted, fontWeight: 600, fontFamily: FONT,
-          fontSize: capovolto ? 22 : 15, textAlign: capovolto ? 'center' : 'left' }}>
-          {capovolto ? L('speakNowEmptyFlipped') : L('speakNowEmpty')}
-        </span>
-      )}
+      {/* b.445 — VIA il segnaposto «Qui la traduzione, testo e voce»
+          (ordine di Luca: «non serve»). Aveva ragione: una frase che spiega
+          cosa comparira e il segno che il disegno non si spiega da solo, ed
+          e la regola 03 del prontuario. Adesso il vuoto resta vuoto, e a
+          dire cosa fare c'e il tasto dell'ospite qui sopra. */}
 
       {storia.map((riga, i) => (
         <div key={i} style={{
@@ -636,7 +737,13 @@ export default function PrimaProva({ onChiudi }) {
           // b.422 — la misura ora la decide chi guarda, e resta decisa.
           fontSize: i === storia.length - 1 ? misuraTestone : misuraVecchie,
           fontWeight: 800, lineHeight: 1.25,
-          color: i === storia.length - 1 ? C.textPrimary : C.textMuted,
+          // b.445 — le frasi dell'OSPITE in un colore diverso (ordine di
+          // Luca). Non e decorazione: senza, chi legge non sa piu chi ha
+          // detto cosa, e in una conversazione a due sensi e l'unica
+          // informazione che conta davvero.
+          color: riga.inverso
+            ? (i === storia.length - 1 ? (C.accent2 || '#38e1ff') : `${C.accent2 || '#38e1ff'}88`)
+            : (i === storia.length - 1 ? C.textPrimary : C.textMuted),
           textAlign: capovolto ? 'center' : 'left',
           fontFamily: FONT, overflowWrap: 'anywhere',
         }}>
@@ -678,17 +785,22 @@ export default function PrimaProva({ onChiudi }) {
       <span style={{ width: 54 }} />
       <button onClick={detta} aria-pressed={detto} aria-label={L('dictateWord')}
         disabled={!micDisponibile}
-        style={{ width: 96, height: 96, borderRadius: 999, padding: 0,
+        // b.445, ordine di Luca: «il pulsante microfono deve essere UGUALE a
+        // quello della home, con dentro il disegno mic BIANCO». Stesse
+        // misure e stesso alone della Home (168 col cerchio, 30 l'icona), e
+        // l'icona bianca invece che azzurra. Quando registra resta rosso —
+        // quello non e uno stile, e lo stato: dice che il microfono e vivo.
+        style={{ width: 168, height: 168, borderRadius: 999, padding: 0,
           cursor: micDisponibile ? 'pointer' : 'default',
-          border: `1px solid ${detto ? '#ff5470' : 'rgba(91,140,255,0.34)'}`,
+          border: `1px solid ${detto ? '#ff5470' : `${C.accent || '#5b8cff'}57`}`,
           background: detto
             ? 'radial-gradient(circle at 50% 38%, rgba(255,84,112,0.30), rgba(255,84,112,0.08) 62%, transparent 74%)'
-            : 'radial-gradient(circle at 50% 38%, rgba(91,140,255,0.30), rgba(91,140,255,0.08) 62%, transparent 74%)',
+            : `radial-gradient(circle at 50% 38%, ${C.accent || '#5b8cff'}4d, ${C.accent || '#5b8cff'}14 62%, transparent 74%)`,
           boxShadow: detto
-            ? '0 0 0 8px rgba(255,84,112,0.06), 0 16px 46px -16px rgba(255,84,112,0.55)'
-            : '0 0 0 8px rgba(91,140,255,0.05), 0 16px 46px -16px rgba(91,140,255,0.55)',
+            ? '0 0 0 10px rgba(255,84,112,0.06), 0 20px 60px -18px rgba(255,84,112,0.55)'
+            : `0 0 0 10px ${C.accent || '#5b8cff'}0d, 0 20px 60px -18px ${C.accent || '#5b8cff'}8c`,
           display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <Icon name="mic" size={38} color={detto ? '#ff5470' : (C.accent || '#5b8cff')} />
+        <Icon name="mic" size={30} color={detto ? '#ff5470' : C.textPrimary} />
       </button>
       <button onClick={() => parla(ultimaResa)} disabled={!ultimaResa}
         aria-label={L('listenWord')} title={L('listenWord')}
@@ -785,6 +897,46 @@ export default function PrimaProva({ onChiudi }) {
           aria-pressed={capovolto} aria-label={L('faceToFaceWord')} title={L('faceToFaceWord')}
           style={tondino(capovolto)}>
           <Icon name="swap" size={19} color={capovolto ? (C.accent || '#5b8cff') : C.textMuted} />
+        </button>
+      </div>
+
+      {/* ═══ b.445 — IL TASTO DELL'OSPITE, in alto e centrato ═══
+          Ordine di Luca: «in alto nella pagina centrato devi mettere un
+          bottone con la bandiera e la scritta SCHIACCIA E PARLA nella
+          lingua dell'ospite».
+          La scritta e in lingua VERA, non tradotta a mano: tLingua(meta,
+          'holdToSpeak') legge la stessa chiave gia presente in tutti e
+          trentotto i pacchetti. Chi hai davanti la trova nella sua lingua
+          senza che nessuno abbia scritto niente a mano.
+          Si tiene premuto, si parla, si lascia. E quando la pagina e
+          capovolta gira anche lui, se no l'ospite se lo trova sottosopra
+          proprio mentre e il suo turno di leggerlo. */}
+      <div style={{ display: 'flex', justifyContent: 'center', flexShrink: 0, padding: '10px 0 2px' }}>
+        <button
+          onPointerDown={ospiteGiu}
+          onPointerUp={ospiteSu}
+          onPointerLeave={ospiteSu}
+          onPointerCancel={ospiteSu}
+          aria-pressed={ospiteParla}
+          aria-label={`${getLang(meta)?.name || meta}: ${tLingua(meta, 'holdToSpeak')}`}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 10,
+            minHeight: TASTO, padding: '0 18px', borderRadius: 999,
+            cursor: 'pointer', fontFamily: FONT, fontSize: 15, fontWeight: 600,
+            border: ospiteParla
+              ? `1.5px solid ${C.accent2 || '#38e1ff'}`
+              : `1px solid ${(C.accent2 || '#38e1ff')}55`,
+            background: ospiteParla
+              ? `${C.accent2 || '#38e1ff'}22`
+              : `${C.accent2 || '#38e1ff'}12`,
+            color: C.accent2 || '#38e1ff',
+            transform: capovolto ? 'rotate(180deg)' : 'none',
+            WebkitTapHighlightColor: 'transparent', touchAction: 'none',
+          }}>
+          <span style={{ fontSize: 22, lineHeight: 1 }}>
+            {getLang(meta)?.flag || String(meta).toUpperCase()}
+          </span>
+          <span>{tLingua(meta, 'holdToSpeak')}</span>
         </button>
       </div>
 
