@@ -516,14 +516,21 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
         // diversi nella stessa pagina, e nessuno dei due era quello giusto.
         padding: '8px 20px 2px', flexShrink: 0,
       }}>
-        <span style={{
-          display: 'inline-flex', alignItems: 'center', gap: 5,
-          padding: '4px 9px', borderRadius: 999, fontSize: 12, fontFamily: FONT,
-          border: `1px solid ${S.colors.cardBorder}`, background: S.colors.cardBg,
-          color: S.colors.textSecondary,
-        }}>
+        {/* b.473 — il chip «Tu» apre il selettore della lingua: e la porta
+            che prima era la coppia grande in testata, tolta perche ripeteva
+            questa riga. La lingua si cambia da dove la si legge. */}
+        <button onClick={() => { vibrate(6); setShowLangPicker(!showLangPicker); }}
+          aria-expanded={showLangPicker} aria-label={L('yourLang')}
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: 5,
+            padding: '4px 9px', borderRadius: 999, fontSize: 12, fontFamily: FONT,
+            border: `1px solid ${showLangPicker ? S.colors.accent1 : S.colors.cardBorder}`,
+            background: showLangPicker ? `${S.colors.accent1}18` : S.colors.cardBg,
+            color: S.colors.textSecondary, cursor: 'pointer',
+            WebkitTapHighlightColor: 'transparent',
+          }}>
           <span>{myL.flag}</span><span>{L('youWord')}</span>
-        </span>
+        </button>
         {otherMembers.map((m, i) => (
           <span key={m.id || m.name || i} style={{
             display: 'inline-flex', alignItems: 'center', gap: 5,
@@ -641,6 +648,18 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
             }}
             style={vocePannello(S)}>
             <span>{L('techReport')}</span>
+          </button>
+
+          {/* b.473 — il modo di leggere, con scritto cosa cambia: era una
+              pillola muta che galleggiava sopra i messaggi. */}
+          <button onClick={() => { vibrate(6); setModoCarosello((v) => !v); }}
+            style={vocePannello(S)}>
+            <span style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <span>{modoCarosello ? L('listView') : L('carouselView')}</span>
+              <span style={{ fontSize: 11.5, color: S.colors.textMuted }}>
+                {modoCarosello ? L('listViewDesc') : L('carouselViewDesc')}
+              </span>
+            </span>
           </button>
 
           {/* le impostazioni vere e proprie, quelle di tutta l'applicazione */}
@@ -766,25 +785,18 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
       )}
 
       {/* ── Messages ── */}
-      {/* b.372 — DUE MODI DI LEGGERE LA STESSA CHAT. Il carosello non si
-          aggiunge sotto l'elenco: lo SOSTITUISCE nello stesso posto,
-          stessa altezza. E il tasto per scambiarli sta sopra, su una riga
-          che c'era gia. */}
-      <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '0 20px', flexShrink: 0 }}>
-        <button onClick={() => { vibrate(6); setModoCarosello(v => !v); }}
-          aria-pressed={modoCarosello}
-          style={{
-            display: 'flex', alignItems: 'center', gap: 6, padding: '5px 11px',
-            borderRadius: 999, cursor: 'pointer', fontFamily: FONT, fontSize: 11.5, fontWeight: 700,
-            background: modoCarosello ? 'rgba(38,217,176,0.14)' : 'rgba(255,255,255,0.05)',
-            border: `1px solid ${modoCarosello ? 'rgba(38,217,176,0.45)' : 'rgba(255,255,255,0.10)'}`,
-            color: modoCarosello ? '#26D9B0' : 'rgba(214,226,245,0.75)',
-            WebkitTapHighlightColor: 'transparent',
-          }}>
-          {modoCarosello ? L('listView') : L('carouselView')}
-        </button>
-      </div>
-
+      {/* b.473 — LA PILLOLA «ELENCO / CAROSELLO» NON STA PIU QUI.
+          Collaudo di Luca: «mi spieghi che cazzo e il carosello/elenco? e
+          perche presenti un cambio pagina?».
+          Domanda giusta, e la risposta e che non doveva starci. Il carosello
+          e un secondo modo di leggere la stessa chat — una frase alla volta,
+          come una carta grande, per farla leggere a qualcuno a distanza di
+          braccio — che avevo portato da un'altra applicazione. Nel template
+          non c'e, nessuno l'ha chiesto, e quel tondo galleggiante sopra i
+          messaggi cambiava la pagina sotto le dita senza spiegare niente:
+          sembrava di essere finiti da un'altra parte.
+          Il modo di leggere e una PREFERENZA, e le preferenze stanno nel
+          pannello (ordine di Luca). Li c'e scritto anche cosa fa. */}
       {modoCarosello ? (
         <Suspense fallback={<div style={{ flex: 1 }} />}>
           <Carosello3D

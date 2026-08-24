@@ -132,8 +132,17 @@ const RoomHeader = memo(function RoomHeader({
           </span>
         )}
 
-        {/* ── Centro: coppia di lingue, grande ── */}
-        <div style={{flex:1, display:'flex', alignItems:'center', justifyContent:'center', gap:10, minWidth:0}}>
+        {/* b.473 — LA COPPIA DI LINGUE NON SI RIPETE. In una chat a due
+            adesso la stessa informazione compariva TRE volte: qui il nome
+            con la sua bandiera, qui accanto la coppia grande, e sotto i chip
+            «Tu / Luca». Tre copie della stessa cosa non informano tre volte:
+            occupano tre volte lo spazio e fanno dubitare che siano tre cose
+            diverse.
+            Quando c'e l'identita (due persone), la coppia sparisce da qui: la
+            dicono i chip sotto la testata, che e dove il template la mette.
+            Il selettore della lingua resta raggiungibile — lo apre il chip. */}
+        <div style={{flex:1, display:'flex', alignItems:'center', justifyContent:'center', gap:10, minWidth:0,
+          ...(partner && otherMembers.length === 1 ? { display:'none' } : {})}}>
           <button onClick={() => setShowLangPicker(!showLangPicker)}
             style={{fontSize:24, lineHeight:1, background:'none', border:'none', cursor:'pointer', padding:'2px 4px',
               borderRadius:10, transition:'outline 0.15s', flexShrink:0,

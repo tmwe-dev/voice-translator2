@@ -214,6 +214,12 @@ qualunque refactoring. Non si propone di rimandarlo.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.473** (push #763) — VIA LA PILLOLA «ELENCO/CAROSELLO» da
+  sopra i messaggi: era un secondo modo di leggere portato da un'altra app,
+  non nel template, che cambiava la pagina sotto le dita senza spiegare
+  niente. E' una preferenza e sta nel pannello, con scritto cosa fa. E in
+  una chat a due la coppia di lingue non compare piu TRE volte: la dicono i
+  chip, che ora aprono anche il selettore.
 - Versione: **b.472** (push #762) — UN MARGINE SOLO IN TUTTA LA CHAT: erano
   QUATTRO rientri diversi incolonnati (10, 12, 14, 20). Ora venti ovunque,
   come la Home e come dice il template. E c'e una prova di guardia che lo
