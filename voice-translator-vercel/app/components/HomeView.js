@@ -7,6 +7,7 @@ import { useApp } from '../contexts/AppContext.js';
 // lingua dei menu esiste in 15 lingue, non nelle 44 in cui si traduce — e
 // `preloadLang`, che porta avanti il pacchetto nuovo appena si conferma.
 import Icon from './Icon.js';
+import { vesteMicrofono } from './ui/Microfono.js';
 import CarouselLingue from './CarouselLingue.js';
 // b.424 — IL RIBALTAMENTO CHE C'E GIA (ordine di Luca: «la pagina deve
 // apparire con un ribaltamento a 180 gradi della home e una pagina intera
@@ -69,6 +70,7 @@ const HomeView = memo(function HomeView({ selectedMode, setSelectedMode,
   // b.358 — la tendina con TUTTE le scelte di comunicazione, dietro il barcode
 
   // I colori vengono dal tema attivo: un'unica verità, sei temi coerenti
+  const mic = vesteMicrofono({ misura: 168, C: S.colors });
   const C = useMemo(() => ({
     accent: S.colors.accent1, accent2: S.colors.accent2, accent3: S.colors.accent3,
     textPrimary: S.colors.textPrimary, textSecondary: S.colors.textSecondary,
@@ -340,14 +342,11 @@ const HomeView = memo(function HomeView({ selectedMode, setSelectedMode,
                 e dentro l'icona BIANCA da 20 (la misura base .ic del
                 template). Non azzurra e non da 44: quelle erano mie
                 deviazioni. L'alone prende l'accent1 del tema. */}
-            <span style={{
-              width: 168, height: 168, borderRadius: 84,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              border: `1px solid ${C.accent}57`,
-              background: `radial-gradient(circle at 50% 38%, ${C.accent}4d, ${C.accent}14 62%, transparent 74%)`,
-              boxShadow: `0 0 0 10px ${C.accent}0d, 0 20px 60px -18px ${C.accent}8c`,
-            }}>
-              <Icon name="mic" size={30} color={C.textPrimary} />
+            {/* b.467 — il microfono viene dal disegno COMUNE: e lo stesso in
+                Home, in «Parla ora» e nella chat. Cambia la misura, non la
+                forma. */}
+            <span style={mic.cerchio}>
+              <Icon name="mic" size={mic.icona} color={mic.coloreIcona} />
             </span>
             <span style={{ fontFamily: FONT, fontSize: 17, fontWeight: 600, color: C.textPrimary }}>
               {L('speakNowTitle')}

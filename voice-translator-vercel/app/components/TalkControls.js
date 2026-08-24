@@ -1,5 +1,6 @@
 'use client';
 import BarraLivelloMicrofono from './BarraLivelloMicrofono.js';
+import { vesteMicrofono } from './ui/Microfono.js';
 import { memo, useState } from 'react';
 import { FONT, vibrate } from '../lib/constants.js';
 import { IconMic, IconRecord, IconLock, IconSparkles, IconHandRaise, IconSend } from './Icons.js';
@@ -94,21 +95,15 @@ const TalkControls = memo(function TalkControls({
               onPointerDown e comunque un gesto valido per il browser. */}
           <button onPointerDown={(e) => { e.preventDefault(); vibrate(25); toggleRecording(); }}
             aria-label={recording ? L('sendVoiceMessage') : L('holdToSpeak')}
-            style={{...S.talkBtn, width:64, height:64, borderRadius:32,
-              display:'flex', alignItems:'center', justifyContent:'center',
-              border:'none', cursor:'pointer', WebkitTapHighlightColor:'transparent',
-              transition:'background 0.2s, box-shadow 0.2s', flexShrink:0,
-              ...(recording ? {
-                background: S.colors.accent4Bg,
-                color: S.colors.textPrimary,
-                boxShadow:`0 0 0 8px ${S.colors.accent4Bg}22, 0 10px 26px rgba(0,0,0,0.35)`,
-                animation:'vtRecordPulse 1.5s ease-in-out infinite',
-              } : {
-                background: S.colors.btnGradient,
-                color: S.colors.textPrimary,
-                boxShadow:`0 0 0 8px ${S.colors.accent3Bg}, 0 12px 28px rgba(0,0,0,0.35)`,
-              })}}>
-            {recording ? <IconSend size={26}/> : <IconMic size={28}/>}
+            // b.467 — LO STESSO MICROFONO DELLA HOME, in piccolo. Qui era un
+            // tondo pieno con una sfumatura e un impulso: un terzo disegno
+            // per lo stesso gesto. Adesso e quello comune, misura 64.
+            style={{...vesteMicrofono({ misura: 64, acceso: recording, C: S.colors }).cerchio,
+              flexShrink:0,
+              ...(recording ? { animation:'vtRecordPulse 1.5s ease-in-out infinite' } : {})}}>
+            {recording
+              ? <IconSend size={vesteMicrofono({ misura: 64, C: S.colors }).icona}/>
+              : <IconMic size={vesteMicrofono({ misura: 64, C: S.colors }).icona}/>}
           </button>
         </div>
         {/* Suggerimento "tieni premuto per parlare", come nel template C */}

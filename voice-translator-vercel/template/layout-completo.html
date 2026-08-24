@@ -286,6 +286,39 @@
   .marchio { display: inline-flex; align-items: baseline; font-size: 22px; letter-spacing: 0.2px; color: var(--testo); }
   .marchio b { font-weight: 500; color: var(--accento); }
 
+  /* ══ IL MICROFONO — uno solo, per tutta l'applicazione ══
+     b.467, ordine di Luca: «il microfono della home va usato anche nella
+     chat (come sistema). L'uso dei microfoni nell'app deve essere uniforme
+     graficamente».
+     Erano TRE disegni per lo stesso gesto: nella Home un cerchio grande con
+     l'alone, in «Parla ora» un altro cerchio con un'altra ombra, nella chat
+     un tondo pieno con una sfumatura e un impulso. Tre modi di dire «parla»
+     che non si somigliavano — e chi impara uno non riconosce gli altri due.
+     Adesso ce n'e UNO. Cambia la MISURA, non la forma: l'alone, il bordo e
+     il tratto bianco dentro sono sempre quelli.
+     E I DUE SISTEMI che Luca ricorda — normale e dal vivo (Compagno) — sono
+     due COMPORTAMENTI, non due grafiche: si distinguono dal colore
+     dell'alone, non da una forma nuova. Un secondo disegno per un secondo
+     comportamento raddoppia le cose da imparare. */
+  .microfono {
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    border-radius: 999px; border: 1px solid var(--accent1);
+    background: radial-gradient(circle at 50% 38%, rgba(91,140,255,0.30), rgba(91,140,255,0.08) 62%, transparent 74%);
+    box-shadow: 0 0 0 10px rgba(91,140,255,0.05), 0 20px 60px -18px rgba(91,140,255,0.55);
+    color: var(--testo);
+  }
+  .microfono.g   { width: 168px; height: 168px; }   /* Home e Parla ora */
+  .microfono.m   { width: 96px;  height: 96px;  box-shadow: 0 0 0 6px rgba(91,140,255,0.05), 0 12px 34px -10px rgba(91,140,255,0.55); }
+  .microfono.p   { width: 64px;  height: 64px;  box-shadow: 0 0 0 4px rgba(91,140,255,0.05), 0 8px 22px -7px rgba(91,140,255,0.55); }
+  /* registra: rosso. E' uno STATO, non uno stile. */
+  .microfono.rec { border-color: rgba(255,84,112,0.55); color: var(--accent3);
+    background: radial-gradient(circle at 50% 38%, rgba(255,84,112,0.30), rgba(255,84,112,0.08) 62%, transparent 74%);
+    box-shadow: 0 0 0 10px rgba(255,84,112,0.05), 0 20px 60px -18px rgba(255,84,112,0.55); }
+  /* dal vivo (Compagno): ascolta di continuo. Verde, come tutto cio che e vivo. */
+  .microfono.vivo { border-color: rgba(61,220,132,0.55);
+    background: radial-gradient(circle at 50% 38%, rgba(61,220,132,0.30), rgba(61,220,132,0.08) 62%, transparent 74%);
+    box-shadow: 0 0 0 10px rgba(61,220,132,0.05), 0 20px 60px -18px rgba(61,220,132,0.55); }
+
   .bandiera {
     font-size: 30px; line-height: 1; height: var(--tasto); width: var(--tasto);
     display: flex; align-items: center; justify-content: center; cursor: pointer;
@@ -2361,6 +2394,34 @@
         <span class="marchio">Bar<b>Talk</b></span>
       </div>
       <div class="perche">Solo la parola, «Talk» in blu. Una scritta a questa misura si legge sempre e non deve reggere piccola come un'icona. L'immagine faccia-a-faccia resta dov'e gia perfetta — il tasto grande della Home — e non fa anche da logo: una cosa, un lavoro.</div>
+    </div>
+
+    <div class="pezzo" style="grid-column:1/-1">
+      <div class="nome">Il microfono, uno solo</div>
+      <div class="mis">168 grande &middot; 96 medio &middot; 64 piccolo &middot; tratto bianco 30/22/16</div>
+      <div class="prova" style="display:flex;gap:26px;align-items:center;flex-wrap:wrap;justify-content:center;padding:14px 0">
+        <span style="display:flex;flex-direction:column;align-items:center;gap:8px">
+          <span class="microfono g"><svg class="ic gg"><use href="#i-mic"/></svg></span>
+          <span style="font-size:11px;color:var(--muto)">Home &middot; Parla ora</span>
+        </span>
+        <span style="display:flex;flex-direction:column;align-items:center;gap:8px">
+          <span class="microfono m"><svg class="ic g"><use href="#i-mic"/></svg></span>
+          <span style="font-size:11px;color:var(--muto)">medio</span>
+        </span>
+        <span style="display:flex;flex-direction:column;align-items:center;gap:8px">
+          <span class="microfono p"><svg class="ic"><use href="#i-mic"/></svg></span>
+          <span style="font-size:11px;color:var(--muto)">chat</span>
+        </span>
+        <span style="display:flex;flex-direction:column;align-items:center;gap:8px">
+          <span class="microfono m rec"><svg class="ic g"><use href="#i-mic"/></svg></span>
+          <span style="font-size:11px;color:var(--accent3)">registra</span>
+        </span>
+        <span style="display:flex;flex-direction:column;align-items:center;gap:8px">
+          <span class="microfono m vivo"><svg class="ic g"><use href="#i-mic"/></svg></span>
+          <span style="font-size:11px;color:var(--verde)">dal vivo &middot; Compagno</span>
+        </span>
+      </div>
+      <div class="perche">Erano tre disegni diversi per lo stesso gesto — un cerchio con l'alone in Home, un altro cerchio con un'altra ombra in «Parla ora», un tondo pieno con la sfumatura e l'impulso nella chat. Chi impara uno non riconosce gli altri due. Adesso e uno: cambia la MISURA, non la forma. Il tratto dentro resta BIANCO e il colore lo porta l'alone.<br><br><span class="ril">E i due sistemi sono due COLORI, non due forme.</span> Normale: alone blu, si tocca e si parla. Dal vivo (il Compagno che ascolta di continuo): alone verde, come tutto cio che e vivo nell'applicazione. Rosso solo mentre registra, che e uno stato e non uno stile. Un secondo disegno per un secondo comportamento raddoppia le cose da imparare.</div>
     </div>
 
     <div class="pezzo">

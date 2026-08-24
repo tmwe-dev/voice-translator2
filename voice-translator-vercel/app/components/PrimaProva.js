@@ -5,6 +5,7 @@ import { memDel, memSet } from '../lib/memoria.js';
 import { LANGS, getLang, FONT, vibrate, metaScelta } from '../lib/constants.js';
 import { t as tLingua, preloadLang } from '../lib/i18n.js';
 import Icon from './Icon.js';
+import { vesteMicrofono } from './ui/Microfono.js';
 import { IconCar } from './Icons.js';
 // b.424 — LA STESSA IDENTICA LISTA DELLA HOME (ordine di Luca: «crea una
 // lista come quella della home, esattamente identica»). Non se ne scrive
@@ -831,17 +832,9 @@ export default function PrimaProva({ onChiudi }) {
         // misure e stesso alone della Home (168 col cerchio, 30 l'icona), e
         // l'icona bianca invece che azzurra. Quando registra resta rosso —
         // quello non e uno stile, e lo stato: dice che il microfono e vivo.
-        style={{ width: 168, height: 168, borderRadius: 999, padding: 0,
-          cursor: micDisponibile ? 'pointer' : 'default',
-          border: `1px solid ${detto ? '#ff5470' : `${C.accent || '#5b8cff'}57`}`,
-          background: detto
-            ? 'radial-gradient(circle at 50% 38%, rgba(255,84,112,0.30), rgba(255,84,112,0.08) 62%, transparent 74%)'
-            : `radial-gradient(circle at 50% 38%, ${C.accent || '#5b8cff'}4d, ${C.accent || '#5b8cff'}14 62%, transparent 74%)`,
-          boxShadow: detto
-            ? '0 0 0 10px rgba(255,84,112,0.06), 0 20px 60px -18px rgba(255,84,112,0.55)'
-            : `0 0 0 10px ${C.accent || '#5b8cff'}0d, 0 20px 60px -18px ${C.accent || '#5b8cff'}8c`,
-          display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <Icon name="mic" size={30} color={detto ? '#ff5470' : C.textPrimary} />
+        style={vesteMicrofono({ misura: 168, acceso: detto, spento: !micDisponibile, C: S?.colors }).cerchio}>
+        <Icon name="mic" size={vesteMicrofono({ misura: 168, C: S?.colors }).icona}
+          color={vesteMicrofono({ misura: 168, acceso: detto, C: S?.colors }).coloreIcona} />
       </button>
       <button onClick={() => parla(ultimaResa)} disabled={!ultimaResa}
         aria-label={L('listenWord')} title={L('listenWord')}

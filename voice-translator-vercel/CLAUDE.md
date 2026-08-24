@@ -214,6 +214,11 @@ qualunque refactoring. Non si propone di rimandarlo.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.467** (push #758) — UN MICROFONO SOLO per tutta
+  l'applicazione (ui/Microfono.js): erano tre disegni diversi per lo stesso
+  gesto — Home, «Parla ora» e chat. Cambia la misura, non la forma; il
+  tratto resta bianco, il colore lo porta l'alone. I due sistemi (normale e
+  dal vivo del Compagno) sono due COLORI, non due forme.
 - Versione: **b.466** (push #757) — NELLA CHAT A DUE, IN ALTO C'E' CHI HAI
   DAVANTI: faccia, nome e bandiera invece del codice della stanza (ordine di
   Luca). In tre o piu resta il codice, perche i nomi sono gia nei chip. E il
