@@ -194,9 +194,13 @@ function CarouselLingue({ selezionata, onScegli, onLinguaMenu, C, L }) {
                 style={{ width: 52, border: 'none', background: 'transparent', cursor: 'pointer',
                   display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, padding: '4px 2px',
                   fontFamily: FONT }}>
-                <span style={{ fontSize: cent ? 34 : 26, lineHeight: 1, transition: 'all .3s',
-                  filter: cent ? 'grayscale(0%) brightness(1.1)' : vicina ? 'grayscale(40%) brightness(0.9)' : 'grayscale(80%) brightness(0.8)',
-                  opacity: cent ? 1 : vicina ? 0.7 : 0.4,
+                {/* b.438 — le bandiere come nel template: piene, non
+                    oscurate. Via il brightness<1 che le spegneva e il
+                    grayscale sul centro; i vicini si smorzano con la sola
+                    opacita, come nel template. E piu grandi. */}
+                <span style={{ fontSize: cent ? 40 : 30, lineHeight: 1, transition: 'all .3s',
+                  filter: cent ? 'none' : vicina ? 'grayscale(30%)' : 'grayscale(55%)',
+                  opacity: cent ? 1 : vicina ? 0.6 : 0.35,
                   transform: cent ? 'scale(1.06)' : 'scale(1)' }}>
                   {l.flag}
                 </span>
@@ -230,7 +234,7 @@ function CarouselLingue({ selezionata, onScegli, onLinguaMenu, C, L }) {
         alignItems: 'center', justifyContent: 'center',
       }}>
         {alCentro.code === selezionata ? (
-          <span style={{ fontFamily: FONT, fontSize: 13, fontWeight: 700, color: C.accent,
+          <span style={{ fontFamily: FONT, fontSize: 13, fontWeight: 600, color: C.accent,
             display: 'flex', alignItems: 'center', gap: 6 }}>
             {alCentro.name}
             <span style={{ color: C.accent, fontSize: 12 }}>✓</span>
@@ -239,7 +243,7 @@ function CarouselLingue({ selezionata, onScegli, onLinguaMenu, C, L }) {
           <button onClick={() => scegli(alCentro)}
             style={{ padding: '5px 16px', borderRadius: 999, cursor: 'pointer',
               border: `1px solid ${C.accent}55`, background: 'transparent', color: C.accent,
-              fontFamily: FONT, fontSize: 12.5, fontWeight: 800, lineHeight: 1.4,
+              fontFamily: FONT, fontSize: 12.5, fontWeight: 600, lineHeight: 1.4,
               whiteSpace: 'nowrap', maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis',
               WebkitTapHighlightColor: 'transparent' }}>
             {L('useWord')} {alCentro.name}

@@ -214,6 +214,11 @@ qualunque refactoring. Non si propone di rimandarlo.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.438** (push #730) — FEDELTA AL TEMPLATE SULLA HOME: il
+  microfono torna BIANCO e da 20 (era azzurro e da 44, una mia deriva);
+  via il grassetto anche nell'app (come nel template, max 600, titoli di
+  sezione 500); le bandiere del carosello tornano piene e piu grandi, senza
+  il filtro che le spegneva. Se c'e un template si rispetta al pixel.
 - Versione: **b.437** (push #729) — HOME A TUTTA LARGHEZZA: i contenitori
   usavano la colonna centrata che lascia 66px liberi per la linguetta —
   ma la Home non ha linguetta, e stringeva tutto a meta schermo. Ora va da

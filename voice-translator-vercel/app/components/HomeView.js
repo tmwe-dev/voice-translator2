@@ -236,7 +236,7 @@ const HomeView = memo(function HomeView({ selectedMode, setSelectedMode,
             aria-label={`rilascio numero ${PUSH}`}
             style={{
               position: 'absolute', top: 0, left: 0, zIndex: 3,
-              fontFamily: FONT, fontSize: 11, fontWeight: 700, lineHeight: 1,
+              fontFamily: FONT, fontSize: 11, fontWeight: 600, lineHeight: 1,
               color: C.accent, background: C.cardBg,
               border: `1px solid ${C.accent}40`, borderRadius: 8,
               padding: '5px 7px', letterSpacing: 0.3,
@@ -288,8 +288,9 @@ const HomeView = memo(function HomeView({ selectedMode, setSelectedMode,
             }}
           >
             {/* b.436 — il microfono e il protagonista della Home (template):
-                un cerchio grande da 132 con l'alone, non piu un tondino. I
-                colori vengono dall'accent1 del tema. */}
+                un cerchio grande da 132 con l'alone. Il microfono dentro e
+                BIANCO (textPrimary) e da 20 come nel template — non azzurro,
+                non da 44: era una mia deriva. L'alone e l'accent1, il tratto no. */}
             <span style={{
               width: 132, height: 132, borderRadius: 66,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -297,7 +298,7 @@ const HomeView = memo(function HomeView({ selectedMode, setSelectedMode,
               background: `radial-gradient(circle at 50% 38%, ${C.accent}4d, ${C.accent}14 62%, transparent 74%)`,
               boxShadow: `0 0 0 10px ${C.accent}0d, 0 20px 60px -18px ${C.accent}8c`,
             }}>
-              <Icon name="mic" size={44} color={C.accent} />
+              <Icon name="mic" size={20} color={C.textPrimary} />
             </span>
             <span style={{ fontFamily: FONT, fontSize: 17, fontWeight: 600, color: C.textPrimary }}>
               {L('speakNowTitle')}
@@ -358,7 +359,7 @@ const HomeView = memo(function HomeView({ selectedMode, setSelectedMode,
                   : <Icon name={voce.icon} size={25} color={C.accent} />}
               </span>
               <span style={{ flex: 1, minWidth: 0 }}>
-                <span style={{ display: 'block', fontSize: 15, fontWeight: 700, color: C.textPrimary, fontFamily: FONT }}>
+                <span style={{ display: 'block', fontSize: 15, fontWeight: 500, color: C.textPrimary, fontFamily: FONT }}>
                   {L(voce.titleKey)}
                 </span>
                 <span style={{ display: 'block', fontSize: 11.5, color: C.textMuted, fontFamily: FONT, marginTop: 2 }}>
@@ -374,7 +375,7 @@ const HomeView = memo(function HomeView({ selectedMode, setSelectedMode,
         {activeRooms.length > 0 && (
           <div style={{ marginBottom: 20 }}>
             <div style={{
-              fontSize: 10, fontWeight: 700, color: C.textMuted,
+              fontSize: 10, fontWeight: 600, color: C.textMuted,
               letterSpacing: 1.5, textTransform: 'uppercase', fontFamily: FONT, marginBottom: 10,
             }}>
               {L('activeChats')}
