@@ -214,6 +214,13 @@ qualunque refactoring. Non si propone di rimandarlo.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.447** (push #738) — LA MAPPA A SCHERMO INTERO, e i tasti che
+  non si vedevano. Il tasto per ingrandire c'e SEMPRE, anche quando la mappa
+  e una miniatura senza comandi: era quello il motivo per cui Luca non
+  trovava ne schermo intero ne stili — in «Parla ora» e TaxiTalk la mappa e
+  montata con i comandi spenti. A schermo intero compaiono tutti i comandi,
+  Esc e il tasto indietro chiudono, e la mappa NON si ricarica (stesso nodo,
+  solo un resize).
 - Versione: **b.446** (push #737) — DIECI STILI DI MAPPA, SATELLITE COMPRESO:
   il grigio e lo stradale in chiaro come chiesto da Luca, piu il satellite
   (immagini Esri, senza chiave, con lo style raster scritto a mano). Il tasto

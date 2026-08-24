@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
 import { useApp } from '../contexts/AppContext.js';
+import { apriPannelloPieno, chiudiPannelloPieno } from '../lib/pannelloPieno.js';
 
 // ═══════════════════════════════════════════════
 // TaxiMap — mappa vettoriale MapLibre GL (OpenFreeMap, senza API key).
@@ -79,6 +80,12 @@ export default function TaxiMap({ lat, lng, altezza = 340, comandi = true, inter
   // si sta sulla mappa. Parte da `stile` se chi monta la mappa ne impone uno.
   const [stileScelto, setStileScelto] = useState(stile);
   const [scegliStile, setScegliStile] = useState(false);
+  // b.447 — LO SCHERMO INTERO. Collaudo di Luca: «perche non vedo a tutto
+  // schermo la mappa e non ci sono i tasti?». Perche non l'avevo scritto:
+  // era solo nel template. E i tasti non c'erano perche qui la mappa e
+  // montata in MINIATURA (comandi spenti) — quindi il tasto per ingrandire
+  // deve esserci ANCHE in miniatura, se no da li non si esce.
+  const [pieno, setPieno] = useState(false);
   const { L, theme, S } = useApp();
   const boxRef = useRef(null);
   const mapRef = useRef(null);
@@ -174,6 +181,40 @@ export default function TaxiMap({ lat, lng, altezza = 340, comandi = true, inter
     };
   }, [lat, lng, theme, stileScelto]); // cambia tema o stile → ricrea con quello giusto
 
+  // Cambiando misura il contenitore cambia, ma il NODO resta lo stesso:
+  // MapLibre non se ne accorge da solo e va avvisato. Se invece si
+  // spostasse il nodo nell'albero si perderebbe il contesto WebGL e
+  // tornerebbe il velo «carico la mappa».
+  useEffect(() => {
+    if (!mapRef.current) return undefined;
+    const id = setTimeout(() => { try { mapRef.current?.resize(); } catch { /* la mappa e stata smontata nel frattempo */ } }, 60);
+    return () => clearTimeout(id);
+  }, [pieno]);
+
+  // A schermo intero: Esc chiude, e il tasto indietro di Android chiude la
+  // mappa invece di buttare fuori dalla schermata — che in mezzo a una
+  // corsa sarebbe il danno peggiore.
+  useEffect(() => {
+    if (!pieno) return undefined;
+    const suTasto = (e) => { if (e.key === 'Escape') setPieno(false); };
+    const suIndietro = () => setPieno(false);
+    window.addEventListener('keydown', suTasto);
+    window.addEventListener('popstate', suIndietro);
+    try { window.history.pushState({ mappaPiena: true }, ''); } catch { /* cronologia non disponibile: resta Esc */ }
+    return () => {
+      window.removeEventListener('keydown', suTasto);
+      window.removeEventListener('popstate', suIndietro);
+    };
+  }, [pieno]);
+
+  // b.447 — dichiarare il pannello pieno, se no il banner «installa
+  // l'applicazione» si piazza sopra la mappa (difetto gia visto in b.255).
+  useEffect(() => {
+    if (!pieno) return undefined;
+    apriPannelloPieno();
+    return () => chiudiPannelloPieno();
+  }, [pieno]);
+
   const zoom = (delta) => mapRef.current?.zoomTo(mapRef.current.getZoom() + delta, { duration: 250 });
   const centra = () => mapRef.current?.flyTo({ center: [lng, lat], zoom: 15, duration: 600 });
 
@@ -185,8 +226,13 @@ export default function TaxiMap({ lat, lng, altezza = 340, comandi = true, inter
   };
 
   return (
-    <div style={{ position: 'relative', height: altezza, width: '100%', borderRadius: raggio, overflow: 'hidden',
-      border: `1px solid ${S.colors?.cardBorder || 'rgba(160,190,255,0.14)'}` }}>
+    <div style={pieno
+      // b.447 — A SCHERMO INTERO e lo STESSO elemento che cambia misura:
+      // non viene spostato nell'albero, quindi la mappa non si ricarica.
+      ? { position: 'fixed', inset: 0, zIndex: 9998, borderRadius: 0, overflow: 'hidden',
+          background: S.colors?.bg || '#05070f' }
+      : { position: 'relative', height: altezza, width: '100%', borderRadius: raggio, overflow: 'hidden',
+          border: `1px solid ${S.colors?.cardBorder || 'rgba(160,190,255,0.14)'}` }}>
       <div ref={boxRef} style={{ position: 'absolute', inset: 0 }} />
       {!pronta && (
         <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center',
@@ -195,7 +241,7 @@ export default function TaxiMap({ lat, lng, altezza = 340, comandi = true, inter
         </div>
       )}
       {/* Bottoni zoom grandi (per chi non usa i gesti) — non in miniatura */}
-      {comandi && (
+      {(comandi || pieno) && (
         <div style={{ position: 'absolute', right: 10, bottom: 12, display: 'flex',
           flexDirection: 'column', gap: 7, zIndex: 5 }}>
           <button style={btn} onClick={() => zoom(1)} aria-label={L('zoomIn')}>+</button>
@@ -204,15 +250,42 @@ export default function TaxiMap({ lat, lng, altezza = 340, comandi = true, inter
         </div>
       )}
 
+      {/* b.447 — IL TASTO PER INGRANDIRE, e per chiudere. C'e SEMPRE, anche
+          quando la mappa e una miniatura senza comandi: se no da una
+          miniatura non si potrebbe mai arrivare allo schermo intero, ed e
+          esattamente il motivo per cui Luca non li trovava. A schermo
+          intero diventa una x NELLO STESSO POSTO: sostituisce, non si
+          aggiunge. Sta sotto la zona sicura, se no sull'iPhone finisce
+          dietro l'orologio. */}
+      <button
+        onClick={() => { setPieno((v) => !v); setScegliStile(false); }}
+        aria-pressed={pieno}
+        aria-label={pieno ? L('close') : L('mapFullScreen')}
+        title={pieno ? L('close') : L('mapFullScreen')}
+        style={{ ...btn, position: 'absolute', right: 10, zIndex: 6,
+          top: pieno ? 'max(12px, env(safe-area-inset-top))' : 10,
+          borderColor: pieno ? oro : 'rgba(160,190,255,0.2)',
+          color: pieno ? oro : '#eef2ff' }}>
+        {pieno ? (
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            strokeWidth="1.6" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12" /></svg>
+        ) : (
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" />
+          </svg>
+        )}
+      </button>
+
       {/* b.446 — IL TASTO DEGLI STILI, e la scelta NASCOSTA dietro di lui.
           Non una fila di dieci bottoni sempre a schermo: la mappa e la cosa
           da guardare, i comandi no. Sta in alto a destra, lontano dai +/−. */}
-      {comandi && (
+      {(comandi || pieno) && (
         <button
           onClick={() => setScegliStile((v) => !v)}
           aria-expanded={scegliStile}
           aria-label={L('mapStyle')}
-          style={{ ...btn, position: 'absolute', right: 10, top: 10, zIndex: 6,
+          style={{ ...btn, position: 'absolute', right: 10, top: pieno ? 'calc(max(12px, env(safe-area-inset-top)) + 52px)' : 62, zIndex: 6,
             borderColor: scegliStile ? oro : 'rgba(160,190,255,0.2)',
             color: scegliStile ? oro : '#eef2ff' }}>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -222,7 +295,7 @@ export default function TaxiMap({ lat, lng, altezza = 340, comandi = true, inter
         </button>
       )}
 
-      {comandi && scegliStile && (
+      {(comandi || pieno) && scegliStile && (
         <div style={{ position: 'absolute', left: 8, right: 8, bottom: 8, zIndex: 7,
           background: 'rgba(8,12,24,0.93)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
           border: `1px solid ${S.colors?.cardBorder || 'rgba(160,190,255,0.14)'}`,
