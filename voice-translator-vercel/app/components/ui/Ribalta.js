@@ -43,6 +43,29 @@ export default function Ribalta({ girato, fronte, retro, durata = 520 }) {
     return () => q.removeEventListener?.('change', leggi);
   }, []);
 
+  // ═══════════════════════════════════════════════════════════════
+  // b.450 — LA HOME SPECCHIATA SU TELEFONO. Collaudo di Luca: «su mobile
+  // appare una immagine inversa della home».
+  //
+  // Era il RETRO della faccia davanti. `backface-visibility: hidden` c'era
+  // gia — ed e la difesa giusta — ma su Safari di iPhone non regge: basta
+  // che dentro una faccia ci sia qualcosa che rompe il contesto 3D (una
+  // zona che scorre, una sfocatura, un elemento fisso) e il browser
+  // APPIATTISCE il 3D. Appiattito, «nascondi il retro» non significa piu
+  // niente, e cosi la Home ricompariva rovesciata.
+  //
+  // Percio non ci si appoggia piu. La faccia che non si deve vedere si
+  // spegne con `visibility`, che nessun browser interpreta a modo suo. Lo
+  // scambio avviene a META giro, quando il foglio e di taglio: e il solo
+  // istante in cui non si vede ne l'una ne l'altra, quindi non si nota.
+  // ═══════════════════════════════════════════════════════════════
+  const [mostrato, setMostrato] = useState(girato ? 'retro' : 'fronte');
+  useEffect(() => {
+    const meta = animato ? Math.max(0, Math.round(durata / 2)) : 0;
+    const id = setTimeout(() => setMostrato(girato ? 'retro' : 'fronte'), meta);
+    return () => clearTimeout(id);
+  }, [girato, animato, durata]);
+
   const faccia = {
     position: 'absolute', inset: 0,
     backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden',
@@ -60,7 +83,10 @@ export default function Ribalta({ girato, fronte, retro, durata = 520 }) {
         {/* la faccia davanti: l'elenco. Quando e girata non deve
             prendere tocchi, se no si tocca l'elenco attraverso
             l'articolo. */}
-        <div style={{ ...faccia, pointerEvents: girato ? 'none' : 'auto' }} aria-hidden={girato}>
+        <div style={{ ...faccia,
+          pointerEvents: girato ? 'none' : 'auto',
+          visibility: mostrato === 'fronte' ? 'visible' : 'hidden',
+        }} aria-hidden={girato}>
           {fronte}
         </div>
 
@@ -70,6 +96,7 @@ export default function Ribalta({ girato, fronte, retro, durata = 520 }) {
           ...faccia,
           transform: 'rotateY(180deg)',
           pointerEvents: girato ? 'auto' : 'none',
+          visibility: mostrato === 'retro' ? 'visible' : 'hidden',
         }} aria-hidden={!girato}>
           {retroNato ? retro : null}
         </div>

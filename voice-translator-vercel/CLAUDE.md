@@ -214,6 +214,13 @@ qualunque refactoring. Non si propone di rimandarlo.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.450** (push #741) — LA HOME SPECCHIATA SU TELEFONO quando si
+  ribalta per parlare: era il RETRO della faccia davanti. backface-visibility
+  c'era gia, ma su Safari di iPhone non regge se dentro una faccia c'e
+  qualcosa che rompe il contesto 3D (una zona che scorre, una sfocatura, un
+  elemento fisso): il browser APPIATTISCE il 3D e quella regola non vale
+  piu. Adesso la faccia che non si deve vedere si spegne con `visibility`,
+  scambiata a meta giro — quando il foglio e di taglio e non si vede niente.
 - Versione: **b.449** (push #740) — LA STRISCIA BIANCA SULLA CARTINA parte
   chiusa: era l'attribuzione, gia compatta, che MapLibre apre da sola al
   primo disegno. Togliere del tutto non si puo — i dati sono OpenStreetMap e
