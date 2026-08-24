@@ -214,6 +214,13 @@ qualunque refactoring. Non si propone di rimandarlo.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.436** (push #728) — HOME MONTATA DAL TEMPLATE: il microfono
+  diventa il protagonista grande al centro, in cima compare la scritta
+  BarTalk. Il tasto immagine faccia-a-faccia esce dalla Home; il barcode e
+  tutti i modi per connettersi passano nel tasto «+», che ora apre una
+  lista A TUTTA PAGINA col barcode dentro. Niente si perde: il gestore del
+  «+» instradava gia quelle porte. Primo trasferimento dal template
+  mappato all'infrastruttura.
 - Versione: **b.435** (push #727) — IMPARA: la lezione non diceva mai a
   che punto sei. L'indice della lezione dentro il programma esisteva ed
   era gia CALCOLATO in due punti — serve a sapere qual e la prossima e a
