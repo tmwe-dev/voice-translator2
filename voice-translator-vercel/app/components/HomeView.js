@@ -365,6 +365,13 @@ const HomeView = memo(function HomeView({ selectedMode, setSelectedMode,
           backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)',
           border: `1px solid ${C.accent}38`,
           borderRadius: 18, padding: '2px 14px', marginBottom: 20, flexShrink: 0,
+          // b.440 — LARGHEZZA FISSA (collaudo di Luca: «l'elenco si stringe
+          // in funzione della lingua»). Il contenitore centra i figli
+          // (scrollCenter ha align-items:center): senza una larghezza la card
+          // si restringeva sul testo, e il testo cambia da lingua a lingua.
+          // Con width 100% resta larga uguale, piena su mobile; su desktop il
+          // tetto del contenitore (maxWidth 900, centrato) la tiene in mezzo.
+          width: '100%', boxSizing: 'border-box',
           // b.361 — VIA l'ombra azzurra offset (collaudo di Luca: «sono le
           // ombre dei tasti menu precedenti»): su fondo scuro appariva come
           // strisce. Niente ombra.
@@ -411,7 +418,7 @@ const HomeView = memo(function HomeView({ selectedMode, setSelectedMode,
 
         {/* ═══ Active Rooms ═══ */}
         {activeRooms.length > 0 && (
-          <div style={{ marginBottom: 20 }}>
+          <div style={{ marginBottom: 20, width: '100%', boxSizing: 'border-box' }}>
             <div style={{
               fontSize: 10, fontWeight: 600, color: C.textMuted,
               letterSpacing: 1.5, textTransform: 'uppercase', fontFamily: FONT, marginBottom: 10,

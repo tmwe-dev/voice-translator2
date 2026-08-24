@@ -214,6 +214,11 @@ qualunque refactoring. Non si propone di rimandarlo.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.440** (push #732) — L'ELENCO SEZIONI NON SI STRINGE PIU CON
+  LA LINGUA: il contenitore della Home centra i figli, e la card senza
+  larghezza si adattava al testo — che in tedesco e lungo, in coreano corto.
+  Ora ha width 100%: larga uguale a ogni lingua, piena su mobile, centrata su
+  desktop come da default.
 - Versione: **b.439** (push #731) — IL SELETTORE PAESE SCENDE SOTTO IL
   MICROFONO, in alternanza con «Parla ora» (ordine di Luca): lo stesso posto
   mostra a turno la scritta e il carosello animato delle bandiere, e si ferma
