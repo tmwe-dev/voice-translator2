@@ -214,6 +214,15 @@ qualunque refactoring. Non si propone di rimandarlo.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.477** (push #767) — RIMESSA LA CHIAMATA VOCALE, che in b.470
+  avevo detto di aver spostato nel menu e invece avevo solo cancellato. Se ne
+  e accorta una prova di guardia, non io.
+- Versione: **b.476** (push #766) — MONDO DIVENTA TRE SCHEDE: Stanze, News e
+  Mondo. Il pianeta sta SOLO nella sua — prima faceva da sfondo a tutte e
+  due le liste, che per restare leggibili avevano bisogno di un velo sopra.
+  Del pianeta non e stato toccato niente: stessi file, stesse animazioni,
+  stesso cielo; e cambiato solo dove compare. E la linguetta su Mondo apre
+  il pannello invece del vuoto.
 - Versione: **b.475** (push #765) — IL MICROFONO DELLA CHAT FUNZIONA COME
   QUELLO DELLA HOME: si tocca e registra, si tocca e finisce. Prima apriva
   un pannello che copriva il campo di scrittura — due tocchi e mezzo schermo

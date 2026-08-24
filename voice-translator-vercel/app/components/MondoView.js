@@ -370,7 +370,18 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
           E c'e anche in News: era il pianeta di Mondo, non della sola
           scheda Stanze (Luca: «la pagina news dovrebbe avere anche lei il
           mondo e non ce l'ha»). */}
-      {(tab === 'stanze' || tab === 'news') && (
+      {/* b.476, ordine di Luca: «mantieni il mondo solo per il tab mondo,
+          mentre in stanze e news lasci lo sfondo normale dell'applicazione».
+          Il pianeta stava dietro TUTTE E DUE le schede, e sotto di lui gli
+          elenchi avevano bisogno di un velo per restare leggibili: si
+          pagava un pianeta che nessuno stava guardando con la leggibilita
+          di quello che invece si stava leggendo.
+          Adesso il pianeta ha una scheda sua — dove e la cosa da guardare —
+          e le altre due hanno il fondo dell'applicazione, come ogni altra
+          pagina di elenchi. Del pianeta non e stato toccato niente: stessi
+          file, stesse animazioni, stesso cielo. E' cambiato solo DOVE
+          compare. */}
+      {tab === 'mondo' && (
         <div style={{ position: 'absolute', inset: 0, zIndex: 0 }}>
           <GloboMondo sfondo paese={paeseScelto} rotte={rotteVere} traffico={trafficoPaesi}
             titolo={L('worldNowTitle')} etichettaCielo={L('skyOfPlanet')}
@@ -462,7 +473,7 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
           ci sono la ricerca e i filtri di questa sezione. */}
       {!cercando && !strumenti && (
         <LinguettaPannello onApri={() => setStrumenti(true)} C={C}
-          etichetta={tab === 'news' ? L('tabNews') : L('searchRooms')} />
+          etichetta={tab === 'news' ? L('tabNews') : tab === 'mondo' ? L('worldNowTitle') : L('searchRooms')} />
       )}
 
       {/* ═══ TESTATA (Luca): solo il testo e l'icona della scheda al centro,
@@ -495,6 +506,9 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
           {[
             { id: 'stanze', parola: L('tabRooms'), icona: 'chat', conto: rooms?.length || null },
             { id: 'news', parola: L('tabNews'), icona: 'doc', conto: null },
+            // b.476 — la terza scheda: il pianeta. Prima faceva da sfondo a
+            // tutte e due le altre senza essere di nessuna; adesso e sua.
+            { id: 'mondo', parola: L('worldNowTitle'), icona: 'globe', conto: null },
           ].map((v) => {
             const acceso = tab === v.id;
             return (
@@ -567,7 +581,10 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
           della testata, staccata si legge come una cosa appoggiata sopra
           il pianeta. */}
       {/* in News il pannello lo riempie MondoNews coi suoi strumenti */}
-      <PannelloLaterale aperto={strumenti && tab === 'stanze'} onChiudi={() => setStrumenti(false)}
+      {/* b.476 — il pannello vale per la scheda in cui si sta: Stanze ha i
+          suoi filtri, e le altre due il loro. Prima era legato alla sola
+          Stanze, quindi da News e da Mondo la linguetta si apriva su niente. */}
+      <PannelloLaterale aperto={strumenti && (tab === 'stanze' || tab === 'mondo')} onChiudi={() => setStrumenti(false)}
         titolo={L('tabRooms')} C={C}>
       {/* b.363 — LA RICERCA IN ALTO (ordine di Luca): e la cosa che si usa
           piu spesso e quella per cui si apre il pannello. Le preferenze,
@@ -745,7 +762,10 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
           fra i due e non prende tocchi: e solo il punto in cui il globo
           finisce e la pagina comincia. Si fa piu decisa mentre scendi,
           insieme al velo, cosi il passaggio segue il gesto. */}
-      {(tab === 'stanze' || tab === 'news') && !cercando && (
+      {/* b.476 — il velo in cima serviva a staccare gli elenchi DAL PIANETA.
+          Senza pianeta dietro non stacca piu niente: sarebbe un'ombra sopra
+          una pagina normale. Resta solo dove il pianeta c'e. */}
+      {tab === 'mondo' && !cercando && (
         <div style={{
           position: 'absolute', left: 0, right: 0, top: 0, height: 96,
           pointerEvents: 'none', zIndex: 4,

@@ -630,16 +630,18 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
         <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
           <div style={{ fontSize: 10.5, letterSpacing: 1.1, textTransform: 'uppercase',
             color: S.colors.textMuted, padding: '0 10px 7px', fontFamily: FONT }}>
-            {L('preferences') || L('settings')}
+            {L('settings')}
           </div>
 
           {/* la voce tradotta si sente, oppure no */}
           <button onClick={() => { if (!audioEnabled) unlockAudio?.(); setAudioEnabled(!audioEnabled); }}
             style={vocePannello(S)}>
             <span>{audioEnabled ? L('muteTranslations') : L('unmuteTranslations')}</span>
-            <span style={{ marginLeft: 'auto', color: audioEnabled ? S.colors.accent4 : S.colors.textMuted }}>
-              {audioEnabled ? L('onWord') || 'on' : L('offWord') || 'off'}
-            </span>
+            {/* b.477 — lo stato lo dice il PALLINO, non una parola: «on/off»
+                non esiste nei pacchetti, e inventarne una qui vorrebbe dire
+                scriverla a mano in trentotto lingue per due lettere. */}
+            <span aria-hidden style={{ marginLeft: 'auto', width: 8, height: 8, borderRadius: 999,
+              background: audioEnabled ? (S.colors.accent4 || '#3ddc84') : S.colors.textMuted }} />
           </button>
 
           {/* il rapporto tecnico: scende qui dalla testata, dove occupava un
@@ -674,7 +676,7 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
 
         <div style={{ fontSize: 10.5, letterSpacing: 1.1, textTransform: 'uppercase',
           color: S.colors.textMuted, padding: '4px 10px 7px', fontFamily: FONT }}>
-          {L('micWord') || L('voiceEngine')}
+          {L('micWord')}
         </div>
         <TalkControls
           L={L} S={S} roomMode={roomMode} roomId={roomId} isHost={isHost}
@@ -926,6 +928,29 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
         padding: '8px 20px calc(10px + env(safe-area-inset-bottom))',
         background: 'linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.55) 45%)',
         pointerEvents: 'none' }}>
+        {/* b.477 — LA CITAZIONE, RIMESSA. Stava dentro il pannello che si
+            apriva col tondo a tastiera, e togliendo quello e sparita con lui:
+            rispondere a un messaggio non si poteva piu. Adesso sta sopra il
+            modulo, attaccata al campo in cui si scrive la risposta — che e
+            il posto dove serve. */}
+        {rispostaA && (
+          <div style={{ pointerEvents: 'auto', marginBottom: 8, padding: '8px 12px', borderRadius: 12,
+            background: S.colors.overlayBg, borderLeft: `3px solid ${S.colors.accent1}`,
+            display: 'flex', alignItems: 'center', gap: 10, fontFamily: FONT }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 10.5, fontWeight: 600, color: S.colors.accent1, marginBottom: 1 }}>
+                {L('replyToWord')} {rispostaA.nome}
+              </div>
+              <div style={{ fontSize: 12, color: S.colors.textMuted,
+                whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {rispostaA.testo}
+              </div>
+            </div>
+            <button onClick={() => setRispostaA(null)} aria-label={L('cancelReply')}
+              style={{ background: 'none', border: 'none', cursor: 'pointer',
+                color: S.colors.textMuted, fontSize: 16, padding: '0 4px' }}>×</button>
+          </div>
+        )}
         <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8, pointerEvents: 'auto' }}>
           {/* b.474, ordine di Luca: «deve diventare rosso insieme all'area di
               testo». Mentre si registra non e il microfono a cambiare
@@ -962,7 +987,7 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
             />
             {/* la fotocamera, come nel template */}
             <button onClick={() => { vibrate(); setShowChatActions(true); }}
-              aria-label={L('photoWord') || L('addShort')}
+              aria-label={L('addShort')}
               style={{ width: 38, height: 38, borderRadius: 12, flexShrink: 0, padding: 0,
                 border: `1px solid ${S.colors.accent1}57`, background: `${S.colors.accent1}14`,
                 color: S.colors.textPrimary, cursor: 'pointer',
