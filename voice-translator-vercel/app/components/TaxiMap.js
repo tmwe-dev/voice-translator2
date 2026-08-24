@@ -170,7 +170,21 @@ export default function TaxiMap({ lat, lng, altezza = 340, comandi = true, inter
         );
       }
 
-      mappa.on('load', () => setPronta(true));
+      mappa.on('load', () => {
+        setPronta(true);
+        // b.449, collaudo di Luca: «togli quel toast dalla cartina, non
+        // serve». L'attribuzione era GIA in modo compatto, ma MapLibre la
+        // apre da sola al primo disegno e resta li: quella striscia bianca
+        // e proprio lei, aperta.
+        // NON si puo togliere del tutto: i dati sono OpenStreetMap, e la
+        // loro licenza (ODbL) impone di citarli — non e una decorazione, e
+        // una condizione d'uso. Ma si puo tenere CHIUSA: resta la «i», che
+        // toccata la riapre. L'obbligo e rispettato, la striscia sparisce.
+        try {
+          boxRef.current?.querySelectorAll('.maplibregl-ctrl-attrib')
+            .forEach((n) => n.classList.remove('maplibregl-compact-show'));
+        } catch { /* la mappa e stata smontata prima di finire di caricare */ }
+      });
       // b.252 — vedi setPronta(false) a inizio effetto: senza, cambiando
       // destinazione restava il riquadro vuoto invece di "carico la mappa".
     });
@@ -242,7 +256,8 @@ export default function TaxiMap({ lat, lng, altezza = 340, comandi = true, inter
       )}
       {/* Bottoni zoom grandi (per chi non usa i gesti) — non in miniatura */}
       {(comandi || pieno) && (
-        <div style={{ position: 'absolute', right: 10, bottom: 12, display: 'flex',
+        <div style={{ position: 'absolute', right: 10, display: 'flex',
+          bottom: pieno ? 'calc(16px + env(safe-area-inset-bottom))' : 12,
           flexDirection: 'column', gap: 7, zIndex: 5 }}>
           <button style={btn} onClick={() => zoom(1)} aria-label={L('zoomIn')}>+</button>
           <button style={btn} onClick={() => zoom(-1)} aria-label={L('zoomOut')}>−</button>
@@ -296,7 +311,8 @@ export default function TaxiMap({ lat, lng, altezza = 340, comandi = true, inter
       )}
 
       {(comandi || pieno) && scegliStile && (
-        <div style={{ position: 'absolute', left: 8, right: 8, bottom: 8, zIndex: 7,
+        <div style={{ position: 'absolute', left: 8, right: 8, zIndex: 7,
+          bottom: pieno ? 'calc(10px + env(safe-area-inset-bottom))' : 8,
           background: 'rgba(8,12,24,0.93)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
           border: `1px solid ${S.colors?.cardBorder || 'rgba(160,190,255,0.14)'}`,
           borderRadius: 18, padding: '9px 8px 10px' }}>

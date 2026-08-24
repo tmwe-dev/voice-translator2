@@ -1,9 +1,10 @@
 'use client';
 
-import { memo } from 'react';
+import { memo, useState, useEffect} from 'react';
 import { vibrate } from '../lib/constants.js';
 import { PALETTE } from '../lib/palette.js';
 import { useApp } from '../contexts/AppContext.js';
+import { ascoltaPannelloPieno } from '../lib/pannelloPieno.js';
 
 // ═══════════════════════════════════════════════════════════════
 // SVG Nav Icons — clean, modern, 2px stroke
@@ -78,6 +79,9 @@ const NavIcon = ({ id, color, size = MISURA_MENU }) => {
 const BottomNav = ({ currentView, onNewConversation }) => {
   const { setView, S, L, theme } = useApp();
   const C = S.colors || {};
+  // b.448 — si ascolta il registro dei pannelli che coprono lo schermo.
+  const [pannelloPieno, setPannelloPieno] = useState(false);
+  useEffect(() => ascoltaPannelloPieno(setPannelloPieno), []);
 
   const navItems = [
     // b.139 — 'Profilo' era italiano fisso in una barra sempre a schermo:
@@ -101,6 +105,13 @@ const BottomNav = ({ currentView, onNewConversation }) => {
 
   const hiddenViews = new Set(['room', 'lobby', 'join', 'welcome', 'loading']);
   if (hiddenViews.has(currentView)) return null;
+  // b.448 — e la barra si toglie anche quando qualcosa COPRE lo schermo
+  // (collaudo di Luca sulla mappa a schermo intero: «mi presenta solo una
+  // barra sopra il menu a pie di pagina»). La mappa piena vive dentro il
+  // ribaltamento della Home, che ha una transform: un antenato trasformato
+  // INTRAPPOLA position:fixed, quindi la mappa non puo coprire questa barra
+  // per quanto alto sia il suo z-index. Se non puo coprirla, si toglie lei.
+  if (pannelloPieno) return null;
 
   const handleTabClick = (viewId) => { vibrate(15); setView(viewId); };
   const handleFabClick = () => { vibrate(20); onNewConversation ? onNewConversation() : setView('home'); };

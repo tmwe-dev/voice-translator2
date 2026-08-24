@@ -214,6 +214,18 @@ qualunque refactoring. Non si propone di rimandarlo.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.449** (push #740) — LA STRISCIA BIANCA SULLA CARTINA parte
+  chiusa: era l'attribuzione, gia compatta, che MapLibre apre da sola al
+  primo disegno. Togliere del tutto non si puo — i dati sono OpenStreetMap e
+  la licenza ODbL impone di citarli — ma chiusa resta solo la «i». E tolto il
+  codice morto rimasto in Home dalle porte passate al «+».
+- Versione: **b.448** (push #739) — LA TENDINA DEGLI STILI FINIVA DIETRO IL
+  MENU. Causa vera: la mappa piena vive dentro il ribaltamento della Home,
+  che ha una transform — e un antenato trasformato INTRAPPOLA position:fixed,
+  quindi nessun z-index poteva farle coprire la barra. Se la mappa non puo
+  coprirla, si toglie lei: la barra in basso ora si nasconde sotto qualunque
+  pannello che si dichiari a schermo intero. E i comandi rispettano la zona
+  sicura.
 - Versione: **b.447** (push #738) — LA MAPPA A SCHERMO INTERO, e i tasti che
   non si vedevano. Il tasto per ingrandire c'e SEMPRE, anche quando la mappa
   e una miniatura senza comandi: era quello il motivo per cui Luca non

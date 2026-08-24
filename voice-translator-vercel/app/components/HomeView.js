@@ -140,21 +140,14 @@ const HomeView = memo(function HomeView({ selectedMode, setSelectedMode,
   function handleAction(actionId) {
     vibrate();
     if (unlockAudio) unlockAudio();
+    // b.448 — qui c'erano ancora i casi 'face-to-face', 'invite',
+    // 'taxitalk' e 'stanza-video': erano CODICE MORTO da b.442, quando
+    // quelle quattro porte sono passate al tasto «+». Nessuno poteva piu
+    // chiamarli — apriSezione manda qui solo cio che non e mondo, life o
+    // business, cioe soltanto 'regala' — e restare li faceva credere che
+    // la Home sapesse ancora aprirle. Le instrada page.js, in
+    // handleNewConversationSelect.
     switch (actionId) {
-      case 'face-to-face':
-        handleCreateRoom();
-        break;
-      case 'invite':
-        setView('quickinvite');
-        break;
-      case 'taxitalk':
-        setView('speaker');
-        break;
-      case 'stanza-video':
-        // Serve una stanza prima di poterci stare in video: si crea, e
-        // dalla sala d'attesa si entra col codice da condividere.
-        handleCreateRoom();
-        break;
       case 'regala':
         // La pagina del credito e gia il posto giusto: c'e il saldo, e i
         // minuti regalati si scalano da li. Non serve una schermata nuova.

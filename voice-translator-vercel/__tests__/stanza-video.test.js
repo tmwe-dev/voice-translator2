@@ -157,8 +157,16 @@ describe('la schermata', () => {
     expect(schermo).toMatch(/scaleX\(-1\)/);
   });
 
-  it('e raggiungibile: c\'e una voce in Home e una porta dalla sala d\'attesa', () => {
-    expect(leggi('components/HomeView.js')).toMatch(/id: 'stanza-video'/);
+  it('e raggiungibile: c\'e una porta nel tasto «+» e una dalla sala d\'attesa', () => {
+    // b.448 — la voce NON sta piu in Home: da b.442 le porte per
+    // connettersi vivono nel tasto «+» (NewConversationSheet), che le apre
+    // a tutta pagina col barcode. La prova guardava il posto vecchio e
+    // sarebbe rimasta rossa pur essendo la stanza raggiungibile: quello che
+    // conta e che una porta ci sia, non in quale schermata.
+    expect(leggi('components/NewConversationSheet.js'),
+      'la porta e nel tasto «+»').toMatch(/id: 'videocall'/);
+    expect(leggi('page.js'), 'e il tasto «+» la instrada')
+      .toMatch(/case 'videocall':/);
     expect(leggi('page.js')).toMatch(/view === 'stanza-video'/);
   });
 

@@ -74,7 +74,7 @@ const NewConversationSheet = ({ open, onClose, onSelect }) => {
           }}>
             {L('whatToDo')}
           </h2>
-          <button onClick={() => { vibrate(); onClose(); }} aria-label={L('close') || 'X'}
+          <button onClick={() => { vibrate(); onClose(); }} aria-label={L('close')}
             style={{
               width: 44, height: 44, borderRadius: 22, flexShrink: 0,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
