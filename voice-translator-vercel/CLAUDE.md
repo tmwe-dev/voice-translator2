@@ -214,6 +214,11 @@ qualunque refactoring. Non si propone di rimandarlo.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.446** (push #737) — DIECI STILI DI MAPPA, SATELLITE COMPRESO:
+  il grigio e lo stradale in chiaro come chiesto da Luca, piu il satellite
+  (immagini Esri, senza chiave, con lo style raster scritto a mano). Il tasto
+  degli stili sta in alto a destra e li tiene NASCOSTI dietro di se. I nomi
+  passano dai pacchetti lingua, non cablati.
 - Versione: **b.445** (push #736) — PARLA ORA VA NEI DUE SENSI: un tasto in
   alto centrato, con la bandiera dell'ospite e «tieni premuto per parlare»
   scritto NELLA SUA LINGUA, gli permette di rispondere — tiene premuto,
