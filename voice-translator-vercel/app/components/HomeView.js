@@ -211,7 +211,19 @@ const HomeView = memo(function HomeView({ selectedMode, setSelectedMode,
         // linguetta laterale, quindi non deve tenere i 66px liberi per lato
         // che il righello riserva a quella: stringevano tutto per niente.
         // Su desktop il tetto largo, centrato, tiene il contenuto in mezzo.
-        paddingLeft: 12, paddingRight: 12,
+        // b.451, collaudo di Luca: «hai modificato i margini dei pulsanti dal
+        // bordo laterale, cosi risultano troppo vicini». Vero, e l'avevo
+        // stretto io: quando Luca aveva detto «troppo stretto, usa la
+        // larghezza dello schermo» ho tolto sia la colonna centrata SIA il
+        // margine, portandolo da 20 a 12. Ma a stringere era la colonna, che
+        // teneva 66 punti liberi per lato per una linguetta che qui non
+        // c'e: il margine non c'entrava niente.
+        // Il template da 12 su una cornice da 340, piu 2 della riga: sono
+        // 14 su 340, cioe il 4,1% — su un telefono vero da 390 fanno 16.
+        // Qui restano 20 (piu i 2 della riga: 22), un filo piu larghi del
+        // template: dopo un «troppo vicini» si sbaglia dalla parte del
+        // respiro, non da quella del bordo.
+        paddingLeft: 20, paddingRight: 20,
         width: '100%', maxWidth: 900, marginLeft: 'auto', marginRight: 'auto',
       }}>
 

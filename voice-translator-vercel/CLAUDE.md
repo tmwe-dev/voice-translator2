@@ -214,6 +214,11 @@ qualunque refactoring. Non si propone di rimandarlo.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.451** (push #742) — I MARGINI LATERALI DELLA HOME tornano a
+  20 (erano 12): li avevo stretti io togliendo insieme la colonna centrata e
+  il margine, ma a stringere era solo la colonna. Il template da il 4,1% di
+  rientro, cioe 16 su un telefono da 390: 20 e un filo piu largo, e dopo un
+  «troppo vicini» si sbaglia dalla parte del respiro.
 - Versione: **b.450** (push #741) — LA HOME SPECCHIATA SU TELEFONO quando si
   ribalta per parlare: era il RETRO della faccia davanti. backface-visibility
   c'era gia, ma su Safari di iPhone non regge se dentro una faccia c'e
