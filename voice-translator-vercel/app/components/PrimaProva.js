@@ -258,6 +258,21 @@ export default function PrimaProva({ onChiudi }) {
     // ragione a pensarlo.
     // Adesso la firma vale solo finche la richiesta e in volo: appena si
     // esce senza una traduzione, si slaccia.
+    // b.465 — STESSA LINGUA: non si traduce, si mostra e si legge.
+    // Ordine di Luca: «il sistema deve funzionare anche tra due lingue
+    // uguali senza traduzione». Mandare la frase al traduttore per farsela
+    // restituire uguale costa credito, aggiunge attesa, e il controllo di
+    // qualita la respingerebbe come «non tradotta» — comparirebbe un errore
+    // dove non c'e nessun errore.
+    if (String(meta).split('-')[0] === String(miaLingua).split('-')[0]) {
+      const mioN = ++numeroRef.current;
+      setStoria((prima) => [...prima, { n: mioN, detto: t, resa: t }].sort((a, b) => a.n - b.n));
+      if (testoRef.current.trim() === t) setTesto('');
+      setStato('quieto');
+      try { memSet(FATTA, '1'); } catch { /* niente memoria: pazienza */ }
+      if (!dettoRef.current) parla(t, meta);
+      return;
+    }
     const impronta = `${meta}|${t}`;
     if (giaChiestaRef.current === impronta) return;
     giaChiestaRef.current = impronta;
@@ -358,6 +373,14 @@ export default function PrimaProva({ onChiudi }) {
   const traduciOspite = useCallback(async (grezzo) => {
     const t = String(grezzo || '').trim();
     if (!t) return;
+    // b.465 — stessa lingua anche qui: l'ospite parla la mia, si mostra e basta
+    if (String(meta).split('-')[0] === String(miaLingua).split('-')[0]) {
+      const mioN = ++numeroRef.current;
+      setStoria((prima) => [...prima, { n: mioN, detto: t, resa: t, inverso: true }].sort((a, b) => a.n - b.n));
+      setStato('quieto');
+      parla(t, miaLingua);
+      return;
+    }
     setStato('traduco');
     const mio = ++numeroRef.current;
     try {
@@ -635,7 +658,6 @@ export default function PrimaProva({ onChiudi }) {
       flexDirection: 'column', justifyContent: 'center', padding: '4px 0' }}>
       <CarouselLingue
         selezionata={meta}
-        escludi={miaLingua}
         // il carosello consegna la LINGUA intera, non il suo codice: cosi
         // fa anche sulla home. Prenderla per un codice significherebbe
         // mettere un oggetto dove va una sigla, e la meta diventerebbe

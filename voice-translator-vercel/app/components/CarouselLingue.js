@@ -20,12 +20,13 @@ import { FONT, LANGS, vibrate } from '../lib/constants.js';
 // sparivano dalle bandiere rapide e finivano in fondo, in ordine alfabetico.
 const RAPIDE = ['it', 'en', 'es', 'fr', 'de', 'pt', 'zh', 'ja', 'ar', 'ru', 'en-GB', 'hi'];
 
-// b.459 — `escludi` toglie una lingua dalla fila e dall'elenco completo.
-// Serve perche questo carosello sceglie la LINGUA 2, quella verso cui si
-// traduce: proporre anche la lingua che l'utente parla gia significherebbe
-// offrirgli una traduzione dall'italiano all'italiano. Meglio non
-// mostrarla che mostrarla e poi rifiutarla — un elenco che contiene una
-// voce che non funziona e un elenco che mente.
+// b.465 — `escludi` resta, ma NESSUNO lo usa piu. In b.459 lo avevo messo
+// per togliere dall'elenco la lingua gia parlata; Luca l'ha bocciato: «il
+// sistema deve funzionare anche tra due lingue uguali senza traduzione».
+// Ha ragione — due italiani in taxi non hanno niente da tradurre e l'app
+// deve servirli lo stesso. Il meccanismo resta perche e onesto e puo
+// servire altrove; la decisione di NON escludere niente sta in chi monta
+// il carosello, non qui dentro.
 function CarouselLingue({ selezionata, onScegli, onLinguaMenu, escludi, C, L }) {
   const lingue = useMemo(() => {
     const radice = (x) => String(x || '').split('-')[0];

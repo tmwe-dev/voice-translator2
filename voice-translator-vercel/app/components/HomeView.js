@@ -317,7 +317,6 @@ const HomeView = memo(function HomeView({ selectedMode, setSelectedMode,
         <div style={{ margin: '18px 0 0' }}>
           <CarouselLingue
             selezionata={metaScelta(prefs)}
-            escludi={prefs.lang}
             onScegli={scegliLingua}
             onLinguaMenu={() => { vibrate(); setView('settings'); }}
             C={C} L={L} />

@@ -36,14 +36,25 @@ const META_RAPIDE = ['en', 'es', 'fr', 'de', 'zh', 'ja', 'ar', 'ru', 'pt'];
 export function metaScelta(prefs) {
   const radice = (x) => String(x || '').split('-')[0];
   const mia = radice(prefs?.lang || 'it');
-  const voluta = prefs?.meta;
-  if (voluta && radice(voluta) !== mia) return voluta;
+  // b.465, ordine di Luca: «perche hai tolto la lingua italiana? Il sistema
+  // deve funzionare anche tra due lingue uguali senza traduzione».
+  //
+  // Ha ragione, e avevo sbagliato a impedirlo. Due italiani che si passano
+  // il telefono in taxi, o che aprono una stanza per usarne le funzioni,
+  // non hanno niente da tradurre — e l'app deve servirli lo stesso. Non
+  // sta a me decidere che quel caso non esiste.
+  //
+  // Quindi: se l'utente SCEGLIE una lingua, quella e. Anche la propria.
+  // Il controllo resta solo sul valore PREDEFINITO, quando nessuno ha
+  // ancora scelto: li proporre la lingua che gia si parla sarebbe una
+  // partenza inutile, non una scelta.
+  if (prefs?.meta) return prefs.meta;
   return META_RAPIDE.find((m) => radice(m) !== mia)
     || LANGS.find((l) => radice(l.code) !== mia)?.code
     || 'en';
 }
 
-export const APP_VERSION = 'b.464';
+export const APP_VERSION = 'b.465';
 
 // ── Numero di rilascio, visibile in alto a sinistra nella home ──
 // Serve a Luca per sapere a colpo d'occhio se la pagina che ha davanti e
@@ -51,7 +62,7 @@ export const APP_VERSION = 'b.464';
 // ancora arrivato al suo browser (o la pagina viene dalla cache).
 // VA AUMENTATO DI UNO A OGNI PUSH SU main. Corrisponde al numero di
 // commit del ramo: `git rev-list --count HEAD`.
-export const PUSH = 755;
+export const PUSH = 756;
 
 export const APP_URL = process.env.NEXT_PUBLIC_URL || 'https://voice-translator2.vercel.app';
 

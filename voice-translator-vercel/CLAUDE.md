@@ -214,6 +214,11 @@ qualunque refactoring. Non si propone di rimandarlo.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.465** (push #756) — TORNA L'ITALIANO, e le lingue uguali
+  funzionano. Avevo tolto dall'elenco la lingua gia parlata: sbagliato, due
+  persone che parlano la stessa lingua devono poter usare l'app (ordine di
+  Luca). Se la scegli, quella e — anche la tua. E in quel caso non si chiama
+  il traduttore: la frase si mostra e si legge com'e.
 - Versione: **b.464** (push #755) — I MENU CHE GALLEGGIANO ADESSO COPRONO:
   nuovo token menuBg, OPACO, in tutti e sei i temi. Erano translucidi e si
   appoggiavano alla sfocatura, che dentro un antenato con una transform (il

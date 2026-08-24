@@ -67,7 +67,7 @@ describe('il traduttore subito', () => {
       .toMatch(/transform: capovolto \? 'rotate\(180deg\)' : 'none'/);
   });
 
-  it('non propone MAI come meta la lingua che già parli', async () => {
+  it('di predefinito non propone la lingua che già parli, ma se la scegli te la lascia', async () => {
     // b.457 — la prova era scritta sulla FORMA del codice: cercava proprio
     // quella riga con RAPIDE.find e quel confronto. Restava verde mentre il
     // difetto accadeva davvero (la meta poteva diventare uguale alla lingua
@@ -80,12 +80,15 @@ describe('il traduttore subito', () => {
     const radice = (x) => String(x).split('-')[0];
 
     // nessuna lingua parlata deve mai tornare come meta
+    // (vale per il PREDEFINITO: senza una scelta, non si parte da se stessi)
     for (const mia of ['it', 'en', 'es', 'fr', 'de', 'zh', 'ja', 'ar', 'ru', 'pt', 'th', 'ko']) {
       expect(radice(metaScelta({ lang: mia })), `parlando ${mia}`).not.toBe(radice(mia));
     }
-    // nemmeno quando l'utente l'ha scelta a mano uguale alla propria
-    expect(radice(metaScelta({ lang: 'it', meta: 'it' }))).not.toBe('it');
-    expect(radice(metaScelta({ lang: 'en', meta: 'en-US' }))).not.toBe('en');
+    // b.465 — ma se l'utente la SCEGLIE uguale alla propria, quella e:
+    // «il sistema deve funzionare anche tra due lingue uguali senza
+    // traduzione» (Luca). Il controllo vale solo sul valore predefinito.
+    expect(metaScelta({ lang: 'it', meta: 'it' })).toBe('it');
+    expect(metaScelta({ lang: 'en', meta: 'en-US' })).toBe('en-US');
     // ma una meta scelta e DIVERSA va rispettata
     expect(metaScelta({ lang: 'it', meta: 'ja' })).toBe('ja');
     // e senza preferenze non si rompe
