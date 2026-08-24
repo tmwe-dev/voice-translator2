@@ -214,6 +214,10 @@ qualunque refactoring. Non si propone di rimandarlo.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.441** (push #733) — RIPRISTINO: la Home e il foglio del «+»
+  tornano alla versione prima della migrazione di oggi, su richiesta di Luca
+  («hai rotto tutto»). Home e NewConversationSheet ripresi da b53469e/738f3a6.
+  La migrazione dal template si rifara con piu attenzione, un pezzo alla volta.
 - Versione: **b.440** (push #732) — L'ELENCO SEZIONI NON SI STRINGE PIU CON
   LA LINGUA: il contenitore della Home centra i figli, e la card senza
   larghezza si adattava al testo — che in tedesco e lungo, in coreano corto.
