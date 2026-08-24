@@ -205,7 +205,8 @@ const RoomHeader = memo(function RoomHeader({
               cosi si legge su qualunque sfondo. */}
           {showMoreMenu && (
             <div style={{position:'absolute', top:'100%', right:0, zIndex:100, marginTop:6,
-              background:S.colors.headerBg, border:`1px solid ${S.colors.overlayBorder}`,
+              // b.464 — anche questo menu galleggia: fondo opaco, non vetro.
+              background:S.colors.menuBg || S.colors.bg, border:`1px solid ${S.colors.overlayBorder}`,
               /* b.394 — IL MENU ERA ILLEGGIBILE, E LE SCRITTE SI ACCAVALLAVANO.
                  La tendina e appoggiata dentro un contenitore largo quanto
                  il tastino: 38 pixel. Senza una larghezza dichiarata, per

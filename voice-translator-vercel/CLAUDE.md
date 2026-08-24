@@ -214,6 +214,15 @@ qualunque refactoring. Non si propone di rimandarlo.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.464** (push #755) — I MENU CHE GALLEGGIANO ADESSO COPRONO:
+  nuovo token menuBg, OPACO, in tutti e sei i temi. Erano translucidi e si
+  appoggiavano alla sfocatura, che dentro un antenato con una transform (il
+  ribaltamento della Home) non funziona: la tendina delle lingue diventava un
+  vetro da cui si leggeva tutto quello che c'era dietro.
+- Versione: **b.463** (push #754) — L'ELENCO DELLE LINGUE non fa piu uscire
+  la tastiera da solo: niente autoFocus, che su un telefono si mangiava meta
+  dell'elenco appena aperto. E si cerca come nel pannello laterale, per nome
+  OPPURE per sigla.
 - Versione: **b.462** (push #753) — L'AUDIO NON ERA ROTTO: NON AVEVA NIENTE
   DA DIRE. L'invito portava all'ospite una lingua che non c'entrava con
   quella scelta nel carosello (partiva da 'en' fisso): se coincideva con la

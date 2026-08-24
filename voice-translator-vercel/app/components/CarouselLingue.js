@@ -89,8 +89,16 @@ function CarouselLingue({ selezionata, onScegli, onLinguaMenu, escludi, C, L }) 
   });
   const alCentro = lingue[centro];
 
-  const filtrate = cerca
-    ? lingue.filter((l) => `${l.name} ${l.code}`.toLowerCase().includes(cerca.toLowerCase()))
+  // b.463 — SI CERCA COME NELLA SIDEBAR (ordine di Luca). Prima si univano
+  // nome e sigla in una stringa sola e si cercava li dentro: scrivendo
+  // «it» usciva anche «Brit-ish» e qualunque lingua avesse quelle due
+  // lettere a cavallo fra il nome e il codice — corrispondenze che nessuno
+  // ha chiesto. Adesso si guarda il NOME oppure la SIGLA, separatamente,
+  // esattamente come fa il pannello laterale: due elenchi che si comportano
+  // allo stesso modo non sono due cose da imparare.
+  const q = cerca.trim().toLowerCase();
+  const filtrate = q
+    ? lingue.filter((l) => l.name.toLowerCase().includes(q) || l.code.toLowerCase().includes(q))
     : lingue;
 
   const freccia = (dir, segno) => (
@@ -127,10 +135,24 @@ function CarouselLingue({ selezionata, onScegli, onLinguaMenu, escludi, C, L }) 
         <>
           <div style={{ position: 'fixed', inset: 0, zIndex: 99 }} onClick={() => setAperto(false)} />
           <div style={{ position: 'absolute', top: 52, zIndex: 100, width: 300,
-            background: C.headerBg || 'rgba(10,15,31,0.97)', border: `1px solid ${C.cardBorder}`,
+            // b.464, ordine di Luca: «la dropdown tendina deve rimanere in
+            // primo piano». Era translucida e si appoggiava alla sfocatura,
+            // che dentro il ribaltamento della Home non funziona: si
+            // leggevano il carosello e «Parla ora» ATTRAVERSO l'elenco.
+            // Adesso il fondo e opaco, e non dipende piu da un effetto che
+            // puo non esserci.
+            background: C.menuBg || C.bg || '#0d1222', border: `1px solid ${C.cardBorder}`,
             borderRadius: 16, boxShadow: '0 16px 56px rgba(0,0,0,0.5)', overflow: 'hidden',
-            backdropFilter: 'blur(24px)' }}>
-            <input autoFocus value={cerca} onChange={(e) => setCerca(e.target.value)}
+            backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)' }}>
+            {/* b.463, ordine di Luca: «se metti il focus direttamente nel
+                campo cerca fai uscire la tastiera riducendo la visibilita
+                dell'elenco, quindi niente focus».
+                Aveva ragione: su un telefono la tastiera si mangia meta
+                schermo, e l'elenco che si e appena aperto per essere GUARDATO
+                si riduce a tre righe. Chi vuole scrivere tocca il campo e la
+                tastiera arriva; chi vuole solo scorrere non se la trova
+                addosso. Niente autoFocus. */}
+            <input value={cerca} onChange={(e) => setCerca(e.target.value)}
               placeholder={L('yourLang') + '…'}
               style={{ width: '100%', boxSizing: 'border-box', padding: '13px 16px', border: 'none',
                 borderBottom: `1px solid ${C.cardBorder}`, background: 'transparent',

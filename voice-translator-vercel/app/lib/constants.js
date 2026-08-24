@@ -43,7 +43,7 @@ export function metaScelta(prefs) {
     || 'en';
 }
 
-export const APP_VERSION = 'b.462';
+export const APP_VERSION = 'b.464';
 
 // ── Numero di rilascio, visibile in alto a sinistra nella home ──
 // Serve a Luca per sapere a colpo d'occhio se la pagina che ha davanti e
@@ -51,7 +51,7 @@ export const APP_VERSION = 'b.462';
 // ancora arrivato al suo browser (o la pagina viene dalla cache).
 // VA AUMENTATO DI UNO A OGNI PUSH SU main. Corrisponde al numero di
 // commit del ramo: `git rev-list --count HEAD`.
-export const PUSH = 753;
+export const PUSH = 755;
 
 export const APP_URL = process.env.NEXT_PUBLIC_URL || 'https://voice-translator2.vercel.app';
 

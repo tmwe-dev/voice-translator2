@@ -100,6 +100,12 @@ export default function getStyles(theme = 'deep') {
       inputBorder: 'rgba(160,190,255,0.16)',
       buttonOverlay: 'rgba(140,170,255,0.06)',
       headerBg: 'rgba(5,7,15,0.85)',
+      // b.464 — il fondo OPACO dei menu che galleggiano sopra i contenuti.
+      // headerBg e translucido apposta (0.85) e si appoggia alla sfocatura;
+      // ma la sfocatura NON funziona dentro un antenato con una transform —
+      // il ribaltamento della Home — e li la tendina diventava un vetro da
+      // cui si leggeva tutto quello che c'era dietro. Un menu deve coprire.
+      menuBg: '#0d1222',
       headerBorder: 'rgba(160,190,255,0.10)',
       accent1: '#5b8cff',
       accent2: '#38e1ff',
@@ -147,6 +153,12 @@ export default function getStyles(theme = 'deep') {
       inputBorder: 'rgba(255,190,140,0.16)',
       buttonOverlay: 'rgba(255,180,120,0.06)',
       headerBg: 'rgba(13,8,5,0.85)',
+      // b.464 — il fondo OPACO dei menu che galleggiano sopra i contenuti.
+      // headerBg e translucido apposta (0.85) e si appoggia alla sfocatura;
+      // ma la sfocatura NON funziona dentro un antenato con una transform —
+      // il ribaltamento della Home — e li la tendina diventava un vetro da
+      // cui si leggeva tutto quello che c'era dietro. Un menu deve coprire.
+      menuBg: '#1a1209',
       headerBorder: 'rgba(255,190,140,0.10)',
       accent1: '#ff8a3d',
       accent2: '#ffc44d',
@@ -194,6 +206,12 @@ export default function getStyles(theme = 'deep') {
       inputBorder: 'rgba(242,239,232,0.14)',
       buttonOverlay: 'rgba(242,239,232,0.05)',
       headerBg: 'rgba(7,7,6,0.85)',
+      // b.464 — il fondo OPACO dei menu che galleggiano sopra i contenuti.
+      // headerBg e translucido apposta (0.85) e si appoggia alla sfocatura;
+      // ma la sfocatura NON funziona dentro un antenato con una transform —
+      // il ribaltamento della Home — e li la tendina diventava un vetro da
+      // cui si leggeva tutto quello che c'era dietro. Un menu deve coprire.
+      menuBg: '#141310',
       headerBorder: 'rgba(242,239,232,0.09)',
       accent1: '#ffb454',
       accent2: '#ffd28a',
@@ -241,6 +259,12 @@ export default function getStyles(theme = 'deep') {
       inputBorder: 'rgba(201,184,245,0.16)',
       buttonOverlay: 'rgba(201,184,245,0.06)',
       headerBg: 'rgba(7,5,16,0.85)',
+      // b.464 — il fondo OPACO dei menu che galleggiano sopra i contenuti.
+      // headerBg e translucido apposta (0.85) e si appoggia alla sfocatura;
+      // ma la sfocatura NON funziona dentro un antenato con una transform —
+      // il ribaltamento della Home — e li la tendina diventava un vetro da
+      // cui si leggeva tutto quello che c'era dietro. Un menu deve coprire.
+      menuBg: '#120e22',
       headerBorder: 'rgba(201,184,245,0.10)',
       accent1: '#a78bfa',
       accent2: '#c9b8f5',
@@ -288,6 +312,12 @@ export default function getStyles(theme = 'deep') {
       inputBorder: 'rgba(130,175,255,0.18)',
       buttonOverlay: 'rgba(244,247,252,0.05)',
       headerBg: 'rgba(5,7,13,0.85)',
+      // b.464 — il fondo OPACO dei menu che galleggiano sopra i contenuti.
+      // headerBg e translucido apposta (0.85) e si appoggia alla sfocatura;
+      // ma la sfocatura NON funziona dentro un antenato con una transform —
+      // il ribaltamento della Home — e li la tendina diventava un vetro da
+      // cui si leggeva tutto quello che c'era dietro. Un menu deve coprire.
+      menuBg: '#0c111e',
       headerBorder: 'rgba(130,175,255,0.11)',
       accent1: '#4d78d8',
       accent2: '#82afff',
@@ -343,6 +373,12 @@ export default function getStyles(theme = 'deep') {
       inputBorder: 'rgba(16,19,28,0.12)',
       buttonOverlay: 'rgba(255,255,255,0.72)',
       headerBg: 'rgba(247,248,252,0.88)',
+      // b.464 — il fondo OPACO dei menu che galleggiano sopra i contenuti.
+      // headerBg e translucido apposta (0.85) e si appoggia alla sfocatura;
+      // ma la sfocatura NON funziona dentro un antenato con una transform —
+      // il ribaltamento della Home — e li la tendina diventava un vetro da
+      // cui si leggeva tutto quello che c'era dietro. Un menu deve coprire.
+      menuBg: '#ffffff',
       headerBorder: 'rgba(16,19,28,0.08)',
       accent1: '#3d63e8',
       accent2: '#00a8cc',
