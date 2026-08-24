@@ -214,6 +214,10 @@ qualunque refactoring. Non si propone di rimandarlo.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.478** (push #768) — FULMINE E LUNA NON PIU SOVRAPPOSTI:
+  chiedevano tutti e due il posto ZERO della fila a destra. La pila resta li,
+  la luna prende il posto accanto. E c'e una prova che controlla che due
+  componenti non chiedano mai lo stesso posto.
 - Versione: **b.477** (push #767) — RIMESSA LA CHIAMATA VOCALE, che in b.470
   avevo detto di aver spostato nel menu e invece avevo solo cancellato. Se ne
   e accorta una prova di guardia, non io.

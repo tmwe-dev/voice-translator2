@@ -220,7 +220,19 @@ export default function GloboMondo({ sfondo = false, titolo = 'Il mondo ora', et
           // il posto 0 restava vuoto e la luna finiva sotto il selettore
           // del Paese, che partiva da destra. Ora e lei la prima della
           // fila, e la testata le tiene libera la colonna (riservaADestra).
-          ...postoADestra(0), zIndex: 80,
+          //
+          // b.478, collaudo di Luca: «fulmine e luna sono sovrapposti,
+          // affiancali in alto a destra». Erano tutti e due al posto 0 —
+          // il righello serve proprio a evitarlo, ma due file diverse lo
+          // chiedevano senza sapere l'una dell'altra, e uno si e seduto
+          // sopra l'altro.
+          // La pila resta al posto 0, che e il piu a destra: e la stessa
+          // colonna che tiene in ogni schermata dell'applicazione, e
+          // spostarla qui la farebbe ballare passando da una pagina
+          // all'altra. La luna prende il posto 1, cioe un passo a sinistra
+          // — che e anche quello che Luca aveva gia chiesto in b.370: «la
+          // luna deve stare di fianco a sinistra della pila, non sotto».
+          ...postoADestra(1), zIndex: 80,
           background: 'none', border: 'none', padding: 0, cursor: 'pointer',
           WebkitTapHighlightColor: 'transparent',
         }}>
@@ -239,7 +251,8 @@ export default function GloboMondo({ sfondo = false, titolo = 'Il mondo ora', et
           <div role="listbox" aria-label={etichettaCielo}
             style={{
               position: 'fixed', zIndex: 81,
-              right: MARGINE, top: `calc(${COLONNA_DESTRA.primo} + 40px)`,
+              // b.478 — la tendina segue la luna, che si e spostata di un passo
+              right: MARGINE + COLONNA_DESTRA.passo, top: `calc(${COLONNA_DESTRA.primo} + 40px)`,
               minWidth: 152, padding: 4,
               background: 'rgba(11,15,28,0.96)',
               border: '1px solid rgba(255,255,255,0.10)', borderRadius: 12,

@@ -546,7 +546,10 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
             fino a 190: gli finiva sopra, coprendo la parola e rubandogli
             il tocco. Ora la testata TIENE LIBERA la colonna dove vive la
             fila fissa — la misura la da il righello, non un numero a mano. */}
-        <div style={{ marginLeft: 'auto', marginRight: riservaADestra(1), minHeight: 30, display: 'flex', alignItems: 'center' }}>
+        {/* b.478 — la colonna a destra adesso ha DUE inquilini, la pila e la
+            luna: se ne riserva uno solo, la testata finisce sotto la
+            seconda. Il conto lo fa il righello, non io. */}
+        <div style={{ marginLeft: 'auto', marginRight: riservaADestra(2), minHeight: 30, display: 'flex', alignItems: 'center' }}>
           {paeseScelto ? (
             <button onClick={() => { vibrate(8); setPaeseScelto(null); setLangFilter('all'); }}
               aria-label={`${L('changeWord')} — ${nomePaese(paeseScelto)}`}
