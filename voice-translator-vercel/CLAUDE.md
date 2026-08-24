@@ -214,6 +214,12 @@ qualunque refactoring. Non si propone di rimandarlo.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.474** (push #764) — TUTTI I MICROFONI ALLO STESSO STANDARD
+  (quello della Home e del taxi), anche quello dentro il modulo della chat.
+  E mentre si registra diventa rossa TUTTA la fascia del testo, non solo il
+  tondino: lo dice la riga intera, larga quanto lo schermo. Scritta la skill
+  «grafica-prima-nel-template»: ogni lavoro grafico si disegna nel template,
+  si verifica, e solo dopo si installa.
 - Versione: **b.473** (push #763) — VIA LA PILLOLA «ELENCO/CAROSELLO» da
   sopra i messaggi: era un secondo modo di leggere portato da un'altra app,
   non nel template, che cambiava la pagina sotto le dita senza spiegare

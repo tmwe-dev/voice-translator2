@@ -16,6 +16,7 @@ import { daBarTalk } from './Carosello3D.js';
 const Carosello3D = lazy(() => import('./Carosello3D.js'));
 import ComandoZoom from './ui/ComandoZoom.js';
 import PannelloLaterale, { LinguettaPannello } from './ui/PannelloLaterale.js';
+import { vesteMicrofono } from './ui/Microfono.js';
 import { IconCamera } from './Icons.js';
 import InterpreterView from './InterpreterView.js';
 import ChatActionsPanel from './ChatActionsPanel.js';
@@ -214,6 +215,9 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
   // 'parla': il microfono-eroe coi suoi strumenti, anche lui libero.
   // La X (o l'invio) riporta alla pagina libera.
   const [plancia, setPlancia] = useState('libera');
+  // b.474 — il modulo del testo deve sapere se si sta parlando: e lui a
+  // diventare rosso, non solo il microfono.
+  const staRegistrando = plancia === 'parla';
   const campoTestoRef = useRef(null);
   useEffect(() => {
     // b.471 — il campo e sempre a schermo: non c'e piu un momento in cui
@@ -906,9 +910,17 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
         background: 'linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.55) 45%)',
         pointerEvents: 'none' }}>
         <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8, pointerEvents: 'auto' }}>
+          {/* b.474, ordine di Luca: «deve diventare rosso insieme all'area di
+              testo». Mentre si registra non e il microfono a cambiare
+              colore: e TUTTA la fascia. Cosi non si deve guardare un
+              tondino da trentotto per sapere se il telefono sta
+              ascoltando — lo dice la riga intera, che e larga quanto lo
+              schermo e non si puo non vedere. */}
           <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'flex-end', gap: 6,
-            minHeight: 54, padding: '8px 8px 8px 8px', borderRadius: 16,
-            border: `1px solid ${S.colors.cardBorder}`, background: S.colors.inputBg }}>
+            minHeight: 54, padding: '8px', borderRadius: 16,
+            transition: 'border-color .2s, background .2s',
+            border: `1px solid ${staRegistrando ? `${S.colors.accent3 || '#ff5470'}88` : S.colors.cardBorder}`,
+            background: staRegistrando ? `${S.colors.accent3 || '#ff5470'}14` : S.colors.inputBg }}>
             {/* il piu: da qui entrano foto, file, posizione, contatto */}
             <button onClick={() => { vibrate(); setShowChatActions(true); }}
               aria-label={L('addShort')}
@@ -962,14 +974,13 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
                 </svg>
               </button>
             ) : (
-              <button onClick={() => { vibrate(); setPlancia('parla'); }}
-                aria-label={L('speakNow')}
-                style={{ width: 38, height: 38, borderRadius: 12, flexShrink: 0, padding: 0,
-                  border: `1px solid ${S.colors.accent1}57`, background: `${S.colors.accent1}14`,
-                  color: S.colors.textPrimary, cursor: 'pointer',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  WebkitTapHighlightColor: 'transparent' }}>
-                <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              <button onClick={() => { vibrate(); setPlancia(staRegistrando ? 'libera' : 'parla'); }}
+                aria-label={L('speakNow')} aria-pressed={staRegistrando}
+                style={{ ...vesteMicrofono({ misura: 38, acceso: staRegistrando, C: S.colors }).cerchio,
+                  borderRadius: 12, flexShrink: 0 }}>
+                <svg width={vesteMicrofono({ misura: 38, C: S.colors }).icona} height={vesteMicrofono({ misura: 38, C: S.colors }).icona}
+                  viewBox="0 0 24 24" fill="none"
+                  stroke={vesteMicrofono({ misura: 38, acceso: staRegistrando, C: S.colors }).coloreIcona}
                   strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
                   <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3zM19 10v2a7 7 0 0 1-14 0v-2M12 19v4M8 23h8" />
                 </svg>
