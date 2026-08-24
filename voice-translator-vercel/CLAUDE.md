@@ -214,6 +214,12 @@ qualunque refactoring. Non si propone di rimandarlo.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.461** (push #752) — NIENTE PIU LAMPO DELLA HOME fra il tocco
+  sul barcode e il QR: la maschera del «+» resta su finche non si e
+  arrivati, la chiude il cambio di schermata. E la stanza video non si
+  propone piu dalla sala d'attesa (dove non c'e ancora nessuno): la
+  telecamera sta dentro la chat e apre il video a due o la stanza video di
+  gruppo, secondo quanti sono davvero in stanza.
 - Versione: **b.460** (push #751) — LA REGOLA b.254 TRASLOCA nelle
   impostazioni, dove ora si cambia la lingua parlata; il carosello non la
   tocca piu. Tolto app/lib/acciaio.js, rimasto orfano quando e sparita

@@ -157,34 +157,26 @@ describe('la schermata', () => {
     expect(schermo).toMatch(/scaleX\(-1\)/);
   });
 
-  it('e raggiungibile: c\'e una porta nel tasto «+» e una dalla sala d\'attesa', () => {
-    // b.448 — la voce NON sta piu in Home: da b.442 le porte per
-    // connettersi vivono nel tasto «+» (NewConversationSheet), che le apre
-    // a tutta pagina col barcode. La prova guardava il posto vecchio e
-    // sarebbe rimasta rossa pur essendo la stanza raggiungibile: quello che
-    // conta e che una porta ci sia, non in quale schermata.
-    // b.458 — la voce «Chat di gruppo» non sta piu nemmeno nel «+»: apriva
-    // la STESSA cosa del barcode (si crea una stanza, e da li si invita
-    // chi si vuole). La porta per il video di gruppo e rimasta UNA, ed e
-    // quella giusta: la sala d'attesa, dove la stanza esiste gia e c'e il
-    // codice da condividere. Il «+» instrada ancora videocall per chi
-    // arriva da un link vecchio.
-    expect(leggi('components/LobbyView.js'), 'la porta e nella sala d\'attesa')
-      .toMatch(/setView\('stanza-video'\)/);
+  it('e raggiungibile: la porta e la telecamera DENTRO la chat', () => {
+    // b.461, ordine di Luca: «non deve proporre stanza video, le stanze
+    // partono normali come testo e si seleziona la camera all'interno della
+    // pagina chat». La porta che stava nella sala d'attesa e stata tolta:
+    // li non c'e ancora nessuno con cui fare video, e proporlo prima che
+    // arrivi qualcuno e chiedere di scegliere il modo di parlare a chi non
+    // ha ancora nessuno con cui parlare.
+    // Adesso la porta e la telecamera in testata alla chat, che apre il
+    // video a due oppure la stanza di gruppo secondo quanti ci sono.
+    const testata = leggi('components/RoomHeader.js');
+    expect(testata, 'la telecamera apre la stanza video quando sono in piu di due')
+      .toMatch(/otherMembers\.length > 1 && setView.*setView\('stanza-video'\)/s);
     expect(leggi('page.js'), 'e la schermata esiste')
       .toMatch(/view === 'stanza-video'/);
-    expect(leggi('page.js'), 'e si arriva alla sala creando una stanza')
-      .toMatch(/case 'face-to-face':/);
   });
 
-  it('il pulsante sta DENTRO la scheda della stanza, non appiccicato fuori', () => {
-    // b.102 lo aveva messo fuori da LobbyView: esisteva nel DOM ma la
-    // schermata della stanza gli passava sopra e non si poteva premere.
-    // Il collaudo dal vivo lo ha bocciato. Un pulsante che c'e ma non si
-    // preme non esiste.
-    expect(leggi('components/LobbyView.js')).toMatch(/Entra in video di gruppo/);
-    expect(leggi('components/LobbyView.js')).toMatch(/setView\('stanza-video'\)/);
-    expect(leggi('page.js'), 'non deve tornare fuori da LobbyView')
-      .not.toMatch(/Entra in video di gruppo/);
+  it('la sala d\'attesa non propone piu il video', () => {
+    // Non e un vezzo: da li la stanza e vuota, si sta aspettando qualcuno.
+    expect(leggi('components/LobbyView.js'), 'niente porta video nella sala d\'attesa')
+      .not.toMatch(/setView\('stanza-video'\)/);
   });
+
 });

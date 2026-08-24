@@ -74,31 +74,18 @@ const LobbyView = memo(function LobbyView({ roomId, roomInfo, partnerConnected, 
             <button style={S.shareBtn} onClick={shareRoom}>{L('shareLink')}</button>
           </div>
 
-          {/* ── b.104 · la porta per la stanza video ──
-              b.271 — diceva "Entra in video di gruppo · Fino a 8 persone"
-              dentro il riquadro di un invito a UNA persona: prometteva una
-              cosa diversa da quella che stava succedendo, ed era in
-              italiano per tutti. Ora dice dove si entra e chi ci si trova,
-              nella lingua di chi legge.
-              In b.102 questo pulsante stava FUORI da LobbyView, appiccicato
-              dopo. Il collaudo dal vivo lo ha bocciato: esisteva nel DOM,
-              ma la schermata della stanza gli passava sopra e nessuno
-              poteva toccarlo. Un pulsante che c'e ma non si preme non
-              esiste. Ora sta dentro la scheda, sotto "Condividi link". */}
-          <div style={{textAlign:'center', marginBottom:12}}>
-            <button
-              onClick={() => { unlockAudio?.(); setView('stanza-video'); }}
-              style={{
-                width:'100%', padding:'12px 16px', borderRadius:13, cursor:'pointer',
-                background:'transparent', border:`1px solid ${S.colors.accent1}55`,
-                color:S.colors.accent1, fontSize:14, fontWeight:800, fontFamily:FONT,
-              }}>
-              {L('enterVideoRoom')}
-            </button>
-            <div style={{fontSize:11, color:S.colors.textMuted, marginTop:5, lineHeight:1.4}}>
-              {L('videoRoomHint')}
-            </div>
-          </div>
+          {/* b.461, ordine di Luca: «non deve proporre stanza video: le
+              stanze partono normali come testo e si seleziona la camera
+              all'interno della pagina chat». Via il tasto «Entra nella
+              stanza video» che stava qui.
+              Il motivo e giusto: da questa scheda non si e ancora in due —
+              c'e il codice e si aspetta qualcuno. Proporre il video PRIMA
+              che arrivi significa chiedere di scegliere il modo di parlare
+              a chi non ha ancora nessuno con cui parlare. La stanza si apre
+              come testo, che e quello che serve sempre; la telecamera si
+              accende dentro, quando c'e davvero qualcuno dall'altra parte.
+              La schermata video resta e resta raggiungibile: cambia solo
+              che non si sceglie da qui. */}
           {/* ── INIZIO b.90 — "Videochiamata" apriva questa identica schermata ──
               Due voci diverse in Home portavano allo stesso posto, senza una
               parola sul video. Ora almeno si dice cosa succede dopo. */}

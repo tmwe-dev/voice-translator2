@@ -456,7 +456,7 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
           testata: li entravano e morivano, nessuno li leggeva (residuo del
           menu smontato in b.353). I sottotitoli restano governati qui. */}
       <RoomHeader
-        L={L} S={S} myLang={myLang} myL={myL} otherL={otherL}
+        L={L} S={S} myLang={myLang} myL={myL} otherL={otherL} setView={setView}
         otherMembers={otherMembers} partner={partner}
         showLangPicker={showLangPicker} setShowLangPicker={setShowLangPicker}
         handleLangChange={handleLangChange}

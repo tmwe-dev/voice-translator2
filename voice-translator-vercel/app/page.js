@@ -193,6 +193,10 @@ function HomeInner() {
   const [inviteMsgLang, setInviteMsgLang] = useState(null);
   // [Removed dead code: showShareApp, shareAppLang — unused]
   const [showNewConversation, setShowNewConversation] = useState(false);
+  // b.461 — la maschera del «+» si chiude quando si e ARRIVATI, non quando
+  // si sceglie: e il cambio di schermata a chiuderla. Cosi fra il tocco e
+  // la stanza non si vede lampeggiare la Home (collaudo di Luca).
+  useEffect(() => { setShowNewConversation(false); }, [view]);
   const [showCreateRoom, setShowCreateRoom] = useState(false);
   // b.147 — "Parlane" su una Topic Card: il foglio di creazione stanza
   // si apre gia compilato con titolo e sintesi dell'argomento.

@@ -1,6 +1,6 @@
 'use client';
 
-import { memo } from 'react';
+import { memo, useState, useEffect } from 'react';
 import { vibrate } from '../lib/constants.js';
 import useSheetA11y from '../hooks/useSheetA11y.js';
 import { PALETTE } from '../lib/palette.js';
@@ -44,6 +44,33 @@ const NewConversationSheet = ({ open, onClose, onSelect }) => {
   const { L, S } = useApp();
   const C = S?.colors || {};
   const sheetRef = useSheetA11y(open, onClose);
+
+  // ═══════════════════════════════════════════════════════════════
+  // b.461 — LA HOME NON DEVE PIU LAMPEGGIARE.
+  //
+  // Collaudo di Luca: «quando schiaccio il logo per il QR, invece di aprire
+  // il QR mostra per due secondi la home e poi apre il popup».
+  //
+  // La maschera si chiudeva SUBITO, mentre la stanza si stava ancora
+  // creando sul server: per quei due secondi sotto non c'era ancora niente,
+  // e si vedeva la Home. Non era un ritardo da togliere — la stanza ci
+  // mette quel che ci mette — era una tenda tirata via troppo presto.
+  //
+  // Adesso la maschera resta su finche non si e arrivati: la chiude il
+  // cambio di schermata, cioe il momento in cui SOTTO c'e qualcosa da
+  // vedere. Nel frattempo spegne le altre voci, cosi si vede che sta
+  // lavorando e non lo si tocca due volte.
+  // ═══════════════════════════════════════════════════════════════
+  const [inCorso, setInCorso] = useState(null);
+  // se dopo dodici secondi non e successo niente — rete caduta, server muto
+  // — la maschera non resta incastrata: si riapre alla scelta.
+  useEffect(() => {
+    if (!inCorso) return undefined;
+    const t = setTimeout(() => setInCorso(null), 12000);
+    return () => clearTimeout(t);
+  }, [inCorso]);
+  useEffect(() => { if (!open) setInCorso(null); }, [open]);
+  const scegli = (id) => { vibrate(15); setInCorso(id); onSelect(id); };
 
   if (!open) return null;
 
@@ -96,11 +123,13 @@ const NewConversationSheet = ({ open, onClose, onSelect }) => {
 
         {/* b.442 — IL BARCODE, la porta faccia-a-faccia: grande, in cima. */}
         <button
-          onClick={() => { vibrate(15); onSelect('face-to-face'); onClose(); }}
+          onClick={() => scegli('face-to-face')}
           aria-label={L('actFaceTitle')}
           style={{
             width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center',
             gap: 6, padding: '8px 8px 18px', marginBottom: 8,
+            opacity: inCorso && inCorso !== 'face-to-face' ? 0.35 : 1,
+            pointerEvents: inCorso ? 'none' : 'auto',
             background: 'none', border: 'none', cursor: 'pointer',
             WebkitTapHighlightColor: 'transparent',
           }}
@@ -124,7 +153,7 @@ const NewConversationSheet = ({ open, onClose, onSelect }) => {
           {OPTIONS.map((opt) => (
             <button
               key={opt.id}
-              onClick={() => { vibrate(15); onSelect(opt.id); onClose(); }}
+              onClick={() => scegli(opt.id)}
               style={{
                 display: 'flex', alignItems: 'center', gap: '14px',
                 padding: '14px 16px', borderRadius: '14px',
