@@ -1007,40 +1007,107 @@
 
     <!-- ── STANZA ── -->
     <div class="colonna">
-      <div class="cartellino"><span class="lettera">04</span><span class="nome">Stanza</span><span class="stato dafare">DA FARE</span></div>
+      <div class="cartellino"><span class="lettera">04</span><span class="nome">Chat di gruppo</span><span class="stato dafare">DA FARE</span></div>
       <div class="destinazione">&rarr; app/components/RoomView.js (+ RoomHeader.js, MessageList.js)</div>
-      <p class="didascalia">Chi c'e e in che lingua, prima di tutto. Il menu ••• smette di comprimersi.</p>
+      <p class="didascalia">Chi c'e e in che lingua, prima di tutto. In testata solo cio che si usa parlando.</p>
       <div class="telefono">
         <div class="linguetta" title="Apri il pannello"><svg class="ic"><use href="#i-menu"/></svg></div>
         <div class="schermo">
           <div class="testata">
-            <span class="tondino nudo"><svg class="ic"><use href="#i-back"/></svg></span><span class="titolo">Yen e inflazione</span><span class="tondino" title="Ingrandisci il carattere">Aa</span><span class="tondino"><svg class="ic"><use href="#i-swap"/></svg></span><span class="tondino"><svg class="ic"><use href="#i-video"/></svg></span>
+            <span class="tondino nudo"><svg class="ic"><use href="#i-back"/></svg></span><span class="titolo">K7M2</span><span class="tondino" title="Ingrandisci il carattere">Aa</span><span class="tondino"><svg class="ic"><use href="#i-speaker"/></svg></span><span class="tondino"><svg class="ic"><use href="#i-video"/></svg></span>
           </div>
           <div class="eti" style="padding:8px 2px 0">
-            <span class="chip">🇮🇹 tu</span><span class="chip">🇯🇵 Kenji</span>
+            <span class="chip">🇮🇹 tu</span><span class="chip">🇯🇵 Kenji</span><span class="chip">🇪🇸 Rosa</span>
+            <span class="quanti"><svg class="ic"><use href="#i-users"/></svg>3</span>
+          </div>
+          <div class="corpo">
+            <div class="bolla sua">お待たせしました。<span class="orig">Scusate l'attesa.</span></div>
+            <div class="bolla sua">Ya estamos todos.<span class="orig">Ci siamo tutti.</span></div>
+            <div class="bolla mia">Perfetto, cominciamo.<span class="orig">完璧です、始めましょう。</span></div>
+          </div>
+          <div class="riga-campo"><div class="modulo"><div class="quadro piu" title="Foto, file, posizione, contatto, documento"><svg class="ic"><use href="#i-plus"/></svg></div><div class="campo">Scrivi…</div><div class="quadro"><svg class="ic"><use href="#i-camera"/></svg></div><div class="quadro"><svg class="ic"><use href="#i-mic"/></svg></div></div></div>
+        </div>
+      </div>
+      <div class="spiega"><span class="ril">Cosa cambia.</span>
+        <ul>
+          <li>Chi c'e e in che lingua sta <span class="ril">sotto la testata</span>, sempre visibile: era dentro il menu •••, cioe nascosto.</li>
+          <li>Ogni messaggio porta l'originale sotto la traduzione, piccolo. Chi vuole controllare puo.</li>
+          <li><span class="ril">In testata restano quattro comandi</span>, non sette: indietro, carattere, voce, video. Chiamata vocale, rapporto tecnico e il resto scendono nel pannello — vedi l'elenco qui sotto.</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="colonna">
+      <div class="cartellino"><span class="lettera">04b</span><span class="nome">Chat singola</span><span class="stato dafare">DA FARE</span></div>
+      <div class="destinazione">&rarr; app/components/RoomView.js &mdash; stessa pagina, due persone</div>
+      <p class="didascalia">Uguale alla stanza, ma in testata c'e chi hai davanti: faccia, nome e bandiera.</p>
+      <div class="telefono">
+        <div class="linguetta" title="Apri il pannello"><svg class="ic"><use href="#i-menu"/></svg></div>
+        <div class="schermo">
+          <div class="testata">
+            <span class="tondino nudo"><svg class="ic"><use href="#i-back"/></svg></span>
+            <span class="faccia" style="width:30px;height:30px;background-image:var(--img-av3)"></span>
+            <span class="titolo">Kenji <span style="font-size:15px">🇯🇵</span></span>
+            <span class="tondino" title="Ingrandisci il carattere">Aa</span><span class="tondino"><svg class="ic"><use href="#i-speaker"/></svg></span><span class="tondino"><svg class="ic"><use href="#i-video"/></svg></span>
+          </div>
+          <div class="eti" style="padding:8px 2px 0">
+            <span class="chip">🇮🇹 &rarr; 🇯🇵</span>
             <span class="quanti"><svg class="ic"><use href="#i-users"/></svg>2</span>
           </div>
           <div class="corpo">
             <div class="bolla sua">こんにちは、はじめまして。<span class="orig">Buongiorno, piacere di conoscerti.</span></div>
             <div class="bolla mia">Piacere mio. Parliamo dello yen?<span class="orig">はじめまして。円について話しましょうか。</span></div>
-            <div class="bolla sua">もちろんです。<span class="orig">Certamente.</span></div>
           </div>
-          <div class="riga-campo"><div class="modulo"><div class="quadro piu" title="Foto, file, posizione, contatto, documento"><svg class="ic"><use href="#i-plus"/></svg></div><div class="campo">Scrivi…</div><div class="quadro"><svg class="ic"><use href="#i-camera"/></svg></div><div class="quadro"><svg class="ic"><use href="#i-mic"/></svg></div></div></div>
+          <div class="riga-campo"><div class="modulo"><div class="quadro piu"><svg class="ic"><use href="#i-plus"/></svg></div><div class="campo">Scrivi…</div><div class="quadro"><svg class="ic"><use href="#i-camera"/></svg></div><div class="quadro"><svg class="ic"><use href="#i-mic"/></svg></div></div></div>
         </div>
       </div>
-      <div class="spiega">
-        <span class="ril">Cosa cambia.</span>
+      <div class="spiega"><span class="ril">Cosa cambia.</span>
         <ul>
-          <li>Chi c'e e in che lingua sta <span class="ril">sotto la testata</span>, sempre visibile: era dentro il menu •••, cioe nascosto.</li>
-          <li>Ogni messaggio porta l'originale sotto la traduzione, piccolo. Chi vuole controllare puo.</li>
-          <li>Il menu ••• si apre a larghezza vera, non piu schiacciato a fisarmonica.</li>
+          <li><span class="ril">In alto c'e chi hai davanti</span>, non un codice: faccia, nome e bandiera. Il codice della stanza serve solo quando si aspetta qualcuno, e in due non si aspetta piu nessuno (ordine di Luca).</li>
+          <li>Sotto, una coppia sola: la tua lingua e la sua. Con tre persone diventano tre chip, ed e la stessa riga.</li>
+          <li>Tutto il resto e identico alla stanza di gruppo: stessa pagina, stessi pezzi.</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="colonna" style="width:400px">
+      <div class="cartellino"><span class="lettera">04c</span><span class="nome">Cosa c'e dentro la chat</span><span class="stato gia">INVENTARIO</span></div>
+      <div class="destinazione">&rarr; i diciassette pezzi che RoomView monta davvero</div>
+      <p class="didascalia">Il template ne disegnava quattro. Questi ci sono tutti nel programma, e vanno tenuti presenti prima di toccare la pagina.</p>
+      <div class="mappa" style="margin-top:0">
+        <table>
+          <tr class="capo"><td>pezzo</td><td>cosa fa, e dove sta</td></tr>
+          <tr><td>RoomHeader</td><td>la testata: indietro, lingue, chiamata, video, voce, rapporto, menu •••</td></tr>
+          <tr><td>MessageList</td><td>le bolle, con l'originale sotto la traduzione</td></tr>
+          <tr><td>TalkControls</td><td>i comandi della voce sotto il campo</td></tr>
+          <tr><td>Carosello3D</td><td>le stesse frasi a carte, una alla volta &mdash; per chi legge da lontano</td></tr>
+          <tr><td>InterpreterView</td><td>modo interprete: due colonne, una per lingua</td></tr>
+          <tr><td>TaxiMode</td><td>il taxi DENTRO la stanza: destinazione, mappa, QR</td></tr>
+          <tr><td>VideoCallOverlay</td><td>la videochiamata sopra la chat</td></tr>
+          <tr><td>VoiceCallOverlay</td><td>la chiamata vocale sopra la chat</td></tr>
+          <tr><td>ChatActionsPanel</td><td>il pannello ••• con le azioni AI</td></tr>
+          <tr><td>ContenutiChat</td><td>foto, file e documenti scambiati</td></tr>
+          <tr><td>SchedaArgomento</td><td>la scheda dell'argomento di cui si sta parlando</td></tr>
+          <tr><td>NumeroSicurezza</td><td>il numero da confrontare per la cifratura</td></tr>
+          <tr><td>VoiceEngineBar</td><td>quale motore vocale sta parlando</td></tr>
+          <tr><td>ProviderBadge</td><td>quale intelligenza sta traducendo</td></tr>
+          <tr><td>ComandoZoom</td><td>la misura del testo</td></tr>
+          <tr><td>AvatarImg</td><td>le facce di chi c'e</td></tr>
+          <tr><td>BarraReazioni</td><td>le reazioni rapide a un messaggio</td></tr>
+        </table>
+      </div>
+      <div class="spiega" style="margin-top:10px"><span class="ril">Perche questo elenco esiste.</span>
+        <ul>
+          <li>Ordine di Luca: «non dimenticare eventuali componenti che troverai nella pagina che possibilmente hai dimenticato di inserire nel template».</li>
+          <li>Aveva ragione: il template disegnava quattro pezzi su diciassette. Una schermata disegnata sul quarto di quello che c'e non e un template, e un'illustrazione — e chi la usa per decidere decide su una cosa che non esiste.</li>
+          <li>Nessuno di questi va tolto senza dirlo. Se una modifica ne nasconde uno, si scrive quale e dove e finito.</li>
         </ul>
       </div>
     </div>
 
     <!-- ── BUSINESS ── -->
     <div class="colonna">
-      <div class="cartellino"><span class="lettera">05</span><span class="nome">Business</span><span class="stato dafare">DA FARE</span></div>
+<div class="cartellino"><span class="lettera">05</span><span class="nome">Business</span><span class="stato dafare">DA FARE</span></div>
       <div class="destinazione">&rarr; app/components/BusinessView.js</div>
       <p class="didascalia">Strumenti, non riquadri. Ognuno dice cosa fa in una riga.</p>
       <div class="telefono">

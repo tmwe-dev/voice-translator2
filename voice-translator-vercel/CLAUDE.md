@@ -214,6 +214,12 @@ qualunque refactoring. Non si propone di rimandarlo.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.466** (push #757) — NELLA CHAT A DUE, IN ALTO C'E' CHI HAI
+  DAVANTI: faccia, nome e bandiera invece del codice della stanza (ordine di
+  Luca). In tre o piu resta il codice, perche i nomi sono gia nei chip. E il
+  template della chat e stato rifatto: disegnava QUATTRO pezzi su
+  DICIASSETTE — ora c'e l'inventario completo di cosa monta davvero
+  RoomView.
 - Versione: **b.465** (push #756) — TORNA L'ITALIANO, e le lingue uguali
   funzionano. Avevo tolto dall'elenco la lingua gia parlata: sbagliato, due
   persone che parlano la stessa lingua devono poter usare l'app (ordine di

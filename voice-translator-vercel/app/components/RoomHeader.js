@@ -2,6 +2,7 @@
 import { memo, useState } from 'react';
 import { LANGS, FONT, getLang, FREE_DAILY_LIMIT } from '../lib/constants.js';
 import ConnectionQuality from './ConnectionQuality.js';
+import AvatarImg from './AvatarImg.js';
 import { IconBack, IconCamera, IconVolume, IconVolumeOff, IconCheck,
   IconClipboard, IconArchive, IconBattery, IconSwap, IconBrainAI } from './Icons.js';
 import { PALETTE } from '../lib/palette.js';
@@ -104,6 +105,32 @@ const RoomHeader = memo(function RoomHeader({
           title={L('exit')} aria-label={L('exit')}>
           <IconBack size={18}/>
         </button>
+
+        {/* ══ b.466 — IN DUE, IN ALTO C'E' CHI HAI DAVANTI ══
+            Ordine di Luca: «in alto nella singola inserisci nome e
+            bandiera». Con una persona sola dall'altra parte, chi e non e un
+            dettaglio: e la cosa che dice dove sei. Il codice della stanza
+            serve mentre si aspetta qualcuno — e in due non si aspetta piu
+            nessuno.
+            In tre o piu non si mette: i nomi sono gia nei chip sotto la
+            testata, e ripeterne uno solo direbbe una cosa falsa (che quella
+            e LA persona con cui parli). */}
+        {partner && otherMembers.length === 1 && (
+          <span style={{display:'flex', alignItems:'center', gap:8, minWidth:0, flexShrink:1}}>
+            {partner.avatar
+              ? <AvatarImg src={partner.avatar} size={30} alt="" />
+              : null}
+            <span style={{fontSize:16, fontWeight:600, color:S.colors.textPrimary, fontFamily:FONT,
+              whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis', minWidth:0}}>
+              {partner.name}
+            </span>
+            <span style={{fontSize:15, lineHeight:1, flexShrink:0,
+              opacity: partnerConnected ? 1 : 0.35, transition:'opacity 0.3s'}}
+              title={partnerConnected ? L('connectedWord') : L('notConnectedWord')}>
+              {otherL.flag}
+            </span>
+          </span>
+        )}
 
         {/* ── Centro: coppia di lingue, grande ── */}
         <div style={{flex:1, display:'flex', alignItems:'center', justifyContent:'center', gap:10, minWidth:0}}>
