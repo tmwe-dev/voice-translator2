@@ -214,6 +214,10 @@ qualunque refactoring. Non si propone di rimandarlo.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.455** (push #746) — VIA L'OMBRA SCURA DIETRO LE IMMAGINI in
+  acciaio (ordine di Luca). Era ombraAcciaio: uno stacco nero pieno pensato
+  per il fondo scuro, che sul tema chiaro diventa una macchia dietro
+  l'oggetto. Le immagini hanno gia il loro rilievo dentro.
 - Versione: **b.454** (push #745) — LA MAPPA CAMBIA COLORE DAVVERO: lo stile
   veniva scelto una volta sola alla nascita, quindi scavallate le 7 o le 19
   non succedeva niente. Ora l'ora si ricontrolla ogni minuto e tornando
