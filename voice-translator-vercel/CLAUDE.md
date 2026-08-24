@@ -214,6 +214,13 @@ qualunque refactoring. Non si propone di rimandarlo.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.453** (push #744) — LA MAPPA E' NOSTRA: due stili disegnati
+  da noi (giorno e notte), generati da scripts/mappa-bartalk.mjs a partire da
+  Liberty — stessi dati OpenStreetMap, cambiano solo le tinte. Contrasto
+  caldo/freddo chiesto da Luca: strade ORO (autostrada) e ARANCIO
+  (principale) su acqua BLU con i nomi in CELESTE. Chiara di giorno, scura
+  di notte, decide l'orologio. Da TomTom non e copiato niente: solo l'idea
+  che le strade restino distinguibili per tinta anche di notte.
 - Versione: **b.452** (push #743) — UNA MAPPA SOLA, CHIARA. Via i dieci stili
   e il tasto che li apriva (ordine di Luca). Resta Liberty di OpenFreeMap:
   chiara, con le strade distinguibili, sempre la stessa — anche di notte.

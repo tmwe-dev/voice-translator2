@@ -21,7 +21,26 @@ import { apriPannelloPieno, chiudiPannelloPieno } from '../lib/pannelloPieno.js'
 // mappa che serve a portare qualcuno da qualche parte e l'unica cosa che
 // conta. Chiaro anche di notte: una mappa che cambia da sola sotto gli
 // occhi e un'altra cosa da imparare, e non serviva a nessuno.
-const MAPPA = 'https://tiles.openfreemap.org/styles/liberty';
+// b.453 — LA MAPPA E' NOSTRA. Luca: «non possiamo disegnarne una noi
+// modificando alcune tonalita di colore?». Si, ed e la cosa piu semplice
+// di tutte: uno stile MapLibre e un file di COLORI. Questi due partono da
+// Liberty — stessi dati OpenStreetMap, stesse piastrelle OpenFreeMap — e
+// cambiano solo le tinte, generati da script/mappa-bartalk.mjs.
+//
+// Niente e stato copiato da TomTom: quello e materiale con licenza. Da
+// loro viene solo un'IDEA, che non si puo possedere e che l'immagine
+// mandata da Luca mostra meglio di mille parole: le strade tengono una
+// GERARCHIA DI COLORE anche di notte — l'autostrada oro, la principale
+// ambra, le minori spente — invece di diventare tutte dello stesso grigio.
+// E il fondo non e nero morto: e il blu profondo dell'applicazione.
+const MAPPA_NOTTE = '/mappe/bartalk-notte.json';
+const MAPPA_GIORNO = '/mappe/bartalk-giorno.json';
+
+/** Di giorno chiara, di notte scura: lo dice l'orologio del telefono. */
+function mappaOra() {
+  const h = new Date().getHours();
+  return (h >= 7 && h < 19) ? MAPPA_GIORNO : MAPPA_NOTTE;
+}
 
 // ── INIZIO b.88 — la mappa serve in due misure ──
 // Oltre al riquadro grande del tassista serve una MINIATURA quadrata
@@ -91,7 +110,7 @@ export default function TaxiMap({ lat, lng, altezza = 340, comandi = true, inter
 
       mappa = new maplibregl.Map({
         container: boxRef.current,
-        style: MAPPA,
+        style: mappaOra(),
         center: [lng, lat],
         zoom: 14.5,
         attributionControl: { compact: true },
