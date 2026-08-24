@@ -13,59 +13,15 @@ import { apriPannelloPieno, chiudiPannelloPieno } from '../lib/pannelloPieno.js'
 // - Marker destinazione con glow · posizione del tassista live (GPS)
 // ═══════════════════════════════════════════════
 
-// ═══════════════════════════════════════════════════════════════
-// b.446 — GLI STILI DELLA MAPPA. Erano due; ordine di Luca: «puoi montare
-// in chiaro il grigio e lo stradale», e «perche non puoi usare il
-// satellite del telefono?».
+// b.452, ordine di Luca: «le mappe col menu in basso fanno cagare.
+// Mantieni solo una mappa chiara ed elimina la scelta di mappe diverse».
 //
-// Ognuno di questi indirizzi e stato PROVATO davvero: risponde 200, e uno
-// style JSON valido per MapLibre, ha CORS aperto e non chiede chiavi.
-//
-// IL SATELLITE. Quello del telefono (Apple/Google) non si puo prendere: le
-// loro immagini non sono esposte a una pagina web senza il loro SDK e la
-// loro chiave, e i termini lo vietano. Ma il satellite si puo avere lo
-// stesso, da Esri: le immagini si scaricano senza chiave (provato: 200,
-// JPEG, CORS aperto) e qui sotto c'e lo style JSON scritto a mano che le
-// monta. Attribuzione obbligatoria, ed e nel campo `attribution`.
-// ═══════════════════════════════════════════════════════════════
-const SATELLITE = {
-  version: 8,
-  sources: {
-    esri: {
-      type: 'raster',
-      tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],
-      tileSize: 256,
-      maxzoom: 19,
-      attribution: 'Esri, Maxar, Earthstar Geographics',
-    },
-  },
-  layers: [{ id: 'esri', type: 'raster', source: 'esri' }],
-};
-
-export const STILI_MAPPA = [
-  { id: 'dark',      chiave: 'mapStyleNight', tinta: 'scuro',  url: 'https://tiles.openfreemap.org/styles/dark' },
-  { id: 'fiord',     chiave: 'mapStyleSlate', tinta: 'scuro',  url: 'https://tiles.openfreemap.org/styles/fiord' },
-  { id: 'eclipse',   chiave: 'mapStyleEclipse', tinta: 'scuro',  url: 'https://tiles.versatiles.org/assets/styles/eclipse/style.json' },
-  { id: 'positron',  chiave: 'mapStyleLight', tinta: 'chiaro', url: 'https://tiles.openfreemap.org/styles/positron' },
-  { id: 'graybeard', chiave: 'mapStyleGray', tinta: 'chiaro', url: 'https://tiles.versatiles.org/assets/styles/graybeard/style.json' },
-  { id: 'liberty',   chiave: 'mapStyleStreets', tinta: 'chiaro', url: 'https://tiles.openfreemap.org/styles/liberty' },
-  { id: 'bright',    chiave: 'mapStyleBright', tinta: 'chiaro', url: 'https://tiles.openfreemap.org/styles/bright' },
-  { id: 'neutrino',  chiave: 'mapStyleEssential', tinta: 'chiaro', url: 'https://tiles.versatiles.org/assets/styles/neutrino/style.json' },
-  { id: 'colorful',  chiave: 'mapStyleColorful', tinta: 'colorato', url: 'https://tiles.versatiles.org/assets/styles/colorful/style.json' },
-  { id: 'satellite', chiave: 'mapStyleSatellite', tinta: 'scuro',  stile: SATELLITE },
-];
-
-const STILI = {
-  scuro: 'https://tiles.openfreemap.org/styles/dark',
-  chiaro: 'https://tiles.openfreemap.org/styles/positron',
-};
-
-/** Lo stile da usare: quello scelto a mano, se no quello del tema. */
-function stileDa(scelto, temaChiaro) {
-  const v = STILI_MAPPA.find((x) => x.id === scelto);
-  if (v) return v.stile || v.url;
-  return temaChiaro ? STILI.chiaro : STILI.scuro;
-}
+// Via i dieci stili e il tasto che li apriva. Ne resta UNO, chiaro, sempre
+// quello: Liberty di OpenFreeMap — le strade si distinguono, che su una
+// mappa che serve a portare qualcuno da qualche parte e l'unica cosa che
+// conta. Chiaro anche di notte: una mappa che cambia da sola sotto gli
+// occhi e un'altra cosa da imparare, e non serviva a nessuno.
+const MAPPA = 'https://tiles.openfreemap.org/styles/liberty';
 
 // ── INIZIO b.88 — la mappa serve in due misure ──
 // Oltre al riquadro grande del tassista serve una MINIATURA quadrata
@@ -75,18 +31,16 @@ function stileDa(scelto, temaChiaro) {
 //   interattiva = si può trascinare e zoomare
 // `altezza` accetta anche '100%' per riempire il contenitore.
 // ── FINE b.88 ──
-export default function TaxiMap({ lat, lng, altezza = 340, comandi = true, interattiva = true, raggio = 20, stile = null }) {
+export default function TaxiMap({ lat, lng, altezza = 340, comandi = true, interattiva = true, raggio = 20, }) {
   // b.446 — lo stile scelto a mano vince su quello del tema, e resta finche
   // si sta sulla mappa. Parte da `stile` se chi monta la mappa ne impone uno.
-  const [stileScelto, setStileScelto] = useState(stile);
-  const [scegliStile, setScegliStile] = useState(false);
   // b.447 — LO SCHERMO INTERO. Collaudo di Luca: «perche non vedo a tutto
   // schermo la mappa e non ci sono i tasti?». Perche non l'avevo scritto:
   // era solo nel template. E i tasti non c'erano perche qui la mappa e
   // montata in MINIATURA (comandi spenti) — quindi il tasto per ingrandire
   // deve esserci ANCHE in miniatura, se no da li non si esce.
   const [pieno, setPieno] = useState(false);
-  const { L, theme, S } = useApp();
+  const { L, S } = useApp();
   const boxRef = useRef(null);
   const mapRef = useRef(null);
   const [pronta, setPronta] = useState(false);
@@ -137,7 +91,7 @@ export default function TaxiMap({ lat, lng, altezza = 340, comandi = true, inter
 
       mappa = new maplibregl.Map({
         container: boxRef.current,
-        style: stileDa(stileScelto, theme === 'dawn'),
+        style: MAPPA,
         center: [lng, lat],
         zoom: 14.5,
         attributionControl: { compact: true },
@@ -193,7 +147,7 @@ export default function TaxiMap({ lat, lng, altezza = 340, comandi = true, inter
       if (gps && navigator.geolocation) navigator.geolocation.clearWatch(gps);
       if (mappa) mappa.remove();
     };
-  }, [lat, lng, theme, stileScelto]); // cambia tema o stile → ricrea con quello giusto
+  }, [lat, lng]); // la mappa non dipende piu dal tema: e sempre la stessa
 
   // Cambiando misura il contenitore cambia, ma il NODO resta lo stesso:
   // MapLibre non se ne accorge da solo e va avvisato. Se invece si
@@ -273,7 +227,7 @@ export default function TaxiMap({ lat, lng, altezza = 340, comandi = true, inter
           aggiunge. Sta sotto la zona sicura, se no sull'iPhone finisce
           dietro l'orologio. */}
       <button
-        onClick={() => { setPieno((v) => !v); setScegliStile(false); }}
+        onClick={() => setPieno((v) => !v)}
         aria-pressed={pieno}
         aria-label={pieno ? L('close') : L('mapFullScreen')}
         title={pieno ? L('close') : L('mapFullScreen')}
@@ -292,50 +246,6 @@ export default function TaxiMap({ lat, lng, altezza = 340, comandi = true, inter
         )}
       </button>
 
-      {/* b.446 — IL TASTO DEGLI STILI, e la scelta NASCOSTA dietro di lui.
-          Non una fila di dieci bottoni sempre a schermo: la mappa e la cosa
-          da guardare, i comandi no. Sta in alto a destra, lontano dai +/−. */}
-      {(comandi || pieno) && (
-        <button
-          onClick={() => setScegliStile((v) => !v)}
-          aria-expanded={scegliStile}
-          aria-label={L('mapStyle')}
-          style={{ ...btn, position: 'absolute', right: 10, top: pieno ? 'calc(max(12px, env(safe-area-inset-top)) + 52px)' : 62, zIndex: 6,
-            borderColor: scegliStile ? oro : 'rgba(160,190,255,0.2)',
-            color: scegliStile ? oro : '#eef2ff' }}>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-            strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
-          </svg>
-        </button>
-      )}
-
-      {(comandi || pieno) && scegliStile && (
-        <div style={{ position: 'absolute', left: 8, right: 8, zIndex: 7,
-          bottom: pieno ? 'calc(10px + env(safe-area-inset-bottom))' : 8,
-          background: 'rgba(8,12,24,0.93)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
-          border: `1px solid ${S.colors?.cardBorder || 'rgba(160,190,255,0.14)'}`,
-          borderRadius: 18, padding: '9px 8px 10px' }}>
-          <div aria-hidden style={{ width: 38, height: 4, borderRadius: 999, margin: '0 auto 9px',
-            background: S.colors?.cardBorder || 'rgba(160,190,255,0.2)' }} />
-          <div style={{ display: 'flex', gap: 7, overflowX: 'auto', scrollbarWidth: 'none' }}>
-            {STILI_MAPPA.map((v) => {
-              const acceso = stileScelto === v.id;
-              return (
-                <button key={v.id}
-                  onClick={() => { setStileScelto(v.id); setScegliStile(false); }}
-                  style={{ flexShrink: 0, minHeight: 44, padding: '0 14px', borderRadius: 12,
-                    cursor: 'pointer', fontFamily: 'inherit', fontSize: 13, whiteSpace: 'nowrap',
-                    border: `1px solid ${acceso ? oro : (S.colors?.cardBorder || 'rgba(160,190,255,0.14)')}`,
-                    background: acceso ? 'rgba(255,196,77,0.14)' : 'rgba(255,255,255,0.05)',
-                    color: acceso ? oro : (S.colors?.textSecondary || '#eef2ff') }}>
-                  {L(v.chiave)}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      )}
     </div>
   );
 }

@@ -214,6 +214,9 @@ qualunque refactoring. Non si propone di rimandarlo.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.452** (push #743) — UNA MAPPA SOLA, CHIARA. Via i dieci stili
+  e il tasto che li apriva (ordine di Luca). Resta Liberty di OpenFreeMap:
+  chiara, con le strade distinguibili, sempre la stessa — anche di notte.
 - Versione: **b.451** (push #742) — I MARGINI LATERALI DELLA HOME tornano a
   20 (erano 12): li avevo stretti io togliendo insieme la colonna centrata e
   il margine, ma a stringere era solo la colonna. Il template da il 4,1% di
