@@ -309,6 +309,33 @@ export default function PrimaProva({ onChiudi }) {
   // disegno e cambierebbe sotto gli occhi un attimo dopo.
   useEffect(() => { try { preloadLang(String(meta).split('-')[0]); } catch { /* il pacchetto arrivera al prossimo disegno */ } }, [meta]);
 
+  // ═══════════════════════════════════════════════════════════════
+  // b.456 — LA META NON PUO' ESSERE LA LINGUA CHE PARLI GIA.
+  //
+  // Collaudo di Luca: «hai ricreato l'errore di prima, che aggiorna
+  // simultaneamente la lingua da tradurre e quella dell'utente».
+  //
+  // Non si aggiornavano insieme: DIVENTAVANO uguali. La meta viene scelta
+  // diversa dalla tua lingua UNA VOLTA SOLA, quando la schermata nasce
+  // (RAPIDE.find piu sopra). Da li in poi resta ferma. Ma la tua lingua si
+  // puo cambiare dopo, dal carosello della Home — e se la porti proprio
+  // sulla lingua che era gia la meta, le due coincidono: la targhetta
+  // mostra due volte la stessa bandiera e la traduzione va dall'italiano
+  // all'italiano.
+  //
+  // Adesso il controllo non e piu solo alla nascita: se le due si
+  // sovrappongono, la meta si sposta da sola sulla prima lingua rapida
+  // diversa. Una traduzione verso se stessa non e una traduzione.
+  // ═══════════════════════════════════════════════════════════════
+  useEffect(() => {
+    const radice = (x) => String(x || '').split('-')[0];
+    if (radice(meta) !== radice(miaLingua)) return;
+    const altra = RAPIDE.find((m) => radice(m) !== radice(miaLingua))
+      || LANGS.find((l) => radice(l.code) !== radice(miaLingua))?.code
+      || 'en';
+    setMeta(altra);
+  }, [miaLingua, meta]);
+
   useEffect(() => { testoRef.current = testo; }, [testo]);
 
   // Appena smetti di scrivere, la frase parte da sola.
