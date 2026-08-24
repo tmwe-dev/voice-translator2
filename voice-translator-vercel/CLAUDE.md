@@ -214,6 +214,13 @@ qualunque refactoring. Non si propone di rimandarlo.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.462** (push #753) — L'AUDIO NON ERA ROTTO: NON AVEVA NIENTE
+  DA DIRE. L'invito portava all'ospite una lingua che non c'entrava con
+  quella scelta nel carosello (partiva da 'en' fisso): se coincideva con la
+  mia, in stanza c'erano due persone con la STESSA lingua — niente da
+  tradurre, quindi nessuna voce, e bandiere uguali. Ora tutta la catena
+  degli inviti porta la LINGUA 2, e metaScelta e salita in lib/constants.js
+  perche la leggano anche gli inviti.
 - Versione: **b.461** (push #752) — NIENTE PIU LAMPO DELLA HOME fra il tocco
   sul barcode e il QR: la maschera del «+» resta su finche non si e
   arrivati, la chiude il cambio di schermata. E la stanza video non si

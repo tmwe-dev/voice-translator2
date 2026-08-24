@@ -74,7 +74,9 @@ describe('il traduttore subito', () => {
     // parlata DOPO, cambiandola dalla Home) e diventava rossa appena la
     // stessa regola veniva scritta meglio. Adesso si prova la REGOLA, non la
     // riga: si chiama la funzione e si guarda cosa risponde.
-    const { metaScelta } = await import('../app/components/PrimaProva.js');
+    // b.462 — metaScelta e salita in lib/constants.js: la leggono anche
+    // gli inviti, e una funzione condivisa non abita dentro una schermata.
+    const { metaScelta } = await import('../app/lib/constants.js');
     const radice = (x) => String(x).split('-')[0];
 
     // nessuna lingua parlata deve mai tornare come meta

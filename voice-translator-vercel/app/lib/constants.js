@@ -15,7 +15,35 @@
 // numeri cambia. Restano due, e a tenerle allineate ci pensa una prova
 // (`__tests__/versione-unica-b421.test.js`) che le confronta col diario:
 // se si aggiorna CLAUDE.md e ci si dimentica di qui, diventa rossa.
-export const APP_VERSION = 'b.461';
+// ═══════════════════════════════════════════════════════════════
+// b.462 — LA LINGUA 2, una sola per tutta l'applicazione.
+//
+// Sono due cose diverse e vanno tenute diverse (ordine di Luca):
+//   prefs.lang = la lingua che parli TU. Si cambia nelle Impostazioni.
+//   prefs.meta = la LINGUA 2, quella di chi hai davanti. La scelgono il
+//                carosello e il suo elenco completo.
+//
+// Sta qui, e non dentro una schermata, perche la deve leggere anche chi
+// prepara gli INVITI: l'ospite dev'essere invitato nella lingua 2, se no
+// entra nella stanza parlando la tua e non c'e piu niente da tradurre —
+// niente traduzione, niente voce, e due bandiere uguali.
+//
+// Non restituisce MAI la lingua che l'utente parla gia: una traduzione
+// verso se stessa non e una traduzione.
+// ═══════════════════════════════════════════════════════════════
+const META_RAPIDE = ['en', 'es', 'fr', 'de', 'zh', 'ja', 'ar', 'ru', 'pt'];
+
+export function metaScelta(prefs) {
+  const radice = (x) => String(x || '').split('-')[0];
+  const mia = radice(prefs?.lang || 'it');
+  const voluta = prefs?.meta;
+  if (voluta && radice(voluta) !== mia) return voluta;
+  return META_RAPIDE.find((m) => radice(m) !== mia)
+    || LANGS.find((l) => radice(l.code) !== mia)?.code
+    || 'en';
+}
+
+export const APP_VERSION = 'b.462';
 
 // ── Numero di rilascio, visibile in alto a sinistra nella home ──
 // Serve a Luca per sapere a colpo d'occhio se la pagina che ha davanti e
@@ -23,7 +51,7 @@ export const APP_VERSION = 'b.461';
 // ancora arrivato al suo browser (o la pagina viene dalla cache).
 // VA AUMENTATO DI UNO A OGNI PUSH SU main. Corrisponde al numero di
 // commit del ramo: `git rev-list --count HEAD`.
-export const PUSH = 752;
+export const PUSH = 753;
 
 export const APP_URL = process.env.NEXT_PUBLIC_URL || 'https://voice-translator2.vercel.app';
 

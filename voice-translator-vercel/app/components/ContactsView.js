@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect, useMemo } from 'react';
-import { FONT, LANGS } from '../lib/constants.js';
+import { FONT, LANGS, metaScelta} from '../lib/constants.js';
 import getStyles from '../lib/styles.js';
 import PageHeader from './ui/PageHeader.js';
 import Icon from './Icon.js';
@@ -87,7 +87,7 @@ export default function ContactsView({
   async function handleShare(channel) {
     const code = currentInviteCode || inviteCode;
     if (!code) return;
-    const result = await shareInvite(channel, code, prefs.lang);
+    const result = await shareInvite(channel, code, metaScelta(prefs));
     if (result?.copied) { setLinkCopied(true); setTimeout(() => setLinkCopied(false), 2000); }
   }
 
@@ -106,10 +106,10 @@ export default function ContactsView({
           if (email) {
             const res = await addContact(email);
             if (res.ok) added++;
-            else if (res.notRegistered) { const inv = await createInvite(0); if (inv?.ok) { await shareInvite('email', inv.inviteCode, prefs.lang); invited++; } }
+            else if (res.notRegistered) { const inv = await createInvite(0); if (inv?.ok) { await shareInvite('email', inv.inviteCode, metaScelta(prefs)); invited++; } }
           } else if (phone) {
             const inv = await createInvite(0);
-            if (inv?.ok) { await shareInvite('sms', inv.inviteCode, prefs.lang); invited++; }
+            if (inv?.ok) { await shareInvite('sms', inv.inviteCode, metaScelta(prefs)); invited++; }
           }
           await new Promise(r => setTimeout(r, 100)); // Rate limit
         } catch (err) {

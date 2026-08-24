@@ -2,7 +2,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { useApp } from '../contexts/AppContext.js';
 import { memDel, memSet } from '../lib/memoria.js';
-import { LANGS, getLang, FONT, vibrate } from '../lib/constants.js';
+import { LANGS, getLang, FONT, vibrate, metaScelta } from '../lib/constants.js';
 import { t as tLingua, preloadLang } from '../lib/i18n.js';
 import Icon from './Icon.js';
 import { IconCar } from './Icons.js';
@@ -80,21 +80,9 @@ export function riapriPrimaProva() {
 // rispondeva IN ITALIANO con voce italiana, in silenzio.
 const RAPIDE = ['en', 'es', 'fr', 'de', 'zh', 'ja', 'ar', 'ru', 'pt'];
 
-/**
- * b.457 — LA LINGUA DI ARRIVO, una sola per tutta l'applicazione.
- * Quella scelta dall'utente se c'e ED E' DIVERSA dalla sua; se no la prima
- * lingua rapida diversa. Non torna mai la lingua che l'utente parla gia:
- * una traduzione verso se stessa non e una traduzione.
- */
-export function metaScelta(prefs) {
-  const radice = (x) => String(x || '').split('-')[0];
-  const mia = radice(prefs?.lang || 'it');
-  const voluta = prefs?.meta;
-  if (voluta && radice(voluta) !== mia) return voluta;
-  return RAPIDE.find((m) => radice(m) !== mia)
-    || LANGS.find((l) => radice(l.code) !== mia)?.code
-    || 'en';
-}
+// b.462 — metaScelta e salita in lib/constants.js: la leggono anche la
+// Home e chi prepara gli inviti, e una funzione condivisa non puo abitare
+// dentro una schermata.
 
 export default function PrimaProva({ onChiudi }) {
   const { L, S, prefs, savePrefs, setView } = useApp();

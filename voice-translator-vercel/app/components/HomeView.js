@@ -1,6 +1,6 @@
 'use client';
 import { memo, useState, useMemo, useEffect } from 'react';
-import { FONT, getLang, vibrate, PUSH } from '../lib/constants.js';
+import { FONT, getLang, vibrate, PUSH, metaScelta } from '../lib/constants.js';
 import { useApp } from '../contexts/AppContext.js';
 // b.363 — `t` serviva solo all'avviso del cambio lingua, che e stato tolto:
 // restava importato senza che nessuno lo chiamasse. Restano `mapLang` — la
@@ -13,7 +13,7 @@ import CarouselLingue from './CarouselLingue.js';
 // con freccia in alto per tornare»). E lo stesso foglio che gira sulle
 // news: non se ne scrive un secondo.
 import Ribalta from './ui/Ribalta.js';
-import PrimaProva, { riapriPrimaProva, metaScelta } from './PrimaProva.js'; // b.96 → b.356 "Parla ora"
+import PrimaProva, { riapriPrimaProva } from './PrimaProva.js'; // b.96 → b.356 "Parla ora"
 import { memGet, memSet } from '../lib/memoria.js';
 
 // ═══════════════════════════════════════

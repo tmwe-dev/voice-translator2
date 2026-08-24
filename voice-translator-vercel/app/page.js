@@ -8,6 +8,7 @@ import { trasportoAmmesso, TRASPORTO, modalitaDiStanza, vaInVetrina } from './li
 import { postoADestra } from './lib/righello.js';
 import { useState, useRef, useEffect, useCallback, lazy, Suspense } from 'react';
 import { t, mapLang, preloadLang, ascoltaLingueCaricate } from './lib/i18n.js';
+import { metaScelta } from './lib/constants.js';
 import { APP_URL, LANGS, VOICES, AVATARS, AVATAR_NAMES, MODES, CONTEXTS, FONT, CREDIT_PACKAGES,
   getLang, vibrate, formatCredits } from './lib/constants.js';
 // Custom hooks
@@ -189,7 +190,27 @@ function HomeInner() {
   const [selectedContext, setSelectedContext] = useState('general');
   const [roomDescription, setRoomDescription] = useState('');
   const [showModeSelector, setShowModeSelector] = useState(false);
+  // b.462 — L'INVITO PORTA LA LINGUA 2, non un inglese fisso.
+  // Collaudo di Luca: «l'ospite eredita bandiere scorrette» e «l'audio non
+  // va piu». Erano lo stesso difetto. L'ospite entrava nella lingua di
+  // questo campo, che partiva da 'en' e non c'entrava niente con la lingua
+  // scelta nel carosello: se per caso coincideva con la mia, in stanza
+  // c'erano due persone con la STESSA lingua — niente da tradurre, quindi
+  // niente traduzione, quindi nessuna voce. L'audio non era rotto: non
+  // aveva niente da dire.
+  // Adesso parte dalla lingua 2 e la segue, finche non lo si cambia a mano:
+  // da quel momento comanda la scelta dell'utente, che vale piu di un
+  // automatismo.
   const [inviteLang, setInviteLang] = useState('en');
+  const inviteLangTocco = useRef(false);
+  const cambiaInviteLang = useCallback((codice) => {
+    inviteLangTocco.current = true;
+    setInviteLang(codice);
+  }, []);
+  useEffect(() => {
+    if (inviteLangTocco.current) return;
+    setInviteLang(metaScelta(prefs));
+  }, [prefs]);
   const [inviteMsgLang, setInviteMsgLang] = useState(null);
   // [Removed dead code: showShareApp, shareAppLang — unused]
   const [showNewConversation, setShowNewConversation] = useState(false);
@@ -1505,7 +1526,7 @@ function HomeInner() {
   if (view === 'lobby') return wrap(
     <Suspense fallback={<LazyFallback />}>
     <LobbyView roomId={roomPolling.roomId} roomInfo={roomPolling.roomInfo} partnerConnected={roomPolling.partnerConnected}
-      inviteLang={inviteLang} setInviteLang={setInviteLang} shareRoom={shareRoom}
+      inviteLang={inviteLang} setInviteLang={cambiaInviteLang} shareRoom={shareRoom}
       leaveRoom={() => { roomPolling.leaveRoom(); convContext.resetContext(); auth.roomTierOverrideRef.current = null; auth.setTierStanza(null); setView('home'); }} unlockAudio={audio.unlockAudio}
       perVideo={intentoVideo} />
     {/* La porta per il video di gruppo sta DENTRO LobbyView: messa qui

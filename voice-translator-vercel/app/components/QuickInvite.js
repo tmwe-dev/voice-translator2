@@ -1,6 +1,6 @@
 'use client';
 import { memo, useState, useEffect, useRef, useCallback } from 'react';
-import { APP_URL, LANGS, FONT, vibrate } from '../lib/constants.js';
+import { APP_URL, LANGS, FONT, vibrate, metaScelta} from '../lib/constants.js';
 import Icon from './Icon.js';
 import { PALETTE } from '../lib/palette.js';
 import { useApp } from '../contexts/AppContext.js';
@@ -13,7 +13,9 @@ const glass = {
 function QuickInvite({ handleCreateRoom, roomId, setViewAfterCreate }) {
   const { L, S, prefs, theme, setView } = useApp();
   const lang = prefs?.lang || 'it';
-  const [guestLang, setGuestLang] = useState(lang === 'en' ? 'it' : 'en');
+  // b.462 — l'ospite si invita nella LINGUA 2, quella scelta nel carosello,
+  // non in un ripiego calcolato sulla mia. Se non c'e, resta il ripiego.
+  const [guestLang, setGuestLang] = useState(() => metaScelta(prefs) || (lang === 'en' ? 'it' : 'en'));
   const [creating, setCreating] = useState(false);
   const [createdRoomId, setCreatedRoomId] = useState(roomId || '');
   const [copied, setCopied] = useState(false);
