@@ -6,7 +6,6 @@ import { useApp } from '../contexts/AppContext.js';
 // restava importato senza che nessuno lo chiamasse. Restano `mapLang` — la
 // lingua dei menu esiste in 15 lingue, non nelle 44 in cui si traduce — e
 // `preloadLang`, che porta avanti il pacchetto nuovo appena si conferma.
-import { mapLang, preloadLang } from '../lib/i18n.js';
 import Icon from './Icon.js';
 import CarouselLingue from './CarouselLingue.js';
 // b.424 — IL RIBALTAMENTO CHE C'E GIA (ordine di Luca: «la pagina deve
@@ -158,20 +157,33 @@ const HomeView = memo(function HomeView({ selectedMode, setSelectedMode,
   // b.354 — la scelta lingua (con la regola b.254: i menu seguono la
   // lingua parlata finche l'utente non li ha scelti a mano) e diventata
   // una funzione: la usa il carosello, non piu la dropdown demolita.
+  // ═══════════════════════════════════════════════════════════════
+  // b.459 — IL CAROSELLO SCEGLIE LA LINGUA 2, NON LA TUA.
+  //
+  // Luca, dopo che l'ho rotto piu volte: «hai la lingua utente che e una
+  // cosa, e la lingua da tradurre (lingua 2) che va gestita da carosello e
+  // selettore hamburger».
+  //
+  // Ecco l'errore che ripetevo. Il carosello scriveva su prefs.lang, cioe
+  // sulla TUA lingua — quella con cui entri nelle stanze e con cui parli.
+  // Quindi ogni volta che sceglievi una bandiera cambiavi te stesso invece
+  // della meta, e la coppia in alto finiva per mostrare due volte la stessa
+  // cosa. Non era un difetto di disegno: era il filo attaccato al posto
+  // sbagliato, e finche restava li lo riattaccavo storto ogni volta.
+  //
+  // Sono due cose separate, e adesso lo sono anche nel codice:
+  //   prefs.lang  = la TUA lingua. Si cambia dalle impostazioni.
+  //   prefs.meta  = la LINGUA 2, quella verso cui si traduce. La scelgono
+  //                 il carosello e il suo elenco completo (l'hamburger),
+  //                 qui e dentro «Parla ora»: lo stesso valore, un posto solo.
+  //
+  // E la lingua dei MENU non segue piu questa scelta: seguiva la lingua
+  // parlata (regola b.254) e continua a farlo, ma la lingua parlata non e
+  // piu quello che il carosello tocca.
+  // ═══════════════════════════════════════════════════════════════
   const scegliLingua = (l) => {
     vibrate();
-    const prima = prefs.uiLang || mapLang(prefs.lang || 'en');
-    const dopo = mapLang(l.code);
-    const nuove = prefs.uiLangScelta
-      ? { ...prefs, lang: l.code }
-      : { ...prefs, lang: l.code, uiLang: dopo };
-    savePrefs(nuove);
-    // b.363 — via l'avviso che annunciava il cambio di lingua con il tasto
-    // per annullarlo: non serve a niente. Da quando il carosello chiede
-    // conferma, la lingua cambia solo quando la si e scelta apposta — e
-    // dire a qualcuno cosa ha appena scelto, coprendogli mezzo schermo per
-    // otto secondi, e solo un disturbo. Il pacchetto si carica lo stesso.
-    if (!prefs.uiLangScelta && dopo !== prima) preloadLang(dopo);
+    savePrefs({ ...prefs, meta: l.code });
   };
 
   // b.356 — la "luce che segue il mouse" di b.354 e stata tolta insieme
@@ -304,7 +316,8 @@ const HomeView = memo(function HomeView({ selectedMode, setSelectedMode,
             dropdown: la lingua si sceglie qui, sotto il titolo. */}
         <div style={{ margin: '18px 0 0' }}>
           <CarouselLingue
-            selezionata={prefs.lang}
+            selezionata={metaScelta(prefs)}
+            escludi={prefs.lang}
             onScegli={scegliLingua}
             onLinguaMenu={() => { vibrate(); setView('settings'); }}
             C={C} L={L} />

@@ -3,7 +3,7 @@ import { memo, useState } from 'react';
 import InteressiProfilo from './ui/InteressiProfilo.js';
 import { LANGS, THEME_LIST, FONT, getLang, APP_VERSION } from '../lib/constants.js';
 import { getPaese } from '../lib/paesi.js';
-import { LINGUE_INTERFACCIA, mapLang } from '../lib/i18n.js';
+import { LINGUE_INTERFACCIA, mapLang, preloadLang } from '../lib/i18n.js';
 import { IconMic, IconGlobe, IconKey, IconMusic, IconUser, IconVolume, IconCreditCard,
   IconShield, IconExport, IconMessageCircle, IconWarning, IconCheck, IconChevronDown,
   IconSparkles, IconSettings } from './Icons.js';
@@ -122,6 +122,30 @@ const SettingsView = memo(function SettingsView({ apiKeyInputs, userAccount, log
   // le altre sarebbe una promessa non mantenuta — si sceglie il danese
   // e i menu restano in inglese.
   const linguaUI = getLang(prefs.uiLang || mapLang(prefs.lang || 'en'));
+
+  // ═══════════════════════════════════════════════════════════════
+  // b.459 — LA REGOLA b.254 ABITA QUI ADESSO.
+  //
+  // «La lingua dei menu segue quella che dichiari di parlare, finche non
+  // scegli i menu a mano.» La regola non cambia; cambia dove nasce.
+  // Prima la lingua parlata si sceglieva dal carosello della Home, e la
+  // regola stava li. Ma da b.459 il carosello sceglie la LINGUA 2, quella
+  // verso cui si traduce: la lingua PARLATA si cambia solo qui dentro.
+  // Se la regola fosse rimasta dov'era, cambiare la propria lingua non
+  // avrebbe piu portato dietro i menu — e chi passa al tedesco si
+  // ritroverebbe l'interfaccia nella lingua di prima, senza capire perche.
+  // ═══════════════════════════════════════════════════════════════
+  const scegliMiaLingua = (codice) => {
+    const prima = prefs.uiLang || mapLang(prefs.lang || 'en');
+    const dopo = mapLang(codice);
+    const nuove = prefs.uiLangScelta
+      ? { ...prefs, lang: codice }
+      : { ...prefs, lang: codice, uiLang: dopo };
+    savePrefs(nuove);
+    // il pacchetto della lingua nuova parte subito: se no i menu restano
+    // in inglese finche qualcosa non li fa ridisegnare (b.256)
+    if (!prefs.uiLangScelta && dopo !== prima) preloadLang(dopo);
+  };
   const motore = MOTORI_VOCE.find(m => m.id === (prefs.voiceEngine || 'auto')) || MOTORI_VOCE[0];
   const nomeMotore = (m) => m.nome || L(m.nomeKey);
 
@@ -232,7 +256,7 @@ const SettingsView = memo(function SettingsView({ apiKeyInputs, userAccount, log
               {LANGS.map(l => (
                 <Scelta c={c} key={l.code} attiva={l.code === prefs.lang}
                   titolo={`${l.flag}  ${l.name}`}
-                  onClick={() => { savePrefs({ ...prefs, lang: l.code }); setApertoLingua(false); }} />
+                  onClick={() => { scegliMiaLingua(l.code); setApertoLingua(false); }} />
               ))}
             </div>
           )}

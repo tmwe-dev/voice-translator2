@@ -214,6 +214,16 @@ qualunque refactoring. Non si propone di rimandarlo.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.460** (push #751) — LA REGOLA b.254 TRASLOCA nelle
+  impostazioni, dove ora si cambia la lingua parlata; il carosello non la
+  tocca piu. Tolto app/lib/acciaio.js, rimasto orfano quando e sparita
+  l'ombra dalle immagini.
+- Versione: **b.459** (push #750) — IL CAROSELLO SCEGLIE LA LINGUA 2, NON LA
+  TUA. Era questo l'errore che ripetevo: il carosello scriveva su prefs.lang,
+  cioe sulla lingua dell'utente, invece che sulla meta. Ora sono due cose
+  separate anche nel codice — prefs.lang la tua (dalle impostazioni),
+  prefs.meta la lingua 2 (carosello + elenco hamburger, in Home e in «Parla
+  ora»). E il carosello non propone piu la lingua che parli gia.
 - Versione: **b.458** (push #749) — IL MENU DEL «+» PERDE TRE TASTI: chat di
   gruppo e invita una persona aprivano la stessa cosa del barcode (una
   stanza, da cui si invita chiunque), e TaxiTalk esiste gia in Home come

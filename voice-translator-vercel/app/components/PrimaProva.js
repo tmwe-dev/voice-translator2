@@ -647,6 +647,7 @@ export default function PrimaProva({ onChiudi }) {
       flexDirection: 'column', justifyContent: 'center', padding: '4px 0' }}>
       <CarouselLingue
         selezionata={meta}
+        escludi={miaLingua}
         // il carosello consegna la LINGUA intera, non il suo codice: cosi
         // fa anche sulla home. Prenderla per un codice significherebbe
         // mettere un oggetto dove va una sigla, e la meta diventerebbe

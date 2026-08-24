@@ -231,9 +231,15 @@ describe('SettingsView ha due impostazioni distinte, non una che ne fa due', () 
   });
 
   it('c\'e la riga della lingua parlata, e scrive lang', () => {
+    // b.459 — la riga non scrive piu `lang: l.code` a mano: passa da
+    // scegliMiaLingua(), che scrive lang E porta dietro la lingua dei menu
+    // (regola b.254, arrivata qui quando il carosello della Home e passato
+    // a scegliere la lingua 2). Cio che conta e che la riga ci sia e che
+    // scriva la lingua parlata — non con quale forma lo faccia.
     const codice = settings();
     expect(codice).toContain("L('spokenLanguage')");
-    expect(codice).toContain('lang: l.code');
+    expect(codice).toContain('scegliMiaLingua(l.code)');
+    expect(codice, 'e chi la scrive tocca davvero prefs.lang').toMatch(/\.\.\.prefs, lang: codice/);
   });
 
   it('e la riga sola "La tua lingua" non c\'e piu', () => {

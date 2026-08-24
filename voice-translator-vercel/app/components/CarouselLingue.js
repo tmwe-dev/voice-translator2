@@ -20,13 +20,22 @@ import { FONT, LANGS, vibrate } from '../lib/constants.js';
 // sparivano dalle bandiere rapide e finivano in fondo, in ordine alfabetico.
 const RAPIDE = ['it', 'en', 'es', 'fr', 'de', 'pt', 'zh', 'ja', 'ar', 'ru', 'en-GB', 'hi'];
 
-function CarouselLingue({ selezionata, onScegli, onLinguaMenu, C, L }) {
+// b.459 — `escludi` toglie una lingua dalla fila e dall'elenco completo.
+// Serve perche questo carosello sceglie la LINGUA 2, quella verso cui si
+// traduce: proporre anche la lingua che l'utente parla gia significherebbe
+// offrirgli una traduzione dall'italiano all'italiano. Meglio non
+// mostrarla che mostrarla e poi rifiutarla — un elenco che contiene una
+// voce che non funziona e un elenco che mente.
+function CarouselLingue({ selezionata, onScegli, onLinguaMenu, escludi, C, L }) {
   const lingue = useMemo(() => {
-    const rapide = RAPIDE.map((c) => LANGS.find((l) => l.code === c)).filter(Boolean);
-    const resto = LANGS.filter((l) => !RAPIDE.includes(l.code))
+    const radice = (x) => String(x || '').split('-')[0];
+    const fuori = escludi ? radice(escludi) : null;
+    const tieni = (l) => !fuori || radice(l.code) !== fuori;
+    const rapide = RAPIDE.map((c) => LANGS.find((l) => l.code === c)).filter(Boolean).filter(tieni);
+    const resto = LANGS.filter((l) => !RAPIDE.includes(l.code)).filter(tieni)
       .sort((a, b) => a.name.localeCompare(b.name, 'en'));
     return [...rapide, ...resto];
-  }, []);
+  }, [escludi]);
   const totale = lingue.length;
 
   const [centro, setCentro] = useState(() => {
