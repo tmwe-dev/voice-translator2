@@ -6,6 +6,7 @@ import useSheetA11y from '../hooks/useSheetA11y.js';
 import { PALETTE } from '../lib/palette.js';
 import { useApp } from '../contexts/AppContext.js';
 import Icon from './Icon.js';
+import { IconCar } from './Icons.js';
 
 // ═══════════════════════════════════════════════════════════════
 // Pannello del tasto "+" — b.93
@@ -22,7 +23,13 @@ import Icon from './Icon.js';
 // b.138 — le quattro voci erano scritte a mano in italiano. E il
 // pannello del tasto "+", il piu premuto dell'app: chi lo apriva con
 // l'interfaccia in un'altra lingua trovava quattro righe italiane.
+// b.442 — in testa le porte per parlare, arrivate dalla Home (il template
+// non le mostra piu li). Il gestore in page.js le instradava gia da b.93
+// come «voci storiche»: qui vengono solo rese visibili.
 const OPTIONS = [
+  { id: 'videocall', icona: 'video', titleKey: 'actRoomTitle', descKey: 'actRoomDesc' },
+  { id: 'invite', icona: 'share', titleKey: 'actInviteTitle', descKey: 'actInviteDesc' },
+  { id: 'taxitalk', speciale: 'car', title: 'TaxiTalk', descKey: 'actTaxiDesc' },
   { id: 'entra-codice', icona: 'doorOpen', titleKey: 'optCodeTitle', descKey: 'optCodeDesc' },
   { id: 'stanza-community', icona: 'globe', titleKey: 'optPublicTitle', descKey: 'optPublicDesc' },
   { id: 'contatti', icona: 'user', titleKey: 'optContactsTitle', descKey: 'optContactsDesc' },
@@ -42,10 +49,11 @@ const NewConversationSheet = ({ open, onClose, onSelect }) => {
     <div
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
       style={{
+        // b.442, ordine di Luca: «il + apre una lista con anche il barcode,
+        // e deve andare A TUTTA PAGINA, cosi da contenerli comodamente».
         position: 'fixed', inset: 0, zIndex: 100,
-        backgroundColor: 'rgba(0,0,0,0.5)',
-        backdropFilter: 'blur(4px)', WebkitBackdropFilter: 'blur(4px)',
-        display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
+        backgroundColor: C.bg || '#05070f',
+        display: 'flex', alignItems: 'stretch', justifyContent: 'center',
         animation: 'ncsOverlayIn 0.2s ease-out',
       }}
       role="dialog"
@@ -53,28 +61,59 @@ const NewConversationSheet = ({ open, onClose, onSelect }) => {
       aria-label={L('newConversation')}
     >
       <div ref={sheetRef} style={{
-        width: '100%', maxWidth: '480px',
-        backgroundColor: C.cardBg || 'rgba(15, 15, 25, 0.98)',
-        borderRadius: '20px 20px 0 0',
-        padding: '12px 20px max(20px, env(safe-area-inset-bottom))',
-        animation: 'ncsSheetUp 0.25s cubic-bezier(0.32, 0.72, 0, 1)',
+        width: '100%', maxWidth: '520px', height: '100%',
+        display: 'flex', flexDirection: 'column',
+        paddingTop: 'max(12px, env(safe-area-inset-top))',
       }}>
-        {/* Drag handle */}
-        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px' }}>
-          <div style={{
-            width: '36px', height: '4px', borderRadius: '2px',
-            backgroundColor: C.textMuted || 'rgba(255,255,255,0.2)',
-          }} />
+        {/* testata: titolo e chiudi */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0, padding: '4px 16px 8px' }}>
+          <h2 style={{
+            flex: 1, minWidth: 0, margin: 0, fontSize: '20px', fontWeight: 600,
+            color: C.textPrimary || '#fff',
+            fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
+          }}>
+            {L('whatToDo')}
+          </h2>
+          <button onClick={() => { vibrate(); onClose(); }} aria-label={L('close') || 'X'}
+            style={{
+              width: 44, height: 44, borderRadius: 22, flexShrink: 0,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              background: C.cardBg || 'rgba(255,255,255,0.05)',
+              border: `1px solid ${C.cardBorder || 'rgba(255,255,255,0.08)'}`,
+              cursor: 'pointer', WebkitTapHighlightColor: 'transparent',
+            }}>
+            <Icon name="x" size={20} color={C.textMuted || 'rgba(255,255,255,0.6)'} />
+          </button>
         </div>
 
-        {/* Title */}
-        <h2 style={{
-          fontSize: '18px', fontWeight: '700', margin: '0 0 16px',
-          color: C.text || '#fff',
-          fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
-        }}>
-          {L('whatToDo')}
-        </h2>
+        {/* il corpo scorre: in cima il barcode, sotto le porte */}
+        <div style={{ flex: 1, minHeight: 0, overflowY: 'auto',
+          padding: '4px 16px calc(24px + env(safe-area-inset-bottom))' }}>
+
+        {/* b.442 — IL BARCODE, la porta faccia-a-faccia: grande, in cima. */}
+        <button
+          onClick={() => { vibrate(15); onSelect('face-to-face'); onClose(); }}
+          aria-label={L('actFaceTitle')}
+          style={{
+            width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center',
+            gap: 6, padding: '8px 8px 18px', marginBottom: 8,
+            background: 'none', border: 'none', cursor: 'pointer',
+            WebkitTapHighlightColor: 'transparent',
+          }}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element -- immagine locale */}
+          <img src="/qr-faccia-a-faccia.webp" alt="" aria-hidden width={1200} height={619}
+            style={{ width: '82%', maxWidth: 320, height: 'auto', display: 'block' }} />
+          <span style={{ fontSize: 18, fontWeight: 600, color: C.textPrimary || '#fff',
+            fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", textAlign: 'center' }}>
+            {L('actFaceTitle')}
+          </span>
+          <span style={{ fontSize: 12.5, color: C.textMuted || 'rgba(255,255,255,0.5)',
+            fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
+            textAlign: 'center', lineHeight: 1.4, maxWidth: 300 }}>
+            {L('actFaceDesc')}
+          </span>
+        </button>
 
         {/* Options */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -102,7 +141,9 @@ const NewConversationSheet = ({ open, onClose, onSelect }) => {
               onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
             >
               <span style={{ lineHeight: 0, flexShrink: 0, color: (S.colors?.accent2 || '#38e1ff') }}>
-                <Icon name={opt.icona} size={24} color={C.accent1 || '#5b8cff'} />
+                {opt.speciale === 'car'
+                  ? <span style={{ color: C.goldAccent || '#ffc44d', lineHeight: 0 }}><IconCar size={24} /></span>
+                  : <Icon name={opt.icona} size={24} color={C.accent1 || '#5b8cff'} />}
               </span>
               <div>
                 <div style={{
@@ -110,7 +151,7 @@ const NewConversationSheet = ({ open, onClose, onSelect }) => {
                   color: C.text || '#fff', marginBottom: '2px',
                   fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
                 }}>
-                  {L(opt.titleKey)}
+                  {opt.title || L(opt.titleKey)}
                 </div>
                 <div style={{
                   fontSize: '13px', color: C.textMuted || 'rgba(255,255,255,0.5)',
@@ -121,6 +162,7 @@ const NewConversationSheet = ({ open, onClose, onSelect }) => {
               </div>
             </button>
           ))}
+        </div>
         </div>
       </div>
 

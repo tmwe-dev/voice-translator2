@@ -214,6 +214,12 @@ qualunque refactoring. Non si propone di rimandarlo.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.442** (push #734) — LA HOME FEDELE AL TEMPLATE: marchio
+  BarTalk centrato in testata; microfono grande col cerchio e l'icona BIANCA
+  da 20; «Parla ora» a 17 sotto; via l'immagine QR (le porte per connettersi
+  passano nel «+», che ora e a tutta pagina col barcode dentro); le sezioni
+  diventano righe NUDE a tutta larghezza, senza card di vetro; niente
+  grassetto. Nessuna alternanza: il carosello resta sopra, fermo.
 - Versione: **b.441** (push #733) — RIPRISTINO: la Home e il foglio del «+»
   tornano alla versione prima della migrazione di oggi, su richiesta di Luca
   («hai rotto tutto»). Home e NewConversationSheet ripresi da b53469e/738f3a6.
