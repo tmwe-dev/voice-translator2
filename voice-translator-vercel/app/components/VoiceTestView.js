@@ -2,7 +2,6 @@
 import { memo, useState, useRef, useCallback, useEffect } from 'react';
 import { FONT, getLang } from '../lib/constants.js';
 import Icon from './Icon.js';
-import { PALETTE } from '../lib/palette.js';
 import { bandieraVoce } from '../lib/bandiereVoci.js';
 import { useApp } from '../contexts/AppContext.js';
 
@@ -67,11 +66,11 @@ const VoiceTestView = memo(function VoiceTestView({ isTrial, isTopPro,
   const [ordina, setOrdina] = useState('paese'); // 'paese' | 'nome' — b.309
   const audioRef = useRef(null);
 
-  // Palette
-  const gold = '#F5A623';
-  const goldGlow = 'rgba(245,166,35,0.25)';
-  const teal = PALETTE.teal;
-  const purple = PALETTE.violet;
+  // i tre colori del foglio vengono dal tema: erano tinte fisse, uguali su tutti e sei i temi
+  const gold = colors.goldAccent;
+  const goldGlow = `${colors.goldAccent}40`;
+  const teal = colors.accent2;
+  const purple = colors.accent1;
 
   const langInfo = getLang(prefs.lang);
   const hasApiAccess = userToken && (useOwnKeys || creditBalance > 0);
@@ -213,12 +212,11 @@ const VoiceTestView = memo(function VoiceTestView({ isTrial, isTopPro,
     </div>
   );
 
+  // il fondo e quello del tema: il nero scritto a mano restava nero anche sul tema chiaro
   return (
-    <div style={{
-      ...S.page,
-      background: 'linear-gradient(180deg, #060810 0%, #0A0D1A 50%, #060810 100%)',
-    }}>
-      <div style={S.scrollCenter}>
+    <div style={S.page}>
+      {/* margini laterali a 20: testata, contenuto e riga in basso sullo stesso filo */}
+      <div style={{...S.scrollCenter, paddingLeft:20, paddingRight:20}}>
         {/* ── INIZIO b.211 — wrapper non comprimibile ──
             scrollCenter è una COLONNA flex: senza questo wrapper le card
             figlie (flex-shrink di default 1) venivano schiacciate quando il
@@ -234,25 +232,26 @@ const VoiceTestView = memo(function VoiceTestView({ isTrial, isTopPro,
           background: 'transparent',
           borderBottom: 'none',
         }}>
+          {/* nessun tasto sotto i 44 punti, e i colori dal tema */}
           <button onClick={() => setView('settings')} style={{
-            width: 40, height: 40, borderRadius: 14, cursor: 'pointer',
-            background: 'rgba(255,255,255,0.04)',
-            border: '1px solid rgba(255,255,255,0.08)',
+            width: 44, height: 44, borderRadius: 14, cursor: 'pointer',
+            background: colors.cardBg,
+            border: `1px solid ${colors.cardBorder}`,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            color: 'rgba(255,255,255,0.7)', fontSize: 18,
+            color: colors.textSecondary, fontSize: 18,
             fontFamily: FONT, WebkitTapHighlightColor: 'transparent',
           }}>
-            <Icon name="back" size={20} color="rgba(255,255,255,0.7)" />
+            <Icon name="back" size={20} color={colors.textSecondary} />
           </button>
           <div style={{ flex: 1, textAlign: 'center' }}>
             <span style={{
-              fontSize: 17, fontWeight: 800, letterSpacing: -0.3,
-              background: `linear-gradient(135deg, ${gold} 0%, #fff 50%, ${gold} 100%)`,
+              fontSize: 17, fontWeight: 500, letterSpacing: -0.3,
+              background: `linear-gradient(135deg, ${gold} 0%, ${colors.textPrimary} 50%, ${gold} 100%)`,
               WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
               backgroundClip: 'text',
             }}>Voice Studio</span>
           </div>
-          <div style={{ width: 40 }} />
+          <div style={{ width: 44 }} />
         </div>
 
         {/* ── Hero Card: ElevenLabs Status ── */}
@@ -260,7 +259,7 @@ const VoiceTestView = memo(function VoiceTestView({ isTrial, isTopPro,
           width: '100%', maxWidth: 400, marginBottom: 16, borderRadius: 24,
           position: 'relative', overflow: 'hidden',
           padding: '28px 22px 24px',
-          background: `linear-gradient(165deg, ${gold}10 0%, rgba(8,10,22,0.95) 50%, ${purple}08 100%)`,
+          background: `linear-gradient(165deg, ${gold}10 0%, ${colors.cardBg} 50%, ${purple}08 100%)`,
           border: `1px solid ${gold}20`,
           backdropFilter: 'blur(40px) saturate(1.2)',
           WebkitBackdropFilter: 'blur(40px) saturate(1.2)',
@@ -293,12 +292,12 @@ const VoiceTestView = memo(function VoiceTestView({ isTrial, isTopPro,
             </div>
             <div>
               <div style={{
-                fontSize: 20, fontWeight: 800, letterSpacing: -0.5,
-                background: `linear-gradient(135deg, ${gold} 0%, #fff 60%, ${gold} 100%)`,
+                fontSize: 20, fontWeight: 500, letterSpacing: -0.5,
+                background: `linear-gradient(135deg, ${gold} 0%, ${colors.textPrimary} 60%, ${gold} 100%)`,
                 WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
                 backgroundClip: 'text',
               }}>ElevenLabs</div>
-              <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', marginTop: 2, letterSpacing: 0.3 }}>
+              <div style={{ fontSize: 12, color: colors.textMuted, marginTop: 2, letterSpacing: 0.3 }}>
                 {elAvailable
                   ? (elevenLabsVoices.length > 0
                     ? `${elevenLabsVoices.length} ${L('voicesAvailable')}`
@@ -310,7 +309,7 @@ const VoiceTestView = memo(function VoiceTestView({ isTrial, isTopPro,
             <div style={{
               marginLeft: 'auto',
               width: 10, height: 10, borderRadius: '50%',
-              background: elAvailable ? teal : 'rgba(255,255,255,0.2)',
+              background: elAvailable ? teal : colors.toggleOff,
               boxShadow: elAvailable ? `0 0 12px ${teal}80` : 'none',
               animation: elAvailable ? 'vtvPulse 2s ease-in-out infinite' : 'none',
             }} />
@@ -329,16 +328,16 @@ const VoiceTestView = memo(function VoiceTestView({ isTrial, isTopPro,
             standard (Edge) e quella che usa il 99% delle persone. */}
         <div style={{
           width: '100%', maxWidth: 400, marginBottom: 16, borderRadius: 20,
-          padding: '18px 18px 16px', background: 'rgba(10,13,26,0.8)',
-          border: '1px solid rgba(255,255,255,0.06)',
+          padding: '18px 18px 16px', background: colors.cardBg,
+          border: `1px solid ${colors.cardBorder}`,
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 4 }}>
             <Icon name="speaker" size={17} color={teal} />
-            <span style={{ fontSize: 14, fontWeight: 800, color: '#fff' }}>
+            <span style={{ fontSize: 14, fontWeight: 500, color: colors.textPrimary }}>
               {L('standardVoiceFree')}
             </span>
           </div>
-          <div style={{ fontSize: 11.5, color: 'rgba(255,255,255,0.45)', lineHeight: 1.5, marginBottom: 12 }}>
+          <div style={{ fontSize: 11.5, color: colors.textMuted, lineHeight: 1.5, marginBottom: 12 }}>
             {L('standardVoiceHint')}
           </div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
@@ -379,15 +378,15 @@ const VoiceTestView = memo(function VoiceTestView({ isTrial, isTopPro,
                       setPlayingVoice(null); }
                   }}
                   style={{
-                    padding: '9px 13px', borderRadius: 12, cursor: inCorso ? 'default' : 'pointer',
-                    background: inCorso ? `${teal}22` : 'rgba(255,255,255,0.05)',
-                    border: `1px solid ${inCorso ? `${teal}55` : 'rgba(255,255,255,0.10)'}`,
-                    color: inCorso ? teal : 'rgba(255,255,255,0.75)',
-                    fontSize: 12.5, fontWeight: 700, fontFamily: FONT,
-                    display: 'flex', alignItems: 'center', gap: 6,
+                    padding: '9px 13px', minHeight: 44, borderRadius: 12, cursor: inCorso ? 'default' : 'pointer',
+                    background: inCorso ? `${teal}22` : colors.inputBg,
+                    border: `1px solid ${inCorso ? `${teal}55` : colors.inputBorder}`,
+                    color: inCorso ? teal : colors.textSecondary,
+                    fontSize: 12.5, fontWeight: 500, fontFamily: FONT,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
                     WebkitTapHighlightColor: 'transparent',
                   }}>
-                  <Icon name={inCorso ? 'refresh' : 'play'} size={11} color={inCorso ? teal : 'rgba(255,255,255,0.6)'} />
+                  <Icon name={inCorso ? 'refresh' : 'play'} size={11} color={inCorso ? teal : colors.textMuted} />
                   {l?.name || codice}
                 </button>
               );
@@ -401,21 +400,21 @@ const VoiceTestView = memo(function VoiceTestView({ isTrial, isTopPro,
           <div style={{
             width: '100%', maxWidth: 400, marginBottom: 16, borderRadius: 20,
             padding: '24px 20px', textAlign: 'center',
-            background: 'rgba(10,13,26,0.8)',
-            border: '1px solid rgba(255,255,255,0.06)',
+            background: colors.cardBg,
+            border: `1px solid ${colors.cardBorder}`,
           }}>
-            <Icon name="key" size={32} color="rgba(255,255,255,0.3)" />
-            <div style={{ fontSize: 14, fontWeight: 600, color: 'rgba(255,255,255,0.6)', marginTop: 12 }}>
+            <Icon name="key" size={32} color={colors.textMuted} />
+            <div style={{ fontSize: 14, fontWeight: 500, color: colors.textSecondary, marginTop: 12 }}>
               {L('elKeyRequired')}
             </div>
-            <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', marginTop: 6, lineHeight: 1.5 }}>
+            <div style={{ fontSize: 11, color: colors.textMuted, marginTop: 6, lineHeight: 1.5 }}>
               {L('elKeyRequiredHint')}
             </div>
             <button onClick={() => setView('settings')} style={{
-              marginTop: 16, padding: '10px 24px', borderRadius: 14, cursor: 'pointer',
+              marginTop: 16, padding: '10px 24px', minHeight: 44, borderRadius: 14, cursor: 'pointer',
               background: `linear-gradient(135deg, ${gold}20, ${gold}08)`,
               border: `1px solid ${gold}30`,
-              color: gold, fontSize: 13, fontWeight: 700, fontFamily: FONT,
+              color: gold, fontSize: 13, fontWeight: 600, fontFamily: FONT,
               WebkitTapHighlightColor: 'transparent',
             }}>
               <Icon name="settings" size={14} color={gold} /> {L('settings')}
@@ -434,7 +433,7 @@ const VoiceTestView = memo(function VoiceTestView({ isTrial, isTopPro,
                 position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)',
                 pointerEvents: 'none',
               }}>
-                <Icon name="globe" size={16} color="rgba(255,255,255,0.3)" />
+                <Icon name="globe" size={16} color={colors.textMuted} />
               </div>
               <input
                 type="text"
@@ -442,10 +441,10 @@ const VoiceTestView = memo(function VoiceTestView({ isTrial, isTopPro,
                 onChange={e => setSearchQuery(e.target.value)}
                 placeholder={L('searchVoice')}
                 style={{
-                  width: '100%', padding: '12px 14px 12px 40px', borderRadius: 16,
-                  background: 'rgba(10,13,26,0.8)',
-                  border: '1px solid rgba(255,255,255,0.08)',
-                  color: 'rgba(255,255,255,0.9)', fontSize: 13,
+                  width: '100%', padding: '12px 14px 12px 40px', minHeight: 44, borderRadius: 16,
+                  background: colors.inputBg,
+                  border: `1px solid ${colors.inputBorder}`,
+                  color: colors.textPrimary, fontSize: 13,
                   fontFamily: FONT, outline: 'none',
                   backdropFilter: 'blur(20px)',
                   WebkitBackdropFilter: 'blur(20px)',
@@ -460,42 +459,46 @@ const VoiceTestView = memo(function VoiceTestView({ isTrial, isTopPro,
                 const active = categoryFilter === f.id;
                 return (
                   <button key={f.id} onClick={() => setCategoryFilter(f.id)} style={{
-                    padding: '6px 14px', borderRadius: 12, cursor: 'pointer',
-                    background: active ? `${gold}18` : 'rgba(255,255,255,0.05)',
-                    border: `1px solid ${active ? gold + '40' : 'rgba(255,255,255,0.12)'}`,
-                    color: active ? gold : 'rgba(255,255,255,0.75)', // b.211 — contrasto: era 0.5, poco visibile
-                    fontSize: 11, fontWeight: 600, fontFamily: FONT,
+                    padding: '6px 14px', minHeight: 44, borderRadius: 12, cursor: 'pointer',
+                    background: active ? `${gold}18` : colors.inputBg,
+                    border: `1px solid ${active ? gold + '40' : colors.inputBorder}`,
+                    color: active ? gold : colors.textSecondary, // b.211 — contrasto: era 0.5, poco visibile
+                    fontSize: 11, fontWeight: 500, fontFamily: FONT,
                     transition: 'all 0.2s ease',
                     WebkitTapHighlightColor: 'transparent',
                   }}>{L(f.chiave)}</button>
                 );
               })}
-              <div style={{ width: 1, height: 28, background: 'rgba(255,255,255,0.06)', alignSelf: 'center', margin: '0 4px' }} />
+              <div style={{ width: 1, height: 28, background: colors.dividerColor, alignSelf: 'center', margin: '0 4px' }} />
               {GENDER_FILTERS.map(f => {
                 const active = genderFilter === f.id;
                 return (
                   <button key={f.id} onClick={() => setGenderFilter(f.id)} style={{
-                    padding: '6px 12px', borderRadius: 12, cursor: 'pointer',
-                    background: active ? `${purple}18` : 'rgba(255,255,255,0.05)',
-                    border: `1px solid ${active ? purple + '40' : 'rgba(255,255,255,0.12)'}`,
-                    color: active ? purple : 'rgba(255,255,255,0.75)', // b.211 — contrasto: era 0.5
-                    fontSize: 11, fontWeight: 600, fontFamily: FONT,
+                    padding: '6px 12px', minHeight: 44, borderRadius: 12, cursor: 'pointer',
+                    background: active ? `${purple}18` : colors.inputBg,
+                    border: `1px solid ${active ? purple + '40' : colors.inputBorder}`,
+                    color: active ? purple : colors.textSecondary, // b.211 — contrasto: era 0.5
+                    fontSize: 11, fontWeight: 500, fontFamily: FONT,
                     transition: 'all 0.2s ease',
                     WebkitTapHighlightColor: 'transparent',
                   }}>{f.fisso || L(f.chiave)}</button>
                 );
               })}
-              <div style={{ width: 1, height: 28, background: 'rgba(255,255,255,0.06)', alignSelf: 'center', margin: '0 4px' }} />
+              <div style={{ width: 1, height: 28, background: colors.dividerColor, alignSelf: 'center', margin: '0 4px' }} />
               {/* b.309 — tasto ORDINAMENTO: alterna paese/nome */}
               <button onClick={() => setOrdina(o => o === 'paese' ? 'nome' : 'paese')}
                 title={ordina === 'paese' ? 'Ordina per paese' : 'Ordina per nome'} style={{
-                padding: '6px 12px', borderRadius: 12, cursor: 'pointer',
-                background: 'rgba(255,255,255,0.05)',
-                border: '1px solid rgba(255,255,255,0.12)',
-                color: 'rgba(255,255,255,0.75)',
-                fontSize: 11, fontWeight: 600, fontFamily: FONT,
+                padding: '6px 12px', minHeight: 44, borderRadius: 12, cursor: 'pointer',
+                background: colors.inputBg,
+                border: `1px solid ${colors.inputBorder}`,
+                color: colors.textSecondary,
+                fontSize: 11, fontWeight: 500, fontFamily: FONT,
+                display: 'flex', alignItems: 'center', gap: 4,
                 transition: 'all 0.2s ease', WebkitTapHighlightColor: 'transparent',
-              }}>{ordina === 'paese' ? '\u{1F3F3}️ ↓' : '\u{1F524} ↓'}</button>
+              }}>{/* niente emoji: l'ordinamento si dice col mappamondo o col foglio, e la freccia dice il verso */}
+                <Icon name={ordina === 'paese' ? 'globe' : 'doc'} size={13} color={colors.textSecondary} />
+                <Icon name="chevDown" size={12} color={colors.textSecondary} />
+              </button>
             </div>
           </div>
         )}
@@ -505,8 +508,8 @@ const VoiceTestView = memo(function VoiceTestView({ isTrial, isTopPro,
           <div style={{
             width: '100%', maxWidth: 400, padding: '40px 20px', textAlign: 'center',
             borderRadius: 20,
-            background: 'rgba(10,13,26,0.6)',
-            border: '1px solid rgba(255,255,255,0.05)',
+            background: colors.cardBg,
+            border: `1px solid ${colors.cardBorder}`,
           }}>
             <div style={{
               width: 48, height: 48, borderRadius: 16, margin: '0 auto 16px',
@@ -517,7 +520,7 @@ const VoiceTestView = memo(function VoiceTestView({ isTrial, isTopPro,
             }}>
               <Icon name="refresh" size={24} color={gold} />
             </div>
-            <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)' }}>
+            <div style={{ fontSize: 13, color: colors.textMuted }}>
               {L('loadingELVoices')}
             </div>
           </div>
@@ -531,7 +534,7 @@ const VoiceTestView = memo(function VoiceTestView({ isTrial, isTopPro,
             marginBottom: 16,
           }}>
             <div style={{
-              fontSize: 10, color: 'rgba(255,255,255,0.35)', padding: '0 4px 4px',
+              fontSize: 10, color: colors.textMuted, padding: '0 4px 4px',
               letterSpacing: 0.5,
             }}>
               {filteredVoices.length} {L('voicesWord')}
@@ -567,11 +570,11 @@ const VoiceTestView = memo(function VoiceTestView({ isTrial, isTopPro,
                     width: '100%', padding: '14px 16px', borderRadius: 18, cursor: 'pointer',
                     position: 'relative', overflow: 'hidden',
                     background: isSelected
-                      ? `linear-gradient(155deg, ${voiceAccent}12 0%, rgba(8,10,22,0.92) 60%)`
+                      ? `linear-gradient(155deg, ${voiceAccent}12 0%, ${colors.cardBg} 60%)`
                       : isHovered
-                        ? `linear-gradient(155deg, ${voiceAccent}08 0%, rgba(10,13,26,0.88) 60%)`
-                        : 'linear-gradient(155deg, rgba(12,15,30,0.5) 0%, rgba(8,10,24,0.7) 100%)',
-                    border: `1px solid ${isSelected ? voiceAccent + '35' : isHovered ? voiceAccent + '20' : 'rgba(255,255,255,0.05)'}`,
+                        ? `linear-gradient(155deg, ${voiceAccent}08 0%, ${colors.cardBg} 60%)`
+                        : colors.glassCard,
+                    border: `1px solid ${isSelected ? voiceAccent + '35' : isHovered ? voiceAccent + '20' : colors.cardBorder}`,
                     backdropFilter: 'blur(24px)',
                     WebkitBackdropFilter: 'blur(24px)',
                     boxShadow: isHovered || isSelected
@@ -589,7 +592,7 @@ const VoiceTestView = memo(function VoiceTestView({ isTrial, isTopPro,
                     width: 44, height: 44, borderRadius: 14, flexShrink: 0,
                     background: isPlaying
                       ? `linear-gradient(145deg, ${voiceAccent}30, ${voiceAccent}10)`
-                      : `linear-gradient(145deg, ${voiceAccent}15, rgba(255,255,255,0.02))`,
+                      : `linear-gradient(145deg, ${voiceAccent}15, ${colors.cardBg})`,
                     border: `1px solid ${isPlaying ? voiceAccent + '40' : voiceAccent + '18'}`,
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     boxShadow: isPlaying ? `0 0 20px ${voiceAccent}30` : 'none',
@@ -599,20 +602,20 @@ const VoiceTestView = memo(function VoiceTestView({ isTrial, isTopPro,
                       ? <WaveBars color={voiceAccent} />
                       : result === 'loading'
                         ? <Icon name="refresh" size={18} color={voiceAccent} />
-                        : <Icon name={isPlaying ? 'pause' : 'play'} size={18} color={isPlaying ? voiceAccent : 'rgba(255,255,255,0.5)'} />
+                        : <Icon name={isPlaying ? 'pause' : 'play'} size={18} color={isPlaying ? voiceAccent : colors.textMuted} />
                     }
                   </div>
 
                   {/* Voice info */}
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{
-                      fontSize: 14, fontWeight: isSelected ? 700 : 600, letterSpacing: -0.2,
-                      color: isSelected ? voiceAccent : (isHovered ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.8)'),
+                      fontSize: 14, fontWeight: 500, letterSpacing: -0.2,
+                      color: isSelected ? voiceAccent : (isHovered ? colors.textPrimary : colors.textSecondary),
                       transition: 'color 0.3s',
                       overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                     }}>{bv?.f ? `${bv.f} ` : ''}{v.name}</div>
                     <div style={{
-                      fontSize: 10, color: 'rgba(255,255,255,0.38)', marginTop: 3,
+                      fontSize: 10, color: colors.textMuted, marginTop: 3,
                       display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap',
                     }}>
                       {category && (
@@ -620,7 +623,7 @@ const VoiceTestView = memo(function VoiceTestView({ isTrial, isTopPro,
                           padding: '1px 6px', borderRadius: 5,
                           background: `${voiceAccent}12`,
                           color: voiceAccent,
-                          fontSize: 9, fontWeight: 700, letterSpacing: 0.5,
+                          fontSize: 9, fontWeight: 600, letterSpacing: 0.5,
                           textTransform: 'uppercase',
                         }}>{category}</span>
                       )}
@@ -641,8 +644,8 @@ const VoiceTestView = memo(function VoiceTestView({ isTrial, isTopPro,
                     {result === 'error' && (
                       <div style={{
                         width: 8, height: 8, borderRadius: '50%',
-                        background: '#EF4444',
-                        boxShadow: '0 0 8px rgba(239,68,68,0.4)',
+                        background: colors.statusError,
+                        boxShadow: `0 0 8px ${colors.statusError}66`,
                       }} />
                     )}
                     {isSelected && (
@@ -651,7 +654,7 @@ const VoiceTestView = memo(function VoiceTestView({ isTrial, isTopPro,
                         background: `${voiceAccent}18`,
                         border: `1px solid ${voiceAccent}30`,
                         color: voiceAccent,
-                        fontSize: 9, fontWeight: 800, letterSpacing: 0.5,
+                        fontSize: 9, fontWeight: 600, letterSpacing: 0.5,
                       }}>{L('voiceActive')}</div>
                     )}
                   </div>
@@ -666,18 +669,18 @@ const VoiceTestView = memo(function VoiceTestView({ isTrial, isTopPro,
           <div style={{
             width: '100%', maxWidth: 400, padding: '30px 20px', textAlign: 'center',
             borderRadius: 20,
-            background: 'rgba(10,13,26,0.5)',
-            border: '1px solid rgba(255,255,255,0.04)',
+            background: colors.cardBg,
+            border: `1px solid ${colors.cardBorder}`,
             marginBottom: 16,
           }}>
-            <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)' }}>
+            <div style={{ fontSize: 13, color: colors.textMuted }}>
               {L('noVoicesMatch')}
             </div>
             <button onClick={() => { setCategoryFilter('all'); setGenderFilter('all'); setSearchQuery(''); }} style={{
-              marginTop: 10, padding: '8px 18px', borderRadius: 12, cursor: 'pointer',
-              background: 'rgba(255,255,255,0.05)',
-              border: '1px solid rgba(255,255,255,0.08)',
-              color: 'rgba(255,255,255,0.6)', fontSize: 12, fontWeight: 600, fontFamily: FONT,
+              marginTop: 10, padding: '8px 18px', minHeight: 44, borderRadius: 12, cursor: 'pointer',
+              background: colors.inputBg,
+              border: `1px solid ${colors.inputBorder}`,
+              color: colors.textSecondary, fontSize: 12, fontWeight: 500, fontFamily: FONT,
               WebkitTapHighlightColor: 'transparent',
             }}>{L('resetWord')}</button>
           </div>
@@ -687,15 +690,15 @@ const VoiceTestView = memo(function VoiceTestView({ isTrial, isTopPro,
         {elAvailable && !loadingEL && (
           <button onClick={loadELVoices} style={{
             width: '100%', maxWidth: 400, marginBottom: 16,
-            padding: '12px 16px', borderRadius: 16, cursor: 'pointer',
-            background: 'rgba(10,13,26,0.5)',
-            border: '1px solid rgba(255,255,255,0.06)',
-            color: 'rgba(255,255,255,0.4)', fontSize: 12, fontWeight: 600,
+            padding: '12px 16px', minHeight: 44, borderRadius: 16, cursor: 'pointer',
+            background: colors.cardBg,
+            border: `1px solid ${colors.cardBorder}`,
+            color: colors.textMuted, fontSize: 12, fontWeight: 500,
             fontFamily: FONT, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
             WebkitTapHighlightColor: 'transparent',
             transition: 'all 0.2s ease',
           }}>
-            <Icon name="refresh" size={14} color="rgba(255,255,255,0.4)" />
+            <Icon name="refresh" size={14} color={colors.textMuted} />
             {L('reloadVoices')}
           </button>
         )}
@@ -704,11 +707,11 @@ const VoiceTestView = memo(function VoiceTestView({ isTrial, isTopPro,
         <div style={{
           width: '100%', maxWidth: 400, marginBottom: 24, padding: '14px 16px',
           borderRadius: 16,
-          background: 'rgba(10,13,26,0.4)',
-          border: '1px solid rgba(255,255,255,0.04)',
+          background: colors.cardBg,
+          border: `1px solid ${colors.cardBorder}`,
         }}>
           <div style={{
-            fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.25)',
+            fontSize: 10, fontWeight: 600, color: colors.textMuted,
             textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8,
           }}>
             {L('activeVoiceEngines')}
@@ -718,27 +721,27 @@ const VoiceTestView = memo(function VoiceTestView({ isTrial, isTopPro,
               { name: 'ElevenLabs', ok: elAvailable, note: L('enginePremium'), color: gold },
               { name: 'Edge TTS', ok: true, note: L('engineAutoFree'), color: teal },
               { name: 'OpenAI TTS', ok: hasApiAccess, note: L('engineFallback'), color: purple },
-              { name: 'Browser', ok: typeof speechSynthesis !== 'undefined', note: L('engineLastFallback'), color: 'rgba(255,255,255,0.4)' },
+              { name: 'Browser', ok: typeof speechSynthesis !== 'undefined', note: L('engineLastFallback'), color: colors.textMuted },
             ].map(e => (
               <div key={e.name} style={{
                 display: 'flex', alignItems: 'center', gap: 10, padding: '4px 0',
               }}>
                 <div style={{
                   width: 6, height: 6, borderRadius: '50%',
-                  background: e.ok ? e.color : 'rgba(255,255,255,0.12)',
+                  background: e.ok ? e.color : colors.toggleOff,
                   boxShadow: e.ok ? `0 0 6px ${e.color}40` : 'none',
                 }} />
-                <span style={{ fontSize: 11, color: e.ok ? 'rgba(255,255,255,0.55)' : 'rgba(255,255,255,0.25)', fontWeight: 500 }}>
+                <span style={{ fontSize: 11, color: e.ok ? colors.textSecondary : colors.textMuted, fontWeight: 500 }}>
                   {e.name}
                 </span>
-                <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.2)', marginLeft: 'auto' }}>
+                <span style={{ fontSize: 10, color: colors.textMuted, marginLeft: 'auto' }}>
                   {e.note}
                 </span>
               </div>
             ))}
           </div>
           <div style={{
-            fontSize: 9, color: 'rgba(255,255,255,0.18)', marginTop: 10, lineHeight: 1.5,
+            fontSize: 9, color: colors.textMuted, marginTop: 10, lineHeight: 1.5,
           }}>
             {L('voiceEnginesNote')}
           </div>

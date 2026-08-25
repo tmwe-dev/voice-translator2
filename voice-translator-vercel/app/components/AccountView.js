@@ -3,7 +3,6 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { FONT } from '../lib/constants.js';
 import Icon from './Icon.js';
 import { createLogger } from '../lib/logger.js';
-import { PALETTE } from '../lib/palette.js';
 import { useApp } from '../contexts/AppContext.js';
 const dbg = createLogger('account');
 
@@ -95,8 +94,13 @@ export default function AccountView({ authStep, authEmail, setAuthEmail, authCod
 
   return (
     <div style={S.page}>
-      <div style={S.scrollCenter}>
-        <div style={{fontSize:42, marginBottom:8}}>{authStep === 'choose' ? '\u2705' : '\u{1F512}'}</div>
+      {/* margini laterali a 20: testata, contenuto e riga in basso sullo stesso filo */}
+      <div style={{...S.scrollCenter, paddingLeft:20, paddingRight:20}}>
+        {/* niente emoji nell'interfaccia: lo stato dell'accesso si dice con un segno al tratto */}
+        <div style={{marginBottom:8, display:'flex', justifyContent:'center'}}>
+          <Icon name={authStep === 'choose' ? 'check' : 'lock'} size={36}
+            color={authStep === 'choose' ? S.colors.accent4 : S.colors.accent1} />
+        </div>
         <div style={S.title}>{L('account')}</div>
         <div style={S.sub}>{authStep === 'choose' ? L('accessDone') : L('accessToCreate')}</div>
 
@@ -154,11 +158,12 @@ export default function AccountView({ authStep, authEmail, setAuthEmail, authCod
               </svg>
               <span>{L('loginGoogle')}</span>
             </button>
+            {/* i colori dell'errore vengono dal tema: i ripieghi scritti a mano restavano rossi anche sul tema chiaro */}
             {authError && (
-              <div style={{color:S.colors.statusError || PALETTE.coral, fontSize:12, textAlign:'center',
+              <div style={{color:S.colors.statusError, fontSize:12, textAlign:'center',
                 padding:'6px 12px', marginBottom:8, borderRadius:8,
-                background:S.colors.accent3Bg || 'rgba(255,107,107,0.1)',
-                border:`1px solid ${S.colors.accent3Border || 'rgba(255,107,107,0.2)'}`}}>
+                background:S.colors.accent3Bg,
+                border:`1px solid ${S.colors.accent3Border}`}}>
                 {authError}
               </div>
             )}
@@ -214,7 +219,8 @@ export default function AccountView({ authStep, authEmail, setAuthEmail, authCod
                   document.head.appendChild(script);
                 }
               }}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="white">
+              {/* il segno Apple prende il colore del testo del tasto: in bianco fisso spariva sul tema chiaro */}
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M17.05 20.28c-.98.95-2.05.88-3.08.4-1.09-.5-2.08-.48-3.24 0-1.44.62-2.2.44-3.06-.4C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"/>
               </svg>
               <span>{L('loginApple')}</span>
@@ -235,7 +241,8 @@ export default function AccountView({ authStep, authEmail, setAuthEmail, authCod
             {authTestCode && (
               <div style={{fontSize:13, color:S.colors.accent3, textAlign:'center', marginBottom:12,
                 padding:'8px 12px', background:S.colors.accent3Bg, borderRadius:12}}>
-                {L('testCode')}: <strong>{authTestCode}</strong>
+                {/* niente grassetto: 600 basta a staccare il codice dal resto della riga */}
+              {L('testCode')}: <span style={{fontWeight:600}}>{authTestCode}</span>
               </div>
             )}
             <div style={S.field}>
@@ -248,8 +255,9 @@ export default function AccountView({ authStep, authEmail, setAuthEmail, authCod
               disabled={authLoading} onClick={verifyAuthCodeFn}>
               {authLoading ? L('verifying') : L('verify')}
             </button>
+            {/* nessun tasto sotto i 44 punti: prima si sfiorava appena */}
             <button style={{marginTop:10, background:'none', border:'none', color:S.colors.textMuted,
-              fontSize:12, cursor:'pointer', fontFamily:FONT, padding:8, width:'100%', textAlign:'center'}}
+              fontSize:12, cursor:'pointer', fontFamily:FONT, padding:8, width:'100%', minHeight:44, textAlign:'center'}}
               onClick={() => { setAuthStep('email'); setAuthCode(''); setAuthError(''); }}>
               {L('changeEmail')}
             </button>
@@ -271,7 +279,7 @@ export default function AccountView({ authStep, authEmail, setAuthEmail, authCod
 
               <div style={{position:'absolute', top:-11, left:18, padding:'3px 14px', borderRadius:8,
                 background:`linear-gradient(135deg, ${S.colors.accent4}, ${S.colors.accent2})`,
-                color:'#0a0e27', fontSize:10, fontWeight:800, letterSpacing:0.5, textTransform:'uppercase'}}>
+                color:S.colors.bg, fontSize:10, fontWeight:600, letterSpacing:0.5, textTransform:'uppercase'}}>
                 {L('recommended')}
               </div>
 
@@ -284,7 +292,7 @@ export default function AccountView({ authStep, authEmail, setAuthEmail, authCod
                   <Icon name="zap" size={28} color={S.colors.accent4} />
                 </div>
                 <div>
-                  <div style={{fontWeight:800, fontSize:20, color:S.colors.accent4, letterSpacing:-0.3}}>
+                  <div style={{fontWeight:500, fontSize:20, color:S.colors.accent4, letterSpacing:-0.3}}>
                     {L('startFreeMode')}
                   </div>
                   <div style={{fontSize:12, color:S.colors.textTertiary, marginTop:2}}>
@@ -295,24 +303,25 @@ export default function AccountView({ authStep, authEmail, setAuthEmail, authCod
 
               {/* Feature grid */}
               <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:'8px 12px', marginBottom:12, paddingLeft:4}}>
+                {/* le sei voci del riquadro gratuito: segni al tratto al posto delle emoji, stesso significato */}
                 {[
-                  { icon:'\u{1F4AC}', text: L('freeTextPerDay') },
-                  { icon:'\u{1F399}\uFE0F', text: L('freeVoiceInput') },
-                  { icon:'\u{1F50A}', text: L('freeBrowserVoice') },
-                  { icon:'\u{1F310}', text: L('freeLangsAvailable') },
-                  { icon:'\u{1F3AF}', text: L('freeTopicContexts') },
-                  { icon:'\u{267E}\uFE0F', text: L('freeRenewsDaily') },
+                  { icon:'chat', text: L('freeTextPerDay') },
+                  { icon:'mic', text: L('freeVoiceInput') },
+                  { icon:'speaker', text: L('freeBrowserVoice') },
+                  { icon:'globe', text: L('freeLangsAvailable') },
+                  { icon:'target', text: L('freeTopicContexts') },
+                  { icon:'refresh', text: L('freeRenewsDaily') },
                 ].map((f, i) => (
                   <div key={i} style={{display:'flex', alignItems:'center', gap:6}}>
-                    <span style={{fontSize:13, width:18, textAlign:'center', flexShrink:0}}>{f.icon}</span>
-                    <span style={{fontSize:11, color:S.colors.textSecondary, fontWeight:600}}>{f.text}</span>
+                    <Icon name={f.icon} size={14} color={S.colors.accent4} style={{width:18}} />
+                    <span style={{fontSize:11, color:S.colors.textSecondary, fontWeight:500}}>{f.text}</span>
                   </div>
                 ))}
               </div>
 
               {/* CTA */}
               <div style={{textAlign:'center', padding:'10px 0 4px', borderTop:`1px solid ${S.colors.accent4Border}`}}>
-                <span style={{fontSize:13, fontWeight:800, color:S.colors.accent4, letterSpacing:0.3}}>
+                <span style={{fontSize:13, fontWeight:600, color:S.colors.accent4, letterSpacing:0.3}}>
                   {L('startFree')} {'\u2192'}
                 </span>
               </div>
@@ -321,7 +330,7 @@ export default function AccountView({ authStep, authEmail, setAuthEmail, authCod
             {/* ══════ Divider ══════ */}
             <div style={{display:'flex', alignItems:'center', gap:12, marginBottom:16}}>
               <div style={{flex:1, height:1, background:S.colors.dividerColor}} />
-              <div style={{fontSize:10, color:S.colors.textSecondary, fontWeight:700, textTransform:'uppercase', letterSpacing:1.5}}>
+              <div style={{fontSize:10, color:S.colors.textSecondary, fontWeight:600, textTransform:'uppercase', letterSpacing:1.5}}>
                 {L('orGoPro')}
               </div>
               <div style={{flex:1, height:1, background:S.colors.dividerColor}} />
@@ -344,10 +353,11 @@ export default function AccountView({ authStep, authEmail, setAuthEmail, authCod
                     background:`linear-gradient(135deg, ${S.colors.accent1Bg}, ${S.colors.accent2Bg})`,
                     border:`1.5px solid ${S.colors.accent1Border}`,
                     display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0}}>
-                    <span style={{fontSize:24}}>{'\u{1F680}'}</span>
+                    {/* niente emoji: il pacchetto d'avvio si segna con una stella al tratto */}
+                    <Icon name="star" size={24} color={S.colors.accent1} />
                   </div>
                   <div style={{flex:1}}>
-                    <div style={{fontWeight:800, fontSize:16, color:S.colors.accent1}}>{L('starterPack')} — {'\u20AC'}0.90</div>
+                    <div style={{fontWeight:500, fontSize:16, color:S.colors.accent1}}>{L('starterPack')} — {'\u20AC'}0.90</div>
                     <div style={{fontSize:11, color:S.colors.textSecondary, marginTop:2}}>
                       {L('starterPackDetail')}
                     </div>
@@ -363,8 +373,8 @@ export default function AccountView({ authStep, authEmail, setAuthEmail, authCod
                     <div key={i} style={{display:'flex', alignItems:'baseline', gap:4,
                       padding:'4px 10px', borderRadius:8, background:S.colors.accent1Bg,
                       border:`1px solid ${S.colors.accent1Border}`}}>
-                      <span style={{fontSize:15, fontWeight:800, color:s.color}}>{s.val}</span>
-                      <span style={{fontSize:9, color:S.colors.textMuted, fontWeight:600}}>{s.label}</span>
+                      <span style={{fontSize:15, fontWeight:600, color:s.color}}>{s.val}</span>
+                      <span style={{fontSize:9, color:S.colors.textMuted, fontWeight:500}}>{s.label}</span>
                     </div>
                   ))}
                 </div>
@@ -382,10 +392,11 @@ export default function AccountView({ authStep, authEmail, setAuthEmail, authCod
                   <div style={{width:48, height:48, borderRadius:14,
                     background:S.colors.inputBg, border:`1px solid ${S.colors.inputBorder}`,
                     display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0}}>
-                    <span style={{fontSize:24}}>{'\u{1F4B3}'}</span>
+                    {/* niente emoji: l'acquisto crediti si segna con la carta al tratto */}
+                    <Icon name="credit" size={24} color={S.colors.textSecondary} />
                   </div>
                   <div style={{flex:1}}>
-                    <div style={{fontWeight:700, fontSize:16}}>{L('buyCredits')}</div>
+                    <div style={{fontWeight:500, fontSize:16}}>{L('buyCredits')}</div>
                     <div style={{fontSize:11, color:S.colors.textMuted, marginTop:2}}>
                       {L('payAsYouGo')} — {L('from')} {'\u20AC'}2 {L('rangeTo')} {'\u20AC'}20
                     </div>
@@ -401,8 +412,8 @@ export default function AccountView({ authStep, authEmail, setAuthEmail, authCod
                     <div key={i} style={{display:'flex', alignItems:'baseline', gap:4,
                       padding:'4px 10px', borderRadius:8, background:S.colors.inputBg,
                       border:`1px solid ${S.colors.inputBorder}`}}>
-                      <span style={{fontSize:12, fontWeight:800, color:s.color}}>{s.val}</span>
-                      <span style={{fontSize:9, color:S.colors.textSecondary, fontWeight:600}}>{s.label}</span>
+                      <span style={{fontSize:12, fontWeight:600, color:s.color}}>{s.val}</span>
+                      <span style={{fontSize:9, color:S.colors.textSecondary, fontWeight:500}}>{s.label}</span>
                     </div>
                   ))}
                 </div>
@@ -423,7 +434,7 @@ export default function AccountView({ authStep, authEmail, setAuthEmail, authCod
                   <Icon name="key" size={22} color={S.colors.accent2} />
                 </div>
                 <div style={{flex:1, textAlign:'left'}}>
-                  <div style={{fontWeight:700, fontSize:15}}>{L('useYourKeys')}</div>
+                  <div style={{fontWeight:500, fontSize:15}}>{L('useYourKeys')}</div>
                   <div style={{fontSize:11, color:S.colors.textMuted, marginTop:2}}>
                     {L('unlimitedOwnApis')}
                   </div>
@@ -432,8 +443,9 @@ export default function AccountView({ authStep, authEmail, setAuthEmail, authCod
               </button>
             </div>
 
+            {/* nessun tasto sotto i 44 punti: prima si sfiorava appena */}
             <button style={{marginTop:16, background:'none', border:'none', color:S.colors.textMuted,
-              fontSize:12, cursor:'pointer', fontFamily:FONT, padding:10, width:'100%', textAlign:'center'}}
+              fontSize:12, cursor:'pointer', fontFamily:FONT, padding:10, width:'100%', minHeight:44, textAlign:'center'}}
               onClick={() => setView('home')}>
               {L('chooseLater')}
             </button>

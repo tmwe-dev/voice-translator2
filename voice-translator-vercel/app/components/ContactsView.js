@@ -47,7 +47,13 @@ export default function ContactsView({
     green: col.onlineColor || col.accent4 || PALETTE.green,
     headerBg: col.headerBg || 'rgba(9,9,11,0.85)',
     headerBorder: col.headerBorder || 'rgba(250,250,250,0.04)',
+    // Il fondo dei tasti neutri era scritto a mano in bianco: su un tema
+    // chiaro schiariva un fondo gia chiaro. Il token lo sa fare da solo.
+    overlay: col.buttonOverlay || 'rgba(250,250,250,0.03)',
   };
+  // Misura minima di un tasto: sotto i 44 punti il dito comincia a sbagliare
+  // bersaglio. Un numero solo, dichiarato una volta.
+  const TASTO = 44;
 
   const [addEmail, setAddEmail] = useState('');
   const [addError, setAddError] = useState('');
@@ -139,6 +145,27 @@ export default function ContactsView({
     return contacts.filter(c => (c.name || c.email || '').toLowerCase().includes(q));
   }, [contacts, search]);
 
+  // Le quattro vie per condividere l'invito avevano un'icona VUOTA: l'emoji
+  // era gia stata tolta e al suo posto non era rimasto niente, solo uno spazio
+  // prima del nome. Qui l'icona e al tratto e prende il colore del canale.
+  function iconaCanale(id, colore) {
+    if (id === 'whatsapp') return <Icon name="chat" size={15} color={colore} />;
+    if (id === 'telegram') return <Icon name="send" size={15} color={colore} />;
+    if (id === 'sms') return (
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={colore}
+        strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+      </svg>
+    );
+    return (
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={colore}
+        strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+        <path d="M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z" />
+        <path d="M22 6l-10 7L2 6" />
+      </svg>
+    );
+  }
+
   const sortedContacts = useMemo(() => {
     return [...filteredContacts].sort((a, b) => {
       if (a.online && !b.online) return -1;
@@ -167,31 +194,51 @@ export default function ContactsView({
         S={{ colors: C }}
         rightAction={
           <button onClick={() => setShowAddSection(!showAddSection)} aria-label={showAddSection ? L('closeWord') : L('addContactAria')} style={{
-            width: 38, height: 38, borderRadius: 12, cursor: 'pointer',
+            // Era 38: sotto la misura minima di un dito.
+            width: TASTO, height: TASTO, borderRadius: 12, cursor: 'pointer',
             background: showAddSection ? `${C.accent}15` : C.card,
             border: `1px solid ${showAddSection ? `${C.accent}25` : C.cardBorder}`,
-            color: showAddSection ? C.accent : C.textMuted, fontSize: 20,
+            color: showAddSection ? C.accent : C.textMuted,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
-            {showAddSection ? '×' : '+'}
+            {/* I segni «×» e «+» erano scritti come testo: un'icona al tratto
+                sta alla stessa misura in ogni carattere e in ogni lingua. */}
+            <Icon name={showAddSection ? 'x' : 'plus'} size={20} color={showAddSection ? C.accent : C.textMuted} />
           </button>
         }
       />
 
       {/* ═══ SEARCH ═══ */}
+      {/* Margine laterale 20, uguale a testata, contenuto e riga in basso. */}
       {contacts.length > 3 && (
-        <div style={{ padding: '0 16px 6px', flexShrink: 0 }}>
+        <div style={{ padding: '0 20px 6px', flexShrink: 0 }}>
           <div style={{
             display: 'flex', alignItems: 'center', gap: 10,
             background: C.card, border: `1px solid ${C.cardBorder}`,
             backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)',
-            borderRadius: 14, padding: '10px 14px',
+            borderRadius: 14, padding: '10px 14px', minHeight: TASTO,
           }}>
-            <span style={{ fontSize: 14, opacity: 0.4 }}></span>
+            {/* Qui c'era una casella VUOTA larga 14: l'emoji della lente era
+                gia stata tolta e al suo posto era rimasto solo il buco.
+                La lente non sta fra le icone comuni, quindi e disegnata qui
+                al tratto, col colore che porta il tema. */}
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={C.textMuted}
+              strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+              <circle cx="11" cy="11" r="7" />
+              <path d="M20 20l-4.35-4.35" />
+            </svg>
             <input type="text" value={search} onChange={e => setSearch(e.target.value)}
               placeholder={L('searchContacts')}
               style={{ flex: 1, background: 'none', border: 'none', outline: 'none', color: C.textPrimary, fontSize: 13, fontFamily: FONT }} />
-            {search && <button onClick={() => setSearch('')} style={{ background: 'none', border: 'none', color: C.textMuted, cursor: 'pointer', fontSize: 16, padding: 0 }}>×</button>}
+            {search && (
+              <button onClick={() => setSearch('')} aria-label={L('resetWord')} style={{
+                background: 'none', border: 'none', color: C.textMuted, cursor: 'pointer',
+                width: TASTO, height: TASTO, padding: 0, flexShrink: 0,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+                <Icon name="x" size={16} color={C.textMuted} />
+              </button>
+            )}
           </div>
         </div>
       )}
@@ -199,12 +246,14 @@ export default function ContactsView({
       {/* ═══ ADD / INVITE SECTION ═══ */}
       {showAddSection && (
         <div style={{
-          margin: '0 16px 8px', padding: 14, borderRadius: 16,
+          // Margine laterale 20, come il resto della pagina.
+          margin: '0 20px 8px', padding: 14, borderRadius: 16,
           background: C.card, border: `1px solid ${C.cardBorder}`,
           backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)',
           animation: 'vtSlideUp 0.2s ease-out',
         }}>
-          <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 8, color: C.textSecondary }}>
+          {/* Il 700 non esiste in questo standard: se tutto pesa, niente pesa. */}
+          <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 8, color: C.textSecondary }}>
             {L('addByEmail')}
           </div>
           <div style={{ display: 'flex', gap: 8, marginBottom: 6 }}>
@@ -214,11 +263,15 @@ export default function ContactsView({
             }} type="email" placeholder={L('contactEmailPlaceholder')}
               value={addEmail} onChange={e => { setAddEmail(e.target.value); setAddError(''); }}
               onKeyDown={e => e.key === 'Enter' && handleAddContact()} />
-            <button onClick={handleAddContact} style={{
-              padding: '10px 16px', borderRadius: 12, cursor: 'pointer',
+            <button onClick={handleAddContact} aria-label={L('addShort')} style={{
+              // Era alto quanto il testo che conteneva: ora tiene la misura del dito.
+              minWidth: TASTO, minHeight: TASTO, padding: '10px 16px', borderRadius: 12, cursor: 'pointer',
               background: `linear-gradient(135deg, ${C.accent}, ${C.purple})`,
-              border: 'none', color: '#fff', fontSize: 14, fontWeight: 700, fontFamily: FONT,
-            }}>+</button>
+              border: 'none', color: '#fff', fontSize: 14, fontWeight: 600, fontFamily: FONT,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              <Icon name="plus" size={18} color="#fff" />
+            </button>
           </div>
           {addError && <div style={{ fontSize: 10, color: C.red, marginBottom: 4 }}>{addError}</div>}
           {addSuccess && <div style={{ fontSize: 10, color: C.green, marginBottom: 4 }}>{addSuccess}</div>}
@@ -226,7 +279,8 @@ export default function ContactsView({
           <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
             {hasDeviceContacts && (
               <button onClick={handleImportDeviceContacts} disabled={deviceImporting} style={{
-                flex: 1, padding: '9px 10px', borderRadius: 12, cursor: 'pointer',
+                // Alzato alla misura minima del dito (era 9 di rientro, cioe ~33).
+                flex: 1, minHeight: TASTO, padding: '9px 10px', borderRadius: 12, cursor: 'pointer',
                 background: `${C.accent}10`, border: `1px solid ${C.accent}20`,
                 color: C.textPrimary, fontSize: 11, fontFamily: FONT,
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
@@ -236,7 +290,8 @@ export default function ContactsView({
               </button>
             )}
             <button onClick={handleCreateInvite} style={{
-              flex: 1, padding: '9px 10px', borderRadius: 12, cursor: 'pointer',
+              // Alzato alla misura minima del dito.
+              flex: 1, minHeight: TASTO, padding: '9px 10px', borderRadius: 12, cursor: 'pointer',
               background: `${C.purple}10`, border: `1px solid ${C.purple}20`,
               color: C.textPrimary, fontSize: 11, fontFamily: FONT,
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
@@ -260,44 +315,53 @@ export default function ContactsView({
       {/* ═══ INVITE SHARE PANEL ═══ */}
       {showInvite && currentInviteCode && (
         <div style={{
-          margin: '0 16px 8px', padding: 14, borderRadius: 16,
+          // Margine laterale 20, come il resto della pagina.
+          margin: '0 20px 8px', padding: 14, borderRadius: 16,
           background: C.card, border: `1px solid ${C.accent}20`,
           backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)',
           animation: 'vtSlideUp 0.2s ease-out',
         }}>
-          <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 4, color: C.textSecondary }}>{L('shareInvite')}</div>
+          {/* Il 700 non esiste in questo standard: il massimo e 600. */}
+          <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 4, color: C.textSecondary }}>{L('shareInvite')}</div>
           <div style={{ fontSize: 10, color: C.textMuted, marginBottom: 10 }}>{L('shareInviteDesc')}</div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginBottom: 8 }}>
             {[
-              { id: 'whatsapp', icon: '', label: 'WhatsApp', color: '#25D366' },
-              { id: 'telegram', icon: '', label: 'Telegram', color: '#0088cc' },
-              { id: 'sms', icon: '', label: 'SMS', color: '#FF9500' },
-              { id: 'email', icon: '', label: 'Email', color: C.accent },
+              { id: 'whatsapp', label: 'WhatsApp', color: '#25D366' },
+              { id: 'telegram', label: 'Telegram', color: '#0088cc' },
+              { id: 'sms', label: 'SMS', color: '#FF9500' },
+              { id: 'email', label: 'Email', color: C.accent },
             ].map(ch => (
               <button key={ch.id} onClick={() => handleShare(ch.id)} style={{
-                padding: '9px 8px', borderRadius: 12, cursor: 'pointer',
+                // Alzato alla misura minima del dito.
+                minHeight: TASTO, padding: '9px 8px', borderRadius: 12, cursor: 'pointer',
                 background: `${ch.color}12`, border: `1px solid ${ch.color}25`,
                 color: C.textPrimary, fontSize: 11, fontFamily: FONT,
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
                 WebkitTapHighlightColor: 'transparent',
               }}>
-                {ch.icon} {ch.label}
+                {iconaCanale(ch.id, ch.color)}
+                {ch.label}
               </button>
             ))}
           </div>
           <div style={{ display: 'flex', gap: 6 }}>
             <button onClick={() => handleShare('copy')} style={{
-              flex: 1, padding: '8px', borderRadius: 10, cursor: 'pointer',
-              background: `rgba(255,255,255,0.03)`, border: `1px solid ${C.cardBorder}`,
+              // Fondo dal token del tema (era un bianco scritto a mano) e
+              // altezza minima del dito.
+              flex: 1, minHeight: TASTO, padding: '8px', borderRadius: 10, cursor: 'pointer',
+              background: C.overlay, border: `1px solid ${C.cardBorder}`,
               color: linkCopied ? C.green : C.textPrimary, fontSize: 11, fontFamily: FONT,
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
             }}>
-              {linkCopied ? `✓ ${L('copiedShort')}` : L('copyLink')}
+              {/* La spunta era un segno di testo: ora e l'icona comune. */}
+              {linkCopied && <Icon name="check" size={14} color={C.green} />}
+              {linkCopied ? L('copiedShort') : L('copyLink')}
             </button>
             {typeof navigator !== 'undefined' && navigator.share && (
               <button onClick={() => handleShare('native')} style={{
-                flex: 1, padding: '8px', borderRadius: 10, cursor: 'pointer',
-                background: `rgba(255,255,255,0.03)`, border: `1px solid ${C.cardBorder}`,
+                // Fondo dal token del tema e altezza minima del dito.
+                flex: 1, minHeight: TASTO, padding: '8px', borderRadius: 10, cursor: 'pointer',
+                background: C.overlay, border: `1px solid ${C.cardBorder}`,
                 color: C.textPrimary, fontSize: 11, fontFamily: FONT,
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
               }}>
@@ -306,15 +370,18 @@ export default function ContactsView({
             )}
           </div>
           <button onClick={() => setShowInvite(false)} style={{
+            // Era alto 16 punti in tutto: adesso tiene la misura del dito.
             marginTop: 4, background: 'none', border: 'none', color: C.textMuted,
-            fontSize: 10, cursor: 'pointer', fontFamily: FONT, width: '100%', textAlign: 'center', padding: 3,
+            fontSize: 10, cursor: 'pointer', fontFamily: FONT, width: '100%',
+            textAlign: 'center', padding: 3, minHeight: TASTO,
           }}>{L('closeWord')}</button>
         </div>
       )}
 
       {/* ═══ CONTACTS LIST ═══ */}
       {/* b.206 — bottom alzato: gli ultimi contatti finivano sotto la BottomNav */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: '4px 16px calc(106px + env(safe-area-inset-bottom))', scrollbarWidth: 'none' }}>
+      {/* Margine laterale 20, uguale a testata e riga in basso. */}
+      <div style={{ flex: 1, overflowY: 'auto', padding: '4px 20px calc(106px + env(safe-area-inset-bottom))', scrollbarWidth: 'none' }}>
         {contactsLoading && contacts.length === 0 ? (
           <div style={{ textAlign: 'center', padding: 40, color: C.textMuted, fontSize: 12 }}>{L('loading')}</div>
         ) : contacts.length === 0 ? (
@@ -323,23 +390,34 @@ export default function ContactsView({
               width: 80, height: 80, borderRadius: 24, margin: '0 auto 16px',
               background: `linear-gradient(135deg, ${C.accent}15, ${C.purple}15)`,
               border: `1px solid ${C.accent}15`,
-              display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 36,
-            }}></div>
-            <div style={{ fontSize: 16, fontWeight: 700, color: C.textPrimary, marginBottom: 6 }}>{L('noContacts')}</div>
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              {/* Il riquadro della rubrica vuota era VUOTO davvero: l'emoji era
+                  gia stata tolta e restava un quadrato colorato senza senso. */}
+              <Icon name="users" size={36} color={C.accent} />
+            </div>
+            <div style={{ fontSize: 16, fontWeight: 600, color: C.textPrimary, marginBottom: 6 }}>{L('noContacts')}</div>
             <div style={{ fontSize: 12, color: C.textMuted, lineHeight: 1.6, maxWidth: 260, margin: '0 auto 20px' }}>
               {L('noContactsDesc')}
             </div>
             <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
               <button onClick={() => setShowAddSection(true)} style={{
-                padding: '10px 22px', borderRadius: 14, cursor: 'pointer',
+                // Altezza minima del dito, e il peso scende da 700 a 600.
+                minHeight: TASTO, padding: '10px 22px', borderRadius: 14, cursor: 'pointer',
                 background: `linear-gradient(135deg, ${C.accent}, ${C.purple})`,
-                border: 'none', color: '#fff', fontSize: 12, fontWeight: 700, fontFamily: FONT,
+                border: 'none', color: '#fff', fontSize: 12, fontWeight: 600, fontFamily: FONT,
                 boxShadow: `0 4px 16px ${C.accent}30`,
-              }}>+ {L('addShort')}</button>
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+              }}>
+                {/* Il «+» era scritto come testo: ora e l'icona comune. */}
+                <Icon name="plus" size={15} color="#fff" />
+                {L('addShort')}
+              </button>
               <button onClick={handleCreateInvite} style={{
-                padding: '10px 22px', borderRadius: 14, cursor: 'pointer',
+                // Altezza minima del dito, e il peso scende da 700 a 600.
+                minHeight: TASTO, padding: '10px 22px', borderRadius: 14, cursor: 'pointer',
                 background: `${C.purple}12`, border: `1px solid ${C.purple}20`,
-                color: C.textPrimary, fontSize: 12, fontWeight: 700, fontFamily: FONT,
+                color: C.textPrimary, fontSize: 12, fontWeight: 600, fontFamily: FONT,
               }}>{L('inviteShort')}</button>
             </div>
           </div>
@@ -370,7 +448,9 @@ export default function ContactsView({
                 {/* Info */}
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                    <span style={{ fontSize: 14, fontWeight: 700, color: C.textPrimary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {/* Il titolo di una riga sta a 500: il grassetto lo toglieva
+                        dalla fila e faceva pesare tutta la pagina. */}
+                    <span style={{ fontSize: 14, fontWeight: 500, color: C.textPrimary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {contact.name || contact.email.split('@')[0]}
                     </span>
                     <span style={{ fontSize: 15, flexShrink: 0 }}>{LANGS.find(l => l.code === contact.lang)?.flag || ''}</span>
@@ -388,28 +468,37 @@ export default function ContactsView({
                       annunciava come "pulsante" e basta. */}
                   <button onClick={() => handleStartChat && handleStartChat(contact)}
                     aria-label={L('chatWord')} title={L('chatWord')} style={{
-                    width: 38, height: 38, borderRadius: 12, cursor: 'pointer',
+                    // Era 38: sotto la misura minima di un dito.
+                    width: TASTO, height: TASTO, borderRadius: 12, cursor: 'pointer',
                     background: contact.online ? `${C.green}15` : `${C.accent}10`,
                     border: `1px solid ${contact.online ? `${C.green}25` : `${C.accent}18`}`,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
                     WebkitTapHighlightColor: 'transparent',
                   }}>
                     <Icon name="chat" size={17} color={contact.online ? C.green : C.accent} />
                   </button>
                   {confirmRemove === contact.email ? (
-                    <button onClick={async () => { await removeContact(contact.email); setConfirmRemove(null); }} style={{
-                      width: 38, height: 38, borderRadius: 12, cursor: 'pointer',
+                    <button onClick={async () => { await removeContact(contact.email); setConfirmRemove(null); }} aria-label={L('removeWord')} title={L('removeWord')} style={{
+                      // Era 38, e la spunta era un segno di testo: ora misura del
+                      // dito e icona al tratto.
+                      width: TASTO, height: TASTO, borderRadius: 12, cursor: 'pointer',
                       background: `${C.red}15`, border: `1px solid ${C.red}25`,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.red, fontSize: 14,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.red,
                       WebkitTapHighlightColor: 'transparent',
-                    }}>✓</button>
+                    }}>
+                      <Icon name="check" size={16} color={C.red} />
+                    </button>
                   ) : (
-                    <button onClick={() => setConfirmRemove(contact.email)} style={{
-                      width: 38, height: 38, borderRadius: 12, cursor: 'pointer',
-                      background: `rgba(255,255,255,0.03)`, border: `1px solid ${C.cardBorder}`,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.textMuted, fontSize: 14,
+                    <button onClick={() => setConfirmRemove(contact.email)} aria-label={L('removeWord')} title={L('removeWord')} style={{
+                      // Era 38, con un fondo bianco scritto a mano e una «×» di
+                      // testo: misura del dito, token del tema, icona al tratto.
+                      width: TASTO, height: TASTO, borderRadius: 12, cursor: 'pointer',
+                      background: C.overlay, border: `1px solid ${C.cardBorder}`,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.textMuted,
                       WebkitTapHighlightColor: 'transparent',
-                    }}>×</button>
+                    }}>
+                      <Icon name="x" size={16} color={C.textMuted} />
+                    </button>
                   )}
                 </div>
               </div>
@@ -418,7 +507,7 @@ export default function ContactsView({
         )}
       </div>
 
-      {status && <div style={{ textAlign: 'center', padding: '6px 16px', fontSize: 11, color: C.accent }}>{status}</div>}
+      {status && <div style={{ textAlign: 'center', padding: '6px 20px', fontSize: 11, color: C.accent }}>{status}</div>}
 
       <style>{`@keyframes vtSlideUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }`}</style>
     </div>

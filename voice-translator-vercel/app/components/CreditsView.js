@@ -23,11 +23,13 @@ import { memGet } from '../lib/memoria.js';
 // scritta a mano nel testo non esiste.
 // ═══════════════════════════════════════════════
 
-const COLORI = { verde: '#3ddc84', giallo: '#ffc44d', rosso: '#ff5470' };
-
 export default function CreditsView({ userAccount }) {
   const { L, S, setView } = useApp();
   const tc = S.colors || {};
+  // I tre colori dello stato vengono dal tema: scritti a mano restavano
+  // quelli del tema scuro anche sul chiaro, dove il verde e il rosso
+  // sono altri due colori.
+  const COLORI = { verde: tc.statusOk, giallo: tc.statusWarning, rosso: tc.statusError };
   const [dati, setDati] = useState(null);
   const [codice, setCodice] = useState('');
   const [esito, setEsito] = useState('');
@@ -142,18 +144,27 @@ export default function CreditsView({ userAccount }) {
 
   return (
     <main style={S.page} aria-label={L('creditAndTopups')}>
-      <div style={{ ...S.scrollCenter, gap: 14, paddingBottom: 'calc(110px + env(safe-area-inset-bottom))' }}>
+      {/* Venti punti di rientro a destra e a sinistra: e la misura della
+          Home e del template, e qui il contenitore comune ne dava sedici. */}
+      <div style={{ ...S.scrollCenter, gap: 14, paddingLeft: 20, paddingRight: 20, paddingBottom: 'calc(110px + env(safe-area-inset-bottom))' }}>
         <div style={{ width: '100%', maxWidth: 460 }}>
 
           {/* Header */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '14px 0 16px' }}>
-            {/* b.206 — pulsante indietro uniforme: glifo ‹ come le altre pagine */}
+            {/* Il tasto indietro sale a quarantaquattro: sotto quella misura
+                un dito comincia a sbagliare bersaglio. E la freccia e quella
+                al tratto della testata comune, non un glifo di tipografia. */}
             <button onClick={() => setView('settings')} aria-label={L('backWord')} style={{
-              width: 38, height: 38, borderRadius: 12, border: `1px solid ${tc.cardBorder}`,
-              background: tc.cardBg, color: tc.textPrimary, cursor: 'pointer', fontSize: 18,
+              width: 44, height: 44, borderRadius: 12, border: `1px solid ${tc.cardBorder}`,
+              background: tc.cardBg, color: tc.textPrimary, cursor: 'pointer',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-            }}>{'‹'}</button>
-            <h1 style={{ fontSize: 22, fontWeight: 800, color: tc.textPrimary, fontFamily: FONT, margin: 0 }}>
+            }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                <path d="M15 18l-6-6 6-6" />
+              </svg>
+            </button>
+            <h1 style={{ fontSize: 22, fontWeight: 600, color: tc.textPrimary, fontFamily: FONT, margin: 0 }}>
               {L('yourCreditTitle')}
             </h1>
           </div>
@@ -169,13 +180,15 @@ export default function CreditsView({ userAccount }) {
             <div style={{ ...card, marginBottom: 14 }}>
               {/* b.364 — come nella pila: stessa riga, parola diversa quando si e
                   sotto zero. Non una riga in piu che spinge giu il resto. */}
-              <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: 1.5, color: tc.textMuted, fontFamily: FONT, textTransform: 'uppercase' }}>
+              <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: 1.5, color: tc.textMuted, fontFamily: FONT, textTransform: 'uppercase' }}>
                 {dati.inRosso ? L('creditCovered') : L('creditMinutesAvailable')}
               </div>
-              <div style={{ fontSize: 34, fontWeight: 850, color: colore, fontFamily: FONT }}>{dati.testo}</div>
+              <div style={{ fontSize: 34, fontWeight: 600, color: colore, fontFamily: FONT }}>{dati.testo}</div>
+              {/* I due numeri stavano dentro un <b>, che pesa settecento:
+                  qui il massimo e seicento, e a distinguerli basta. */}
               <div style={{ display: 'flex', gap: 14, marginTop: 4, fontSize: 12, color: tc.textSecondary, fontFamily: FONT }}>
-                <span>{L('todayWord')}: <b>{dati.oggi}</b></span>
-                <span>{L('thisMonth')}: <b>{dati.mese}</b></span>
+                <span>{L('todayWord')}: <span style={{ fontWeight: 600, color: tc.textPrimary }}>{dati.oggi}</span></span>
+                <span>{L('thisMonth')}: <span style={{ fontWeight: 600, color: tc.textPrimary }}>{dati.mese}</span></span>
               </div>
             </div>
           )}
@@ -187,29 +200,29 @@ export default function CreditsView({ userAccount }) {
           </div>
 
           {/* Pacchetti — L'UNICO listino */}
-          <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: 1.5, color: tc.textMuted, fontFamily: FONT, marginBottom: 8, textTransform: 'uppercase' }}>{L('landingRecharge')}</div>
+          <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: 1.5, color: tc.textMuted, fontFamily: FONT, marginBottom: 8, textTransform: 'uppercase' }}>{L('landingRecharge')}</div>
           {PACCHETTI.map(p => {
             const ore = oreIncluse(p);
             return (
               <button key={p.id} disabled={caricando} onClick={() => compra(p.id)} style={{
                 display: 'flex', alignItems: 'center', width: '100%', gap: 12, cursor: 'pointer',
-                padding: '15px 16px', marginBottom: 8, borderRadius: 16, fontFamily: FONT,
-                background: p.consigliato ? `linear-gradient(145deg, ${tc.accent1 || '#5b8cff'}18, ${tc.accent2 || '#38e1ff'}10)` : tc.cardBg,
-                border: p.consigliato ? `1.5px solid ${tc.accent1 || '#5b8cff'}55` : `1px solid ${tc.cardBorder}`,
+                padding: '15px 16px', minHeight: 44, marginBottom: 8, borderRadius: 16, fontFamily: FONT,
+                background: p.consigliato ? `linear-gradient(145deg, ${tc.accent1}18, ${tc.accent2}10)` : tc.cardBg,
+                border: p.consigliato ? `1.5px solid ${tc.accent1}55` : `1px solid ${tc.cardBorder}`,
                 color: tc.textPrimary, textAlign: 'left', opacity: caricando ? 0.6 : 1,
               }}>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 15, fontWeight: 800 }}>
+                  <div style={{ fontSize: 15, fontWeight: 500 }}>
                     {p.nome} {'·'} {ore.standard}
-                    {p.consigliato && <span style={{ marginLeft: 8, fontSize: 9, fontWeight: 800, letterSpacing: 1,
+                    {p.consigliato && <span style={{ marginLeft: 8, fontSize: 9, fontWeight: 600, letterSpacing: 1,
                       padding: '3px 8px', borderRadius: 999, color: '#fff',
-                      background: `linear-gradient(90deg, ${tc.accent1 || '#5b8cff'}, ${tc.accent2 || '#38e1ff'})`, textTransform: 'uppercase' }}>{L('recommended')}</span>}
+                      background: `linear-gradient(90deg, ${tc.accent1}, ${tc.accent2})`, textTransform: 'uppercase' }}>{L('recommended')}</span>}
                   </div>
                   <div style={{ fontSize: 11.5, color: tc.textMuted, marginTop: 2 }}>
                     {L('withPremiumVoice')} {ore.premium}
                   </div>
                 </div>
-                <div style={{ fontSize: 18, fontWeight: 850, color: tc.accent2 || '#38e1ff' }}>
+                <div style={{ fontSize: 18, fontWeight: 600, color: tc.accent2 }}>
                   {'€'}{String(p.euro).replace('.', ',')}
                 </div>
               </button>
@@ -217,15 +230,17 @@ export default function CreditsView({ userAccount }) {
           })}
 
           {/* Voucher o regalo ricevuto — un campo solo */}
-          <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: 1.5, color: tc.textMuted, fontFamily: FONT, margin: '14px 0 8px', textTransform: 'uppercase' }}>{L('creditHaveCode')}</div>
+          <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: 1.5, color: tc.textMuted, fontFamily: FONT, margin: '14px 0 8px', textTransform: 'uppercase' }}>{L('creditHaveCode')}</div>
           <div style={{ display: 'flex', gap: 8 }}>
             <input value={codice} onChange={(e) => setCodice(e.target.value.toUpperCase())} placeholder={L('voucherOrGift')}
               style={{ flex: 1, padding: '12px 14px', borderRadius: 13, fontFamily: FONT, fontSize: 14, textTransform: 'uppercase',
                 background: tc.inputBg, border: `1px solid ${tc.inputBorder}`, color: tc.textPrimary }} />
+            {/* Quarantaquattro di altezza minima: e la misura sotto la
+                quale un dito sbaglia bersaglio. */}
             <button onClick={usaCodice} disabled={!codice} style={{
-              padding: '12px 18px', borderRadius: 13, border: 'none', cursor: 'pointer', fontFamily: FONT,
-              fontSize: 14, fontWeight: 800, color: '#000',
-              background: tc.btnGradient || 'linear-gradient(90deg,#5b8cff,#38e1ff)',
+              padding: '12px 18px', minHeight: 44, borderRadius: 13, border: 'none', cursor: 'pointer', fontFamily: FONT,
+              fontSize: 14, fontWeight: 600, color: '#000',
+              background: tc.btnGradient,
             }}>{L('useWord')}</button>
           </div>
           {/* b.138 — il colore si decideva con esito.startsWith('Fatto'): tolto
@@ -237,7 +252,7 @@ export default function CreditsView({ userAccount }) {
           {/* Regala minuti a qualcuno */}
           {userAccount && (
             <>
-              <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: 1.5, color: tc.textMuted, fontFamily: FONT, margin: '18px 0 8px', textTransform: 'uppercase' }}>{L('creditGiftMinutes')}</div>
+              <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: 1.5, color: tc.textMuted, fontFamily: FONT, margin: '18px 0 8px', textTransform: 'uppercase' }}>{L('creditGiftMinutes')}</div>
               {!regaloFatto ? (
                 <div style={card}>
                   <div style={{ fontSize: 12.5, color: tc.textSecondary, fontFamily: FONT, lineHeight: 1.5, marginBottom: 10 }}>
@@ -250,8 +265,8 @@ export default function CreditsView({ userAccount }) {
                         background: tc.inputBg, border: `1px solid ${tc.inputBorder}`, color: tc.textPrimary }} />
                     <span style={{ fontSize: 13, color: tc.textMuted, fontFamily: FONT, flex: 1 }}>{L('minutesWord')}</span>
                     <button onClick={creaRegalo} style={{
-                      padding: '12px 18px', borderRadius: 13, border: `1px solid ${tc.cardBorder}`, cursor: 'pointer',
-                      fontFamily: FONT, fontSize: 14, fontWeight: 800, color: tc.textPrimary, background: 'transparent',
+                      padding: '12px 18px', minHeight: 44, borderRadius: 13, border: `1px solid ${tc.cardBorder}`, cursor: 'pointer',
+                      fontFamily: FONT, fontSize: 14, fontWeight: 600, color: tc.textPrimary, background: 'transparent',
                     }}>{L('createGift')}</button>
                   </div>
                   {esitoRegalo && <div style={{ fontSize: 12, marginTop: 8, fontFamily: FONT, color: COLORI.rosso }}>{esitoRegalo}</div>}
@@ -259,18 +274,18 @@ export default function CreditsView({ userAccount }) {
               ) : (
                 <div style={card}>
                   <div style={{ fontSize: 12, color: tc.textMuted, fontFamily: FONT, textTransform: 'uppercase' }}>{L('giftReady')} {'·'} {regaloFatto.testo}</div>
-                  <div style={{ fontSize: 20, fontWeight: 850, color: tc.accent2 || '#38e1ff', fontFamily: FONT, letterSpacing: 1, margin: '4px 0 10px' }}>
+                  <div style={{ fontSize: 20, fontWeight: 600, color: tc.accent2, fontFamily: FONT, letterSpacing: 1, margin: '4px 0 10px' }}>
                     {regaloFatto.codice}
                   </div>
                   <div style={{ display: 'flex', gap: 8 }}>
                     <button onClick={condividiRegalo} style={{
-                      flex: 1, padding: '12px 16px', borderRadius: 13, border: 'none', cursor: 'pointer',
-                      fontFamily: FONT, fontSize: 14, fontWeight: 800, color: '#000',
-                      background: tc.btnGradient || 'linear-gradient(90deg,#5b8cff,#38e1ff)',
+                      flex: 1, padding: '12px 16px', minHeight: 44, borderRadius: 13, border: 'none', cursor: 'pointer',
+                      fontFamily: FONT, fontSize: 14, fontWeight: 600, color: '#000',
+                      background: tc.btnGradient,
                     }}>{L('sendGift')}</button>
                     <button onClick={() => { setRegaloFatto(null); setEsitoRegalo(''); }} style={{
-                      padding: '12px 16px', borderRadius: 13, border: `1px solid ${tc.cardBorder}`, cursor: 'pointer',
-                      fontFamily: FONT, fontSize: 14, fontWeight: 700, color: tc.textSecondary, background: 'transparent',
+                      padding: '12px 16px', minHeight: 44, borderRadius: 13, border: `1px solid ${tc.cardBorder}`, cursor: 'pointer',
+                      fontFamily: FONT, fontSize: 14, fontWeight: 600, color: tc.textSecondary, background: 'transparent',
                     }}>{L('closeWord')}</button>
                   </div>
                   {esitoRegalo && <div style={{ fontSize: 12, marginTop: 8, fontFamily: FONT, color: COLORI.verde }}>{esitoRegalo}</div>}
@@ -282,7 +297,7 @@ export default function CreditsView({ userAccount }) {
           {/* Storico */}
           {dati?.storico?.length > 0 && (
             <>
-              <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: 1.5, color: tc.textMuted, fontFamily: FONT, margin: '16px 0 6px', textTransform: 'uppercase' }}>{L('creditYourTopups')}</div>
+              <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: 1.5, color: tc.textMuted, fontFamily: FONT, margin: '16px 0 6px', textTransform: 'uppercase' }}>{L('creditYourTopups')}</div>
               <div style={card}>
                 {dati.storico.map((r, i) => (
                   <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 2px',
@@ -292,7 +307,7 @@ export default function CreditsView({ userAccount }) {
                     <span style={{ flex: 1, color: tc.textSecondary }}>
                       {r.tipo === 'acquisto' ? L('landingRecharge') : r.tipo === 'benvenuto' ? L('histWelcome') : r.tipo === 'omaggio' ? L('histFree') : r.tipo === 'regalo_in' ? L('histGift') : 'Voucher'}
                     </span>
-                    <span style={{ fontWeight: 800, color: COLORI.verde }}>{r.testo}</span>
+                    <span style={{ fontWeight: 600, color: COLORI.verde }}>{r.testo}</span>
                     {r.euro && <span style={{ color: tc.textMuted }}>{r.euro}</span>}
                   </div>
                 ))}

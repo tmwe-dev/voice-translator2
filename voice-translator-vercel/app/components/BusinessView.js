@@ -1,7 +1,6 @@
 'use client';
 import { memo, useState } from 'react';
 import { FONT } from '../lib/constants.js';
-import { PALETTE } from '../lib/palette.js';
 import Icon from './Icon.js';
 import { COLONNA } from '../lib/righello.js';
 import { useApp } from '../contexts/AppContext.js';
@@ -50,43 +49,48 @@ const STRUMENTI = [
 // traduttore. La prova di guardia non le aveva viste perche guarda solo
 // quindici lingue su trentotto (vedi il registro di bordo).
 function BusinessView({ onBack }) {
-  const { L } = useApp();
+  // b.479 — i colori arrivano dal tema (S), non da una tavolozza fissa:
+  // con PALETTE questa schermata restava scura anche sui temi chiari.
+  const { L, S } = useApp();
   const nomeDi = (s) => (s.nomeKey ? L(s.nomeKey) : s.nome);
   const [aperto, setAperto] = useState(null); // strumento aperto | null = elenco
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100dvh', background: PALETTE.bgDeep }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', borderBottom: '1px solid rgba(255,255,255,0.08)', flexShrink: 0 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100dvh', background: S.colors.bg }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 20px', borderBottom: `1px solid ${S.colors.headerBorder}`, flexShrink: 0 }}>
+        {/* b.479 — il tasto indietro era alto 32: sotto i 44 il dito sbaglia bersaglio. */}
         <button onClick={() => (aperto ? setAperto(null) : onBack())} aria-label={L('backWord')}
-          style={{ background: 'none', border: '1px solid rgba(255,255,255,0.14)', borderRadius: 10, padding: '8px 10px', cursor: 'pointer', display: 'flex' }}>
-          <Icon name="back" size={16} color={PALETTE.grayLight} />
+          style={{ background: 'none', border: `1px solid ${S.colors.cardBorder}`, borderRadius: 12, width: 44, height: 44, flexShrink: 0, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <Icon name="back" size={16} color={S.colors.textPrimary} />
         </button>
-        <div style={{ fontFamily: FONT, color: PALETTE.grayLight, flex: 1 }}>
-          <div style={{ fontWeight: 800, fontSize: 15 }}>Business{aperto ? ` — ${nomeDi(aperto)}` : ''}</div>
-          <div style={{ fontSize: 11, color: 'rgba(238,242,255,0.55)' }}>
+        {/* b.479 — il nome della sezione era scritto a mano: la chiave esiste gia. */}
+        <div style={{ fontFamily: FONT, color: S.colors.textPrimary, flex: 1, minWidth: 0 }}>
+          <div style={{ fontWeight: 600, fontSize: 15 }}>{L('businessEntry')}{aperto ? ` — ${nomeDi(aperto)}` : ''}</div>
+          <div style={{ fontSize: 11, color: S.colors.textMuted }}>
             {aperto ? L(aperto.descKey) : L('businessSubtitle')}
           </div>
         </div>
       </div>
 
       {!aperto && (
-        <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 10, overflowY: 'auto', ...COLONNA }}>
+        <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 10, overflowY: 'auto', ...COLONNA }}>
           {STRUMENTI.map((s) => (
             <button key={s.id} onClick={() => setAperto(s)}
               style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 16, borderRadius: 14, cursor: 'pointer', textAlign: 'left',
-                background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.10)', fontFamily: FONT }}>
+                background: S.colors.cardBg, border: `1px solid ${S.colors.cardBorder}`, fontFamily: FONT }}>
               <span style={{ width: 44, height: 44, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                background: `linear-gradient(135deg, ${PALETTE.purple}, ${PALETTE.cyan})`, flexShrink: 0 }}>
-                <Icon name={s.icona} size={20} color="#04121c" />
+                background: S.colors.accentGradient, flexShrink: 0 }}>
+                <Icon name={s.icona} size={20} color={S.colors.bg} />
               </span>
               <span style={{ flex: 1, minWidth: 0 }}>
-                <span style={{ display: 'block', fontWeight: 800, color: PALETTE.grayLight, fontSize: 15 }}>{nomeDi(s)}</span>
-                <span style={{ display: 'block', fontSize: 12, color: 'rgba(238,242,255,0.55)' }}>{L(s.descKey)}</span>
+                {/* b.479 — se tutto pesa niente pesa: il titolo di riga sta a 500. */}
+                <span style={{ display: 'block', fontWeight: 500, color: S.colors.textPrimary, fontSize: 15 }}>{nomeDi(s)}</span>
+                <span style={{ display: 'block', fontSize: 12, color: S.colors.textMuted }}>{L(s.descKey)}</span>
               </span>
-              <Icon name="chevRight" size={16} color="rgba(238,242,255,0.4)" />
+              <Icon name="chevRight" size={16} color={S.colors.textMuted} />
             </button>
           ))}
-          <div style={{ padding: 14, borderRadius: 14, border: '1px dashed rgba(255,255,255,0.15)', color: 'rgba(238,242,255,0.45)', fontSize: 13, fontFamily: FONT, textAlign: 'center' }}>
+          <div style={{ padding: 14, borderRadius: 14, border: `1px dashed ${S.colors.cardBorder}`, color: S.colors.textMuted, fontSize: 13, fontFamily: FONT, textAlign: 'center' }}>
             {L('moreToolsSoon')}
           </div>
         </div>
@@ -115,7 +119,7 @@ function BusinessView({ onBack }) {
           allow={aperto.permessi || ''}
           sandbox="allow-scripts allow-forms allow-modals allow-popups allow-same-origin"
           referrerPolicy="no-referrer"
-          style={{ flex: 1, width: '100%', border: 'none', display: 'block', background: PALETTE.bgDeep }} />
+          style={{ flex: 1, width: '100%', border: 'none', display: 'block', background: S.colors.bg }} />
       )}
     </div>
   );

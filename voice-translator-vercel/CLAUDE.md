@@ -214,6 +214,12 @@ qualunque refactoring. Non si propone di rimandarlo.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.480** (push #769) — LO STANDARD DEL TEMPLATE APPLICATO a sei
+  schermate (archivio, dettaglio, sommario, rubrica, business, credito, pila,
+  profilo, voci): niente grassetto, niente caselle di icona rimaste vuote,
+  margini a 20, tasti da 44, colori dai token, parole dai pacchetti. E due
+  tasti che erano diventati INVISIBILI — elimina conversazione e svuota
+  ricerca — hanno di nuovo un'icona.
 - Versione: **b.478** (push #768) — FULMINE E LUNA NON PIU SOVRAPPOSTI:
   chiedevano tutti e due il posto ZERO della fila a destra. La pila resta li,
   la luna prende il posto accanto. E c'e una prova che controlla che due

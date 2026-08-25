@@ -3,9 +3,9 @@ import { memo, useState, useMemo } from 'react';
 import { FONT, LANGS } from '../lib/constants.js';
 import getStyles from '../lib/styles.js';
 import AvatarImg from './AvatarImg.js';
+import Icon from './Icon.js';
 import PageHeader from './ui/PageHeader.js';
 import EmptyState from './ui/EmptyState.js';
-import { PALETTE } from '../lib/palette.js';
 import { useApp } from '../contexts/AppContext.js';
 
 // ═══════════════════════════════════════════════
@@ -19,19 +19,25 @@ function HistoryView({ convHistory, viewConversation, verifiedName, archivioSolo
   const { L, S, prefs, setView, status, theme, setTheme, uiLang } = useApp();
   const _S = getStyles(theme);
   const col = _S.colors || {};
+  // I COLORI VENGONO DAL TEMA, e basta: i ripieghi in esadecimale erano
+  // codice morto (tutti e sei i temi definiscono questi token) e un hex
+  // scritto a mano e proprio cio che il tema serve a togliere.
+  // accent1 col suo nome vero perche le schermate di vuoto lo cercano
+  // cosi: senza, si dipingevano di un viola fisso ignorando il tema.
   const C = {
-    bg: col.bg || '#09090b',
-    textPrimary: col.textPrimary || '#fafafa',
-    textSecondary: col.textSecondary || 'rgba(250,250,250,0.90)',
-    textMuted: col.textMuted || 'rgba(250,250,250,0.60)',
-    card: col.glassCard || 'rgba(17,17,19,0.65)',
-    cardBorder: col.cardBorder || 'rgba(250,250,250,0.05)',
-    input: col.inputBg || 'rgba(17,17,19,0.6)',
-    inputBorder: col.inputBorder || 'rgba(250,250,250,0.07)',
-    accent: col.accent1 || PALETTE.purple,
-    purple: col.accent2 || PALETTE.cyan,
-    headerBg: col.headerBg || 'rgba(9,9,11,0.85)',
-    headerBorder: col.headerBorder || 'rgba(250,250,250,0.04)',
+    bg: col.bg,
+    textPrimary: col.textPrimary,
+    textSecondary: col.textSecondary,
+    textMuted: col.textMuted,
+    card: col.glassCard,
+    cardBorder: col.cardBorder,
+    input: col.inputBg,
+    inputBorder: col.inputBorder,
+    accent: col.accent1,
+    accent1: col.accent1,
+    purple: col.accent2,
+    headerBg: col.headerBg,
+    headerBorder: col.headerBorder,
   };
 
   const [search, setSearch] = useState('');
@@ -153,7 +159,7 @@ function HistoryView({ convHistory, viewConversation, verifiedName, archivioSolo
           transition: 'all 0.2s ease',
         }}
         onMouseEnter={(e) => {
-          e.currentTarget.style.background = `rgba(255,255,255,0.05)`;
+          e.currentTarget.style.background = `${C.accent}08`;
           e.currentTarget.style.borderColor = `${C.accent}40`;
         }}
         onMouseLeave={(e) => {
@@ -173,8 +179,10 @@ function HistoryView({ convHistory, viewConversation, verifiedName, archivioSolo
         {/* Content */}
         <div style={{ flex: 1, minWidth: 0 }}>
           {/* Name + topic */}
+          {/* Niente grassetto: un titolo di riga sta a 500, se tutto pesa
+              niente pesa. */}
           <div style={{
-            fontWeight: 700,
+            fontWeight: 500,
             fontSize: 14,
             color: C.textPrimary,
             marginBottom: 4,
@@ -207,17 +215,19 @@ function HistoryView({ convHistory, viewConversation, verifiedName, archivioSolo
             justifyContent: 'space-between',
           }}>
             <div style={{ display: 'flex', gap: 4 }}>
+              {/* «msg» era scritto a mano: in giapponese non vuol dire
+                  niente. La parola sta gia nei pacchetti lingua. */}
               <span
                 style={{
                   padding: '3px 8px',
                   borderRadius: 6,
                   fontSize: 10,
-                  fontWeight: 700,
+                  fontWeight: 600,
                   background: `${C.accent}15`,
                   color: C.accent,
                 }}
               >
-                {c.msgCount || 0} msg
+                {c.msgCount || 0} {L('messages')}
               </span>
               {/* b.433 — DA CHE LINGUA A CHE LINGUA (layout completo, pagina
                   07). Fra due conversazioni la cosa che le distingue non e
@@ -230,7 +240,7 @@ function HistoryView({ convHistory, viewConversation, verifiedName, archivioSolo
               {Array.isArray(c.lingue) && c.lingue.length > 0 ? (
                 <span style={{
                   display: 'inline-flex', alignItems: 'center', gap: 4,
-                  padding: '3px 8px', borderRadius: 6, fontSize: 10, fontWeight: 700,
+                  padding: '3px 8px', borderRadius: 6, fontSize: 10, fontWeight: 600,
                   background: `${C.purple}15`, color: C.purple,
                 }}>
                   {c.lingue.slice(0, 3).map((l, i) => (
@@ -246,7 +256,7 @@ function HistoryView({ convHistory, viewConversation, verifiedName, archivioSolo
                     padding: '3px 8px',
                     borderRadius: 6,
                     fontSize: 10,
-                    fontWeight: 700,
+                    fontWeight: 600,
                     background: `${C.purple}15`,
                     color: C.purple,
                   }}
@@ -263,8 +273,10 @@ function HistoryView({ convHistory, viewConversation, verifiedName, archivioSolo
 
         {/* b.353 — Esporta, sulla riga: il posto giusto per portarsi via
             il testo (prima viveva sepolto nel menu della stanza). */}
+        {/* 44 e la misura sotto la quale un dito comincia a sbagliare
+            bersaglio: il tasto ne misurava 36. */}
         <button onClick={esporta} aria-label={L('exportConversation')} title={L('exportConversation')}
-          style={{ flexShrink: 0, width: 36, height: 36, borderRadius: 10, cursor: 'pointer',
+          style={{ flexShrink: 0, width: 44, height: 44, borderRadius: 12, cursor: 'pointer',
             border: `1px solid ${C.cardBorder}`, background: 'transparent', color: C.textMuted,
             display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <svg width={15} height={15} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
@@ -308,7 +320,9 @@ function HistoryView({ convHistory, viewConversation, verifiedName, archivioSolo
       />
 
       {/* ═══ SEARCH BAR ═══ */}
-      <div style={{ padding: '0 16px 12px', flexShrink: 0 }}>
+      {/* Venti di rientro come la testata: erano sedici, e la riga di
+          ricerca partiva quattro punti piu a sinistra del titolo. */}
+      <div style={{ padding: '0 20px 12px', flexShrink: 0 }}>
         <div
           style={{
             display: 'flex',
@@ -318,11 +332,20 @@ function HistoryView({ convHistory, viewConversation, verifiedName, archivioSolo
             border: `1px solid ${C.cardBorder}`,
             backdropFilter: 'blur(24px)',
             WebkitBackdropFilter: 'blur(24px)',
-            borderRadius: 12,
-            padding: '10px 14px',
+            borderRadius: 14,
+            minHeight: 48,
+            padding: '0 14px',
           }}
         >
-          <span style={{ fontSize: 14, opacity: 0.5 }}></span>
+          {/* La lente al tratto: qui era rimasto un contenitore vuoto, e un
+              campo di ricerca senza lente si distingue dal campo dove si
+              scrive solo leggendolo. Misure del template: alto 48, raggio 14. */}
+          <svg width={16} height={16} viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"
+            style={{ flexShrink: 0, color: C.textMuted }} aria-hidden="true">
+            <circle cx="11" cy="11" r="7" />
+            <path d="M20 20l-3.5-3.5" />
+          </svg>
           <input
             type="text"
             value={search}
@@ -339,6 +362,9 @@ function HistoryView({ convHistory, viewConversation, verifiedName, archivioSolo
               '::placeholder': { color: C.textMuted },
             }}
           />
+          {/* Era un segno di moltiplicazione scritto come testo, dentro un
+              tasto largo quanto il segno stesso: ora e un'icona al tratto in
+              un bersaglio da 44. */}
           {search && (
             <button
               onClick={() => setSearch('')}
@@ -347,15 +373,19 @@ function HistoryView({ convHistory, viewConversation, verifiedName, archivioSolo
                 border: 'none',
                 color: C.textMuted,
                 cursor: 'pointer',
-                fontSize: 16,
+                width: 44,
+                height: 44,
+                margin: '0 -12px 0 0',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
                 padding: 0,
-                fontWeight: 700,
                 transition: 'color 0.2s ease',
               }}
               onMouseEnter={(e) => (e.currentTarget.style.color = C.textPrimary)}
               onMouseLeave={(e) => (e.currentTarget.style.color = C.textMuted)}
             >
-              ×
+              <Icon name="x" size={16} />
             </button>
           )}
         </div>
@@ -367,7 +397,7 @@ function HistoryView({ convHistory, viewConversation, verifiedName, archivioSolo
           style={{
             display: 'flex',
             gap: 8,
-            padding: '0 16px 12px',
+            padding: '0 20px 12px',
             overflowX: 'auto',
             scrollBehavior: 'smooth',
             scrollbarWidth: 'none',
@@ -378,7 +408,10 @@ function HistoryView({ convHistory, viewConversation, verifiedName, archivioSolo
           <button
             onClick={() => setActiveFilter('all')}
             style={{
-              padding: '6px 14px',
+              display: 'inline-flex',
+              alignItems: 'center',
+              minHeight: 44,
+              padding: '0 14px',
               borderRadius: 8,
               border: activeFilter === 'all' ? `2px solid ${C.accent}` : `1px solid ${C.cardBorder}`,
               background: activeFilter === 'all' ? `${C.accent}15` : C.card,
@@ -413,7 +446,10 @@ function HistoryView({ convHistory, viewConversation, verifiedName, archivioSolo
               key={filter.code}
               onClick={() => setActiveFilter(filter.code)}
               style={{
-                padding: '6px 14px',
+                display: 'inline-flex',
+                alignItems: 'center',
+                minHeight: 44,
+                padding: '0 14px',
                 borderRadius: 8,
                 border: activeFilter === filter.code ? `2px solid ${C.accent}` : `1px solid ${C.cardBorder}`,
                 background: activeFilter === filter.code ? `${C.accent}15` : C.card,
@@ -448,7 +484,10 @@ function HistoryView({ convHistory, viewConversation, verifiedName, archivioSolo
               key={filter.id}
               onClick={() => setActiveFilter(filter.id)}
               style={{
-                padding: '6px 14px',
+                display: 'inline-flex',
+                alignItems: 'center',
+                minHeight: 44,
+                padding: '0 14px',
                 borderRadius: 8,
                 border: activeFilter === filter.id ? `2px solid ${C.accent}` : `1px solid ${C.cardBorder}`,
                 background: activeFilter === filter.id ? `${C.accent}15` : C.card,
@@ -485,7 +524,7 @@ function HistoryView({ convHistory, viewConversation, verifiedName, archivioSolo
           flex: 1,
           overflowY: 'auto',
           // b.206 — bottom alzato: le ultime conversazioni finivano sotto la BottomNav
-          padding: '8px 16px calc(106px + env(safe-area-inset-bottom))',
+          padding: '8px 20px calc(106px + env(safe-area-inset-bottom))',
           scrollbarWidth: 'none',
         }}
       >
@@ -531,7 +570,7 @@ function HistoryView({ convHistory, viewConversation, verifiedName, archivioSolo
         <div
           style={{
             textAlign: 'center',
-            padding: '8px 16px',
+            padding: '8px 20px',
             fontSize: 12,
             color: C.accent,
           }}

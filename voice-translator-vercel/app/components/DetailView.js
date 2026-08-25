@@ -2,7 +2,7 @@
 import { memo, useState, useMemo } from 'react';
 import { getLang, FONT } from '../lib/constants.js';
 import AvatarImg from './AvatarImg.js';
-import { IconPlay, IconVolume } from './Icons.js';  // b.404 — l'icona vera, non la lettera
+import { IconPlay, IconVolume, IconBack, IconExport } from './Icons.js';  // b.404 — l'icona vera, non la lettera
 import { useApp } from '../contexts/AppContext.js';
 
 /**
@@ -23,7 +23,7 @@ const DetailView = memo(function DetailView({
   onPlayMessage,
   playingMsgId,
 }) {
-  const { L, S, theme, prefs } = useApp();
+  const { L, S, theme, prefs, uiLang } = useApp();
   const [activeTab, setActiveTab] = useState('messages');
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -47,9 +47,9 @@ const DetailView = memo(function DetailView({
 
   const tabs = [
     // b.138 — schede, etichette e riepilogo erano in italiano fisso.
-    { id: 'messages', label: L('tabMessages'), icon: '' },
-    { id: 'summary', label: L('tabSummary'), icon: '' },
-    { id: 'stats', label: L('tabStats'), icon: '' },
+    { id: 'messages', label: L('tabMessages') },
+    { id: 'summary', label: L('tabSummary') },
+    { id: 'stats', label: L('tabStats') },
   ];
 
   return (
@@ -59,22 +59,23 @@ const DetailView = memo(function DetailView({
     }}>
       {/* Header */}
       <div style={{
-        padding: '16px', display: 'flex', alignItems: 'center', gap: 12,
+        padding: '12px 20px', display: 'flex', alignItems: 'center', gap: 12,
         borderBottom: `1px solid ${S.colors.overlayBorder}`,
         background: S.colors.headerBg, backdropFilter: 'blur(20px)',
       }}>
         <button onClick={onBack}
           style={{
             background: S.colors.overlayBg, border: `1px solid ${S.colors.overlayBorder}`,
-            borderRadius: 12, padding: '8px 12px', cursor: 'pointer',
-            color: S.colors.textPrimary, fontSize: 16,
+            borderRadius: 12, minWidth: 44, minHeight: 44, cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            color: S.colors.textPrimary,
           }}>
-          ←
+          <IconBack size={18} />
         </button>
         <AvatarImg src={partner?.avatar} size={40} />
         <div style={{ flex: 1 }}>
-          <div style={{ color: S.colors.textPrimary, fontSize: 16, fontWeight: 700 }}>
-            {partner?.name || conversation.partnerName || 'Conversazione'}
+          <div style={{ color: S.colors.textPrimary, fontSize: 16, fontWeight: 600 }}>
+            {partner?.name || conversation.partnerName || L('conversation')}
           </div>
           <div style={{ color: S.colors.textMuted, fontSize: 12, display: 'flex', gap: 8, alignItems: 'center' }}>
             <span>{myLangInfo.flag} ⇄ {partnerLang.flag}</span>
@@ -87,31 +88,31 @@ const DetailView = memo(function DetailView({
           {onResume && (
             <button onClick={onResume}
               style={{
-                padding: '8px 14px', borderRadius: 12, border: 'none', cursor: 'pointer',
-                background: S.colors.btnGradient, color: '#000', fontSize: 12, fontWeight: 700,
-                boxShadow: S.colors.btnGlow,
+                ...S.btn, width: 'auto', minHeight: 44, padding: '0 14px',
+                borderRadius: 12, fontSize: 12, display: 'flex',
+                alignItems: 'center', justifyContent: 'center', gap: 6,
               }}>
-              {'\u25B6'} Riprendi{/* b.404 — resta un bottone suo: riprende la CONVERSAZIONE, non un audio */}
+              <IconPlay size={12} />
+              {L('lifeResumeWord')}
             </button>
           )}
         </div>
       </div>
 
       {/* Info Cards */}
-      <div style={{ padding: '12px 16px', display: 'flex', gap: 10, overflowX: 'auto' }}>
+      <div style={{ padding: '12px 20px', display: 'flex', gap: 10, overflowX: 'auto' }}>
         {[
-          { label: L('mode'), value: conversation.mode || L('conversation'), icon: '' },
-          { label: L('context'), value: conversation.context || L('ctxGeneral'), icon: '' },
-          { label: L('tabMessages'), value: String(messages.length || conversation.messageCount || 0), icon: '' },
-          { label: L('costWord'), value: conversation.totalCost ? `€${conversation.totalCost.toFixed(4)}` : L('freeWord'), icon: '' },
+          { label: L('mode'), value: conversation.mode || L('conversation') },
+          { label: L('context'), value: conversation.context || L('ctxGeneral') },
+          { label: L('tabMessages'), value: String(messages.length || conversation.messageCount || 0) },
+          { label: L('costWord'), value: conversation.totalCost ? `€${conversation.totalCost.toFixed(4)}` : L('freeWord') },
         ].map((card, i) => (
           <div key={i} style={{
             flexShrink: 0, padding: '10px 14px', borderRadius: 14,
             background: S.colors.cardBg, border: `1px solid ${S.colors.cardBorder}`,
             minWidth: 90, textAlign: 'center',
           }}>
-            <div style={{ fontSize: 18, marginBottom: 4 }}>{card.icon}</div>
-            <div style={{ fontSize: 14, fontWeight: 700, color: S.colors.textPrimary }}>{card.value}</div>
+            <div style={{ fontSize: 14, fontWeight: 600, color: S.colors.textPrimary }}>{card.value}</div>
             <div style={{ fontSize: 10, color: S.colors.textMuted, marginTop: 2 }}>{card.label}</div>
           </div>
         ))}
@@ -119,33 +120,38 @@ const DetailView = memo(function DetailView({
 
       {/* Tabs */}
       <div style={{
-        display: 'flex', gap: 0, padding: '0 16px',
+        display: 'flex', gap: 0, padding: '0 20px',
         borderBottom: `1px solid ${S.colors.overlayBorder}`,
       }}>
         {tabs.map(tab => (
           <button key={tab.id} onClick={() => setActiveTab(tab.id)}
             style={{
-              flex: 1, padding: '12px 0', background: 'none', border: 'none', cursor: 'pointer',
+              flex: 1, minHeight: 44, padding: '12px 0', background: 'none', border: 'none', cursor: 'pointer',
               color: activeTab === tab.id ? S.colors.accent1 : S.colors.textMuted,
-              fontSize: 13, fontWeight: activeTab === tab.id ? 700 : 500,
+              fontSize: 13, fontWeight: activeTab === tab.id ? 600 : 500,
               borderBottom: activeTab === tab.id ? `2px solid ${S.colors.accent1}` : '2px solid transparent',
               transition: 'all 0.2s',
             }}>
-            {tab.icon} {tab.label}
+            {tab.label}
           </button>
         ))}
       </div>
 
       {/* Tab Content */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: '12px 16px' }}>
+      <div style={{ flex: 1, overflowY: 'auto', padding: '12px 20px' }}>
         {activeTab === 'messages' && (
           <>
             {/* Search */}
             <div style={{
-              display: 'flex', gap: 8, marginBottom: 12, padding: '8px 12px',
+              display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12,
+              padding: '8px 12px', minHeight: 44,
               borderRadius: 12, background: S.colors.inputBg, border: `1px solid ${S.colors.inputBorder}`,
             }}>
-              <span style={{ color: S.colors.textMuted }}></span>
+              <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"
+                style={{ color: S.colors.textMuted, flexShrink: 0 }}>
+                <circle cx="11" cy="11" r="7" /><path d="M20 20l-3.5-3.5" />
+              </svg>
               <input
                 placeholder={L('searchInMessages')}
                 value={searchQuery}
@@ -185,7 +191,7 @@ const DetailView = memo(function DetailView({
                       )}
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 6 }}>
                         <span style={{ fontSize: 10, color: S.colors.textMuted }}>
-                          {m.timestamp ? new Date(m.timestamp).toLocaleTimeString('it', { hour: '2-digit', minute: '2-digit' }) : ''}
+                          {m.timestamp ? new Date(m.timestamp).toLocaleTimeString(uiLang, { hour: '2-digit', minute: '2-digit' }) : ''}
                         </span>
                         {onPlayMessage && m.translated && (
                           <button onClick={() => onPlayMessage(m)}
@@ -217,8 +223,7 @@ const DetailView = memo(function DetailView({
             background: S.colors.cardBg, border: `1px solid ${S.colors.cardBorder}`,
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-              <span style={{ fontSize: 18 }}></span>
-              <span style={{ fontSize: 14, fontWeight: 700, color: S.colors.textPrimary }}>
+              <span style={{ fontSize: 14, fontWeight: 600, color: S.colors.textPrimary }}>
                 {L('aiSummary')}
               </span>
             </div>
@@ -238,20 +243,19 @@ const DetailView = memo(function DetailView({
         {activeTab === 'stats' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             {[
-              { label: L('statsSent'), value: messages.filter(m => m.sender === prefs.name).length, icon: '' },
-              { label: L('statsReceived'), value: messages.filter(m => m.sender !== prefs.name).length, icon: '' },
-              { label: L('languagesWord'), value: `${myLangInfo.name} ⇄ ${partnerLang.name}`, icon: '' },
-              { label: L('durationWord'), value: duration, icon: '' },
-              { label: L('translationCost'), value: conversation.totalCost ? `€${conversation.totalCost.toFixed(4)}` : L('freeWord'), icon: '' },
-              { label: L('context'), value: conversation.context || L('ctxGeneral'), icon: '' },
+              { label: L('statsSent'), value: messages.filter(m => m.sender === prefs.name).length },
+              { label: L('statsReceived'), value: messages.filter(m => m.sender !== prefs.name).length },
+              { label: L('languagesWord'), value: `${myLangInfo.name} ⇄ ${partnerLang.name}` },
+              { label: L('durationWord'), value: duration },
+              { label: L('translationCost'), value: conversation.totalCost ? `€${conversation.totalCost.toFixed(4)}` : L('freeWord') },
+              { label: L('context'), value: conversation.context || L('ctxGeneral') },
             ].map((stat, i) => (
               <div key={i} style={{
                 display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px',
                 borderRadius: 14, background: S.colors.cardBg, border: `1px solid ${S.colors.cardBorder}`,
               }}>
-                <span style={{ fontSize: 20 }}>{stat.icon}</span>
-                <span style={{ flex: 1, color: S.colors.textSecondary, fontSize: 13 }}>{stat.label}</span>
-                <span style={{ color: S.colors.textPrimary, fontSize: 14, fontWeight: 700 }}>{stat.value}</span>
+                <span style={{ flex: 1, color: S.colors.textSecondary, fontSize: 13, fontWeight: 500 }}>{stat.label}</span>
+                <span style={{ color: S.colors.textPrimary, fontSize: 14, fontWeight: 600 }}>{stat.value}</span>
               </div>
             ))}
           </div>
@@ -260,33 +264,46 @@ const DetailView = memo(function DetailView({
 
       {/* Bottom Actions */}
       <div style={{
-        padding: '12px 16px', display: 'flex', gap: 10,
+        padding: '12px 20px', display: 'flex', gap: 10,
         borderTop: `1px solid ${S.colors.overlayBorder}`,
         background: S.colors.headerBg, backdropFilter: 'blur(20px)',
       }}>
         <button onClick={onExport}
           style={{
-            flex: 1, padding: '12px', borderRadius: 14, cursor: 'pointer',
+            flex: 1, minHeight: 44, padding: '12px', borderRadius: 14, cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
             background: S.colors.overlayBg, border: `1px solid ${S.colors.overlayBorder}`,
             color: S.colors.textPrimary, fontSize: 13, fontWeight: 600,
           }}>
-          Esporta
+          <IconExport size={15} />
+          {L('exportConversation')}
         </button>
         <button onClick={onShare}
           style={{
-            flex: 1, padding: '12px', borderRadius: 14, cursor: 'pointer',
+            flex: 1, minHeight: 44, padding: '12px', borderRadius: 14, cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
             background: S.colors.accent2Bg, border: `1px solid ${S.colors.accent2Border}`,
             color: S.colors.accent2, fontSize: 13, fontWeight: 600,
           }}>
-          Condividi
+          <svg width={15} height={15} viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" />
+            <path d="M8.6 13.5l6.8 4" /><path d="M15.4 6.5l-6.8 4" />
+          </svg>
+          {L('shareWord')}
         </button>
         <button onClick={onDelete}
           style={{
-            padding: '12px 16px', borderRadius: 14, cursor: 'pointer',
+            minWidth: 44, minHeight: 44, padding: '12px 16px', borderRadius: 14, cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
             background: S.colors.accent3Bg, border: `1px solid ${S.colors.accent3Border}`,
             color: S.colors.statusError, fontSize: 13, fontWeight: 600,
           }}>
-        
+          <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+            <path d="M3 6h18" /><path d="M8 6V4h8v2" />
+            <path d="M6 6l1 14h10l1-14" /><path d="M10 11v6" /><path d="M14 11v6" />
+          </svg>
         </button>
       </div>
     </div>

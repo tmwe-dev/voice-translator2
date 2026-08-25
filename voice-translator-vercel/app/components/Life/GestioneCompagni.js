@@ -32,7 +32,11 @@ const MAX_GEN_IMG = 6;
 // /api/compagni/mie (persistenza nostra). (Luca)
 // ═══════════════════════════════════════════════════════════════
 
-function GestioneCompagni({ miei, onCambiato, L, lingua, userToken, testoP, muto, accent, card, bordo }) {
+function GestioneCompagni({ miei, onCambiato, L, C = {}, lingua, userToken, testoP, muto, accent, card, bordo }) {
+  // I colori vengono dai token del tema: scritti a mano restavano quelli del
+  // tema scuro anche sul chiaro, dove l'errore e il fondo sono altri due colori.
+  const rosso = C.statusError;   // avvisi ed errori
+  const suAccento = C.bg;        // il testo sopra una superficie in accento
   const [bozza, setBozza] = useState(null); // null = lista; oggetto = form aperto
   const [salvando, setSalvando] = useState(false);
   const [errore, setErrore] = useState('');
