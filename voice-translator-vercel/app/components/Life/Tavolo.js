@@ -203,38 +203,52 @@ function Tavolo({ compagni, L, C = {}, lingua, userToken, testoP, muto, accent, 
     return (
       <div>
         <div style={{ fontSize: 12, color: muto, marginBottom: 8 }}>{L('lifeTableWho')}</div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(96px, 1fr))', gap: 8, marginBottom: 14 }}>
+        {/* b.497 — tavola 23: «chi siede al tavolo si sceglie toccando le
+            facce» — PILLOLE con la faccia piccola e il nome, accese o
+            spente. Si vede subito chi c'e e chi no, e in una riga ce ne
+            stanno tre. Stesso toggle di prima. */}
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 14 }}>
           {compagni.map((c) => {
             const on = scelti.includes(c.id);
             return (
-              <button key={c.id} onClick={() => { vibrate(6); toggle(c.id); }}
-                style={{ padding: '10px 6px', minHeight: 44, borderRadius: 12, cursor: 'pointer', textAlign: 'center', background: on ? `${c.colore}22` : card, border: `1px solid ${on ? c.colore : bordo.split(' ').pop()}`, fontFamily: FONT }}>
-                <img src={c.avatar} alt="" width={46} height={46} style={{ borderRadius: 12, display: 'block', margin: '0 auto 6px', objectFit: 'cover' }} />
-                <div style={{ fontSize: 12, fontWeight: 600, color: testoP }}>{c.nome}</div>
+              <button key={c.id} onClick={() => { vibrate(6); toggle(c.id); }} aria-pressed={on}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '8px 14px 8px 8px',
+                  minHeight: 44, borderRadius: 999, cursor: 'pointer',
+                  background: on ? `${c.colore}22` : card,
+                  border: `1.5px solid ${on ? c.colore : bordo.split(' ').pop()}`, fontFamily: FONT }}>
+                <img src={c.avatar} alt="" width={24} height={24} style={{ borderRadius: 999, display: 'block', objectFit: 'cover' }} />
+                <span style={{ fontSize: 13, fontWeight: 600, color: testoP }}>{c.nome}</span>
               </button>
             );
           })}
         </div>
         {/* b.226 — Debate: l'obiettivo comune della tavola (facoltativo). */}
+        {/* b.497 — tavola 23: l'etichetta dice SU COSA, prima del campo. */}
+        <div style={{ fontSize: 12, color: muto, margin: '2px 0 6px' }}>{L('tableOnWhatWord')}</div>
         <input value={obiettivo} onChange={(e) => setObiettivo(e.target.value)}
           placeholder={L('lifeDebateGoalPh')}
           style={{ width: '100%', padding: 12, borderRadius: 12, border: bordo, background: card, color: testoP, fontSize: 14, fontFamily: FONT, boxSizing: 'border-box', marginBottom: 10 }} />
         {/* b.302 — le due opzioni ereditate dal Dossier: fonti + documento */}
+        {/* b.497 — tavola 23: «le due opzioni sono righe con la
+            spiegazione, non caselle da spuntare al buio» — la spunta e
+            un pallino a destra, come sulla tavola. Stessi stati. */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 12 }}>
-          <label style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '11px 20px', minHeight: 44, borderRadius: 12, background: card, border: bordo, cursor: 'pointer', fontFamily: FONT, boxSizing: 'border-box' }}>
-            <input type="checkbox" checked={conFonti} onChange={(e) => setConFonti(e.target.checked)} style={{ width: 20, height: 20, accentColor: accent }} />
-            <span style={{ flex: 1 }}>
-              <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 14, fontWeight: 600, color: testoP }}><Icon name="globe" size={16} color={testoP} />{L('lifeTableSources')}</span>
-              <span style={{ display: 'block', fontSize: 11.5, color: muto }}>{L('lifeTableSourcesDesc')}</span>
-            </span>
-          </label>
-          <label style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '11px 20px', minHeight: 44, borderRadius: 12, background: card, border: bordo, cursor: 'pointer', fontFamily: FONT, boxSizing: 'border-box' }}>
-            <input type="checkbox" checked={conDocumento} onChange={(e) => setConDocumento(e.target.checked)} style={{ width: 20, height: 20, accentColor: accent }} />
-            <span style={{ flex: 1 }}>
-              <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 14, fontWeight: 600, color: testoP }}><Icon name="doc" size={16} color={testoP} />{L('lifeTableDoc')}</span>
-              <span style={{ display: 'block', fontSize: 11.5, color: muto }}>{L('lifeTableDocDesc')}</span>
-            </span>
-          </label>
+          {[
+            { on: conFonti, su: () => setConFonti(v => !v), icona: 'globe', t: L('lifeTableSources'), d: L('lifeTableSourcesDesc') },
+            { on: conDocumento, su: () => setConDocumento(v => !v), icona: 'doc', t: L('lifeTableDoc'), d: L('lifeTableDocDesc') },
+          ].map((r) => (
+            <button key={r.icona} onClick={() => { vibrate(6); r.su(); }}
+              aria-pressed={r.on}
+              style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '11px 20px', minHeight: 44,
+                borderRadius: 12, background: card, border: bordo, cursor: 'pointer',
+                fontFamily: FONT, boxSizing: 'border-box', textAlign: 'left', width: '100%' }}>
+              <span style={{ flex: 1 }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 14, fontWeight: 600, color: testoP }}><Icon name={r.icona} size={16} color={testoP} />{r.t}</span>
+                <span style={{ display: 'block', fontSize: 11.5, color: muto }}>{r.d}</span>
+              </span>
+              <span aria-hidden="true" style={{ fontSize: 18, color: r.on ? accent : muto, flexShrink: 0 }}>{r.on ? '\u25C9' : '\u25CB'}</span>
+            </button>
+          ))}
         </div>
         <button onClick={avviaTavola} disabled={attende}
           style={{ width: '100%', padding: 14, minHeight: 44, borderRadius: 14, border: 'none', cursor: 'pointer', background: accent, color: suAccento, fontWeight: 600, fontSize: 15, fontFamily: FONT, opacity: attende ? 0.6 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>

@@ -183,6 +183,19 @@ function GestioneCompagni({ miei, onCambiato, L, C = {}, lingua, userToken, test
   // cancellare, ma possono avere ricordi tuoi. Prima non c'era proprio
   // modo di liberarsene.
   const [dimenticato, setDimenticato] = useState('');
+  // b.498 — tavola 24: «la memoria e un interruttore visibile su ogni
+  // Compagno». Il toggle sulla card salva subito (stesso salvaMio del
+  // modulo) e ricarica la lista; se il salvataggio fallisce, l'errore
+  // si vede — niente interruttori che mentono.
+  const toggleMemoria = useCallback(async (c) => {
+    vibrate(6);
+    try {
+      await salvaMio({ ...c, memoria: !c.memoria }, userToken);
+      onCambiato?.();
+    } catch {
+      setErrore(L('genericError'));
+    }
+  }, [userToken, onCambiato, L]);
   const dimentica = useCallback(async (id) => {
     if (!userToken) return;
     try {
@@ -475,28 +488,47 @@ function GestioneCompagni({ miei, onCambiato, L, C = {}, lingua, userToken, test
   }
 
   // ── LISTA ──
+  // b.498 — TAVOLA 24: la card e fatta di RIGHE, come sulla tavola.
+  // In alto la persona (faccia 44, nome, ruolo) coi suoi comandi; sui
+  // MIEI, sotto, l'interruttore della memoria — visibile, non sepolto
+  // nel modulo di modifica — e la riga «dimentica», nel colore
+  // dell'attenzione perche cancella. Sui predefiniti resta dimentica:
+  // anche loro possono avere ricordi (b.411).
   const carta = (c, mio) => (
-    <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 20px', ...clayCard(card) }}>
-      <img src={c.avatar} alt="" width={38} height={38} style={{ borderRadius: 8 }} />
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontWeight: 600, color: testoP, fontSize: 14 }}>{c.nome}</div>
-        <div style={{ fontSize: 11, color: muto, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.ruolo}</div>
+    <div key={c.id} style={{ ...clayCard(card), padding: 0, overflow: 'hidden' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 20px' }}>
+        <img src={c.avatar} alt="" width={44} height={44} style={{ borderRadius: 10 }} />
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontWeight: 600, color: testoP, fontSize: 15 }}>{c.nome}</div>
+          <div style={{ fontSize: 11.5, color: muto, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.ruolo}</div>
+        </div>
+        {mio
+          ? <>
+              <button onClick={() => modifica(c)} aria-label={L('lifeEdit')} style={{ background: 'none', border: bordo, borderRadius: 8, padding: 7, minHeight: 44, cursor: 'pointer' }}><Icon name="settings" size={14} color={testoP} /></button>
+              <button onClick={() => elimina(c.id)} aria-label={L('lifeDelete')} style={{ background: 'none', border: bordo, borderRadius: 8, padding: 7, minHeight: 44, cursor: 'pointer' }}><Icon name="x" size={14} color={rosso} /></button>
+            </>
+          : <button onClick={() => daBase(c)} style={{ background: 'none', border: bordo, borderRadius: 8, padding: '7px 10px', minHeight: 44, cursor: 'pointer', color: accent, fontSize: 12, fontWeight: 600, fontFamily: FONT }}>{L('lifeDuplicate')}</button>}
       </div>
+      {mio && (
+        <button onClick={() => toggleMemoria(c)} aria-pressed={!!c.memoria}
+          style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', textAlign: 'left',
+            padding: '10px 20px', minHeight: 44, background: 'none', border: 'none',
+            borderTop: bordo, cursor: 'pointer', fontFamily: FONT }}>
+          <span style={{ flex: 1, fontSize: 12.5, color: testoP }}>{c.memoria ? L('lifeMemoryOn') : `${L('lifeMemory')} — ${L('lifeMemoryHint')}`}</span>
+          <span style={{ width: 42, height: 24, borderRadius: 999, background: c.memoria ? accent : card, border: bordo, position: 'relative', flexShrink: 0, transition: 'background 0.15s' }}>
+            <span style={{ position: 'absolute', top: 2, left: c.memoria ? 20 : 2, width: 18, height: 18, borderRadius: '50%', background: '#fff', transition: 'left 0.15s' }} />
+          </span>
+        </button>
+      )}
       {/* b.411 · P1.17 — «Dimentica»: cancella cio che questo Compagno
-          ricorda di te, e lascia il Compagno. Sta su OGNI riga, anche sui
-          predefiniti, perche anche loro possono ricordare. */}
+          ricorda di te, e lascia il Compagno. Su OGNI card. */}
       <button onClick={() => dimentica(c.id)} aria-label={tt('lifeForget', 'Dimentica cio che ricorda di me')}
         title={tt('lifeForget', 'Dimentica cio che ricorda di me')}
-        style={{ background: 'none', border: bordo, borderRadius: 8, padding: '7px 9px', minHeight: 44, cursor: 'pointer',
-          color: dimenticato === c.id ? accent : muto, fontSize: 11, fontWeight: 600, fontFamily: FONT }}>
-        {dimenticato === c.id ? tt('lifeForgotten', 'fatto') : tt('lifeForgetShort', 'dimentica')}
+        style={{ display: 'block', width: '100%', textAlign: 'left', padding: '9px 20px', minHeight: 44,
+          background: 'none', border: 'none', borderTop: bordo, cursor: 'pointer',
+          color: dimenticato === c.id ? accent : rosso, fontSize: 11.5, fontWeight: 600, fontFamily: FONT }}>
+        {dimenticato === c.id ? tt('lifeForgotten', 'fatto') : tt('lifeForget', 'Dimentica cio che ricorda di me')}
       </button>
-      {mio
-        ? <>
-            <button onClick={() => modifica(c)} aria-label={L('lifeEdit')} style={{ background: 'none', border: bordo, borderRadius: 8, padding: 7, minHeight: 44, cursor: 'pointer' }}><Icon name="settings" size={14} color={testoP} /></button>
-            <button onClick={() => elimina(c.id)} aria-label={L('lifeDelete')} style={{ background: 'none', border: bordo, borderRadius: 8, padding: 7, minHeight: 44, cursor: 'pointer' }}><Icon name="x" size={14} color={rosso} /></button>
-          </>
-        : <button onClick={() => daBase(c)} style={{ background: 'none', border: bordo, borderRadius: 8, padding: '7px 10px', minHeight: 44, cursor: 'pointer', color: accent, fontSize: 12, fontWeight: 600, fontFamily: FONT }}>{L('lifeDuplicate')}</button>}
     </div>
   );
 
@@ -524,10 +556,6 @@ function GestioneCompagni({ miei, onCambiato, L, C = {}, lingua, userToken, test
         {errore && <div style={{ color: rosso, fontSize: 13, marginTop: 10 }}>{errore}</div>}
       </div>
 
-      <button onClick={() => { vibrate(8); nuovo(); }} style={{ width: '100%', padding: 13, minHeight: 44, borderRadius: 14, border: bordo, cursor: 'pointer', background: 'transparent', color: testoP, fontWeight: 600, fontSize: 14, fontFamily: FONT, marginBottom: 16 }}>
-        {L('lifeCreateManual')}
-      </button>
-
       {miei.length > 0 && <>
         <div style={{ fontSize: 12, color: muto, marginBottom: 8 }}>{L('lifeMine')}</div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 18 }}>{miei.map((c) => carta(c, true))}</div>
@@ -535,6 +563,15 @@ function GestioneCompagni({ miei, onCambiato, L, C = {}, lingua, userToken, test
 
       <div style={{ fontSize: 12, color: muto, marginBottom: 8 }}>{L('lifePredefined')}</div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>{COMPAGNI_PREDEFINITI.map((c) => carta(c, false))}</div>
+
+      {/* b.498 — tavola 24: aggiungerne uno e la pillola grande in
+          fondo, dopo cio che c'e gia. */}
+      <button onClick={() => { vibrate(8); nuovo(); }}
+        style={{ width: '100%', padding: 14, minHeight: 54, borderRadius: 16, border: 'none', cursor: 'pointer',
+          background: accent, color: suAccento, fontWeight: 600, fontSize: 15, fontFamily: FONT,
+          marginTop: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+        <Icon name="plus" size={18} color={suAccento} /> {L('lifeCreateManual')}
+      </button>
     </div>
   );
 }

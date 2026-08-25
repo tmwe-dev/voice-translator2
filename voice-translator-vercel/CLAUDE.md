@@ -219,6 +219,29 @@ qualunque refactoring. Non si propone di rimandarlo.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.498** (push #787) — TAVOLA 24: I COMPAGNI.
+  «La memoria e un interruttore visibile su ogni Compagno»: il toggle
+  sta sulla card dei miei (salva subito con salvaMio e ricarica; se
+  fallisce, l'errore si vede), non piu solo sepolto nel modulo di
+  modifica (dove resta). «Dimentica» e la riga sotto di OGNI card, nel
+  colore dell'attenzione, col testo intero. La card e fatta di righe
+  (faccia 44, persona, comandi / memoria / dimentica). «Aggiungi un
+  Compagno» e la pillola grande in fondo. SCOSTAMENTO DICHIARATO: il
+  conteggio «N ricordi» del cartellino non c'e — il numero dei ricordi
+  non e esposto da nessuna via oggi, e un numero inventato e peggio di
+  nessun numero. Nessuna chiave nuova.
+  PROVE: `compagni-tavola-24-b498.test.js` (rossa prima).
+
+- Versione: **b.497** (push #786) — TAVOLA 23: LA TAVOLA ROTONDA.
+  «Chi siede al tavolo si sceglie toccando le facce»: i compagni sono
+  PILLOLE (faccia 24 + nome, accese/spente) al posto della griglia di
+  card. Le due opzioni (fonti reali / documento) sono RIGHE con la
+  spiegazione e la spunta TONDA a destra — via i checkbox quadrati;
+  stessi stati, stessi effetti. L'etichetta «Su cosa devono
+  confrontarsi» sta sopra il campo. «Apri la Tavola» era gia la
+  pillola grande in fondo. Chiave nuova x38: tableOnWhatWord.
+  PROVE: `tavolo-tavola-23-b497.test.js` (rossa prima).
+
 - Versione: **b.496** (push #785) — TAVOLA 22: IL PROFILO PUBBLICO.
   «Chi e, che lingue parla, cosa ha detto. Nient'altro.» Le LINGUE
   accanto al nome vengono dai suoi commenti veri (mondoDB seleziona
