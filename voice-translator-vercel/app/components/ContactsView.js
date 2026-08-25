@@ -66,6 +66,8 @@ export default function ContactsView({
   const [deviceImportResult, setDeviceImportResult] = useState(null);
   const [search, setSearch] = useState('');
   const [showAddSection, setShowAddSection] = useState(false);
+  // b.502 — tavola 30: Aa come su ogni pagina.
+  const [zoomTesto, setZoomTesto] = useState(0);
 
   useEffect(() => { const cleanup = startPolling(); return cleanup; }, [startPolling]);
 
@@ -193,6 +195,16 @@ export default function ContactsView({
         onBack={() => setView('settings')}
         S={{ colors: C }}
         rightAction={
+          <>
+          {/* b.502 — tavola 30: Aa in testata, accanto al piu. */}
+          <button onClick={() => setZoomTesto((z) => (z >= 3 ? 0 : z + 1))}
+            title={L('textBigger')} aria-label={L('textBigger')}
+            style={{ width: TASTO, height: TASTO, borderRadius: 12, cursor: 'pointer',
+              background: zoomTesto ? `${C.accent}15` : C.card,
+              border: `1px solid ${C.cardBorder}`, color: C.textMuted,
+              fontSize: 15, fontWeight: 600, marginRight: 8 }}>
+            Aa
+          </button>
           <button onClick={() => setShowAddSection(!showAddSection)} aria-label={showAddSection ? L('closeWord') : L('addContactAria')} style={{
             // Era 38: sotto la misura minima di un dito.
             width: TASTO, height: TASTO, borderRadius: 12, cursor: 'pointer',
@@ -205,8 +217,12 @@ export default function ContactsView({
                 sta alla stessa misura in ogni carattere e in ogni lingua. */}
             <Icon name={showAddSection ? 'x' : 'plus'} size={20} color={showAddSection ? C.accent : C.textMuted} />
           </button>
+          </>
         }
       />
+
+      {/* b.502 — lo zoom di Aa scala l'elenco in proporzione. */}
+      <div style={{ zoom: 1 + zoomTesto * 0.1, display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
 
       {/* ═══ SEARCH ═══ */}
       {/* Margine laterale 20, uguale a testata, contenuto e riga in basso. */}
@@ -453,7 +469,10 @@ export default function ContactsView({
                     <span style={{ fontSize: 14, fontWeight: 500, color: C.textPrimary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {contact.name || contact.email.split('@')[0]}
                     </span>
+                    {/* b.502 — tavola 30: la lingua A PAROLE accanto alla
+                        bandiera — e cio che dice se potete parlarvi. */}
                     <span style={{ fontSize: 15, flexShrink: 0 }}>{LANGS.find(l => l.code === contact.lang)?.flag || ''}</span>
+                    <span style={{ fontSize: 11.5, color: C.textMuted, flexShrink: 0 }}>{LANGS.find(l => l.code === contact.lang)?.name || ''}</span>
                   </div>
                   <div style={{ fontSize: 11, color: C.textMuted, marginTop: 2 }}>
                     {contact.online ? L('onlineWord') : contact.lastSeen ? `${L('lastSeenPrefix')} ${formatLastSeen(contact.lastSeen)} ${L('agoWord')}` : L('offlineWord')}
@@ -510,6 +529,7 @@ export default function ContactsView({
       {status && <div style={{ textAlign: 'center', padding: '6px 20px', fontSize: 11, color: C.accent }}>{status}</div>}
 
       <style>{`@keyframes vtSlideUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }`}</style>
+    </div>
     </div>
   );
 }

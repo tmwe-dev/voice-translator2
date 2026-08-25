@@ -219,6 +219,20 @@ qualunque refactoring. Non si propone di rimandarlo.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.502** (push #791) — TAVOLE 29 E 30.
+  TAVOLA 29 (le tue chiavi): sotto ogni chiave lo STATO — «attiva»
+  verde con la maschera che il server gia manda (b.166, mai la chiave
+  intera, mai campi prefillati) oppure «non impostata» — e COSA
+  SBLOCCA (OpenAI: traduzione e voce; Anthropic/Gemini: altro motore;
+  ElevenLabs: la sua descrizione). Aa in testata.
+  TAVOLA 30 (rubrica): la LINGUA A PAROLE accanto alla bandiera (era
+  solo bandiera); Aa in testata accanto al piu (zoom sull'elenco).
+  Pallino verde online sull'avatar e ordinamento online-first
+  c'erano gia.
+  Chiavi nuove x38: keyActiveWord, unlocksTranslateVoice,
+  unlocksAltTranslate.
+  PROVE: `chiavi-rubrica-29-30-b502.test.js` (rossa prima).
+
 - Versione: **b.501** (push #790) — TAVOLE 27 E 28.
   TAVOLA 27 (Impostazioni): righe col valore a destra, gruppi con
   l'etichetta e interruttori visibili c'erano GIA (la riscrittura
