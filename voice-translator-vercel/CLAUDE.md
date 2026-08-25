@@ -219,6 +219,20 @@ qualunque refactoring. Non si propone di rimandarlo.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.494** (push #783) — TAVOLA 10: OBIETTIVI.
+  «Poche cose, con quanto manca. Aggiungerne una e una riga sola.»
+  I COMPITI DI OGGI (e in ritardo, max 3) sono righe «PER OGGI» dentro
+  Obiettivi — stessa porta dei Compiti (/api/compiti, azione elenca),
+  sola lettura, fallimento silenzioso; toccare una riga porta ai
+  Compiti veri (cambiaScheda da LifeView). «Nuovo obiettivo» e la
+  pillola grande accesa IN FONDO, dopo cio che c'e gia (prima era un
+  bottone trasparente in cima). Le barre con la percentuale c'erano
+  gia (b.320/b.334). SCOSTAMENTO DICHIARATO: le matite e le X sulle
+  card degli obiettivi restano (il template non le mostra ma sono
+  funzioni vive: toglierle senza un posto nuovo e perdere funzioni).
+  Chiave nuova x38: forTodayWord.
+  PROVE: `obiettivi-tavola-10-b494.test.js` (rossa prima).
+
 - Versione: **b.493** (push #782) — TAVOLA 13: PRIMO AVVIO.
   «Una domanda per schermata» c'era gia (tre fasi, b.136); i ritorni
   c'erano gia. Quel che mancava: il trattino della fase in corso ora e

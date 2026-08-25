@@ -196,7 +196,7 @@ function LifeView({ onApriStanza }) {
       {scheda === 'tavolo' && <Tavolo compagni={tutti} obiettivoIniziale={tavoloPreset || debateObiettivo} {...{ L, C, lingua, userToken, testoP, muto, accent, card, bordo }} />}
       {/* b.302 — 'dossier' non e piu una scheda: chi ci arriva vede la Tavola. */}
       {scheda === 'impara' && <Impara compagni={tutti} argomentoIniziale={imparaPreset} {...{ L, C, lingua, userToken, testoP, muto, accent, card, bordo }} />}
-      {scheda === 'obiettivi' && <GestioneObiettivi {...{ L, userToken, testoP, muto, accent, card, bordo }} />}
+      {scheda === 'obiettivi' && <GestioneObiettivi {...{ L, userToken, testoP, muto, accent, card, bordo }} cambiaScheda={setScheda} />}
       {/* b.482 — i Compiti ricevono anche la tavolozza del tema: i loro
           colori di stato erano scritti a mano e non seguivano il tema. */}
       {scheda === 'compiti' && <CompitiView {...{ L, C, userToken, lingua, testoP, muto, accent, card, bordo }} cambiaScheda={setScheda} />}

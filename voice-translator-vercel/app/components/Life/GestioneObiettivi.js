@@ -20,7 +20,7 @@ import { elencoObiettivi, salvaObiettivo, rimuoviObiettivo,
 
 const STATO_ETI = { attivo: 'Attivo', raggiunto: 'Raggiunto', pausa: 'In pausa' };
 
-function GestioneObiettivi({ L, userToken, testoP, muto, accent, card, bordo }) {
+function GestioneObiettivi({ L, userToken, testoP, muto, accent, card, bordo, cambiaScheda }) {
   const [lista, setLista] = useState([]);
   const [bozza, setBozza] = useState(null); // null = elenco; oggetto = form
 
@@ -36,6 +36,30 @@ function GestioneObiettivi({ L, userToken, testoP, muto, accent, card, bordo }) 
       if (sincronizzaConCorsi(cs || [])) setLista(elencoObiettivi());
     }).catch(() => {});
   }, [userToken]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ═══ b.494 — TAVOLA 10: «PER OGGI» — i compiti di oggi (e quelli in
+  // ritardo) sono RIGHE qui dentro, non un'altra sezione da aprire.
+  // Stessa porta dei Compiti (/api/compiti, azione elenca), sola
+  // lettura: si tocca la riga e si va ai Compiti veri. Fallimento
+  // silenzioso: senza rete o senza accesso la sezione semplicemente
+  // non compare, gli obiettivi restano.
+  const [perOggi, setPerOggi] = useState([]);
+  useEffect(() => {
+    if (!userToken) return;
+    fetch('/api/compiti', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ azione: 'elenca', userToken }),
+      signal: AbortSignal.timeout(60000),
+    }).then((r) => (r.ok ? r.json() : null)).then((d) => {
+      if (!d?.jobs) return;
+      const oggi = new Date(); oggi.setHours(0, 0, 0, 0);
+      setPerOggi(d.jobs.filter((j) => {
+        if (j.stato === 'fatto' || !j.scadenza) return false;
+        const sc = new Date(j.scadenza + 'T00:00:00');
+        return sc - oggi <= 0; // oggi o in ritardo
+      }).slice(0, 3));
+    }).catch(() => {});
+  }, [userToken]);
 
   const vuoto = () => ({ id: '', titolo: '', descrizione: '', categoria: 'crescita', stato: 'attivo', priorita: 2, progresso: 0, corsoId: null });
   const campo = (k) => (e) => setBozza((b) => ({ ...b, [k]: e.target.value }));
@@ -123,10 +147,6 @@ function GestioneObiettivi({ L, userToken, testoP, muto, accent, card, bordo }) 
         {L('lifeGoalIntro')}
       </div>
 
-      <button onClick={() => { vibrate(8); setBozza(vuoto()); }} style={{ width: '100%', padding: 13, minHeight: 44, borderRadius: 14, border: bordo, cursor: 'pointer', background: 'transparent', color: testoP, fontWeight: 600, fontSize: 14, fontFamily: FONT, marginBottom: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-        <Icon name="plus" size={18} color={testoP} /> {L('lifeGoalNew')}
-      </button>
-
       {lista.length === 0
         ? <div style={{ fontSize: 13, color: muto, textAlign: 'center', padding: '24px 8px' }}>{L('lifeGoalEmpty')}</div>
         : <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -157,6 +177,35 @@ function GestioneObiettivi({ L, userToken, testoP, muto, accent, card, bordo }) 
               );
             })}
           </div>}
+
+      {/* b.494 — tavola 10: «PER OGGI», i compiti come righe. Toccarne
+          una porta ai Compiti veri: qui non si gestisce, si vede. */}
+      {perOggi.length > 0 && <>
+        <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: 1, color: muto, margin: '18px 0 4px', textTransform: 'uppercase' }}>
+          {L('forTodayWord')}
+        </div>
+        {perOggi.map((j) => (
+          <button key={j.id} onClick={() => { vibrate(8); cambiaScheda && cambiaScheda('compiti'); }}
+            style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, textAlign: 'left',
+              padding: '12px 4px', minHeight: 44, background: 'none', border: 'none',
+              borderBottom: bordo, cursor: 'pointer', fontFamily: FONT }}>
+            <span style={{ flex: 1, minWidth: 0 }}>
+              <span style={{ display: 'block', fontSize: 14, fontWeight: 500, color: testoP }}>{j.titolo}</span>
+              {j.materia && <span style={{ display: 'block', fontSize: 12, color: muto }}>{j.materia}</span>}
+            </span>
+            <Icon name="chevRight" size={14} color={muto} />
+          </button>
+        ))}
+      </>}
+
+      {/* b.494 — tavola 10: «Aggiungerne una e una riga sola» — la
+          pillola grande sta IN FONDO, dopo cio che c'e gia. */}
+      <button onClick={() => { vibrate(8); setBozza(vuoto()); }}
+        style={{ width: '100%', padding: 14, minHeight: 54, borderRadius: 16, border: 'none', cursor: 'pointer',
+          background: accent, color: '#04121c', fontWeight: 600, fontSize: 15, fontFamily: FONT,
+          marginTop: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+        <Icon name="plus" size={18} color="#04121c" /> {L('lifeGoalNew')}
+      </button>
 
       {attivi.length > 0 && <div style={{ fontSize: 11, color: muto, marginTop: 14, textAlign: 'center' }}>
         {attivi.length} {attivi.length === 1 ? L('lifeGoalActive1') : L('lifeGoalActiveN')} · {L('lifeGoalKnown')}
