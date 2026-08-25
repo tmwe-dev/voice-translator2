@@ -214,6 +214,51 @@ qualunque refactoring. Non si propone di rimandarlo.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.483** (push #772) — DUE COSE CHE AVEVO CHIAMATO «SOSPESE» E
+  NON LO ERANO: non erano decisioni di Luca, erano lavoro mio. Chiederle a lui
+  era scaricargli addosso una cosa che dovevo fare.
+  1. IL CODICE A BARRE DEL TASSISTA ERA ROVESCIATO. Non solo «verde su blu
+     scuro»: misurata la luminosita dei due colori, il TRATTO era piu CHIARO
+     del FONDO. Un lettore si aspetta scuro su chiaro; al rovescio moltissime
+     fotocamere non leggono e non lo dicono — non succede niente, e chi
+     inquadra crede di aver sbagliato lui. Ed e l'unico codice che deve
+     leggere uno SCONOSCIUTO, di corsa, dentro un'auto.
+     Sotto c'erano altre due cose che non avevo visto:
+     · TRE dei cinque codici li disegnava un SERVER DI TERZI
+       (api.qrserver.com). Se quel server e lento o irraggiungibile da quella
+       rete, il codice NON COMPARE — su schermate il cui unico scopo e il
+       codice, e senza nessun ripiego. E l'indirizzo dove stai andando usciva
+       dal telefono e finiva dentro una richiesta a un'azienda che non
+       conosciamo. La libreria per disegnarli era GIA IN CASA e la usavano
+       gia l'invito e la sala d'attesa: non si e aggiunto niente, si e smesso
+       di chiedere fuori una cosa che sapevamo fare dentro.
+     · GLI ANGOLI DELLA TELA ERANO ARROTONDATI. I tre quadrati che un lettore
+       cerca per primi stanno proprio negli angoli, e dodici punti di raggio
+       ci entravano dentro.
+     Ora c'e UN POSTO SOLO che decide come si disegna un codice
+     (app/lib/codiceQR.js): nero su bianco, cornice chiara larga, angoli
+     vivi, e tutte e cinque le schermate passano di li.
+     PROVA: `__tests__/codice-qr-leggibile-b483.test.js`, verificata ROSSA sul
+     codice di ieri su tutti e tre i punti.
+     E UNA PROVA MIA RISCRITTA: `lingua-e-pila-b429` pretendeva di trovare il
+     nome del servizio esterno dentro le due schermate. L'intento — «i pezzi
+     sono COPIATI, non riscritti» — resta e vale; ma cosi, difendendo la
+     somiglianza, la prova teneva in vita anche la dipendenza.
+  2. LE PAROLE DELLA SEZIONE VITA: ventitre, non quindici. Le peggiori erano
+     le OTTO IDEE DI CORSO — otto pulsanti in italiano, e toccandone uno ti
+     ritrovavi una frase italiana dentro il campo. Piu i cinque gruppi
+     dell'agenda dei compiti, il riassunto che si manda al Compagno, e il
+     nome del Maestro. Tutte tradotte davvero in trentotto lingue, non
+     copiate: verificato che nessuna lingua ripeta l'italiano o l'inglese.
+  RESTA DAVVERO A LUCA, e non per prudenza: il permesso della voce
+  (`voice_id`) e un interruttore dentro il pannello ElevenLabs. Lo strumento
+  disponibile da qui arriva al prompt e alla voce dell'agente, NON alla
+  scheda dei permessi: non e una cosa che posso fare e ho scelto di non fare.
+  NON TOCCATO, e dichiarato: `Life/CompagnoLive.js` ha quattordici frasi
+  italiane visibili (gli avvisi di quando la linea vocale non parte). E il
+  file che Luca ha vietato per nome; le parole si potrebbero cambiare senza
+  sfiorare la telefonata, ma il divieto e suo e serve il suo via.
+
 - Versione: **b.482** (push #771) — LO STANDARD DEL TEMPLATE SU TUTTO IL RESTO:
   Vita, Mondo, gli ingressi, il taxi, la stanza video, il clone della voce.
   Nove lavorazioni in parallelo, un pacchetto di schermate ciascuna, coi due

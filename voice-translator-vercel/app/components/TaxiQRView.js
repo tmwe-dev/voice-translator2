@@ -5,6 +5,7 @@ import { FONT, vibrate } from '../lib/constants.js';
 import { buildMapsUrl } from '../lib/mapsLink.js';
 import { PALETTE } from '../lib/palette.js';
 import { useApp } from '../contexts/AppContext.js';
+import { disegnaQR, QR_TRATTO, QR_FONDO } from '../lib/codiceQR.js';
 
 // ═══════════════════════════════════════════════════════════════
 // TaxiQRView — QR con il LINK ALLA MAPPA per il tassista.
@@ -21,25 +22,30 @@ import { useApp } from '../contexts/AppContext.js';
 
 // La scritta di riserva (se il servizio del QR non risponde) arriva gia
 // tradotta come argomento.
+// b.483 — QUESTO CODICE ERA VERDE SU BLU SCURO, ed e quello che deve
+// inquadrare il TASSISTA: uno sconosciuto, di corsa, dentro un'auto. Un
+// lettore si aspetta scuro su chiaro; al contrario moltissime fotocamere
+// non leggono, e quando non leggono non dicono niente — semplicemente
+// non succede niente, e chi inquadra pensa di aver sbagliato lui.
+// E lo disegnava un server di terzi: se quel server e lento o giu, il
+// codice NON COMPARE — su una schermata il cui unico scopo e il codice.
+// Adesso lo disegniamo noi, con la libreria che era gia in casa (la
+// usavano gia l'invito e la sala d'attesa), nero su bianco. Vedi
+// app/lib/codiceQR.js.
 function generateQRCanvas(canvas, data, size = 280, etichettaScansiona = '') {
   const ctx = canvas.getContext('2d');
   canvas.width = size; canvas.height = size;
 
-  const img = new Image();
-  img.crossOrigin = 'anonymous';
-  const encoded = encodeURIComponent(data);
-  img.src = `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encoded}&bgcolor=0a0e1a&color=26D9B0&format=png`;
-
-  return new Promise((resolve) => {
-    img.onload = () => { ctx.drawImage(img, 0, 0, size, size); resolve(true); };
-    img.onerror = () => {
-      ctx.fillStyle = '#0a0e1a'; ctx.fillRect(0, 0, size, size);
-      ctx.fillStyle = PALETTE.teal; ctx.font = 'bold 14px system-ui'; ctx.textAlign = 'center';
-      ctx.fillText('QR Code', size / 2, size / 2 - 10);
-      ctx.font = '10px system-ui';
-      ctx.fillText(etichettaScansiona || 'Scan with the camera', size / 2, size / 2 + 10);
-      resolve(false);
-    };
+  return disegnaQR(canvas, data, size).then((fatto) => {
+    if (fatto) return true;
+    // Non si disegna un finto codice: un rettangolo che sembra un QR e
+    // non lo e fa inquadrare a vuoto. Si dice che non c'e.
+    ctx.fillStyle = QR_FONDO; ctx.fillRect(0, 0, size, size);
+    ctx.fillStyle = QR_TRATTO; ctx.font = '600 14px system-ui'; ctx.textAlign = 'center';
+    ctx.fillText('QR', size / 2, size / 2 - 10);
+    ctx.font = '10px system-ui';
+    ctx.fillText(etichettaScansiona || '', size / 2, size / 2 + 10);
+    return false;
   });
 }
 
@@ -120,15 +126,25 @@ function TaxiQRView({ destination, onClose, onStartConversation, S }) {
         justifyContent: 'center', padding: '0 24px', gap: 20,
       }}>
         {/* QR Code */}
+        {/* b.483 — LA CORNICE DIVENTA BIANCA, e non e una scelta di gusto:
+            un codice ha bisogno di una fascia chiara tutto intorno per
+            essere riconosciuto. Prima era blu notte e la fascia chiara la
+            dava solo il margine interno del codice, due quadratini —
+            meno di quanto la norma chiede.
+            E il CANVAS PERDE GLI ANGOLI ARROTONDATI: i tre quadrati che
+            un lettore cerca per primi stanno proprio negli angoli, e
+            dodici punti di raggio ci entravano dentro. Erano dodici punti
+            che potevano far fallire l'inquadratura senza dire perche. */}
         <div style={{
           padding: 20, borderRadius: 24,
-          background: '#0a0e1a', border: `2px solid ${accent}25`,
+          background: QR_FONDO, border: `2px solid ${accent}25`,
           boxShadow: `0 0 60px ${accent}10`,
         }}>
           <canvas ref={canvasRef} style={{
-            width: 240, height: 240, borderRadius: 12,
+            width: 240, height: 240,
             opacity: qrReady ? 1 : 0.3,
             transition: 'opacity 0.3s',
+            display: 'block',
           }} />
         </div>
 

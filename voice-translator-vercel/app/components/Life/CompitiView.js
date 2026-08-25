@@ -208,7 +208,10 @@ function CompitiView({ L, C, userToken, lingua, cambiaScheda, testoP, muto, acce
   const salvaMat = useCallback(async () => {
     if (!matBozza?.testo?.trim()) return;
     try {
-      await chiama('salvaMateriale', { materiale: { titolo: matBozza.titolo || 'Materiale', materia: matBozza.materia || '', origine: 'appunti', testo: matBozza.testo } }, userToken);
+      // b.483 — il titolo di ripiego era scritto in italiano qui dentro: chi
+      // salvava un materiale senza dargli un nome se lo ritrovava scritto
+      // «Materiale» nell'elenco anche leggendo l'app in un'altra lingua.
+      await chiama('salvaMateriale', { materiale: { titolo: matBozza.titolo || tt('taskMaterialUntitled', 'Materiale'), materia: matBozza.materia || '', origine: 'appunti', testo: matBozza.testo } }, userToken);
       setMatBozza(null); ricaricaMateriali();
     } catch (e) {
       // b.363 — prima questo guasto non lasciava traccia da nessuna parte: nel
@@ -256,13 +259,17 @@ function CompitiView({ L, C, userToken, lingua, cambiaScheda, testoP, muto, acce
 
   // b.333 — COACH: porta l'agenda di oggi dal Compagno (scheda Amico) con
   // il riassunto gia scritto nel campo messaggio.
+  // b.483 — le tre frasi del riassunto erano scritte in italiano dentro il
+  // codice, e questo testo non resta nascosto: viene messo nel campo
+  // messaggio della scheda Amico, dove la persona lo legge e lo invia. Chi
+  // usa l'app in un'altra lingua ci trovava dentro l'italiano.
   const studiaColCoach = useCallback(() => {
     const aperti = (jobs || []).filter((j) => j.stato !== 'fatto').slice(0, 6);
-    const righe = aperti.map((j) => `- ${j.titolo}${j.materia ? ` (${j.materia})` : ''}${j.scadenza ? ` entro ${j.scadenza}` : ''}`).join('\n');
-    sesSet('vt-coach-brief', `Stasera devo studiare:\n${righe}\nAiutami a organizzarmi: da cosa parto e come divido il tempo?`);
+    const righe = aperti.map((j) => `- ${j.titolo}${j.materia ? ` (${j.materia})` : ''}${j.scadenza ? ` ${tt('taskDueBy', 'entro')} ${j.scadenza}` : ''}`).join('\n');
+    sesSet('vt-coach-brief', `${tt('taskCoachBriefIntro', 'Stasera devo studiare:')}\n${righe}\n${tt('taskCoachBriefAsk', 'Aiutami a organizzarmi: da cosa parto e come divido il tempo?')}`);
     vibrate(10);
     cambiaScheda?.('amico');
-  }, [jobs, cambiaScheda]);
+  }, [jobs, cambiaScheda]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const input = { width: '100%', padding: 11, borderRadius: 10, border: bordo, background: card, color: testoP, fontSize: 14, fontFamily: FONT, boxSizing: 'border-box' };
 

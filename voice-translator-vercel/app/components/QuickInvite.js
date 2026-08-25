@@ -4,6 +4,7 @@ import { APP_URL, LANGS, FONT, vibrate, metaScelta} from '../lib/constants.js';
 import Icon from './Icon.js';
 import { PALETTE } from '../lib/palette.js';
 import { useApp } from '../contexts/AppContext.js';
+import { disegnaQR } from '../lib/codiceQR.js';
 
 // b.482 — I COLORI ARRIVANO DAL TEMA, non da valori scritti a mano dentro
 // la schermata: l'invito restava scuro e verde-acqua anche col tema chiaro,
@@ -58,14 +59,14 @@ function QuickInvite({ handleCreateRoom, roomId, setViewAfterCreate }) {
     if (!createdRoomId || !canvasRef.current) return;
     const url = `${APP_URL}?room=${createdRoomId}&lang=${lang}&auto=1&gl=${guestLang}`;
     let cancelled = false;
-    import('qrcode').then(QRCode => {
-      if (cancelled) return;
-      QRCode.toCanvas(canvasRef.current, url, {
-        width: 260, margin: 2,
-        color: { dark: PALETTE.bgDeep, light: '#ffffff' },
-        errorCorrectionLevel: 'M',
-      }, () => {});
-    }).catch(() => {});
+    // b.483 — il codice lo disegna app/lib/codiceQR.js, che e l'unico
+    // posto dove si decide come si disegna un QR in questa applicazione.
+    // Prima ogni schermata se lo scriveva da se, e infatti quello del
+    // tassista era finito verde su blu scuro.
+    // E il tratto passa dal blu notte al NERO: quel blu era quasi nero e
+    // di solito si legge, ma "quasi" su un codice a barre vuol dire che
+    // qualche fotocamera ce la fa e qualcuna no, senza dire quale.
+    disegnaQR(canvasRef.current, url, 260, 2);
     return () => { cancelled = true; };
   }, [createdRoomId, lang, guestLang]);
 

@@ -20,6 +20,7 @@ import CarouselLingue from './CarouselLingue.js';
 import TaxiMap from './TaxiMap.js';
 import { buildMapsUrl } from '../lib/mapsLink.js';
 import { parlaColSistema } from '../lib/voceSistema.js'; // b.417
+import { immagineQR } from '../lib/codiceQR.js';
 
 // ═══════════════════════════════════════════════════════════════
 // b.355→b.356 — "PARLA ORA", il traduttore subito.
@@ -557,9 +558,18 @@ export default function PrimaProva({ onChiudi }) {
   }, []);
 
   const indirizzoMappa = meta2 ? buildMapsUrl({ lat: meta2.lat, lng: meta2.lon, normalizedAddress: meta2.displayName }, 'google') : '';
-  const qrSrc = indirizzoMappa
-    ? `https://api.qrserver.com/v1/create-qr-code/?size=240x240&margin=8&data=${encodeURIComponent(indirizzoMappa)}`
-    : '';
+  // b.483 — IL CODICE LO DISEGNIAMO NOI, non piu un server di terzi.
+  // Prima l'indirizzo dove stai andando usciva dal telefono e finiva
+  // dentro una richiesta a un'azienda che non conosciamo; e se quel
+  // server era lento o irraggiungibile dalla rete di quel taxi, il
+  // codice non compariva affatto. La libreria era gia in casa.
+  const [qrSrc, setQrSrc] = useState('');
+  useEffect(() => {
+    let vivo = true;
+    if (!indirizzoMappa) { setQrSrc(''); return undefined; }
+    immagineQR(indirizzoMappa, 240, 8).then((dato) => { if (vivo) setQrSrc(dato); });
+    return () => { vivo = false; };
+  }, [indirizzoMappa]);
   const condividiMappa = useCallback(async () => {
     if (!indirizzoMappa) return; vibrate(12);
     if (navigator.share) { try { await navigator.share({ text: meta2?.displayName || '', url: indirizzoMappa }); } catch { /* l'utente ha annullato la condivisione: nessuna azione necessaria */ } }
@@ -722,9 +732,9 @@ export default function PrimaProva({ onChiudi }) {
           <div style={{ width: 138, flexShrink: 0, display: 'flex', flexDirection: 'column',
             alignItems: 'center', gap: 8, background: 'rgba(255,255,255,0.05)', border: bordo,
             borderRadius: 16, padding: '12px 10px' }}>
-            {/* eslint-disable-next-line @next/next/no-img-element -- immagine
-                generata da un servizio esterno: next/image vorrebbe il
-                dominio in elenco, e per un QR non serve */}
+            {/* eslint-disable-next-line @next/next/no-img-element -- il codice
+                e disegnato qui dentro e vive gia nell'indirizzo: non c'e
+                niente da scaricare, quindi niente da ottimizzare */}
             <img src={qrSrc} alt="" width={108} height={108}
               style={{ borderRadius: 10, background: '#fff', padding: 6, display: 'block' }} />
             <div style={{ fontSize: 11, color: C.textMuted, textAlign: 'center', lineHeight: 1.35, fontFamily: FONT }}>

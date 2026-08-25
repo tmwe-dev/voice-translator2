@@ -79,8 +79,15 @@ describe('l\'indirizzo e la mappa, che in «Parla ora» non c\'erano', () => {
     const p = senzaCommenti(leggi('app/components/PrimaProva.js'));
     const tt = senzaCommenti(leggi('app/components/TaxiTalk.js'));
     // la stessa ricerca, sullo stesso servizio, con lo stesso riquadro
+    // b.483 — QUESTA RIGA PRETENDEVA UN INDIRIZZO DI TERZI. L'intento e
+    // giusto e resta: «Parla ora» e TaxiTalk devono usare gli STESSI
+    // pezzi, non due copie che divergono. Ma uno dei pezzi elencati era
+    // il nome del servizio esterno che disegnava i codici a barre — e
+    // cosi la prova, difendendo la somiglianza, teneva in vita anche la
+    // dipendenza. Adesso il codice lo disegniamo noi, e cio che le due
+    // schermate devono avere in comune e il nostro disegnatore.
     for (const pezzo of ['nominatim.openstreetmap.org/search', 'format=json&limit=5&addressdetails=1',
-                         'api.qrserver.com/v1/create-qr-code', 'buildMapsUrl', '<TaxiMap']) {
+                         'immagineQR', 'buildMapsUrl', '<TaxiMap']) {
       expect(p, `manca in «Parla ora»: ${pezzo}`).toContain(pezzo);
       expect(tt, `e doveva venire da TaxiTalk: ${pezzo}`).toContain(pezzo);
     }

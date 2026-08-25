@@ -10,15 +10,22 @@ import { LIVELLI, PROFILI } from '../../lib/compagni/corsi/catalogo.js';
 // dettagliata, cosi anche un anziano o un bambino non parte dal vuoto.
 // b.482 — via le faccine da queste idee: a schermo non ci vanno, e la
 // parola da sola dice gia di che materia si tratta.
+// b.483 — ANCHE QUESTE IDEE SI VEDONO A SCHERMO, e finora erano scritte
+// in italiano dentro il codice: chi apre l'app in un'altra lingua trovava
+// otto pulsanti in italiano, e toccandone uno si ritrovava una frase
+// italiana dentro il campo. Ora ogni idea porta due chiavi — la parola
+// sul pulsante (etK) e la frase che finisce nel campo (qK) — e il testo
+// italiano resta come ripiego, come per tutte le altre parole di questa
+// schermata.
 const IDEE_CORSO = [
-  { et: 'Matematica', q: 'Matematica di base: numeri, operazioni ed equazioni semplici' },
-  { et: 'Storia', q: 'Storia: dai secoli antichi ai giorni nostri, con date ed eventi chiave' },
-  { et: 'Musica', q: 'Storia della musica e dei grandi compositori, con esempi da ascoltare' },
-  { et: 'Inglese', q: 'Inglese per iniziare a parlare: frasi utili di ogni giorno' },
-  { et: 'Scienze', q: 'Scienze: il corpo umano, la natura e come funziona il mondo' },
-  { et: 'Cucina', q: 'Cucina: ricette semplici passo dopo passo' },
-  { et: 'Computer', q: 'Usare il computer e internet senza paura, passo dopo passo' },
-  { et: 'Arte', q: 'Storia dell\'arte: opere famose e artisti da conoscere' },
+  { etK: 'lifeIdeaMath', et: 'Matematica', qK: 'lifeIdeaMathTopic', q: 'Matematica di base: numeri, operazioni ed equazioni semplici' },
+  { etK: 'lifeIdeaHistory', et: 'Storia', qK: 'lifeIdeaHistoryTopic', q: 'Storia: dai secoli antichi ai giorni nostri, con date ed eventi chiave' },
+  { etK: 'lifeIdeaMusic', et: 'Musica', qK: 'lifeIdeaMusicTopic', q: 'Storia della musica e dei grandi compositori, con esempi da ascoltare' },
+  { etK: 'lifeIdeaEnglish', et: 'Inglese', qK: 'lifeIdeaEnglishTopic', q: 'Inglese per iniziare a parlare: frasi utili di ogni giorno' },
+  { etK: 'lifeIdeaScience', et: 'Scienze', qK: 'lifeIdeaScienceTopic', q: 'Scienze: il corpo umano, la natura e come funziona il mondo' },
+  { etK: 'lifeIdeaCooking', et: 'Cucina', qK: 'lifeIdeaCookingTopic', q: 'Cucina: ricette semplici passo dopo passo' },
+  { etK: 'lifeIdeaComputer', et: 'Computer', qK: 'lifeIdeaComputerTopic', q: 'Usare il computer e internet senza paura, passo dopo passo' },
+  { etK: 'lifeIdeaArt', et: 'Arte', qK: 'lifeIdeaArtTopic', q: 'Storia dell\'arte: opere famose e artisti da conoscere' },
 ];
 import { generaTurnoPodcast, generaSyllabus, generaLezione, generaQuiz, parlaTurno, parlaBilingue, elencoMiei, corsiDisponibili, pubblicaCorso, generaIllustrazione, generaTavola, arricchisciLezione, registraEsito, chiediAlMaestro, salvaCorsoMio, mieiCorsiUtente, segnaLibroCorso, progressoCorso, profiloStudente, salvaProfiloStudente } from '../../lib/compagni/cliente.js';
 import { pausa as pausaAudio, ferma as fermaAudio, fermaElemento, suInterruzione, apriCiclo } from '../../lib/voce.js';
@@ -307,7 +314,9 @@ function Podcast({ compagni, L, C, lingua, userToken, testoP, muto, accent, card
         // b.405 — `chi` al posto della registrazione a mano: ora registra
         // `parlaTurno`. Il callback serve solo a tenere il riferimento per
         // lo Stop locale.
-        await parlaTurno({ voceId: d.turno.voceId, testo: d.turno.testo, lingua, userToken, chi: d.turno.nome || 'Podcast' }, (a) => { audioRef.current = a; });
+        // b.483 — `chi` finisce scritto sul telecomando dell'audio: il
+        // ripiego era una parola italiana cablata.
+        await parlaTurno({ voceId: d.turno.voceId, testo: d.turno.testo, lingua, userToken, chi: d.turno.nome || L('lifePodcast') }, (a) => { audioRef.current = a; });
       }
       if (!fermatoRef.current) { setStato('pronto'); setAttuale(-1); }
     } catch (e) {
@@ -537,7 +546,9 @@ function Impara({ compagni, L, C, lingua, userToken, testoP, muto, accent, card,
     const spegni = ascoltaScansioni(async ({ testo, dest }) => {
       if (dest !== 'impara') return;
       const t = String(testo || '');
-      const titolo = (t.split('\n').map((r) => r.trim()).find(Boolean) || 'Documento scansionato').slice(0, 80);
+      // b.483 — il titolo di ripiego si vedeva a schermo (testata della
+      // lezione e campo dell'argomento) ed era scritto in italiano.
+      const titolo = (t.split('\n').map((r) => r.trim()).find(Boolean) || tt('lifeScannedDoc', 'Documento scansionato')).slice(0, 80);
       if (!userToken) { setErrore(L('lifeLoginNeeded')); return; }
       setLavoro(true); setErrore(''); setArgomento(titolo);
       try {
@@ -995,9 +1006,12 @@ function Impara({ compagni, L, C, lingua, userToken, testoP, muto, accent, card,
     if (lavoro) return;
     setLavoro(true); setErrore(''); setIllustrazione(null); setArricchimento(null);
     try {
-      const d = await generaLezione({ argomento: argomento.trim(), categoria, livello, lezione: { indice: 0, titolo: `Ripasso — ${argomento.trim()}` }, docenteId: docenteId || undefined, lingua: linguaCorso, linguaStudiata: linguaStudiata || undefined, profilo, userToken, ripasso: true });
+      // b.483 — questo titolo si legge in testa alla lezione: la parola
+      // «Ripasso» era cablata in italiano per tutte le lingue.
+      const titoloRipasso = `${tt('lifeReviewWord', 'Ripasso')} — ${argomento.trim()}`;
+      const d = await generaLezione({ argomento: argomento.trim(), categoria, livello, lezione: { indice: 0, titolo: titoloRipasso }, docenteId: docenteId || undefined, lingua: linguaCorso, linguaStudiata: linguaStudiata || undefined, profilo, userToken, ripasso: true });
       setRisposte({});
-      setAperta({ lezione: { titolo: `Ripasso — ${argomento.trim()}` }, contenuto: d.contenuto, fonti: d.fonti || [], fontiNonTrovate: !!d.fontiNonTrovate, domande: null });
+      setAperta({ lezione: { titolo: titoloRipasso }, contenuto: d.contenuto, fonti: d.fonti || [], fontiNonTrovate: !!d.fontiNonTrovate, domande: null });
       setRipassoDa(0);
     } catch (e) {
       // b.363 — prima questo guasto non lasciava traccia da nessuna parte: nel
@@ -1006,7 +1020,7 @@ function Impara({ compagni, L, C, lingua, userToken, testoP, muto, accent, card,
       if (e?.name !== 'AbortError') console.warn('[b.363] faiRipasso:', e?.message || e);
       setErrore(e.creditoEsaurito ? L('lifeNoCredit') : L('lifeError')); }
     finally { setLavoro(false); }
-  }, [lavoro, argomento, categoria, livello, docenteId, linguaCorso, userToken, L]);
+  }, [lavoro, argomento, categoria, livello, docenteId, linguaCorso, userToken, L, tt]);
 
   // b.334 — VAI A FONDO (terzo livello): il Maestro scava oltre, e il nuovo
   // pezzo si AGGIUNGE alla lezione (diapositive ricalcolate da sole).
@@ -1082,8 +1096,10 @@ function Impara({ compagni, L, C, lingua, userToken, testoP, muto, accent, card,
   // b.314 — il Maestro parla con la sua voce (usato per risposta e rientro).
   const diLaVoce = useCallback(async (testo) => {
     if (!testo) return;
-    try { await parlaTurno({ voceId: tutor?.voce?.id || voceMaestroRef.current, testo, lingua: linguaCorso, userToken, chi: tutor?.nome || 'Maestro', onVoce: (v) => { voceMaestroRef.current = v; } }, (a) => { audioLezioneRef.current = a; }); } catch { /* la voce e un di piu */ }
-  }, [tutor, linguaCorso, userToken]);
+    // b.483 — `chi` si legge sul telecomando dell'audio: senza un docente
+    // scelto (il caso normale) compariva la parola italiana «Maestro».
+    try { await parlaTurno({ voceId: tutor?.voce?.id || voceMaestroRef.current, testo, lingua: linguaCorso, userToken, chi: tutor?.nome || tt('lifeTeacherName', 'Maestro'), onVoce: (v) => { voceMaestroRef.current = v; } }, (a) => { audioLezioneRef.current = a; }); } catch { /* la voce e un di piu */ }
+  }, [tutor, linguaCorso, userToken, tt]);
 
   // b.313/b.314 — invia la domanda; il Maestro risponde ancorato alla sezione,
   // poi CHIEDE se vuoi altro (non torna da solo). Dialogo a piu battute.
@@ -1160,7 +1176,8 @@ function Impara({ compagni, L, C, lingua, userToken, testoP, muto, accent, card,
           linguaParlata: linguaCorso,
           linguaStudiata: (l2 && l2 !== linguaCorso) ? l2 : linguaCorso,
           userToken,
-          chi: tutor?.nome || 'Lezione',
+          // b.483 — la parola che compare sul telecomando dell'audio
+          chi: tutor?.nome || L('lifeLesson'),
         }, (a) => { audioLezioneRef.current = a; });
         if (stopLetturaRef.current) break;
         // b.313 — hai alzato la mano DURANTE il paragrafo? Ora e' finito: il
@@ -1182,7 +1199,7 @@ function Impara({ compagni, L, C, lingua, userToken, testoP, muto, accent, card,
       }
     } catch { /* la voce e un di piu: la lezione resta leggibile */ }
     finally { chiudiCicloLezione(); setAscoltando(false); setSezioneAttiva(-1); inDomandaRef.current = false; setManoAlzata(false); setMaestroStaFinendo(false); }
-  }, [aperta, ascoltando, argomento, linguaCorso, tutor, userToken, fermaLettura, immaginiSezioni]);
+  }, [aperta, ascoltando, argomento, linguaCorso, tutor, userToken, fermaLettura, immaginiSezioni, L]);
 
   // b.376 — VAI DA QUI. Un dito su un paragrafo e la voce ci si sposta.
   // Se la lezione non sta suonando, parte da li; se sta suonando, si
@@ -1370,7 +1387,7 @@ function Impara({ compagni, L, C, lingua, userToken, testoP, muto, accent, card,
               <a key={i} href={v.url || `https://youtube.com/watch?v=${v.id}`} target="_blank" rel="noopener noreferrer"
                 style={{ display: 'flex', alignItems: 'center', gap: 8, minHeight: 44, padding: '9px 11px', borderRadius: 10,
                   background: card, color: accent, textDecoration: 'none', fontSize: 13, fontWeight: 600, fontFamily: FONT }}>
-                <Icon name="video" size={15} color={accent} /><span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{v.titolo || v.title || 'Video'}</span>
+                <Icon name="video" size={15} color={accent} /><span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{v.titolo || v.title || tt('lifeContentVideo', 'Video')}</span>
               </a>
             ))}
           </div>
@@ -1860,10 +1877,10 @@ function Impara({ compagni, L, C, lingua, userToken, testoP, muto, accent, card,
       {sezione === 'materie' && !argomento.trim() && (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
           {IDEE_CORSO.map((idea) => (
-            <button key={idea.q} onClick={() => setArgomento(idea.q)}
+            <button key={idea.etK} onClick={() => setArgomento(tt(idea.qK, idea.q))}
               style={{ minHeight: 44, padding: '7px 12px', borderRadius: 999, cursor: 'pointer', fontFamily: FONT,
                 fontSize: 13, fontWeight: 600, background: card, color: testoP, border: bordo }}>
-              {idea.et}
+              {tt(idea.etK, idea.et)}
             </button>
           ))}
         </div>

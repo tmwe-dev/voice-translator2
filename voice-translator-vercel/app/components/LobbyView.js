@@ -3,6 +3,7 @@ import { memo, useState, useEffect, useRef } from 'react';
 import { LANGS, APP_URL, FONT } from '../lib/constants.js';
 import { useApp } from '../contexts/AppContext.js';
 import Icon from './Icon.js';
+import { disegnaQR } from '../lib/codiceQR.js';
 
 const LobbyView = memo(function LobbyView({ roomId, roomInfo, partnerConnected, inviteLang, setInviteLang,
   shareRoom, leaveRoom, unlockAudio, perVideo = false }) {
@@ -17,19 +18,12 @@ const LobbyView = memo(function LobbyView({ roomId, roomInfo, partnerConnected, 
     const url = `${APP_URL}?room=${roomId}&lang=${inviteLang}`;
     let cancelled = false;
 
-    import('qrcode').then(QRCode => {
-      if (cancelled) return;
-      QRCode.toCanvas(canvasRef.current, url, {
-        width: 180,
-        margin: 2,
-        color: { dark: '#000000', light: '#ffffff' },
-        errorCorrectionLevel: 'M',
-      }, (err) => {
-        if (!err && !cancelled) setQrReady(true);
-      });
-    }).catch(() => {
-      // Fallback: if qrcode lib fails, show the invite URL text
-      if (!cancelled) setQrReady(false);
+    // b.483 — il codice lo disegna app/lib/codiceQR.js, che e l'unico
+    // posto dove si decide come si disegna un QR in questa applicazione.
+    // Prima ogni schermata se lo scriveva da se, e infatti quello del
+    // tassista era finito verde su blu scuro.
+    disegnaQR(canvasRef.current, url, 180, 2).then((fatto) => {
+      if (!cancelled) setQrReady(fatto);
     });
 
     return () => { cancelled = true; };

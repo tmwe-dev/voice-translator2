@@ -12,6 +12,7 @@ import { buildMapsUrl } from '../lib/mapsLink.js';
 import { creaCodaAudio } from '../lib/codaAudio.js';
 import { PALETTE } from '../lib/palette.js';
 import { useApp } from '../contexts/AppContext.js';
+import { immagineQR } from '../lib/codiceQR.js';
 
 // ═══════════════════════════════════════════════════════════════
 // TaxiTalk — rifatto da capo, semplice e immediato (Luca).
@@ -316,9 +317,18 @@ function TaxiTalk({ userToken }) {
 
   // Link mappa + QR (il QR contiene il link alla mappa vera del tassista)
   const mapUrl = dest ? buildMapsUrl({ lat: dest.lat, lng: dest.lon, normalizedAddress: dest.displayName }, 'google') : '';
-  const qrSrc = mapUrl
-    ? `https://api.qrserver.com/v1/create-qr-code/?size=240x240&margin=8&data=${encodeURIComponent(mapUrl)}`
-    : '';
+  // b.483 — IL CODICE LO DISEGNIAMO NOI, non piu un server di terzi.
+  // Prima l'indirizzo dove stai andando usciva dal telefono e finiva
+  // dentro una richiesta a un'azienda che non conosciamo; e se quel
+  // server era lento o irraggiungibile dalla rete di quel taxi, il
+  // codice non compariva affatto. La libreria era gia in casa.
+  const [qrSrc, setQrSrc] = useState('');
+  useEffect(() => {
+    let vivo = true;
+    if (!mapUrl) { setQrSrc(''); return undefined; }
+    immagineQR(mapUrl, 240, 8).then((dato) => { if (vivo) setQrSrc(dato); });
+    return () => { vivo = false; };
+  }, [mapUrl]);
 
   const condividiMappa = useCallback(async () => {
     if (!mapUrl) return; vibrate(12);
