@@ -219,6 +219,34 @@ qualunque refactoring. Non si propone di rimandarlo.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.503** (push #792) — TAVOLE F E 32, e il punto sulle
+  ultime tavole del template.
+  TAVOLA F (il pannello di Vita): le SETTE SEZIONI non stanno piu in
+  fila sopra la conversazione (b.208: per vedere le ultime bisognava
+  trascinare) — vivono nel PANNELLO LATERALE in colonna (lo stesso del
+  Mondo, b.363), tutte visibili insieme; la testata dice DOVE SEI (la
+  sezione attiva, che apre il pannello) e la linguetta sul bordo e la
+  maniglia. Si recupera una riga intera. Chiave x38: lifeSectionsWord.
+  SCOSTAMENTO: niente conteggi (2 obiettivi, 3 compiti) sulle voci —
+  i numeri veri li sapremo quando le fonti saranno esposte in elenco.
+  TAVOLA 32 (pagina del tassista): la LINGUA si sceglie IN CIMA E
+  SUBITO — pillole scorrevoli, un tocco — via il bottone che apriva un
+  altro schermo (la scelta iniziale col rilevamento resta); la
+  DESTINAZIONE e ENORME (28). Il tasto della mappa c'era gia.
+  TAVOLE DICHIARATE NON APPLICABILI ORA:
+  - E (pannello della finestra): e il MONDO col pianeta — VIETATA
+    dall'ordine di Luca, si guarda insieme.
+  - G (il piu della chat, con foto/documento/posizione/contatto): le
+    funzioni di allegato NON esistono nel sistema — una tendina di
+    tasti che aprono il nulla e vietata (regola 2). NOTA per il
+    futuro: oggi il + e la fotocamera del modulo aprono le Azioni AI,
+    e il commento nel codice promette «foto, file, posizione,
+    contatto» — quel commento MENTE, da correggere quando si fara G.
+  - 31 (scanner biglietti): il controllo campo-per-campo prima del
+    salvataggio esiste GIA dentro il BizCard (scheda campi in tempo
+    reale), e il codice BizCard non si tocca (ordine di Luca).
+  PROVE: `vita-tassista-F-32-b503.test.js` (rossa prima).
+
 - Versione: **b.502** (push #791) — TAVOLE 29 E 30.
   TAVOLA 29 (le tue chiavi): sotto ogni chiave lo STATO — «attiva»
   verde con la maschera che il server gia manda (b.166, mai la chiave

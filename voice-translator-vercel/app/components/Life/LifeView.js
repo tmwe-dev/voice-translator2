@@ -31,6 +31,7 @@ import { generaTurnoPodcast, generaSyllabus, generaLezione, generaQuiz, parlaTur
 import { pausa as pausaAudio, ferma as fermaAudio, fermaElemento, suInterruzione, apriCiclo } from '../../lib/voce.js';
 import { rilevaLinguaStudiata, testoVisibile, staccaLettura } from '../../lib/compagni/corsi/lingua.js';
 import PannelloLettura from './PannelloLettura.js';
+import PannelloLaterale, { LinguettaPannello } from '../ui/PannelloLaterale.js';
 import TestoLingua from './TestoLingua.js';
 import CompagnoDiSventura from './CompagnoDiSventura.js';
 import AvatarImg from '../AvatarImg.js';
@@ -61,6 +62,8 @@ function LifeView({ onApriStanza }) {
   const C = S?.colors || {};
   const lingua = prefs?.uiLang || prefs?.lang || 'it';
   const [scheda, setScheda] = useState('podcast');
+  // b.503 — tavola F: le sette sezioni vivono nel pannello laterale.
+  const [pannelloAperto, setPannelloAperto] = useState(false);
   // b.334 — arrivo da "Condividi -> BarTalk": la scheda giusta si apre da
   // sola col contenuto gia dentro (Spiegamelo -> Impara; Tavola -> Tavolo).
   const [imparaPreset, setImparaPreset] = useState('');
@@ -153,43 +156,64 @@ function LifeView({ onApriStanza }) {
         <span style={{ fontSize: 20, fontWeight: 600 }}>Life</span>
       </div>
 
-      {/* ── b.208 — Schede senza box: icone SVG monocolore più grandi.
-          Niente pulsante intorno; attivo = colore accento + sottolineatura. ── */}
-      <div style={{ display: 'flex', gap: 4, marginBottom: 18 }}>
-        {[
+      {/* ═══ b.503 — TAVOLA F: «le sette sezioni non stanno piu in fila
+          sopra la conversazione». La fila di schede (b.208) chiedeva di
+          trascinare per vedere le ultime, e le ultime due non le trovava
+          nessuno. Ora vivono nel PANNELLO LATERALE, in colonna, tutte
+          visibili insieme (stesso pannello del Mondo, b.363); sopra la
+          conversazione si recupera una riga intera. La linguetta sul
+          bordo e la maniglia, la testata dice DOVE SEI. ═══ */}
+      {(() => {
+        const SEZIONI = [
           { id: 'podcast', icon: 'mic', label: L('lifePodcast') },
           { id: 'amico', icon: 'chat', label: L('lifeFriendTab') },
-          // b.302 — Dossier e Tavolo erano due porte per la stessa stanza:
-          // fuse in una, "Tavola rotonda", che cerca online e produce un
-          // documento su richiesta. Il Dossier non e piu una scheda a se.
           { id: 'tavolo', icon: 'users', label: L('lifeTableTab') },
           { id: 'impara', icon: 'graduation', label: L('lifeLearn') },
-          // b.247 — la chiave ora esiste in tutti e quindici i pacchetti:
-          // via il ripiego che confrontava il risultato con la chiave stessa.
           { id: 'obiettivi', icon: 'target', label: L('lifeGoalsTab') },
-          // b.332 — Ripetizioni e Compiti: l'agenda di studio (piano di Luca).
-          // b.482 — la chiave esiste in tutti i pacchetti lingua: il ripiego
-          // in italiano era codice morto che teneva una parola cablata qui.
           { id: 'compiti', icon: 'history', label: L('lifeHomeworkTab') },
           { id: 'compagni', icon: 'star', label: L('lifeCompanionsTab') },
-        ].map((t) => {
-          const on = scheda === t.id;
-          // b.210 — contrasto: gli inattivi erano grigio tenue e sparivano sul
-          // fondo scuro. Ora l'inattivo è testo pieno ad alto contrasto,
-          // l'attivo è in accento con sottolineatura.
-          const colore = on ? accent : testoP;
-          return (
-            <button key={t.id} onClick={() => { vibrate(8); setScheda(t.id); }}
-              aria-label={t.label} aria-current={on ? 'page' : undefined}
-              style={{ flex: 1, minWidth: 0, minHeight: 44, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5,
-                padding: '4px 2px', background: 'none', border: 'none', cursor: 'pointer', color: colore, opacity: on ? 1 : 0.92, fontFamily: FONT }}>
-              <Icon name={t.icon} size={26} color={colore} />
-              <span style={{ fontSize: 10.5, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%' }}>{t.label}</span>
-              <span style={{ width: 16, height: 2, borderRadius: 2, background: on ? accent : 'transparent' }} />
+        ];
+        const schedaAttiva = SEZIONI.find((t) => t.id === scheda);
+        return (
+          <>
+            <button onClick={() => { vibrate(8); setPannelloAperto(true); }}
+              aria-haspopup="dialog" aria-expanded={pannelloAperto}
+              style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14,
+                padding: '9px 14px', minHeight: 44, borderRadius: 12, cursor: 'pointer',
+                background: card, border: bordo, color: testoP, fontFamily: FONT,
+                fontSize: 13.5, fontWeight: 600 }}>
+              <Icon name={schedaAttiva?.icon || 'star'} size={17} color={accent} />
+              {schedaAttiva?.label}
+              <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                strokeWidth={1.6} strokeLinecap="round" style={{ opacity: 0.6 }}>
+                <line x1="4" y1="7" x2="20" y2="7" /><line x1="4" y1="12" x2="20" y2="12" /><line x1="4" y1="17" x2="14" y2="17" />
+              </svg>
             </button>
-          );
-        })}
-      </div>
+            <LinguettaPannello onApri={() => setPannelloAperto(true)} C={C} etichetta={L('lifeSectionsWord')} />
+            <PannelloLaterale aperto={pannelloAperto} onChiudi={() => setPannelloAperto(false)}
+              titolo={L('lifeSectionsWord')} C={C}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                {SEZIONI.map((t) => {
+                  const on = scheda === t.id;
+                  return (
+                    <button key={t.id}
+                      onClick={() => { vibrate(8); setScheda(t.id); setPannelloAperto(false); }}
+                      aria-current={on ? 'page' : undefined}
+                      style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%', textAlign: 'left',
+                        padding: '12px 14px', minHeight: 48, borderRadius: 12, cursor: 'pointer', fontFamily: FONT,
+                        background: on ? `${accent}18` : 'transparent',
+                        border: `1px solid ${on ? accent : 'transparent'}`,
+                        color: testoP, fontSize: 14.5, fontWeight: 600 }}>
+                      <Icon name={t.icon} size={19} color={on ? accent : testoP} />
+                      {t.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </PannelloLaterale>
+          </>
+        );
+      })()}
 
       {scheda === 'podcast' && <Podcast compagni={tutti} {...{ L, C, lingua, userToken, testoP, muto, accent, card, bordo }} />}
       {scheda === 'amico' && <AmicoChat compagni={tutti} {...{ L, C, lingua, userToken, testoP, muto, accent, card, bordo }} />}

@@ -344,16 +344,30 @@ function TaxiDriverView({ destId, decryptionKey }) {
             </span>
           </div>
         </div>
-        {/* b.482 — cambiare lingua e un bersaglio da toccare: almeno
-            quarantaquattro di altezza utile, l'icona dentro non cambia. */}
-        <button onClick={() => setShowLangPicker(true)} style={{
-          padding: '6px 12px', minHeight: 44, borderRadius: 10, cursor: 'pointer',
-          background: C.card, border: `1px solid ${C.cardBorder}`,
-          color: C.textMuted, fontSize: 10, fontWeight: 600, fontFamily: FONT,
-        }}>
-          {L('yourLang')}
-        </button>
       </header>
+
+      {/* b.503 — tavola 32: «la lingua si sceglie IN CIMA E SUBITO» —
+          chi apre questa pagina non e dei nostri e non ha impostazioni.
+          Pillole scorrevoli, selezione a un tocco: via il bottone che
+          apriva un altro schermo (la scelta iniziale resta per il primo
+          arrivo). */}
+      <div style={{ display: 'flex', gap: 8, overflowX: 'auto', flexShrink: 0,
+        padding: '0 20px 10px', scrollbarWidth: 'none' }}>
+        {DRIVER_LANGS.map(lang => (
+          <button key={lang.code}
+            onClick={() => { setDriverLang(lang.code); vibrate(10); }}
+            aria-pressed={driverLang === lang.code}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 6, flexShrink: 0,
+              padding: '8px 14px', minHeight: 44, borderRadius: 999, cursor: 'pointer',
+              background: driverLang === lang.code ? `${C.accent}18` : C.card,
+              border: `1.5px solid ${driverLang === lang.code ? C.accent : C.cardBorder}`,
+              color: driverLang === lang.code ? C.accent : C.textPrimary,
+              fontSize: 13, fontWeight: 600, fontFamily: FONT,
+              WebkitTapHighlightColor: 'transparent' }}>
+            <span style={{ fontSize: 17 }}>{lang.flag}</span> {lang.name}
+          </button>
+        ))}
+      </div>
 
       {/* Content */}
       {/* b.482 — il corpo della pagina rientra di venti come la testata. */}
@@ -374,8 +388,10 @@ function TaxiDriverView({ destId, decryptionKey }) {
               <div style={{ fontSize: 10, fontWeight: 600, color: C.accent, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6 }}>
                 {L('destinationWord')}
               </div>
+              {/* b.503 — tavola 32: la destinazione e ENORME — si legge
+                  con lo sguardo, non si studia. */}
               <div style={{
-                fontSize: 22, fontWeight: 600, color: C.textPrimary, lineHeight: 1.3, marginBottom: 8,
+                fontSize: 28, fontWeight: 600, color: C.textPrimary, lineHeight: 1.28, marginBottom: 8,
               }}>
                 {translatedAddress || destination.normalizedAddress}
               </div>
