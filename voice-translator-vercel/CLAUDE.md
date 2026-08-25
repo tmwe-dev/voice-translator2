@@ -219,6 +219,28 @@ qualunque refactoring. Non si propone di rimandarlo.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.506** (push #795) — LA FINESTRA SUL MONDO (progettata
+  con Luca stanotte). Componente nuovo `FinestraSulMondo.js` montato
+  nella scheda Mondo, fratello del globo (fuori dalla gabbia b.505):
+  al RITMO scelto nel pannello (preferenza mondoRitmo: MAI predefinito
+  / 2 / 5 / 10 minuti — tavola E) cerca le ultime notizie via
+  /api/topics/search (cache condivisa; fresca solo col ritmo a 2, che
+  e l'«ultimo minuto»); cosa cerca: gli INTERESSI del profilo a
+  rotazione, altrimenti il Paese scelto, altrimenti il mondo. Le
+  notizie NUOVE (dedupe su url) compaiono UNA ALLA VOLTA come un
+  CARTELLO in basso — bandiera del Paese, miniatura, titolo nella
+  lingua di chi guarda, «ULTIM'ORA» — che avanza da solo dopo 18s, si
+  chiude con la X o si tocca: toccato si apre A TUTTO SCHERMO (foto
+  16:9, titolo, sintesi, «Leggi su [fonte]»), chiuso vola via e il
+  mondo continua. SI FERMA quando la pagina e nascosta
+  (visibilitychange): niente batteria e credito bruciati per nessuno.
+  Vere o niente: senza notizie nuove, nessun cartello.
+  Chiavi nuove x38: prefRhythmTitle, rhythmNever, minShort,
+  breakingWord.
+  PROVE: `finestra-sul-mondo-b506.test.js`.
+  [ATTESO] verifica visiva del ciclo completo in produzione con ritmo
+  attivo — richiede Chrome in primo piano e qualche minuto di attesa.
+
 - Versione: **b.505** (push #794) — UN LAYER SOLO per i comandi del
   cielo (ordine di Luca: «la luna e il sole non funzionano»).
   IL GUASTO: il wrapper del globo in MondoView dichiarava la quota

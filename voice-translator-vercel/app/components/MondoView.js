@@ -16,6 +16,7 @@ import Scelta from './ui/Scelta.js';
 import { memo, useState, useEffect, useCallback, useMemo } from 'react';
 import { FONT, LANGS, vibrate } from '../lib/constants.js';
 import GloboMondo from './GloboMondo.js'; // b.359 — il pianeta dal file di Luca
+import FinestraSulMondo from './FinestraSulMondo.js'; // b.506 — le breaking sul pianeta
 import getStyles from '../lib/styles.js';
 import { PALETTE } from '../lib/palette.js';
 import { subscribeTick } from '../lib/ticker.js';
@@ -482,6 +483,13 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
           )}
         </div>
       )}
+
+      {/* b.506 — LA FINESTRA SUL MONDO: le breaking che compaiono sul
+          pianeta al ritmo scelto nel pannello (mondoRitmo). Fratello del
+          wrapper del globo, cosi i suoi cartelli non finiscono nella
+          gabbia dei livelli (la lezione di b.505). */}
+      <FinestraSulMondo C={C} L={L} lingua={prefs?.lang || 'it'} prefs={prefs}
+        attiva={tab === 'mondo' && !cercando} paese={paeseScelto} nomePaese={nomePaese} />
 
       {/* b.363 — LA LINGUETTA DEL PANNELLO, sul bordo sinistro: si vede
           sempre, dice da che parte si apre, e non copre il mondo. Dentro

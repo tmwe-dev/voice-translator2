@@ -90,6 +90,22 @@ const PREFERENZE = [
       { valore: 'approfondita', etichettaKey: 'newsModeDeep', icona: 'graduation' },
     ],
   },
+  // b.506 — IL RITMO DELLA FINESTRA SUL MONDO (tavola E, deciso con
+  // Luca): ogni quanto il pianeta cerca le ultime notizie da solo.
+  // «Mai» e il predefinito: niente ricerche non chieste. Il 2 e
+  // l'«ultimo minuto» (vivo ma costa), 5 e 10 il passo tranquillo.
+  {
+    chiave: 'mondoRitmo',
+    predefinito: 'mai',
+    icona: 'history',
+    titoloKey: 'prefRhythmTitle',
+    scelte: [
+      { valore: 'mai', etichettaKey: 'rhythmNever' },
+      { valore: '2', numero: 2 },
+      { valore: '5', numero: 5 },
+      { valore: '10', numero: 10 },
+    ],
+  },
   {
     chiave: 'mondoAggiorna',
     predefinito: 'richiesta',
@@ -199,7 +215,10 @@ export default function PreferenzeMondo({ C, bandieraMia }) {
                         WebkitTapHighlightColor: 'transparent',
                       }}>
                       {s.icona && <Icon name={s.icona} size={13} color={attiva ? accento : 'rgba(214,226,245,0.75)'} />}
-                      <span>{L(s.etichettaKey)}</span>
+                      {/* b.506 — le scelte numeriche («2 min») si compongono
+                          col numero e la parola breve: il numero non si
+                          traduce, la parola si. */}
+                      <span>{s.numero ? `${s.numero} ${L('minShort')}` : L(s.etichettaKey)}</span>
                     </button>
                   );
                 })}
