@@ -295,10 +295,6 @@ function CompitiView({ L, C, userToken, lingua, cambiaScheda, testoP, muto, acce
             {tt('lifeCoachBtn', 'Coach')}
           </button>
         )}
-        <button onClick={() => { vibrate(8); setAggiungo((v) => !v); }}
-          style={{ minHeight: 44, padding: '9px 14px', borderRadius: 12, border: 'none', background: accent, color: '#04121c', fontWeight: 600, cursor: 'pointer', fontFamily: FONT, fontSize: 13 }}>
-          {aggiungo ? tt('lifeCancel', 'Annulla') : `+ ${tt('lifeHomeworkAdd', 'Compito')}`}
-        </button>
       </div>
 
       {/* b.333 — le due anime dei Compiti: l'AGENDA e i MATERIALI. */}
@@ -381,16 +377,35 @@ function CompitiView({ L, C, userToken, lingua, cambiaScheda, testoP, muto, acce
           </div>
         );
       })}
+
+      {/* b.499 — tavola 25: «Nuovo compito» e la pillola grande in
+          fondo, dopo cio che c'e gia (apre il modulo qui sopra). */}
+      <button onClick={() => { vibrate(8); setAggiungo((v) => !v); }}
+        style={{ width: '100%', padding: 14, minHeight: 54, borderRadius: 16, border: 'none', cursor: 'pointer',
+          background: accent, color: '#04121c', fontWeight: 600, fontSize: 15, fontFamily: FONT,
+          marginTop: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+        <Icon name="plus" size={18} color="#04121c" /> {aggiungo ? tt('lifeCancel', 'Annulla') : tt('lifeHomeworkAdd', 'Compito')}
+      </button>
       </>}
 
       {vista === 'materiali' && (
         <div>
           {/* nuovo materiale: INCOLLA (gratis) o FOTO -> AI (wallet) */}
+          {/* b.499 — tavola 25: «Fotografa e incolla sono due tasti
+              PARI: incollare e gratis, fotografare costa — e si dice
+              dove costa». Fotografa apre lo scanner vero (b.344);
+              incolla apre il modulo col campo di testo. */}
           {!matBozza && !matAperto && (
-            <button onClick={() => setMatBozza({ titolo: '', materia: '', testo: '' })}
-              style={{ width: '100%', minHeight: 44, padding: 13, borderRadius: 14, border: bordo, cursor: 'pointer', background: 'transparent', color: testoP, fontWeight: 600, fontSize: 14, fontFamily: FONT, marginBottom: 12 }}>
-              + {tt('lifeMatAdd', 'Aggiungi materiale (appunti, pagine, dispense)')}
-            </button>
+            <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+              <button onClick={() => apriScanner({ doc: true, dest: 'materiali' })}
+                style={{ flex: 1, minHeight: 54, padding: '11px 8px', borderRadius: 14, border: bordo, cursor: 'pointer', background: 'transparent', color: testoP, fontWeight: 600, fontSize: 13, fontFamily: FONT, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7 }}>
+                <Icon name="video" size={16} color={testoP} /> {tt('matPhotoBtn', 'Fotografa una pagina (usa il credito)')}
+              </button>
+              <button onClick={() => setMatBozza({ titolo: '', materia: '', testo: '' })}
+                style={{ flex: 1, minHeight: 54, padding: '11px 8px', borderRadius: 14, border: bordo, cursor: 'pointer', background: 'transparent', color: testoP, fontWeight: 600, fontSize: 13, fontFamily: FONT, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7 }}>
+                <Icon name="doc" size={16} color={testoP} /> {tt('matPasteBtn', 'Incolla il testo (gratis)')}
+              </button>
+            </div>
           )}
 
           {matBozza && (

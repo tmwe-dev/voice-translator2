@@ -219,6 +219,18 @@ qualunque refactoring. Non si propone di rimandarlo.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.499** (push #788) — TAVOLA 25: I COMPITI.
+  I gruppi per scadenza c'erano gia (b.333). Ora: «Nuovo compito» e la
+  PILLOLA GRANDE in fondo all'agenda (apre lo stesso modulo; via il
+  tastino dalla testata); nei Materiali «FOTOGRAFA E INCOLLA sono due
+  tasti pari» — fotografa apre subito lo scanner vero (b.344) e dice
+  che usa il credito, incolla apre il modulo e dice che e gratis.
+  Chiavi nuove x38: matPhotoBtn, matPasteBtn.
+  SCOSTAMENTO DICHIARATO: niente conteggio «N materiali» sulle schede
+  dei compiti — il legame compito-materiali oggi e un campo singolo
+  non esposto in elenco.
+  PROVE: `compiti-tavola-25-b499.test.js` (rossa prima).
+
 - Versione: **b.498** (push #787) — TAVOLA 24: I COMPAGNI.
   «La memoria e un interruttore visibile su ogni Compagno»: il toggle
   sta sulla card dei miei (salva subito con salvaMio e ricarica; se
