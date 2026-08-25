@@ -219,6 +219,17 @@ qualunque refactoring. Non si propone di rimandarlo.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.500** (push #789) — TAVOLA 26: IL SOMMARIO.
+  La testata dice CHI e QUANDO («Kenji · 25/08»), non «Rapporto»; la
+  prima riga porta le bandiere delle lingue dei membri e i numeri
+  (messaggi, durata); «IN DUE RIGHE» e un'etichetta e il sommario si
+  legge a 15; le DECISIONI (keyPoints) sono righe con la riga sotto,
+  non puntini; Aa in testata. La TRASCRIZIONE DOPPIONE e stata tolta:
+  ai messaggi si va con la pillola (setView detail, che e la vista
+  vera) — un contenuto in due posti invecchia male in uno dei due.
+  Chiave nuova x38: inTwoLinesWord.
+  PROVE: `sommario-tavola-26-b500.test.js` (rossa prima).
+
 - Versione: **b.499** (push #788) — TAVOLA 25: I COMPITI.
   I gruppi per scadenza c'erano gia (b.333). Ora: «Nuovo compito» e la
   PILLOLA GRANDE in fondo all'agenda (apre lo stesso modulo; via il
