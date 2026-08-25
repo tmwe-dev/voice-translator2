@@ -57,6 +57,8 @@ const VoiceTestView = memo(function VoiceTestView({ isTrial, isTopPro,
   const colors = S.colors;
 
   const [playingVoice, setPlayingVoice] = useState(null);
+  // b.501 — tavola 28: Aa come su ogni pagina.
+  const [zoomTesto, setZoomTesto] = useState(0);
   const [testResults, setTestResults] = useState({});
   const [loadingEL, setLoadingEL] = useState(false);
   const [categoryFilter, setCategoryFilter] = useState('all');
@@ -243,15 +245,29 @@ const VoiceTestView = memo(function VoiceTestView({ isTrial, isTopPro,
           }}>
             <Icon name="back" size={20} color={colors.textSecondary} />
           </button>
+          {/* b.501 — tavola 28: la testata dice COSA E questa pagina
+              («Come ti sentono»), nella lingua dell'utente — non un nome
+              in inglese. E Aa, come ovunque. */}
           <div style={{ flex: 1, textAlign: 'center' }}>
             <span style={{
               fontSize: 17, fontWeight: 500, letterSpacing: -0.3,
-              background: `linear-gradient(135deg, ${gold} 0%, ${colors.textPrimary} 50%, ${gold} 100%)`,
-              WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
-              backgroundClip: 'text',
-            }}>Voice Studio</span>
+              color: colors.textPrimary,
+            }}>{L('howTheyHearYou')}</span>
           </div>
-          <div style={{ width: 44 }} />
+          <button onClick={() => setZoomTesto((z) => (z >= 3 ? 0 : z + 1))}
+            title={L('textBigger')} aria-label={L('textBigger')}
+            style={{ width: 44, height: 44, borderRadius: 14, flexShrink: 0, cursor: 'pointer',
+              background: zoomTesto ? `${colors.accent1}22` : colors.cardBg,
+              border: `1px solid ${colors.cardBorder}`, color: colors.textSecondary,
+              fontFamily: FONT, fontSize: 15, fontWeight: 600 }}>
+            Aa
+          </button>
+        </div>
+
+        {/* b.501 — tavola 28: la riga in cima spiega IL GESTO. */}
+        <div style={{ width: '100%', maxWidth: 400, fontSize: 12.5 * (1 + zoomTesto * 0.15), color: colors.textMuted,
+          lineHeight: 1.5, margin: '0 0 12px', textAlign: 'left' }}>
+          {L('voicesExplain')}
         </div>
 
         {/* ── Hero Card: ElevenLabs Status ── */}

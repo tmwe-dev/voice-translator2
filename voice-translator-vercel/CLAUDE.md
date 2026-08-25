@@ -219,6 +219,19 @@ qualunque refactoring. Non si propone di rimandarlo.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.501** (push #790) — TAVOLE 27 E 28.
+  TAVOLA 27 (Impostazioni): righe col valore a destra, gruppi con
+  l'etichetta e interruttori visibili c'erano GIA (la riscrittura
+  «ogni riga FA qualcosa»); aggiunto Aa in testata (rightAction del
+  PageHeader, zoom CSS su tutto il contenuto).
+  TAVOLA 28 (le voci): la testata dice «Come ti sentono» nella lingua
+  dell'utente — prima diceva «Voice Studio», un nome in inglese con un
+  gradiente dorato che nessun'altra testata ha; la riga in cima spiega
+  il gesto («Tocca il triangolo per sentirle...»); Aa in testata. Il
+  triangolo grande a sinistra e le bandiere c'erano gia (b.309).
+  Chiavi nuove x38: howTheyHearYou, voicesExplain.
+  PROVE: `impostazioni-voci-27-28-b501.test.js` (rossa prima).
+
 - Versione: **b.500** (push #789) — TAVOLA 26: IL SOMMARIO.
   La testata dice CHI e QUANDO («Kenji · 25/08»), non «Rapporto»; la
   prima riga porta le bandiere delle lingue dei membri e i numeri

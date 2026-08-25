@@ -113,6 +113,8 @@ const SettingsView = memo(function SettingsView({ apiKeyInputs, userAccount, log
   const { L, S, prefs, savePrefs, setView, theme, setTheme } = useApp();
   const c = S.colors;
   const [apertoLingua, setApertoLingua] = useState(false);
+  // b.501 — tavola 27: Aa come su ogni pagina (zoom su tutte le righe).
+  const [zoomTesto, setZoomTesto] = useState(0);
   const [apertoInterfaccia, setApertoInterfaccia] = useState(false);
   const [apertoVoce, setApertoVoce] = useState(false);
 
@@ -155,8 +157,22 @@ const SettingsView = memo(function SettingsView({ apiKeyInputs, userAccount, log
         paddingBottom: 'calc(110px + env(safe-area-inset-bottom))' }}>
 
         <div style={{ width: '100%', maxWidth: 440 }}>
-          <PageHeader title={L('settings')} onBack={() => setView('home')} S={S} />
+          <PageHeader title={L('settings')} onBack={() => setView('home')} S={S}
+            rightAction={
+              <button onClick={() => setZoomTesto((z) => (z >= 3 ? 0 : z + 1))}
+                title={L('textBigger')} aria-label={L('textBigger')}
+                style={{ width: 44, height: 44, borderRadius: 12, flexShrink: 0, cursor: 'pointer',
+                  background: zoomTesto ? `${c.accent1}22` : 'none',
+                  border: `1px solid ${c.cardBorder}`, color: c.textSecondary,
+                  fontFamily: FONT, fontSize: 15, fontWeight: 600 }}>
+                Aa
+              </button>
+            } />
         </div>
+
+        {/* b.501 — tavola 27: lo zoom di Aa scala tutto il contenuto in
+            proporzione, senza toccare le misure delle singole righe. */}
+        <div style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', zoom: 1 + zoomTesto * 0.1 }}>
 
         {/* ═══ 1 · PROFILO ═══ */}
         <div style={{ width: '100%', maxWidth: 440, marginBottom: 18 }}>
@@ -438,6 +454,8 @@ const SettingsView = memo(function SettingsView({ apiKeyInputs, userAccount, log
             style={{ padding: '13px 20px', borderRadius: 14, cursor: 'pointer', fontFamily: FONT,
               fontSize: 13.5, fontWeight: 600, background: 'transparent',
               border: `1px solid ${c.cardBorder}`, color: c.textMuted }}>{L('exitWord')}</button>
+        </div>
+
         </div>
 
       </div>
