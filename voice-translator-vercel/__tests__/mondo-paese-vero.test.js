@@ -106,14 +106,19 @@ describe('il mondo gira, finche non gli dici dove andare', () => {
 describe('il globo e una porta: si entra, si vede dove sei, si esce', () => {
   it('la testata dice sempre dove sei — un Paese, o il mondo intero', () => {
     const v = leggi('app/components/MondoView.js');
-    expect(v).toMatch(/L\('changeWord'\)/);
+    // b.504 — M1: la pillola non porta piu il «Cambia ›» scritto (si
+    // tocca la pillola stessa); il mondo intero resta detto a parole.
     expect(v).toMatch(/L\('wholeWorld'\)/);
     expect(v, 'ad altezza fissa: comparire non deve spostare niente').toMatch(/minHeight: 30/);
   });
 
-  it("«Cambia» riporta al mondo, che e l'unica uscita che prima non c'era", () => {
+  it("l'uscita dal Paese esiste ancora: la pillola apre il pannello, dove c'e mondoPaese", () => {
     const v = leggi('app/components/MondoView.js');
-    expect(v).toMatch(/setPaeseScelto\(null\); setLangFilter\('all'\)/);
+    // b.504 — l'uscita non e piu un tasto che azzera al volo: la pillola
+    // apre il pannello e li mondoPaese ha «nessuno» (il mondo intero).
+    expect(v).toMatch(/paeseScelto[\s\S]{0,900}setStrumenti\(true\)/);
+    const pref = leggi('app/components/ui/PreferenzeMondo.js');
+    expect(pref).toMatch(/nessuno/);
   });
 
   it('il pianeta sa quanto sei sceso, e si vela di conseguenza', () => {

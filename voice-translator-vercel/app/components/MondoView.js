@@ -568,11 +568,24 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
             non i caratteri illustrati del telefono, che cambiano faccia da
             un telefono all'altro. */}
         <div style={{ marginLeft: 'auto', marginRight: riservaADestra(2), minHeight: 30, display: 'flex', alignItems: 'center' }}>
+          {/* b.504 — M1, col Mondo finalmente guardato con Luca: «il
+              Paese e una PILLOLA, non una freccia». Via il «Cambia ›»:
+              si tocca la pillola e si apre il pannello, dove il posto da
+              cui guardare (mondoPaese) c'e gia. E accanto, l'AGGIORNA e
+              un'icona in testata: si tocca mentre si guarda l'elenco,
+              che e quando viene voglia di aggiornarlo. */}
+          <button onClick={() => { vibrate(8); handleRefresh(); }}
+            aria-label={L('retryWord')} title={L('retryWord')}
+            style={{ width: 44, height: 44, borderRadius: 12, marginRight: 6, flexShrink: 0,
+              cursor: 'pointer', background: 'none', border: `1px solid ${C.cardBorder}`,
+              color: C.textMuted, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Icon name="refresh" size={16} color={C.textMuted} />
+          </button>
           {paeseScelto ? (
-            <button onClick={() => { vibrate(8); setPaeseScelto(null); setLangFilter('all'); }}
-              aria-label={`${L('changeWord')} — ${nomePaese(paeseScelto)}`}
+            <button onClick={() => { vibrate(8); setStrumenti(true); }}
+              aria-label={nomePaese(paeseScelto)}
               style={{
-                display: 'flex', alignItems: 'center', gap: 6, minHeight: 44, padding: '5px 10px',
+                display: 'flex', alignItems: 'center', gap: 6, minHeight: 44, padding: '5px 12px',
                 borderRadius: 999, cursor: 'pointer', fontFamily: FONT,
                 background: C.card, border: `1px solid ${C.cardBorder}`,
                 color: C.textPrimary, fontSize: 12.5, fontWeight: 600,
@@ -580,8 +593,6 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
               }}>
               <span style={{ fontSize: 15 }}>{bandieraPaese(paeseScelto)}</span>
               <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{nomePaese(paeseScelto)}</span>
-              <span style={{ color: C.textMuted, fontWeight: 600 }}>{L('changeWord')}</span>
-              <span style={{ color: C.textMuted }}>›</span>
             </button>
           ) : (
             <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5, fontWeight: 600, color: C.textMuted, whiteSpace: 'nowrap' }}>
@@ -608,47 +619,9 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
           Stanze, quindi da News e da Mondo la linguetta si apriva su niente. */}
       <PannelloLaterale aperto={strumenti && (tab === 'stanze' || tab === 'mondo')} onChiudi={() => setStrumenti(false)}
         titolo={L('tabRooms')} C={C}>
-      {/* b.363 — LA RICERCA IN ALTO (ordine di Luca): e la cosa che si usa
-          piu spesso e quella per cui si apre il pannello. Le preferenze,
-          che si sistemano una volta sola, scendono sotto i filtri. */}
-      <div style={{ display: 'flex', justifyContent: 'center' }}>
-        <div style={{
-          // b.482 — LA FASCIA DELLA RICERCA HA UN'ALTEZZA SUA, FISSA.
-          // Prima la dava il contenuto: appena si scriveva una lettera
-          // compariva il tasto per svuotare e la fascia cresceva,
-          // spingendo in basso i filtri che stanno sotto. Ora il tasto
-          // (44, come ogni bersaglio) ci sta dentro senza muovere niente.
-          // E il rientro passa da quattordici a venti, come tutto il resto.
-          width: '100%', maxWidth: 420, minHeight: 54,
-          display: 'flex', alignItems: 'center', gap: 10,
-          background: C.card, border: `1px solid ${C.cardBorder}`,
-          backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)',
-          borderRadius: 14, padding: '0 20px',
-        }}>
-          <Icon name="globe" size={14} color={C.textMuted} />
-          <input type="text" value={search} onChange={e => setSearch(e.target.value)}
-            placeholder={L('searchRooms')}
-            style={{
-              flex: 1, background: 'none', border: 'none', outline: 'none',
-              color: C.textPrimary, fontSize: 13, fontFamily: FONT,
-            }}
-          />
-          {/* b.482 — IL TASTO CHE SVUOTA LA RICERCA era un carattere
-              tipografico alto quanto una lettera: nessuna icona, nessun
-              bersaglio, e su un telefono lo si mancava. Ora e l'icona del
-              sistema dentro una casella da quarantaquattro, come nella
-              rubrica. */}
-          {search && (
-            <button onClick={() => setSearch('')} aria-label={L('resetWord')} style={{
-              background: 'none', border: 'none', color: C.textMuted, cursor: 'pointer',
-              width: 44, height: 44, padding: 0, flexShrink: 0,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-            }}>
-              <Icon name="x" size={16} color={C.textMuted} />
-            </button>
-          )}
-        </div>
-      </div>
+      {/* b.504 — M2, col Mondo guardato con Luca: il pannello e SOLO
+          preferenze. La RICERCA e andata NELLA PAGINA (M1: si cerca dove
+          si guarda, non dietro una porta che nessuno apre per cercare). */}
       {/* b.397 — DA QUI ARRIVAVA UNA LINGUA TRAVESTITA DA PAESE. Scegliendo
           una lingua dal filtro si mandava in giro il suo codice in maiuscolo
           come se fosse un Paese: «en» diventava «EN», che non e nessun posto
@@ -662,19 +635,11 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
           il tipo di stanza sono scelte SINGOLE, e una fila di bottoni che
           va a capo prometteva il contrario. Ognuna dice quante stanze ci
           sono dietro, cosi si sceglie prima di toccare. */}
-      <Scelta C={C}
-        etichetta={L('yourLang')}
-        valore={langFilter}
-        opzioni={[
-          { valore: 'all', etichetta: L('filterAllVoices'), conto: rooms.length },
-          ...LANG_FILTERS.filter((l) => l.code !== 'all').map((l) => ({
-            valore: l.code,
-            etichetta: `${l.flag} ${l.nameKey ? L(l.nameKey) : l.name}`,
-            conto: perLingua[l.code] || 0,
-          })),
-        ]}
-        onCambia={(v) => { setLangFilter(v); setPaeseScelto(v === 'all' ? null : paeseDaLingua(v)); }} />
-
+      {/* b.504 — M2: VIA il filtro LINGUA. In un'applicazione che traduce
+          tutto, filtrare per lingua rimette la barriera che l'applicazione
+          toglie; quello che serve e la ZONA — da dove guardo il mondo — e
+          sta qui sotto, in mondoPaese (b.363/b.397, che gia raccontava i
+          guai della lingua travestita da Paese). */}
       {availableModes.length > 2 && (
         <Scelta C={C}
           etichetta={L('roomTypeWord')}
@@ -933,6 +898,13 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
             trenta volte di fila, smette di essere letta e diventa rumore
             che allontana lo sguardo da cio che serve per scegliere.
             Qui vale per tutte le stanze dell'elenco. */}
+        {/* b.504 — M1: «Aperte adesso» — le stanze VIVE hanno la loro
+            etichetta, come sulla tavola. */}
+        {filteredRooms.length > 0 && (
+          <div style={{ fontSize: 10.5, fontWeight: 600, letterSpacing: 1.1, textTransform: 'uppercase', color: C.textMuted, margin: '2px 0 6px' }}>
+            {L('openNowWord')}
+          </div>
+        )}
         {filteredRooms.length > 0 && (
           <div style={{ fontSize: 10.5, color: C.textMuted, opacity: 0.85, padding: '0 4px 8px', lineHeight: 1.5 }}>
             {L('openRoomNotice')}

@@ -221,7 +221,11 @@ describe('la lingua non e un Paese', () => {
     const v = leggi('app/components/MondoView.js');
     expect(v, 'la tendina della lingua').not.toMatch(/setPaeseScelto\(v === 'all' \? null : v\.toUpperCase\(\)\)/);
     expect(v, 'e la ricerca dei paesi').not.toMatch(/setPaeseScelto\(l\.paese \|\| l\.code\.toUpperCase\(\)\)/);
-    expect(v).toMatch(/setPaeseScelto\(v === 'all' \? null : paeseDaLingua\(v\)\)/);
+    // b.504 — il FILTRO LINGUA del pannello non esiste piu (M2: l'app
+    // traduce tutto, la zona si sceglie con mondoPaese): l'intento di
+    // questa prova — nessuna lingua spacciata per Paese — e soddisfatto
+    // a monte. Resta la conversione vera dove una lingua entra ancora
+    // (i risultati della ricerca).
     expect(v).toMatch(/setPaeseScelto\(paeseDaLingua\(l\.code\)\)/);
   });
 

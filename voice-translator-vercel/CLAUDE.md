@@ -219,6 +219,28 @@ qualunque refactoring. Non si propone di rimandarlo.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.504** (push #793) — IL MONDO, guardato con Luca:
+  tavole 02/M1/M2. Le tre linguette (Stanze·News·Mondo) e il pianeta
+  solo nella sua linguetta c'erano GIA (b.476). Quel che mancava:
+  M1 — la RICERCA sta NELLA PAGINA, sotto le linguette (prima era
+  dentro il pannello, dietro una porta che nessuno apre per cercare);
+  il PAESE e una pillola SENZA il «Cambia ›» (si tocca e si apre il
+  pannello, dove mondoPaese c'era gia; la voce «mondo intero» sta li);
+  l'AGGIORNA e un'icona in testata; «APERTE ADESSO» e l'etichetta
+  dell'elenco delle stanze vive (i temi «qui se ne parla» c'erano gia,
+  b.401).
+  M2 — il pannello e SOLO preferenze: via la ricerca (in pagina) e via
+  il FILTRO LINGUA (l'app traduce tutto: filtrare per lingua rimette
+  la barriera; la zona si sceglie con mondoPaese). Il filtro per tipo
+  di stanza resta (funzione viva non mostrata dalla tavola).
+  NON TOCCATI: GloboMondo, la scheda Mondo col pianeta, MondoNews.
+  RESTANO da guardare con Luca: il ritmo di ricerca a 4 passi (tavola
+  E — oggi c'e mondoAggiorna si/no + l'aggiorna manuale in testata) e
+  gli attivi «a cascata Matrix» sul globo (tavola 02-Mondo, tocca il
+  globo 3D).
+  Chiave nuova x38: openNowWord.
+  PROVE: `mondo-m1-m2-b504.test.js` (rossa prima).
+
 - Versione: **b.503** (push #792) — TAVOLE F E 32, e il punto sulle
   ultime tavole del template.
   TAVOLA F (il pannello di Vita): le SETTE SEZIONI non stanno piu in
