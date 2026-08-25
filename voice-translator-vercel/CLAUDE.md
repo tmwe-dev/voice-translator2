@@ -214,6 +214,31 @@ qualunque refactoring. Non si propone di rimandarlo.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.484** (push #773) — L'ULTIMO SOSPESO CHE NON DOVEVA ESSERLO:
+  la scheda del DAL VIVO parlava italiano a tutti. Venti frasi scritte nel
+  codice — rete caduta, credito finito, microfono negato, «ti ascolto» — cioe
+  proprio i momenti in cui chi legge ha bisogno di capire, e ci trovava una
+  lingua che non e la sua. Adesso vengono dai pacchetti, in trentotto lingue,
+  tradotte col tono giusto: queste frasi esistono per NON colpevolizzare e
+  per dire cosa si puo fare lo stesso.
+  IL FILE E' QUELLO CHE LUCA HA VIETATO PER NOME, e il divieto e stato
+  rispettato dove conta: della telefonata non e stata toccata una riga. Il
+  traduttore arriva come PROP da chi monta la scheda — dentro non e stato
+  aggiunto nessun aggancio nuovo al contesto. Cambia solo cio che si legge.
+  Le ventiquattro prove della scheda restano verdi.
+  E UNA PROVA MIA RISCRITTA, sempre la stessa malattia: cercava la frase ALLA
+  LETTERA, accento compreso, e si e fatta rossa quando l'italiano e stato
+  corretto («non e» → «non e'»). Difendeva l'ortografia di un ripiego, non il
+  comportamento.
+  CORREZIONE A CIO CHE AVEVO SCRITTO IN b.483: avevo detto che il permesso
+  della voce su ElevenLabs «non e una cosa che posso fare». NON E' VERO, e
+  l'ho verificato sulla documentazione: l'interruttore
+  (`platform_settings.overrides.conversation_config_override.tts.voice_id`)
+  si accende anche via API, con una PATCH sull'agente. Serve la chiave, che
+  sta su Vercel, e serve il SI di Luca perche e un cambio al suo account —
+  ma la mano ce l'ho. Il comando e scritto e provato nella sintassi, e non e
+  stato eseguito.
+
 - Versione: **b.483** (push #772) — DUE COSE CHE AVEVO CHIAMATO «SOSPESE» E
   NON LO ERANO: non erano decisioni di Luca, erano lavoro mio. Chiederle a lui
   era scaricargli addosso una cosa che dovevo fare.

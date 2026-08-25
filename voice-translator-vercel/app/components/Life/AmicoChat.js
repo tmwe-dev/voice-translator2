@@ -285,7 +285,9 @@ function AmicoChat({ compagni, L, lingua, userToken, testoP, muto, accent, card,
         // dell'agente, che riprende il filo invece di ripartire da zero.
         // b.407 — il gettone serve: la linea non parte piu dal browser, la
         // apre il nostro server dopo aver guardato chi sei e quanto credito hai.
-        <CompagnoLive compagno={scelto} lingua={lingua} userToken={userToken}
+        // b.484 — il traduttore va passato: la scheda del dal vivo non ha
+        // nessun aggancio al contesto, e non gliene diamo uno.
+        <CompagnoLive L={L} compagno={scelto} lingua={lingua} userToken={userToken}
           onChiudi={() => setDalVivo(false)}
           onFine={accogliTurniDalVivo}
           contesto={messaggi.slice(-14).map((m) =>

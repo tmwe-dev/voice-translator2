@@ -317,7 +317,12 @@ describe('b.407 — il browser non e piu autoritativo', () => {
   it("e una configurazione mancante non si ripara premendo Riprova", async () => {
     permesso = { stato: 503, corpo: { error: 'Il dal vivo non e configurato su questo ambiente.', motivo: 'agente-non-configurato' } };
     await apri();
-    expect(screen.getByText(/non e acceso su questo ambiente/)).toBeTruthy();
+    // b.484 — questa riga cercava la frase ALLA LETTERA, accento compreso, e
+    // si e fatta rossa quando l'italiano e stato corretto («non e» → «non
+    // e'»). Difendeva l'ortografia di un ripiego, non il comportamento. Cio
+    // che conta e: si dice che il dal vivo non e acceso qui, e NON si offre
+    // un tasto che non potrebbe funzionare.
+    expect(screen.getByText(/acceso su questo ambiente/)).toBeTruthy();
     expect(screen.queryByLabelText('Riprova'), 'il tasto che non puo funzionare non si mostra').toBeNull();
   });
 

@@ -1332,7 +1332,7 @@ function Impara({ compagni, L, C, lingua, userToken, testoP, muto, accent, card,
           // b.339 — anche qui la sessione dal vivo conosce il terreno: titolo
           // della lezione e la parte di testo su cui si sta lavorando.
           const brano = (paragrafiLezione[sezioneAttiva >= 0 ? sezioneAttiva : 0] || paragrafiLezione[0] || '').slice(0, 1200);
-          return <CompagnoLive compagno={finto} lingua={l2c} onChiudi={() => setParlaAssist(false)}
+          return <CompagnoLive L={L} compagno={finto} lingua={l2c} onChiudi={() => setParlaAssist(false)}
             contesto={`Lezione in corso: "${aperta.lezione?.titolo || argomento}".\nBrano su cui stiamo lavorando:\n${brano}`}
             {...{ testoP, muto, accent, card, bordo }} />;
         })()}
