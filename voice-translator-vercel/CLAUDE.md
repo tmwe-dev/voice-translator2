@@ -219,6 +219,24 @@ qualunque refactoring. Non si propone di rimandarlo.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.488** (push #777) — TAVOLA 15 DEL TEMPLATE: entra col
+  codice (`JoinView.js`). CASELLE, NON UN CAMPO: si vede quanto e lungo
+  il codice prima di cominciare a scriverlo. La tavola le disegna per un
+  codice da quattro; i codici veri ne hanno OTTO da sempre (b.248), e le
+  caselle sono quante i caratteri veri — la fedelta e allo scOPO, non al
+  numero disegnato con un codice d'esempio. La digitazione passa da un
+  input invisibile steso sopra la fila: tastiera, incolla e correzione
+  funzionano come prima, le caselle sono solo il vestito. Sopra le
+  caselle: «Il codice che ti hanno dato» (`codeGiven`, 38 lingue). E il
+  bottone si accende solo a codice COMPLETO (otto): prima con disabled a
+  4 si poteva premere Entra con mezzo codice e l'errore arrivava dal
+  server invece che dal disegno.
+  SCOSTAMENTI DICHIARATI: niente pillola «Inquadra il QR» — uno scanner
+  QR in-app per l'ingresso NON esiste, e una pillola senza funzione e un
+  tasto finto (si aggiunge quando esiste lo scanner); niente Aa in
+  testata (stessa ragione della tavola 14: lo zoom vive dentro RoomView).
+  PROVA: `__tests__/entra-col-codice-b488.test.js`.
+
 - Versione: **b.487** (push #776) — TAVOLA 14 DEL TEMPLATE: la sala
   d'attesa (`LobbyView.js`). Applicata fedelmente:
   1. IL CODICE E' LA COSA PIU GRANDE A SCHERMO — 48 punti, cifre

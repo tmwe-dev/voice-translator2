@@ -50,9 +50,16 @@ describe('il codice stanza da 8 caratteri entra nel campo', () => {
     expect(s).not.toContain('value={joinCode} maxLength={6}');
   });
 
-  it('e il placeholder mostra la forma vera del codice (8 esadecimali)', () => {
+  it('e la lunghezza vera del codice si VEDE prima di scrivere', () => {
+    // b.488 — il placeholder «A4F72C19» non c'e piu: al suo posto ci sono
+    // OTTO CASELLE (tavola 15 del template), che dicono la lunghezza
+    // meglio di un esempio. L'intento di b.248 — l'ingresso manuale
+    // accetta il codice INTERO da otto — e lo stesso, soddisfatto meglio:
+    // qui si controlla quello, non la forma che aveva nel 2026 di agosto.
     const s = senzaCommenti(leggi('app/components/JoinView.js'));
-    expect(s).toMatch(/placeholder="[0-9A-F]{8}" value=\{joinCode\}/);
+    expect(s).toMatch(/Array\.from\(\{ length: 8 \}/);
+    expect(s).toMatch(/value=\{joinCode\} maxLength=\{8\}/);
+    expect(s, 'e non si entra con mezzo codice').toMatch(/disabled=\{joinCode\.length < 8/);
   });
 });
 

@@ -277,16 +277,42 @@ export default function JoinView({ joinCode,
               A4F72C19 si fermava a "A4F72C" e l'ingresso manuale era
               IMPOSSIBILE per costruzione. Ora il campo tiene 8 caratteri e
               l'esempio mostra la forma vera del codice. */}
+          {/* b.488 — TAVOLA 15 DEL TEMPLATE: caselle, non un campo. «Si sa
+              quanto e lungo il codice prima di cominciare a scriverlo.»
+              La tavola le disegna per un codice da quattro; i codici veri
+              ne hanno OTTO da sempre (b.248: randomBytes(4) in esadecimale)
+              e le caselle sono quante i caratteri veri, dimensionate per
+              stare in una riga. La digitazione passa da un input invisibile
+              steso sopra la fila: cosi tastiera, incolla e correzione
+              funzionano come prima, e le caselle sono solo il vestito. */}
           <div style={{ marginBottom: 14 }}>
-            <div style={{ fontSize: 12, fontWeight: 600, color: C.textMuted, marginBottom: 6 }}>{L('roomCode')}</div>
-            <input style={{
-              width: '100%', padding: '14px', borderRadius: 12, textAlign: 'center',
-              fontSize: 24, letterSpacing: 8, textTransform: 'uppercase', fontWeight: 600,
-              background: C.input, border: `1px solid ${joinCode.length >= 4 ? `${C.accent}40` : C.inputBorder}`,
-              color: C.textPrimary, fontFamily: FONT, outline: 'none',
-              boxSizing: 'border-box', transition: 'border-color 0.2s',
-            }} placeholder="A4F72C19" value={joinCode} maxLength={8}
-              onChange={e => setJoinCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g,''))} />
+            <div style={{ fontSize: 15, color: C.textMuted, marginBottom: 12, textAlign: 'center' }}>{L('codeGiven')}</div>
+            <div style={{ position: 'relative' }}>
+              <div style={{ display: 'flex', gap: 5, justifyContent: 'center' }}>
+                {Array.from({ length: 8 }, (_, i) => {
+                  const pieno = joinCode[i] || '';
+                  const attiva = i === joinCode.length;
+                  return (
+                    <span key={i} style={{
+                      width: 36, height: 50, borderRadius: 12, flexShrink: 0,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: 22, fontWeight: 600, color: C.textPrimary, fontFamily: FONT,
+                      background: attiva ? `${C.accent}1A` : C.input,
+                      border: attiva ? `1px solid ${C.accent}` : `1px solid ${C.inputBorder}`,
+                      transition: 'border-color 0.15s, background 0.15s',
+                    }}>{pieno}</span>
+                  );
+                })}
+              </div>
+              <input aria-label={L('roomCode')} autoCapitalize="characters" autoCorrect="off" spellCheck={false}
+                value={joinCode} maxLength={8}
+                onChange={e => setJoinCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g,''))}
+                style={{
+                  position: 'absolute', inset: 0, width: '100%', height: '100%',
+                  opacity: 0, cursor: 'text', fontSize: 22, background: 'transparent',
+                  border: 'none', outline: 'none', color: 'transparent', caretColor: 'transparent',
+                }} />
+            </div>
           </div>
 
           {/* Language */}
@@ -304,7 +330,7 @@ export default function JoinView({ joinCode,
           </div>
 
           <PrimaryBtn C={C} FONT={FONT} onClick={() => { if (unlockAudio) unlockAudio(); savePrefs(prefs); handleJoinRoom(); }}
-            disabled={joinCode.length < 4 || !prefs.name.trim()}>
+            disabled={joinCode.length < 8 || !prefs.name.trim()}>
             {L('enterRoom')} →
           </PrimaryBtn>
 
