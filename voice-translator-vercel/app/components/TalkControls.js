@@ -37,7 +37,8 @@ const TalkControls = memo(function TalkControls({
   // essendo di nuovo con la mano abbassata sul server. Ora si legge il
   // proprio membro in roomInfo, aggiornato dal polling (useRoomPolling,
   // ogni 1.5-3s) e da Realtime.
-  const myHandRaised = !!roomInfo?.members?.find(m => m.name === myName)?.handRaised;
+  // b.485 — vedi RoomView: `?.` non protegge da un members che non e un elenco.
+  const myHandRaised = !!membriDi(roomInfo).find(m => m.name === myName)?.handRaised;
 
   return (
     // ═══ INIZIO b.173 — microfono-eroe, centrato (template C) ═══
@@ -203,7 +204,7 @@ const TalkControls = memo(function TalkControls({
         </div>
       )}
       {/* Host: show who raised hands */}
-      {roomMode === 'classroom' && isHost && roomInfo?.members?.some(m => m.handRaised) && (
+      {roomMode === 'classroom' && isHost && membriDi(roomInfo).some(m => m.handRaised) && (
         <div style={{
           display: 'flex', flexWrap: 'wrap', gap: 6, padding: '6px 14px',
           background: 'rgba(255,165,0,0.08)', borderRadius: 12, margin: '0 10px 6px',

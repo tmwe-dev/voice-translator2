@@ -214,6 +214,27 @@ qualunque refactoring. Non si propone di rimandarlo.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.485** (push #774) — «U.FIND IS NOT A FUNCTION», DI NUOVO, e
+  stavolta l'ha visto Luca sul telefono con la pagina intera sostituita dalla
+  scritta di errore. E' lo stesso schianto chiuso in b.426.
+  LA CAUSA e la stessa di allora: `roomInfo?.members?.find(...)` protegge dal
+  MANCANTE, non dal NON-ELENCO. Il punto interrogativo salta solo null e
+  undefined; se `members` torna un OGGETTO — e la lettura PUBBLICA di una
+  stanza non restituisce i membri apposta, dice solo quanti sono — allora non
+  salta niente, si chiama `.find` su un oggetto, e la schermata muore.
+  ORA PASSANO TUTTI DALL'AIUTANTE, che esiste dal b.387 (`membriDi()` in
+  app/lib/membri.js, `Array.isArray(m) ? m : []`): RoomView in tre punti,
+  TalkControls in due, piu Home, archivio, dettaglio e sommario — che avevano
+  la stessa riga e sarebbero morti allo stesso modo.
+  E LA COSA CHE FA PIU MALE E' MIA: il diario di b.426 dichiara una prova di
+  guardia, `__tests__/membri-non-elenco-b426.test.js`, che NON E' MAI
+  ESISTITA — cercata in tutta la storia del deposito, non c'e in nessun
+  commit. Ho scritto di aver messo una guardia e non l'ho messa, e senza
+  guardia il difetto e rientrato in silenzio. Adesso c'e davvero:
+  `__tests__/membri-non-elenco-b485.test.js`, e vieta l'accesso a mano ai
+  membri in TUTTE le superfici (components e hooks), non solo nelle righe che
+  conoscevo. Verificata ROSSA sul codice di prima.
+
 - Versione: **b.484** (push #773) — L'ULTIMO SOSPESO CHE NON DOVEVA ESSERLO:
   la scheda del DAL VIVO parlava italiano a tutti. Venti frasi scritte nel
   codice — rete caduta, credito finito, microfono negato, «ti ascolto» — cioe

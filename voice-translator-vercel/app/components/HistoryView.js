@@ -7,6 +7,7 @@ import Icon from './Icon.js';
 import PageHeader from './ui/PageHeader.js';
 import EmptyState from './ui/EmptyState.js';
 import { useApp } from '../contexts/AppContext.js';
+import { membriDi } from '../lib/membri.js';
 
 // ═══════════════════════════════════════════════
 // HistoryView — Archivio (P4 Archive)
@@ -110,7 +111,7 @@ function HistoryView({ convHistory, viewConversation, verifiedName, archivioSolo
   };
 
   const renderConversationCard = (c, index) => {
-    const memberNames = c.members?.filter(m => m !== (verifiedName || prefs.name)) || [];
+    const memberNames = membriDi(c).filter(m => m !== (verifiedName || prefs.name));
     const displayName = c.topic || memberNames.join(', ') || L('conversation');
 
     // b.353 — l'esportazione dal posto giusto (Luca: «esporta conversazione

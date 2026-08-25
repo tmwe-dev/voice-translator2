@@ -16,6 +16,7 @@ import CarouselLingue from './CarouselLingue.js';
 import Ribalta from './ui/Ribalta.js';
 import PrimaProva, { riapriPrimaProva } from './PrimaProva.js'; // b.96 → b.356 "Parla ora"
 import { memGet, memSet } from '../lib/memoria.js';
+import { membriDi } from '../lib/membri.js';
 
 // ═══════════════════════════════════════
 // Theme palette (multi-theme support)
@@ -443,7 +444,7 @@ const HomeView = memo(function HomeView({ selectedMode, setSelectedMode,
                   }}
                 >
                   <div style={{ display: 'flex', gap: 4, fontSize: 16 }}>
-                    {[...new Set(room.members?.map(m => getLang(m.lang).flag) || [])].map((flag, i) => (
+                    {[...new Set(membriDi(room).map(m => getLang(m.lang).flag))].map((flag, i) => (
                       <span key={i}>{flag}</span>
                     ))}
                   </div>
@@ -452,7 +453,7 @@ const HomeView = memo(function HomeView({ selectedMode, setSelectedMode,
                       fontSize: 13, fontWeight: 600, color: C.textPrimary,
                       overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                     }}>
-                      {room.members?.map(m => m.name).join(', ') || room.roomId}
+                      {membriDi(room).map(m => m.name).join(', ') || room.roomId}
                     </div>
                   </div>
                   <div style={{ fontSize: 11, color: C.textMuted }}>{timeStr}</div>

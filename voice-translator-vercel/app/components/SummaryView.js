@@ -1,6 +1,7 @@
 'use client';
 import { useApp } from '../contexts/AppContext.js';
 import { IconLoader } from './Icons.js';
+import { membriDi } from '../lib/membri.js';
 
 export default function SummaryView({ currentConv, summaryLoading, shareSummary,
   setCurrentConv, verifiedName }) {
@@ -63,7 +64,7 @@ export default function SummaryView({ currentConv, summaryLoading, shareSummary,
 
             <div style={{display:'flex', justifyContent:'space-between', padding:'10px 0',
               borderTop:`1px solid ${colors.dividerColor}`, fontSize:11, color:colors.textMuted}}>
-              <span>{s.participants || currentConv.members?.map(m => m.name).join(' & ')}</span>
+              <span>{s.participants || membriDi(currentConv).map(m => m.name).join(' & ')}</span>
               <span>{s.duration || ''} | {s.messageCount || currentConv.msgCount} msg</span>
             </div>
 
@@ -79,7 +80,7 @@ export default function SummaryView({ currentConv, summaryLoading, shareSummary,
               {L('savedConversation')}
             </div>
             <div style={{fontSize:13, color:colors.textTertiary, marginBottom:8}}>
-              {currentConv.members?.map(m => m.name).join(' & ')} - {currentConv.msgCount} {L('messages')}
+              {membriDi(currentConv).map(m => m.name).join(' & ')} - {currentConv.msgCount} {L('messages')}
             </div>
             <div style={{fontSize:11, color:colors.textMuted}}>
               {currentConv.created ? new Date(currentConv.created).toLocaleString(uiLang) : ''}

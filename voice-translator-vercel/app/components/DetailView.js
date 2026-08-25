@@ -4,6 +4,7 @@ import { getLang, FONT } from '../lib/constants.js';
 import AvatarImg from './AvatarImg.js';
 import { IconPlay, IconVolume, IconBack, IconExport } from './Icons.js';  // b.404 — l'icona vera, non la lettera
 import { useApp } from '../contexts/AppContext.js';
+import { membriDi } from '../lib/membri.js';
 
 /**
  * DetailView — P4 Schermata 5: Conversation Command Center
@@ -27,7 +28,7 @@ const DetailView = memo(function DetailView({
   const [activeTab, setActiveTab] = useState('messages');
   const [searchQuery, setSearchQuery] = useState('');
 
-  const partner = conversation.members?.find(m => m.name !== prefs.name);
+  const partner = membriDi(conversation).find(m => m.name !== prefs.name);
   const partnerLang = getLang(partner?.lang || conversation.otherLang || 'en');
   const myLangInfo = getLang(conversation.myLang || prefs.lang || 'it');
   const duration = conversation.duration

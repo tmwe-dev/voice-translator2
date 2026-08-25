@@ -194,7 +194,14 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
   const typingDebounceRef = useRef(null);
 
   // ── Compute derived values ──
-  const otherMembers = roomInfo?.members?.filter(m => m.name !== myName) || [];
+// b.485 — «U.find is not a function», DI NUOVO, e stavolta trovato da
+// Luca sul telefono con la pagina intera sostituita dalla scritta di
+// errore. E' lo stesso difetto di b.426: il punto interrogativo
+// protegge dal MANCANTE, non dal NON-ELENCO. Se `members` torna un
+// oggetto (e la lettura pubblica di una stanza non li restituisce
+// apposta), `?.` non salta niente: chiama .find su un oggetto e la
+// schermata muore. L'aiutante giusto esiste da b.387: membriDi().
+  const otherMembers = membriDi(roomInfo).filter(m => m.name !== myName);
   const partner = otherMembers[0];
   const myL = getLang(myLang);
   const otherL = partner ? getLang(partner.lang) : getLang('en');
@@ -232,7 +239,7 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
   // "granted" che grantSpeaking imposta sul proprio membro (vedi
   // GRANT_SPEAKING in redisLua.js — non e piu lo stesso campo "speaking"
   // che ogni battuta di conversazione riscrive).
-  const myMember = roomInfo?.members?.find(m => m.name === myName);
+  const myMember = membriDi(roomInfo).find(m => m.name === myName);
   const canTalk = roomMode === 'classroom' ? (isHost || !!myMember?.granted) : true;
   const totalCost = roomInfo?.totalCost || 0;
   const msgCount = roomInfo?.msgCount || 0;
@@ -432,7 +439,7 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
   }
 
   function getSenderAvatar(senderName) {
-    const member = roomInfo?.members?.find(m => m.name === senderName);
+    const member = membriDi(roomInfo).find(m => m.name === senderName);
     return member?.avatar || 'av1';
   }
 
