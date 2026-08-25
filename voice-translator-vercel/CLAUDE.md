@@ -219,6 +219,16 @@ qualunque refactoring. Non si propone di rimandarlo.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.493** (push #782) — TAVOLA 13: PRIMO AVVIO.
+  «Una domanda per schermata» c'era gia (tre fasi, b.136); i ritorni
+  c'erano gia. Quel che mancava: il trattino della fase in corso ora e
+  GIALLO (regola 13: blu=sistema, giallo=dove-sei — era blu), e il
+  tasto Aa sta in testata anche qui: ingrandisce tutto il contenuto
+  con lo zoom CSS, senza toccare le misure delle tre fasi.
+  PROVE: `primo-avvio-tavola-13-b493.test.js` (rossa prima).
+  LIMITE DICHIARATO: verifica visiva del primo avvio da fare in
+  incognito (nel Chrome di Luca il profilo esiste gia e non si tocca).
+
 - Versione: **b.492** (push #781) — TAVOLA 05 DEL TEMPLATE: BUSINESS.
   «Strumenti, non riquadri. Ognuno dice cosa fa in una riga.» La
   SCANSIONE e la cosa grande in cima (e il motivo per cui si apre la

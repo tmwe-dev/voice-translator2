@@ -223,17 +223,24 @@ export default function WelcomeView({ joinCode, userToken, setAuthStep,
     { icon: <IconBattery size={19} />, text: L('featureFree'), color: D.neon4 },
   ];
 
+  // b.493 — tavola 13: Aa anche qui. Lo zoom CSS scala il contenuto in
+  // proporzione, senza toccare le misure scritte nelle tre fasi.
+  const [zoomTesto, setZoomTesto] = useState(0);
+
   // Progress indicator
   const progressBar = (
     <div style={{ display: 'flex', gap: 6, justifyContent: 'center', marginBottom: 20 }}>
+      {/* b.493 — tavola 13, regola 13 del template: il giallo dice DOVE
+          SEI. Il trattino della fase in corso era blu — ma il blu e il
+          colore del sistema, non della posizione. */}
       {[0, 1, 2].map(i => (
         <div key={i} style={{
           width: i === phase ? 32 : 10, height: 6, borderRadius: 3,
-          background: i <= phase
-            ? `linear-gradient(90deg, ${D.neon1}, ${D.neon2})`
+          background: i === phase ? PALETTE.amber
+            : i < phase ? 'rgba(255,255,255,0.18)'
             : 'rgba(255,255,255,0.06)',
           transition: 'all 0.5s cubic-bezier(0.16, 1, 0.3, 1)',
-          boxShadow: i === phase ? `0 0 12px ${D.neon1}40` : 'none',
+          boxShadow: i === phase ? `0 0 12px ${PALETTE.amber}40` : 'none',
         }} />
       ))}
     </div>
@@ -270,8 +277,20 @@ export default function WelcomeView({ joinCode, userToken, setAuthStep,
         position: 'relative', zIndex: 1,
       }}>
 
-        {/* Progress */}
-        {progressBar}
+        {/* Progress + Aa (tavola 13: la testata del primo avvio) */}
+        <div style={{ display: 'flex', alignItems: 'center', width: '100%', maxWidth: 400 }}>
+          <span style={{ width: 44, flexShrink: 0 }} />
+          <div style={{ flex: 1 }}>{progressBar}</div>
+          <button onClick={() => setZoomTesto((z) => (z >= 3 ? 0 : z + 1))}
+            title={L('textBigger')} aria-label={L('textBigger')}
+            style={{ width: 44, height: 44, borderRadius: 12, flexShrink: 0, cursor: 'pointer',
+              background: zoomTesto ? 'rgba(255,255,255,0.10)' : 'none',
+              border: `1.5px solid ${D.glassBorder}`, color: D.textSoft,
+              fontFamily: FONT, fontSize: 15, fontWeight: 600, marginBottom: 20 }}>
+            Aa
+          </button>
+        </div>
+        <div style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1, zoom: 1 + zoomTesto * 0.1 }}>
 
         {/* ═══════════════════════════════════════════════
             PHASE 0: HERO — Value Proposition + Auth
@@ -571,6 +590,8 @@ export default function WelcomeView({ joinCode, userToken, setAuthStep,
             </div>
           </div>
         )}
+      </div>
+
       </div>
 
       {/* ═══ ANIMATIONS ═══ */}
