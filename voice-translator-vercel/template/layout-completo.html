@@ -86,7 +86,10 @@
        L'APPLICAZIONE, IL GIALLO E' DOVE SEI. Prima era #ffc93c, un valore
        derivato a mano: ora punta al token vero (#ffc44d). */
     --giallo:     var(--goldAccent);
-    --giallo-vel: var(--accent1Bg);
+    /* b.484 — QUESTO VELO SI CHIAMAVA GIALLO ED ERA BLU: puntava al fondo
+     dell'accento (che e azzurro), quindi ogni etichetta gialla si
+     appoggiava a una macchia blu. Ora e davvero il giallo, smorzato. */
+  --giallo-vel: rgba(255,196,77,0.12);
     --giallo-bor: rgba(255,196,77,0.40);
     --verde:      var(--accent4);
     --oro:        var(--goldAccent);
@@ -135,6 +138,27 @@
   .pista { display: flex; gap: 18px; overflow-x: auto; padding: 22px 0 12px; scroll-snap-type: x mandatory; scrollbar-width: none; }
   .pista::-webkit-scrollbar { display: none; }
   .colonna { flex: 0 0 auto; width: 340px; scroll-snap-align: center; }
+
+  /* ── b.484 — IL BORDO GIALLO (ordine di Luca, 25/08/2026) ──
+     Segna le maschere la cui pagina VERA nel programma e gia stata portata
+     a questo template. Serve a sapere, guardando, dove si e passati — e da
+     oggi si aggiunge a ogni schermata che facciamo, una per una. */
+  .colonna.aggiornata .telefono {
+    border: 2px solid var(--giallo);
+    box-shadow: 0 0 0 5px rgba(255,196,77,0.10),
+                0 24px 60px -22px rgba(0,0,0,0.75);
+  }
+  .bollo-agg {
+    display: inline-flex; align-items: center; gap: 5px;
+    margin-left: auto; padding: 2px 8px; border-radius: 999px;
+    font-size: 10px; letter-spacing: 0.4px; text-transform: uppercase;
+    color: var(--giallo); background: var(--giallo-vel);
+    border: 1px solid var(--giallo-bor); white-space: nowrap;
+  }
+  .bollo-agg::before {
+    content: ''; width: 6px; height: 6px; border-radius: 50%;
+    background: var(--giallo);
+  }
 
   .destinazione { font-family: ui-monospace, 'SF Mono', Menlo, monospace; font-size: 11px;
     color: var(--accent2); margin: -2px 0 6px; letter-spacing: 0.2px; }
@@ -690,6 +714,27 @@
     spingere giu.
   </p>
   <p class="nota" style="border-left-color:var(--giallo)">
+    <span class="ril">IL BORDO GIALLO (b.484, ordine di Luca del 25/08/2026).</span>
+    Una maschera col bordo giallo e una schermata su cui sono GIA PASSATO nel
+    programma: la pagina vera e stata portata a questo template — margini a
+    venti, tasti da quarantaquattro, niente grassetto, colori dai token del
+    tema, parole dai pacchetti lingua, nessun tasto senza icona.
+    <br><br>
+    <span class="ril">Cosa NON dice.</span> Il bordo dice che ci sono passato,
+    non che quella schermata sia stata ridisegnata da capo come la vedi qui.
+    Per quello c'e il cartellino sopra al telefono: <b>FATTO</b> vuol dire che
+    il disegno nuovo e installato, <b>DA FARE</b> che il disegno c'e ma nel
+    programma quella pagina ha ancora la struttura di prima — ripulita, ma la
+    stessa. Sono due cose diverse e vanno lette insieme.
+    <br><br>
+    <span class="ril">Oggi il bordo ce l'hanno quasi tutte</span>, ed e il
+    senso della notizia: il giro sullo standard le ha toccate una per una.
+    L'unica senza e il <b>Podcast</b>, che nel programma non ha ancora un
+    file suo — e infatti il template lo dichiara «da confermare».
+    D'ora in avanti il bordo si aggiunge a ogni schermata che facciamo, una
+    alla volta.
+  </p>
+  <p class="nota" style="border-left-color:var(--giallo)">
     <span class="ril">b.444 — il template ora e mappato all'infrastruttura.</span> Su richiesta
     di Luca: non piu un disegno a parte da tradurre, ma uno specchio del codice. I colori
     hanno i nomi veri dei token del tema (styles.js), ogni schermata dichiara il suo file
@@ -847,8 +892,8 @@
   <div class="pista">
 
     <!-- ── HOME ── -->
-    <div class="colonna">
-      <div class="cartellino"><span class="lettera">01</span><span class="nome">Home</span><span class="stato gia">GIA COSI</span></div>
+    <div class="colonna aggiornata">
+      <div class="cartellino"><span class="lettera">01</span><span class="nome">Home</span><span class="stato gia">GIA COSI</span><span class="bollo-agg">aggiornata</span></div>
       <div class="destinazione">&rarr; app/components/HomeView.js</div>
       <p class="didascalia">Il microfono comanda. Le sezioni sono righe, non riquadri: si leggono in fila.</p>
       <div class="telefono">
@@ -890,8 +935,8 @@
     </div>
 
     <!-- ── STANZE · SOCIAL · MONDO — le tre linguette (b.440) ── -->
-    <div class="colonna">
-      <div class="cartellino"><span class="lettera">02</span><span class="nome">Stanze</span><span class="stato dafare">DA FARE</span></div>
+    <div class="colonna aggiornata">
+      <div class="cartellino"><span class="lettera">02</span><span class="nome">Stanze</span><span class="stato dafare">DA FARE</span><span class="bollo-agg">aggiornata</span></div>
       <div class="destinazione">&rarr; app/components/MondoView.js — tab Stanze</div>
       <p class="didascalia">Pulita. Via il pianeta e lo sfondo stellato: qui si scelgono le stanze, e basta.</p>
       <div class="telefono">
@@ -943,8 +988,8 @@
       </div>
     </div>
 
-    <div class="colonna">
-      <div class="cartellino"><span class="lettera">02</span><span class="nome">Social</span><span class="stato dafare">DA FARE</span></div>
+    <div class="colonna aggiornata">
+      <div class="cartellino"><span class="lettera">02</span><span class="nome">Social</span><span class="stato dafare">DA FARE</span><span class="bollo-agg">aggiornata</span></div>
       <div class="destinazione">&rarr; app/components/MondoNews.js</div>
       <p class="didascalia">La stessa pagina, seconda linguetta. Le notizie e i post, senza pianeta.</p>
       <div class="telefono">
@@ -991,8 +1036,8 @@
       </div>
     </div>
 
-    <div class="colonna">
-      <div class="cartellino"><span class="lettera">02</span><span class="nome">Mondo</span><span class="stato dafare">DA FARE · nuova</span></div>
+    <div class="colonna aggiornata">
+      <div class="cartellino"><span class="lettera">02</span><span class="nome">Mondo</span><span class="stato dafare">DA FARE · nuova</span><span class="bollo-agg">aggiornata</span></div>
       <div class="destinazione">&rarr; app/components/MondoView.js + GloboMondo.js (public/mondo-globo.html)</div>
       <p class="didascalia">La finestra sul mondo. Il pianeta gira; sopra, solo cose vere: chi e attivo e le breaking news.</p>
       <div class="telefono">
@@ -1047,8 +1092,8 @@
       </div>
     </div>
     <!-- ── VITA ── -->
-    <div class="colonna">
-      <div class="cartellino"><span class="lettera">03</span><span class="nome">Vita</span><span class="stato fatto">FATTO · b.432</span></div>
+    <div class="colonna aggiornata">
+      <div class="cartellino"><span class="lettera">03</span><span class="nome">Vita</span><span class="stato fatto">FATTO · b.432</span><span class="bollo-agg">aggiornata</span></div>
       <div class="destinazione">&rarr; app/components/Life/LifeView.js</div>
       <p class="didascalia">Le sette sezioni se ne vanno nel pannello. Qui resta la conversazione.</p>
       <div class="telefono">
@@ -1078,8 +1123,8 @@
     </div>
 
     <!-- ── STANZA ── -->
-    <div class="colonna">
-      <div class="cartellino"><span class="lettera">04</span><span class="nome">Chat di gruppo</span><span class="stato dafare">DA FARE</span></div>
+    <div class="colonna aggiornata">
+      <div class="cartellino"><span class="lettera">04</span><span class="nome">Chat di gruppo</span><span class="stato dafare">DA FARE</span><span class="bollo-agg">aggiornata</span></div>
       <div class="destinazione">&rarr; app/components/RoomView.js (+ RoomHeader.js, MessageList.js)</div>
       <p class="didascalia">Chi c'e e in che lingua, prima di tutto. In testata solo cio che si usa parlando.</p>
       <div class="telefono">
@@ -1109,8 +1154,8 @@
       </div>
     </div>
 
-    <div class="colonna">
-      <div class="cartellino"><span class="lettera">04b</span><span class="nome">Chat singola</span><span class="stato dafare">DA FARE</span></div>
+    <div class="colonna aggiornata">
+      <div class="cartellino"><span class="lettera">04b</span><span class="nome">Chat singola</span><span class="stato dafare">DA FARE</span><span class="bollo-agg">aggiornata</span></div>
       <div class="destinazione">&rarr; app/components/RoomView.js &mdash; stessa pagina, due persone</div>
       <p class="didascalia">Uguale alla stanza, ma in testata c'e chi hai davanti: faccia, nome e bandiera.</p>
       <div class="telefono">
@@ -1178,8 +1223,8 @@
     </div>
 
     <!-- ── BUSINESS ── -->
-    <div class="colonna">
-<div class="cartellino"><span class="lettera">05</span><span class="nome">Business</span><span class="stato dafare">DA FARE</span></div>
+    <div class="colonna aggiornata">
+<div class="cartellino"><span class="lettera">05</span><span class="nome">Business</span><span class="stato dafare">DA FARE</span><span class="bollo-agg">aggiornata</span></div>
       <div class="destinazione">&rarr; app/components/BusinessView.js</div>
       <p class="didascalia">Strumenti, non riquadri. Ognuno dice cosa fa in una riga.</p>
       <div class="telefono">
@@ -1213,8 +1258,8 @@
     </div>
 
     <!-- ── PROFILO ── -->
-    <div class="colonna">
-      <div class="cartellino"><span class="lettera">06</span><span class="nome">Profilo</span><span class="stato gia">GIA COSI</span></div>
+    <div class="colonna aggiornata">
+      <div class="cartellino"><span class="lettera">06</span><span class="nome">Profilo</span><span class="stato gia">GIA COSI</span><span class="bollo-agg">aggiornata</span></div>
       <div class="destinazione">&rarr; app/components/AccountView.js</div>
       <p class="didascalia">Il credito in alto, perche e la cosa che si viene a guardare.</p>
       <div class="telefono">
@@ -1262,8 +1307,8 @@
 
 
     <!-- ── CHAT / STORICO ── -->
-    <div class="colonna">
-      <div class="cartellino"><span class="lettera">07</span><span class="nome">Chat</span><span class="stato fatto">FATTO · b.433</span></div>
+    <div class="colonna aggiornata">
+      <div class="cartellino"><span class="lettera">07</span><span class="nome">Chat</span><span class="stato fatto">FATTO · b.433</span><span class="bollo-agg">aggiornata</span></div>
       <div class="destinazione">&rarr; app/components/HistoryView.js</div>
       <p class="didascalia">Le conversazioni avute. Ognuna dice con chi, in che lingue, e quando.</p>
       <div class="telefono">
@@ -1287,8 +1332,8 @@
     </div>
 
     <!-- ── IMPARA · una lezione ── -->
-    <div class="colonna">
-      <div class="cartellino"><span class="lettera">08</span><span class="nome">Impara</span><span class="stato fatto">FATTO · b.435</span></div>
+    <div class="colonna aggiornata">
+      <div class="cartellino"><span class="lettera">08</span><span class="nome">Impara</span><span class="stato fatto">FATTO · b.435</span><span class="bollo-agg">aggiornata</span></div>
       <div class="destinazione">&rarr; app/components/Life/LifeView.js — sezione Impara</div>
       <p class="didascalia">Una lezione per volta. Il Maestro legge, tu segui, e puoi alzare la mano.</p>
       <div class="telefono">
@@ -1351,8 +1396,8 @@
     </div>
 
     <!-- ── OBIETTIVI E COMPITI ── -->
-    <div class="colonna">
-      <div class="cartellino"><span class="lettera">10</span><span class="nome">Obiettivi</span><span class="stato dafare">DA FARE</span></div>
+    <div class="colonna aggiornata">
+      <div class="cartellino"><span class="lettera">10</span><span class="nome">Obiettivi</span><span class="stato dafare">DA FARE</span><span class="bollo-agg">aggiornata</span></div>
       <div class="destinazione">&rarr; app/components/Life/GestioneObiettivi.js</div>
       <p class="didascalia">Poche cose, con quanto manca. Aggiungerne una e una riga sola.</p>
       <div class="telefono">
@@ -1389,8 +1434,8 @@
     </div>
 
     <!-- ── TAXITALK ── -->
-    <div class="colonna">
-      <div class="cartellino"><span class="lettera">11</span><span class="nome">TaxiTalk</span><span class="stato fatto">META · b.430</span></div>
+    <div class="colonna aggiornata">
+      <div class="cartellino"><span class="lettera">11</span><span class="nome">TaxiTalk</span><span class="stato fatto">META · b.430</span><span class="bollo-agg">aggiornata</span></div>
       <div class="destinazione">&rarr; app/components/TaxiTalk.js (+ TaxiMode.js, TaxiDestinationPanel.js)</div>
       <p class="didascalia">Stessa forma del traduttore. Cambia solo che qui c'e anche dove vai.</p>
       <div class="telefono">
@@ -1424,8 +1469,8 @@
     </div>
 
     <!-- ── CREDITO ── -->
-    <div class="colonna">
-      <div class="cartellino"><span class="lettera">12</span><span class="nome">Credito</span><span class="stato gia">GIA COSI</span></div>
+    <div class="colonna aggiornata">
+      <div class="cartellino"><span class="lettera">12</span><span class="nome">Credito</span><span class="stato gia">GIA COSI</span><span class="bollo-agg">aggiornata</span></div>
       <div class="destinazione">&rarr; app/components/CreditsView.js</div>
       <p class="didascalia">Quanto ti resta, cosa lo consuma, e come ricaricare. In quest'ordine.</p>
       <div class="telefono">
@@ -1455,8 +1500,8 @@
     </div>
 
     <!-- ── PRIMO AVVIO ── -->
-    <div class="colonna">
-      <div class="cartellino"><span class="lettera">13</span><span class="nome">Primo avvio</span><span class="stato dafare">DA FARE</span></div>
+    <div class="colonna aggiornata">
+      <div class="cartellino"><span class="lettera">13</span><span class="nome">Primo avvio</span><span class="stato dafare">DA FARE</span><span class="bollo-agg">aggiornata</span></div>
       <div class="destinazione">&rarr; app/components/WelcomeView.js</div>
       <p class="didascalia">Una domanda per schermata. Nessuno legge due domande insieme.</p>
       <div class="telefono">
@@ -1498,8 +1543,8 @@
 
   <div class="pista">
 
-    <div class="colonna">
-      <div class="cartellino"><span class="lettera">14</span><span class="nome">Sala d'attesa</span><span class="stato dafare">DA FARE</span></div>
+    <div class="colonna aggiornata">
+      <div class="cartellino"><span class="lettera">14</span><span class="nome">Sala d'attesa</span><span class="stato dafare">DA FARE</span><span class="bollo-agg">aggiornata</span></div>
       <div class="destinazione">&rarr; app/components/LobbyView.js</div>
       <p class="didascalia">Il codice grande, perche e la cosa che devi leggere a voce a qualcun altro.</p>
       <div class="telefono">
@@ -1526,8 +1571,8 @@
         <li>«In attesa» e una riga con un pallino, non un riquadro: cambia da sola quando entra qualcuno.</li></ul></div>
     </div>
 
-    <div class="colonna">
-      <div class="cartellino"><span class="lettera">15</span><span class="nome">Entra col codice</span><span class="stato dafare">DA FARE</span></div>
+    <div class="colonna aggiornata">
+      <div class="cartellino"><span class="lettera">15</span><span class="nome">Entra col codice</span><span class="stato dafare">DA FARE</span><span class="bollo-agg">aggiornata</span></div>
       <div class="destinazione">&rarr; app/components/JoinView.js</div>
       <p class="didascalia">Quattro caselle, non un campo. Si sa quanto e lungo prima di cominciare.</p>
       <div class="telefono">
@@ -1554,8 +1599,8 @@
         <li>Il QR e li accanto, non dietro un altro tocco.</li></ul></div>
     </div>
 
-    <div class="colonna">
-      <div class="cartellino"><span class="lettera">16</span><span class="nome">Invita</span><span class="stato dafare">DA FARE</span></div>
+    <div class="colonna aggiornata">
+      <div class="cartellino"><span class="lettera">16</span><span class="nome">Invita</span><span class="stato dafare">DA FARE</span><span class="bollo-agg">aggiornata</span></div>
       <div class="destinazione">&rarr; app/components/QuickInvite.js (+ InvitaAmici.js)</div>
       <p class="didascalia">Un link, e i modi per mandarlo. Niente altro su cui pensare.</p>
       <div class="telefono">
@@ -1584,8 +1629,8 @@
         <li>La lingua dell'invito e una scelta esplicita: era gia successo che partisse nella lingua sbagliata.</li></ul></div>
     </div>
 
-    <div class="colonna">
-      <div class="cartellino"><span class="lettera">17</span><span class="nome">Chat di gruppo</span><span class="stato dafare">DA FARE</span></div>
+    <div class="colonna aggiornata">
+      <div class="cartellino"><span class="lettera">17</span><span class="nome">Chat di gruppo</span><span class="stato dafare">DA FARE</span><span class="bollo-agg">aggiornata</span></div>
       <div class="destinazione">&rarr; app/components/StanzaVideoGruppo.js</div>
       <p class="didascalia">Chi c'e in cima, sempre. La videochiamata si accende da dentro, non e un'altra stanza.</p>
       <div class="telefono">
@@ -1611,8 +1656,8 @@
         <li>La telecamera e un tondino in testata: accendere il video non e cambiare stanza.</li></ul></div>
     </div>
 
-    <div class="colonna">
-      <div class="cartellino"><span class="lettera">18</span><span class="nome">Videochiamata</span><span class="stato dafare">DA FARE</span></div>
+    <div class="colonna aggiornata">
+      <div class="cartellino"><span class="lettera">18</span><span class="nome">Videochiamata</span><span class="stato dafare">DA FARE</span><span class="bollo-agg">aggiornata</span></div>
       <div class="destinazione">&rarr; app/components/VideoCallOverlay.js</div>
       <p class="didascalia">Le facce, e sotto quello che si stanno dicendo. I comandi spariscono da soli.</p>
       <div class="telefono">
@@ -1638,8 +1683,8 @@
         <li>Chi parla ha la sua bandiera sull'immagine: con tre persone non si indovina.</li></ul></div>
     </div>
 
-    <div class="colonna">
-      <div class="cartellino"><span class="lettera">19</span><span class="nome">Il menu ⋯</span><span class="stato dafare">DA FARE</span></div>
+    <div class="colonna aggiornata">
+      <div class="cartellino"><span class="lettera">19</span><span class="nome">Il menu ⋯</span><span class="stato dafare">DA FARE</span><span class="bollo-agg">aggiornata</span></div>
       <div class="destinazione">&rarr; app/components/ChatActionsPanel.js</div>
       <p class="didascalia">Largo abbastanza da leggerlo. Ogni voce dice cosa fa, non solo come si chiama.</p>
       <div class="telefono">
@@ -1663,8 +1708,8 @@
         <li>Chiudere la stanza e in fondo, in rosso, con scritto che vale <span class="ril">per tutti</span>.</li></ul></div>
     </div>
 
-    <div class="colonna">
-      <div class="cartellino"><span class="lettera">20</span><span class="nome">Numero di sicurezza</span><span class="stato dafare">DA FARE</span></div>
+    <div class="colonna aggiornata">
+      <div class="cartellino"><span class="lettera">20</span><span class="nome">Numero di sicurezza</span><span class="stato dafare">DA FARE</span><span class="bollo-agg">aggiornata</span></div>
       <div class="destinazione">&rarr; app/components/NumeroSicurezza.js</div>
       <p class="didascalia">Due schermi, lo stesso numero. Se non combacia, qualcuno sta in mezzo.</p>
       <div class="telefono">
@@ -1698,8 +1743,8 @@
 
   <div class="pista">
 
-    <div class="colonna">
-      <div class="cartellino"><span class="lettera">21</span><span class="nome">Discussione</span><span class="stato dafare">DA FARE</span></div>
+    <div class="colonna aggiornata">
+      <div class="cartellino"><span class="lettera">21</span><span class="nome">Discussione</span><span class="stato dafare">DA FARE</span><span class="bollo-agg">aggiornata</span></div>
       <div class="destinazione">&rarr; app/components/MondoDiscussioni.js</div>
       <p class="didascalia">La notizia in cima, i commenti sotto, e il campo che non finisce sotto la barra.</p>
       <div class="telefono">
@@ -1731,8 +1776,8 @@
         <li>Il mappamondo in testata apre «cosa ne pensa il mondo» su questo tema.</li></ul></div>
     </div>
 
-    <div class="colonna">
-      <div class="cartellino"><span class="lettera">22</span><span class="nome">Profilo pubblico</span><span class="stato dafare">DA FARE</span></div>
+    <div class="colonna aggiornata">
+      <div class="cartellino"><span class="lettera">22</span><span class="nome">Profilo pubblico</span><span class="stato dafare">DA FARE</span><span class="bollo-agg">aggiornata</span></div>
       <div class="destinazione">&rarr; app/components/MondoPersona.js</div>
       <p class="didascalia">Chi e, che lingue parla, cosa ha detto. Nient'altro: qui non si guarda la vita di nessuno.</p>
       <div class="telefono">
@@ -1765,8 +1810,8 @@
         <li>Tre numeri e basta. Niente foto della vita: qui si conosce il pensiero di qualcuno, non la sua giornata.</li></ul></div>
     </div>
 
-    <div class="colonna">
-      <div class="cartellino"><span class="lettera">23</span><span class="nome">Tavola rotonda</span><span class="stato dafare">DA FARE</span></div>
+    <div class="colonna aggiornata">
+      <div class="cartellino"><span class="lettera">23</span><span class="nome">Tavola rotonda</span><span class="stato dafare">DA FARE</span><span class="bollo-agg">aggiornata</span></div>
       <div class="destinazione">&rarr; app/components/Life/Tavolo.js</div>
       <p class="didascalia">Chi siede al tavolo, e su cosa. Poi parlano fra loro e tu entri quando vuoi.</p>
       <div class="telefono">
@@ -1794,8 +1839,8 @@
         <li>Chi siede al tavolo si sceglie toccando le facce: si vede subito chi c'e e chi no.</li></ul></div>
     </div>
 
-    <div class="colonna">
-      <div class="cartellino"><span class="lettera">24</span><span class="nome">Compagni</span><span class="stato dafare">DA FARE</span></div>
+    <div class="colonna aggiornata">
+      <div class="cartellino"><span class="lettera">24</span><span class="nome">Compagni</span><span class="stato dafare">DA FARE</span><span class="bollo-agg">aggiornata</span></div>
       <div class="destinazione">&rarr; app/components/Life/GestioneCompagni.js</div>
       <p class="didascalia">I tuoi, e cosa ricordano. Perche un Compagno che ricorda e una scelta, non un difetto.</p>
       <div class="telefono">
@@ -1831,8 +1876,8 @@
         <li>«Dimentica tutto» esiste ed e raggiungibile: era scritto nel codice e nessuno poteva chiederlo.</li></ul></div>
     </div>
 
-    <div class="colonna">
-      <div class="cartellino"><span class="lettera">25</span><span class="nome">Compiti</span><span class="stato dafare">DA FARE</span></div>
+    <div class="colonna aggiornata">
+      <div class="cartellino"><span class="lettera">25</span><span class="nome">Compiti</span><span class="stato dafare">DA FARE</span><span class="bollo-agg">aggiornata</span></div>
       <div class="destinazione">&rarr; app/components/Life/CompitiView.js</div>
       <p class="didascalia">Cosa devi studiare e per quando. I materiali si aggiungono con una foto.</p>
       <div class="telefono">
@@ -1865,8 +1910,8 @@
         <li>Fotografa e incolla sono due tasti pari: incollare e gratis, fotografare costa — e si dice dove costa.</li></ul></div>
     </div>
 
-    <div class="colonna">
-      <div class="cartellino"><span class="lettera">26</span><span class="nome">Sommario</span><span class="stato dafare">DA FARE</span></div>
+    <div class="colonna aggiornata">
+      <div class="cartellino"><span class="lettera">26</span><span class="nome">Sommario</span><span class="stato dafare">DA FARE</span><span class="bollo-agg">aggiornata</span></div>
       <div class="destinazione">&rarr; app/components/SummaryView.js</div>
       <p class="didascalia">Cosa vi siete detti, in dieci righe. E cosa avete deciso.</p>
       <div class="telefono">
@@ -1901,8 +1946,8 @@
 
   <div class="pista">
 
-    <div class="colonna">
-      <div class="cartellino"><span class="lettera">27</span><span class="nome">Impostazioni</span><span class="stato dafare">DA FARE</span></div>
+    <div class="colonna aggiornata">
+      <div class="cartellino"><span class="lettera">27</span><span class="nome">Impostazioni</span><span class="stato dafare">DA FARE</span><span class="bollo-agg">aggiornata</span></div>
       <div class="destinazione">&rarr; app/components/SettingsView.js</div>
       <p class="didascalia">Ogni riga dice il suo valore attuale a destra. Non si entra per scoprire com'e.</p>
       <div class="telefono">
@@ -1930,8 +1975,8 @@
         <li>Tre gruppi con l'etichetta: lingue, voce, aspetto. Non una lista lunga uguale.</li></ul></div>
     </div>
 
-    <div class="colonna">
-      <div class="cartellino"><span class="lettera">28</span><span class="nome">Le voci</span><span class="stato dafare">DA FARE</span></div>
+    <div class="colonna aggiornata">
+      <div class="cartellino"><span class="lettera">28</span><span class="nome">Le voci</span><span class="stato dafare">DA FARE</span><span class="bollo-agg">aggiornata</span></div>
       <div class="destinazione">&rarr; app/components/VoiceTestView.js</div>
       <p class="didascalia">Si ascoltano prima di sceglierle. Una voce non si giudica dal nome.</p>
       <div class="telefono">
@@ -1962,8 +2007,8 @@
         <li>Sotto ogni voce, le <span class="ril">lingue in cui e madrelingua</span>: e cio che decide se ti serve.</li></ul></div>
     </div>
 
-    <div class="colonna">
-      <div class="cartellino"><span class="lettera">29</span><span class="nome">Le tue chiavi</span><span class="stato dafare">DA FARE</span></div>
+    <div class="colonna aggiornata">
+      <div class="cartellino"><span class="lettera">29</span><span class="nome">Le tue chiavi</span><span class="stato dafare">DA FARE</span><span class="bollo-agg">aggiornata</span></div>
       <div class="destinazione">&rarr; app/components/ApiKeysView.js</div>
       <p class="didascalia">Roba tecnica. Dice cosa sblocca ognuna, e non mostra mai la chiave intera.</p>
       <div class="telefono">
@@ -1993,8 +2038,8 @@
         <li>La chiave si vede solo per le ultime quattro cifre, mai intera.</li></ul></div>
     </div>
 
-    <div class="colonna">
-      <div class="cartellino"><span class="lettera">30</span><span class="nome">Rubrica</span><span class="stato dafare">DA FARE</span></div>
+    <div class="colonna aggiornata">
+      <div class="cartellino"><span class="lettera">30</span><span class="nome">Rubrica</span><span class="stato dafare">DA FARE</span><span class="bollo-agg">aggiornata</span></div>
       <div class="destinazione">&rarr; app/components/ContactsView.js</div>
       <p class="didascalia">Chi hai incontrato, in che lingua parlava, e se e online adesso.</p>
       <div class="telefono">
@@ -2022,8 +2067,8 @@
         <li>Il pallino verde sull'avatar, non una parola in piu.</li></ul></div>
     </div>
 
-    <div class="colonna">
-      <div class="cartellino"><span class="lettera">31</span><span class="nome">Scanner biglietti</span><span class="stato dafare">DA FARE</span></div>
+    <div class="colonna aggiornata">
+      <div class="cartellino"><span class="lettera">31</span><span class="nome">Scanner biglietti</span><span class="stato dafare">DA FARE</span><span class="bollo-agg">aggiornata</span></div>
       <div class="destinazione">&rarr; app/components/BusinessView.js + public/scanner/ (da confermare)</div>
       <p class="didascalia">La foto diventa un contatto. E si controlla prima di salvarlo.</p>
       <div class="telefono">
@@ -2047,8 +2092,8 @@
         <li>I campi su cui la lettura e incerta sono in oro, non uguali agli altri.</li></ul></div>
     </div>
 
-    <div class="colonna">
-      <div class="cartellino"><span class="lettera">32</span><span class="nome">Pagina del tassista</span><span class="stato dafare">DA FARE</span></div>
+    <div class="colonna aggiornata">
+      <div class="cartellino"><span class="lettera">32</span><span class="nome">Pagina del tassista</span><span class="stato dafare">DA FARE</span><span class="bollo-agg">aggiornata</span></div>
       <div class="destinazione">&rarr; app/components/TaxiDriverView.js</div>
       <p class="didascalia">Si apre sul SUO telefono, e lui non ha l'app. Grande, poche cose, la sua lingua.</p>
       <div class="telefono">
@@ -2673,8 +2718,8 @@
 
   <div class="pista">
 
-    <div class="colonna">
-      <div class="cartellino"><span class="lettera">E</span><span class="nome">Il pannello della finestra</span><span class="stato dafare">DA FARE</span></div>
+    <div class="colonna aggiornata">
+      <div class="cartellino"><span class="lettera">E</span><span class="nome">Il pannello della finestra</span><span class="stato dafare">DA FARE</span><span class="bollo-agg">aggiornata</span></div>
       <div class="destinazione">&rarr; app/components/ui/PannelloLaterale.js (+ MondoView strumenti)</div>
       <p class="didascalia">Qui si decide cosa cerca il mondo, e ogni quanto. Il ritmo lo dai tu.</p>
       <div class="telefono">
@@ -2715,8 +2760,8 @@
       </div>
     </div>
 
-    <div class="colonna">
-      <div class="cartellino"><span class="lettera">F</span><span class="nome">Il pannello di Vita</span><span class="stato dafare">DA FARE</span></div>
+    <div class="colonna aggiornata">
+      <div class="cartellino"><span class="lettera">F</span><span class="nome">Il pannello di Vita</span><span class="stato dafare">DA FARE</span><span class="bollo-agg">aggiornata</span></div>
       <div class="destinazione">&rarr; app/components/ui/PannelloLaterale.js</div>
       <p class="didascalia">Le sette sezioni non stanno piu in fila sopra la conversazione.</p>
       <div class="telefono">
@@ -2752,8 +2797,8 @@
       </div>
     </div>
 
-    <div class="colonna">
-      <div class="cartellino"><span class="lettera">G</span><span class="nome">Il piu, aperto</span><span class="stato dafare">DA FARE</span></div>
+    <div class="colonna aggiornata">
+      <div class="cartellino"><span class="lettera">G</span><span class="nome">Il piu, aperto</span><span class="stato dafare">DA FARE</span><span class="bollo-agg">aggiornata</span></div>
       <div class="destinazione">&rarr; app/components/NewConversationSheet.js — A TUTTA PAGINA, col barcode</div>
       <p class="didascalia">Cosa si puo mandare oltre alle parole. Sale dal basso, dal tasto che l'ha aperto.</p>
       <div class="telefono">
