@@ -254,7 +254,13 @@ export default function useTranslation({
     // ── PHASE 1: Send original immediately (skip if caller already sent) ──
     if (!opts.skipPhase1) {
       getPerf().mark(PERF.PHASE1_SEND);
-      if (roomId) sendMessage(text, null, myL.code, primaryTargetLang, null, { idCattura, rispostaA: opts.rispostaA });
+      // b.486 — SE NON C'E' NESSUNO PER CUI TRADURRE, IL MESSAGGIO LO
+      // DICHIARA. La regola b.289 (niente destinatari = niente traduzione,
+      // niente spesa) e giusta e resta; ma il messaggio partiva IDENTICO a
+      // uno in attesa di traduzione, e la bolla del mittente mostrava
+      // «Traduzione...» PER SEMPRE — trovato nel collaudo del 25/08: la
+      // prima cosa che il partner vedeva entrando era un messaggio rotto.
+      if (roomId) sendMessage(text, null, myL.code, primaryTargetLang, null, { idCattura, rispostaA: opts.rispostaA, soloOriginale: targetLangs.length === 0 });
       getPerf().measure(PERF.PHASE1_SEND);
     }
     // b.247 — la cattura in corso risulta partita: un secondo invio dello
@@ -455,7 +461,9 @@ export default function useTranslation({
     const idCattura = nuovoIdCattura();
     // b.289 — con targetLangs vuoto (nessuno da tradurre) il messaggio
     // parte comunque, nella lingua di chi parla.
-    sendMessage(original, null, myL.code, primaryTarget?.code || myL.code, null, { idCattura });
+    // b.486 — stesso segno del percorso testo: senza destinatari la bolla
+    // non deve promettere una traduzione che non arrivera mai.
+    sendMessage(original, null, myL.code, primaryTarget?.code || myL.code, null, { idCattura, soloOriginale: targetLangs.length === 0 });
     setStreamingMsg({ original, translated: '...', isStreaming: false });
 
     try {

@@ -117,9 +117,13 @@ const RoomHeader = memo(function RoomHeader({
             e LA persona con cui parli). */}
         {partner && otherMembers.length === 1 && (
           <span style={{display:'flex', alignItems:'center', gap:8, minWidth:0, flexShrink:1}}>
-            {partner.avatar
-              ? <AvatarImg src={partner.avatar} size={30} alt="" />
-              : null}
+            {/* b.486 — la faccia c'e SEMPRE: se il membro non ha un avatar
+                si ricade su quello di default, come fa gia getSenderAvatar
+                nelle bolle. Nel collaudo del 25/08 il partner senza avatar
+                lasciava la testata con solo nome e bandiera: il template
+                04b la vuole con la faccia, ed e la faccia che si riconosce
+                al volo, prima ancora di leggere. */}
+            <AvatarImg src={partner.avatar || 'av1'} size={30} alt="" />
             <span style={{fontSize:16, fontWeight:600, color:S.colors.textPrimary, fontFamily:FONT,
               whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis', minWidth:0}}>
               {partner.name}

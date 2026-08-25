@@ -214,6 +214,31 @@ qualunque refactoring. Non si propone di rimandarlo.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.486** (push #775) — PAGINA 04/04b (chat singola e di
+  gruppo): verifica col template, un difetto funzionale chiuso, un
+  ritocco. Collaudo fisico del 25/08, due schede nella stessa stanza.
+  VERIFICA PRIMA DI TUTTO: la 04b che il template dava «DA FARE» era gia
+  mezza applicata (b.466 partner in testata, b.470 quattro comandi,
+  b.473 coppia non ripetuta, b.482 pila nell'angolo). Il ConsumoChip
+  resta in testata: porta scritto «(Luca)», e un ordine, non una svista.
+  IL DIFETTO: «Traduzione...» PER SEMPRE. Un messaggio mandato quando in
+  stanza c'era una persona sola restava con l'etichetta in corsivo sotto,
+  anche dopo l'ingresso del partner: la prima cosa che il partner vedeva
+  entrando era un messaggio rotto. La causa non e un guasto ma una regola
+  giusta senza etichetta: b.289 (nessun destinatario = niente traduzione,
+  niente spesa) e sacrosanta, ma il messaggio partiva IDENTICO a uno in
+  attesa, e la bolla non poteva distinguere «sta arrivando» da «non
+  arrivera mai». Ora il messaggio nato senza destinatari lo DICHIARA
+  (`soloOriginale`, nei due percorsi: testo e audio) e la bolla del
+  mittente non scrive piu «Traduzione...» su di lui. Un ERRORE vero si
+  mostra comunque; il tasto «Traduci» del ricevente (b.326) non cambia;
+  il segno NON va al server (il corpo di /api/messages e costruito a
+  mano, verificato).
+  RITOCCO: la faccia del partner in testata c'e SEMPRE — senza avatar si
+  ricade su quello di default, come gia fanno le bolle.
+  PROVA: `__tests__/traduzione-eterna-b486.test.js` — 4 rosse sul codice
+  di prima, verdi adesso.
+
 - Versione: **b.485** (push #774) — «U.FIND IS NOT A FUNCTION», DI NUOVO, e
   stavolta l'ha visto Luca sul telefono con la pagina intera sostituita dalla
   scritta di errore. E' lo stesso schianto chiuso in b.426.

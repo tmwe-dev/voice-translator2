@@ -256,9 +256,16 @@ const MessageList = memo(function MessageList({
                   {/* Secondary line: original for sender (small), original for receiver */}
                   {pendingTranslation ? (
                     isMine ? (
+                      // b.486 — se il messaggio e partito quando non c'era
+                      // nessuno per cui tradurre (b.289), qui non si scrive
+                      // «Traduzione...»: non e in corso niente, e un'attesa
+                      // che non finisce mai e una bugia. Il ricevente non
+                      // cambia: il suo tasto «Traduci» (b.326) resta.
+                      m.soloOriginale && !m._translationError ? null : (
                       <div style={{fontSize:mis(11), color:S.colors.textMuted, marginTop:4, fontStyle:'italic'}}>
                         {m._translationError ? L('translationFailedShort') : L('translating')}
                       </div>
+                      )
                     ) : (() => {
                       // b.326 — D2: il lettore traduce QUI, subito, senza aspettare
                       // una traduzione del mittente che potrebbe non arrivare mai.

@@ -190,6 +190,11 @@ export default function useTranslationAPI({
       targetLang,
       translations: translations || null,
       ...(opzioni.rispostaA && { rispostaA: opzioni.rispostaA }),
+      // b.486 — «nessuno per cui tradurre» viaggia col messaggio: la bolla
+      // del mittente lo usa per NON mostrare una «Traduzione...» eterna.
+      // Al server non va (il corpo qui sotto e costruito a mano): e un
+      // fatto di presentazione, non di dato.
+      ...(opzioni.soloOriginale && { soloOriginale: true }),
       timestamp: Date.now(),
       // ── b.120 · "in coda" non e "consegnato" ──
       // Fino a ieri qui c'era `_status: 'sent'`, messo PRIMA che
