@@ -219,6 +219,18 @@ qualunque refactoring. Non si propone di rimandarlo.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.496** (push #785) — TAVOLA 22: IL PROFILO PUBBLICO.
+  «Chi e, che lingue parla, cosa ha detto. Nient'altro.» Le LINGUE
+  accanto al nome vengono dai suoi commenti veri (mondoDB seleziona
+  anche la colonna lang — sola lettura, una colonna in piu); TRE
+  NUMERI in fila con cifre tabulari (discussioni, commenti, seguaci);
+  le discussioni portano l'ARGOMENTO sotto; Aa in testata.
+  SCOSTAMENTI DICHIARATI: niente faccia grande (nel Mondo non esiste
+  un avatar pubblico), niente telefono ne «Aggiungi ai contatti»
+  (funzioni che oggi non esistono: un tasto che apre il nulla e un
+  tasto finto). Segui resta in testata. Nessuna chiave nuova.
+  PROVE: `persona-tavola-22-b496.test.js` (rossa prima).
+
 - Versione: **b.495** (push #784) — TAVOLA 21: LA DISCUSSIONE, e una
   correzione vista a schermo.
   TAVOLA 21 (MondoDiscussioni): la notizia sta GRANDE in cima al corpo

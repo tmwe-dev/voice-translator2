@@ -1,6 +1,6 @@
 'use client';
 import { memo, useState, useEffect, useCallback } from 'react';
-import { FONT, vibrate } from '../lib/constants.js';
+import { FONT, vibrate, getLang } from '../lib/constants.js';
 import Icon from './Icon.js';
 import { useApp } from '../contexts/AppContext.js';
 
@@ -23,6 +23,9 @@ function MondoPersona({ publicId, onClose, onOpenDiscussione }) {
   // b.255 — mancava del tutto un posto dove dire che il Segui non e
   // riuscito: il pulsante tornava indietro da solo, senza spiegazioni.
   const [erroreSegui, setErroreSegui] = useState('');
+  // b.496 — tavola 22: Aa come su ogni pagina.
+  const [zoomTesto, setZoomTesto] = useState(0);
+  const ingr = 1 + zoomTesto * 0.15;
 
   useEffect(() => {
     let vivo = true;
@@ -98,6 +101,14 @@ function MondoPersona({ publicId, onClose, onOpenDiscussione }) {
           <div style={{ fontSize: 16, fontWeight: 600, color: testoP }}>{p?.nome || (caricando ? '…' : '—')}</div>
           <div style={{ fontSize: 11, color: muto }}>{(p?.seguaci ?? 0)} {L('followersLabel')}</div>
         </div>
+        {/* b.496 — tavola 22: Aa in testata, come ovunque. */}
+        <button onClick={() => { vibrate(6); setZoomTesto((z) => (z >= 3 ? 0 : z + 1)); }}
+          title={L('textBigger')} aria-label={L('textBigger')}
+          style={{ width: 44, height: 44, borderRadius: 12, flexShrink: 0, cursor: 'pointer',
+            background: zoomTesto ? `${accent}22` : card, border: bordo, color: muto,
+            fontFamily: FONT, fontSize: 15, fontWeight: 600 }}>
+          Aa
+        </button>
         {/* b.482 — la pillola Segui era alta ventinove: sotto la soglia
             del dito. Il rientro interno resta quello di una pillola, a
             cambiare e solo l'altezza utile. */}
@@ -122,10 +133,55 @@ function MondoPersona({ publicId, onClose, onOpenDiscussione }) {
       )}
 
       <div style={{ flex: 1, overflowY: 'auto', padding: '4px 20px 24px', scrollbarWidth: 'none' }}>
+        {/* ═══ b.496 — TAVOLA 22: «Chi e, che lingue parla, cosa ha
+            detto. Nient'altro.» Le LINGUE vengono dai suoi commenti
+            veri (colonna lang), non da un campo dichiarato che non
+            esiste; i TRE NUMERI sono conteggi reali. SCOSTAMENTI
+            DICHIARATI: niente faccia grande (nel Mondo non esiste un
+            avatar pubblico), niente tondino telefono ne «Aggiungi ai
+            contatti» (chiamare o salvare una persona del Mondo non e
+            una funzione che esista oggi: un tasto che apre il nulla e
+            un tasto finto). ═══ */}
+        {p && (() => {
+          const lingue = [...new Set((p.commenti || []).map((c) => c.lang).filter(Boolean))].slice(0, 4);
+          return (
+            <div style={{ padding: '8px 0 4px' }}>
+              {lingue.length > 0 && (
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 10 }}>
+                  {lingue.map((l) => {
+                    const info = getLang(l);
+                    return (
+                      <span key={l} style={{ display: 'inline-flex', alignItems: 'center', gap: 5,
+                        padding: '4px 10px', borderRadius: 999, background: card, border: bordo,
+                        fontSize: 12, color: testoP }}>
+                        <span aria-hidden="true">{info.flag}</span>{info.name || l}
+                      </span>
+                    );
+                  })}
+                </div>
+              )}
+              <div style={{ display: 'flex', gap: 18, padding: '2px 0' }}>
+                {[[p.discussioni?.length ?? 0, L('discussionsLabel')],
+                  [p.commenti?.length ?? 0, L('commentsLabel')],
+                  [p.seguaci ?? 0, L('followersLabel')]].map(([nu, eti]) => (
+                  <div key={eti}>
+                    <div style={{ fontSize: 20 * ingr, fontWeight: 600, color: testoP, fontVariantNumeric: 'tabular-nums' }}>{nu}</div>
+                    <div style={{ fontSize: 11 * ingr, color: muto }}>{eti}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })()}
         {p?.discussioni?.length > 0 && (
           <>
             {sezione(L('discussionsLabel'))}
-            {p.discussioni.map(d => voce(d.title || '—', () => { vibrate(6); onOpenDiscussione?.(d.id); }))}
+            {p.discussioni.map(d => voce(
+              <span key={d.id} style={{ display: 'block' }}>
+                <span style={{ display: 'block', fontSize: 13 * ingr, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.title || '—'}</span>
+                {d.topic && <span style={{ display: 'block', fontSize: 11 * ingr, color: muto, marginTop: 2 }}>{d.topic}</span>}
+              </span>,
+              () => { vibrate(6); onOpenDiscussione?.(d.id); }))}
           </>
         )}
         {/* b.482 — NIENTE TASTI INVISIBILI: un commento senza testo

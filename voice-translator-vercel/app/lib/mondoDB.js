@@ -304,7 +304,10 @@ async function attivitaPersona(publicId, { limit = 30 } = {}) {
     db().from('mondo_discussions').select('id, title, topic, country, created_at')
       .eq('author_user_id', publicId).eq('archived', false)
       .order('created_at', { ascending: false }).limit(limit),
-    db().from('mondo_comments').select('id, discussion_id, text, created_at')
+    // b.496 — tavola 22: anche la LINGUA di ogni commento — serve al
+    // profilo pubblico per dire che lingue parla la persona, con dati
+    // veri e non inventati. Sola lettura, una colonna in piu.
+    db().from('mondo_comments').select('id, discussion_id, text, lang, created_at')
       .eq('author_user_id', publicId).eq('hidden', false)
       .order('created_at', { ascending: false }).limit(limit),
   ]);
