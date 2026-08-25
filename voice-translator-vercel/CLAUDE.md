@@ -219,6 +219,33 @@ qualunque refactoring. Non si propone di rimandarlo.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.487** (push #776) — TAVOLA 14 DEL TEMPLATE: la sala
+  d'attesa (`LobbyView.js`). Applicata fedelmente:
+  1. IL CODICE E' LA COSA PIU GRANDE A SCHERMO — 48 punti, cifre
+     tabulari, testo pieno (era 30, colorato d'accento, sotto
+     un'etichetta «CODICE» che non informava). E' quello che si detta al
+     telefono o si urla in un bar.
+  2. Sotto il codice, COSA FARCI: «Leggi questo codice a chi deve
+     entrare» — nuova chiave `readCodeAloud`, in 38 lingue.
+  3. «IN ATTESA» E' UNA RIGA COL PALLINO verde (stanza viva), non un
+     riquadro; cambia da sola quando entra qualcuno.
+  4. IL BOTTONE IN FONDO C'E' SEMPRE: da soli «Entra tu per primo»
+     (`enterFirst`), in due «Iniziamo». Prima si poteva entrare SOLO
+     quando qualcuno era gia dentro: chiusi fuori dalla propria stanza.
+  5. Pillola «Copia» accanto a «Condividi» (`copyWord`): chi non usa il
+     foglio di condivisione non aveva modo di prendersi il link.
+  6. `membriDi()` anche qui (regola b.485): c'era un
+     `roomInfo?.members?.[1]` letto a mano.
+  SCOSTAMENTO DICHIARATO: la tavola ha il tasto Aa in testata (regola
+  10); lo zoom del testo pero oggi vive dentro RoomView e qui sarebbe un
+  tasto finto. Si aggiunge quando lo zoom diventa globale, non prima.
+  ORDINI NUOVI DI LUCA (25/08): la pagina Mondo col pianeta NON si tocca
+  (si guarda insieme); elementi fuori template si dispongono secondo il
+  kit, o in sidebar se c'e dubbio; dopo ogni pagina verifica visiva col
+  browser. I processi lanciati da device_bash MUOIONO fra una chiamata e
+  l'altra: il dev server (porta 3005) va avviato dal terminale di Luca.
+  PROVA: `__tests__/sala-attesa-b487.test.js`.
+
 - Versione: **b.486** (push #775) — PAGINA 04/04b (chat singola e di
   gruppo): verifica col template, un difetto funzionale chiuso, un
   ritocco. Collaudo fisico del 25/08, due schede nella stessa stanza.
