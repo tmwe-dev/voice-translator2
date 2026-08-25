@@ -219,6 +219,33 @@ qualunque refactoring. Non si propone di rimandarlo.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.505** (push #794) — UN LAYER SOLO per i comandi del
+  cielo (ordine di Luca: «la luna e il sole non funzionano»).
+  IL GUASTO: il wrapper del globo in MondoView dichiarava la quota
+  zero — position piu z-index creano uno STACKING CONTEXT, una gabbia:
+  la luna e il suo menu (fixed, quota 80/81) per quanto alti restavano
+  composti dentro il contesto a quota zero, sotto la testata (quota 6)
+  e sotto gli elenchi — VISIBILI ma NON CLICCABILI. Un fixed non
+  scappa dalla gabbia del suo avo. Senza z-index il wrapper non fa
+  contesto; il pianeta resta sotto perche il contenitore interno di
+  GloboMondo la quota zero ce l'ha gia.
+  RAPPORTO ORIGINE DATI DEL PIANETA (verificato per Luca):
+  - puntini/traffico: STANZE APERTE VERE (rooms) + discussioni del
+    feed caldo, scalati sul paese piu vivo (MondoView, b.363/b.403);
+  - rotte aeroplanini: coppie di paesi con stanze vere + rotte di
+    scena del file (b.363);
+  - texture Terra/luna: CDN esterni (unpkg three-globe, jsdelivr) —
+    verificato 200 in produzione; il motore del globo in
+    public/mondo-globo.html e INTATTO rispetto all'originale
+    bartalk-completo_2.html di Luca (navigator/wueform/ibrido, texture
+    day/night, points identici) — i 3.7MB di differenza sono l'app
+    demo intorno, tolta in b.369, NON il pianeta;
+  - il pianeta SI FERMA quando la pagina e nascosta (rAF sospesi dal
+    browser): e per questo che a Chrome minimizzato lo schermo del
+    Mondo appare nero — non e un guasto, ma va verificato a schermo
+    che RIPARTA quando la pagina torna visibile.
+  PROVE: `globo-un-layer-b505.test.js` (rossa prima).
+
 - Versione: **b.504** (push #793) — IL MONDO, guardato con Luca:
   tavole 02/M1/M2. Le tre linguette (Stanze·News·Mondo) e il pianeta
   solo nella sua linguetta c'erano GIA (b.476). Quel che mancava:

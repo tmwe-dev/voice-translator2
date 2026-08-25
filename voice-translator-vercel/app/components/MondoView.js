@@ -387,7 +387,17 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
           file, stesse animazioni, stesso cielo. E' cambiato solo DOVE
           compare. */}
       {tab === 'mondo' && (
-        <div style={{ position: 'absolute', inset: 0, zIndex: 0 }}>
+        // b.505, ordine di Luca: «fai in modo che ci sia un layer solo —
+        // la luna e il sole non funzionano». Questo wrapper dichiarava
+        // la quota zero — position piu z-index creano uno STACKING CONTEXT,
+        // una gabbia: la luna e il suo menu (fixed, quota 80/81) per
+        // quanto alti restavano composti dentro il contesto a quota
+        // zero, sotto la testata (6) e gli elenchi — visibili ma non
+        // cliccabili. Un fixed non scappa dalla gabbia del suo avo.
+        // Senza z-index il wrapper non fa contesto; il pianeta resta
+        // comunque sotto perche il contenitore interno di GloboMondo la
+        // quota zero ce l'ha gia.
+        <div style={{ position: 'absolute', inset: 0 }}>
           <GloboMondo sfondo paese={paeseScelto} rotte={rotteVere} traffico={trafficoPaesi}
             titolo={L('worldNowTitle')} etichettaCielo={L('skyOfPlanet')}
             // b.383 — toccare un paese sul pianeta adesso FILTRA le liste.
