@@ -93,11 +93,17 @@ export default function NumeroSicurezza({ numero, C, compatto = false }) {
 
       {pronto ? (
         <>
+          {/* b.490 — tavola 20: il numero e LA COSA GRANDE. Era 17 punti,
+              da leggere a voce strizzando gli occhi; ora e 28, a gruppi
+              (li fa gia improntaChiavi), cifre tabulari, e va a capo da
+              solo se i gruppi non stanno in una riga — «si legge a voce
+              senza perdere il segno». */}
           <div style={{
             fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
-            fontSize: 17, letterSpacing: 1.5, color: testoVivo,
-            padding: '10px 12px', borderRadius: 9,
+            fontSize: 28, fontWeight: 600, letterSpacing: 3, color: testoVivo,
+            lineHeight: 1.5, padding: '12px 12px', borderRadius: 9,
             background: 'rgba(0,0,0,0.22)', textAlign: 'center', userSelect: 'all',
+            fontVariantNumeric: 'tabular-nums', overflowWrap: 'break-word',
           }}>
             {numero}
           </div>
@@ -110,6 +116,16 @@ export default function NumeroSicurezza({ numero, C, compatto = false }) {
             </span>
           </div>
 
+          {/* b.490 — tavola 20: quando i numeri combaciano lo si LEGGE,
+              col pallino verde — prima il bottone spariva e restava solo
+              un bordo piu verde, che non dice niente a voce alta. */}
+          {verificato && (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+              marginTop: 11, color: verde, fontSize: 14, fontWeight: 500 }}>
+              <span aria-hidden="true" style={{ width: 8, height: 8, borderRadius: 999, background: verde }} />
+              {L('secNumbersMatch')}
+            </div>
+          )}
           {!verificato && (
             <button
               onClick={() => setVerificato(true)}

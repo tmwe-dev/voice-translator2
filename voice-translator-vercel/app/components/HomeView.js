@@ -290,10 +290,21 @@ const HomeView = memo(function HomeView({ selectedMode, setSelectedMode,
               Adesso: le bandiere nell'angolo, il numero centrato sotto il
               marchio — dove serve a Luca per sapere in un colpo d'occhio
               quale versione ha in mano. */}
-          <div style={{
-            textAlign: 'center', fontFamily: FONT, fontSize: 30, lineHeight: 1,
-            letterSpacing: 0.2, color: C.textPrimary, padding: '3px 0',
-          }}>
+          {/* b.490, ordine di Luca: l'invito «viene attivato dal logo»,
+              non dal foglio +. Toccare il marchio apre QuickInvite
+              (tavola 16), che col ridisegno della Home era rimasta una
+              pagina orfana: nessun punto dell'interfaccia la apriva piu. */}
+          <div
+            role="button"
+            tabIndex={0}
+            aria-label={L('optInviteTitle')}
+            onClick={() => { vibrate(); setView('quickinvite'); }}
+            onKeyDown={(e) => { if (e.key === 'Enter') { vibrate(); setView('quickinvite'); } }}
+            style={{
+              textAlign: 'center', fontFamily: FONT, fontSize: 30, lineHeight: 1,
+              letterSpacing: 0.2, color: C.textPrimary, padding: '3px 0',
+              cursor: 'pointer', WebkitTapHighlightColor: 'transparent',
+            }}>
             Bar<span style={{ color: C.accent }}>Talk</span>
           </div>
           <div

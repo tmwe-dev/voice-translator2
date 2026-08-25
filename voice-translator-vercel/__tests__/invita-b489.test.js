@@ -63,13 +63,29 @@ describe('tavola 16 — niente colori scritti a mano', () => {
   });
 });
 
+describe("b.490 — l'invito e raggiungibile dal logo", () => {
+  // Ordine di Luca (25/08): «viene attivato dal logo». Col ridisegno
+  // della Home la voce «Invita una persona» era sparita e QuickInvite —
+  // rifatta sulla tavola 16 — era una pagina ORFANA: nessun punto
+  // dell'interfaccia la apriva piu. Ora il marchio in testata la apre.
+  it('il marchio BarTalk apre QuickInvite', () => {
+    const home = readFileSync(join(process.cwd(), 'app/components/HomeView.js'), 'utf8');
+    expect(home).toMatch(/onClick=\{\(\) => \{ vibrate\(\); setView\('quickinvite'\); \}\}/);
+  });
+
+  it("e il marchio dice cos'e a chi non vede", () => {
+    const home = readFileSync(join(process.cwd(), 'app/components/HomeView.js'), 'utf8');
+    expect(home).toMatch(/aria-label=\{L\('optInviteTitle'\)\}[\s\S]{0,600}Bar<span/);
+  });
+});
+
 describe('le chiavi nuove esistono in tutte le lingue', () => {
   it('nessuna lingua di serie B', async () => {
     const LINGUE = readdirSync(join(process.cwd(), 'app/lib/locales'))
       .filter((f) => f.endsWith('.js')).map((f) => f.replace('.js', ''));
     for (const l of LINGUE) {
       await preloadLang(l);
-      for (const k of ['inviteExplain', 'inviteReadLang']) {
+      for (const k of ['inviteExplain', 'inviteReadLang', 'optInviteTitle']) {
         expect(t(l, k), `${l}/${k}`).not.toBe(k);
       }
     }

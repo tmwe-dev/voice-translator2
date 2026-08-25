@@ -11,6 +11,7 @@ import { rapportoMonitorTesto } from '../lib/monitorSviluppo.js';
 import { toast } from '../lib/avvisi.js';
 import { BatteryPillSlot } from './BatteryPill.js';
 import ConsumoChip from './ConsumoChip.js';
+import NumeroSicurezza from './NumeroSicurezza.js';
 
 // ═══ INIZIO b.129 — due colori, una forma ═══
 //
@@ -52,6 +53,19 @@ const rigaMenu = (S) => ({
   color: S.colors.textPrimary, fontSize: 13, fontWeight: 500, textAlign: 'left',
   WebkitTapHighlightColor: 'transparent', fontFamily: FONT,
 });
+
+// b.490 — tavola 19: «ogni voce dice cosa fa, non solo come si chiama».
+// La spiegazione sta sotto il nome, piccola e muta: nessuno deve toccare
+// una voce per scoprire cosa fa.
+const VoceMenu = ({ S, icona, nome, spiega, onClick }) => (
+  <button onClick={onClick} style={rigaMenu(S)}>
+    <span style={iconaMenu}>{icona}</span>
+    <span style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
+      <span>{nome}</span>
+      {spiega && <span style={{ fontSize: 11, fontWeight: 400, color: S.colors.textMuted }}>{spiega}</span>}
+    </span>
+  </button>
+);
 const iconaMenu = { fontSize: 15, width: 24, textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center' };
 
 const RoomHeader = memo(function RoomHeader({
@@ -71,6 +85,7 @@ const RoomHeader = memo(function RoomHeader({
   setView, setZoomTesto,
 }) {
   const [showMoreMenu, setShowMoreMenu] = useState(false);
+  const [mostraNumero, setMostraNumero] = useState(false); // b.490 — l'overlay del numero di sicurezza
 
   // b.173 — attivazione Taxi: identica a prima (era dentro TaxiButton),
   // ora invocata da una voce di menu. Nessun cambiamento di logica.
@@ -320,7 +335,11 @@ const RoomHeader = memo(function RoomHeader({
                       <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/>
                     </svg>
                   </span>
-                  <span>{L('voiceCall')}</span>
+                  {/* b.490 — tavola 19: la voce dice cosa fa */}
+                  <span style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
+                    <span>{L('voiceCall')}</span>
+                    <span style={{ fontSize: 11, fontWeight: 400, color: S.colors.textMuted }}>{L('voiceCallDesc')}</span>
+                  </span>
                 </button>
               )}
 
@@ -329,8 +348,30 @@ const RoomHeader = memo(function RoomHeader({
                 <button onClick={() => { setShowChatActions(true); setShowMoreMenu(false); }}
                   style={rigaMenu(S)}>
                   <span style={iconaMenu}><IconBrainAI size={15}/></span>
-                  <span>{L('aiActionsTitle')}</span>
+                  {/* b.490 — tavola 19: la voce dice cosa fa */}
+                  <span style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
+                    <span>{L('aiActionsTitle')}</span>
+                    <span style={{ fontSize: 11, fontWeight: 400, color: S.colors.textMuted }}>{L('aiActionsDesc')}</span>
+                  </span>
                 </button>
+              )}
+
+              {/* b.490 — tavola 19: IL NUMERO DI SICUREZZA ENTRA NEL MENU,
+                  con la sua spiegazione («Controlla che nessuno ascolti»).
+                  Prima viveva solo come chip sopra la chat, visibile ma
+                  anonimo: nel menu ha nome e scopo. Compare solo quando il
+                  collegamento diretto esiste — senza E2E il numero non c'e,
+                  e una voce che apre il nulla e un tasto finto.
+                  SCOSTAMENTI DICHIARATI dalla tavola: «Chi puo entrare» non
+                  ha oggi un controllo da dentro la stanza (si aggiungera
+                  con quello); «Rapporto tecnico» e «Chiudi la stanza» vivono
+                  nel pannello laterale per la regola 11 e per b.482 — un
+                  comando rosso a un dito dalla chiamata e una trappola. */}
+              {webrtc?.webrtcConnected && webrtc?.numeroSicurezza && (
+                <VoceMenu S={S}
+                  icona={<svg width={15} height={15} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>}
+                  nome={L('securityNumberWord')} spiega={L('securityNumberDesc')}
+                  onClick={() => { setShowMoreMenu(false); setMostraNumero(true); }} />
               )}
               {/* b.482 — «CHIUDI E ARCHIVIA» SE NE VA DA QUI, e va nel
                   pannello laterale, in fondo alle preferenze. Non e sparita:
@@ -407,6 +448,25 @@ const RoomHeader = memo(function RoomHeader({
       {showLangPicker && (
         <div onClick={() => setShowLangPicker(false)}
           style={{position:'fixed', inset:0, zIndex:99, background:'transparent'}} />
+      )}
+
+      {/* b.490 — tavola 20: il numero di sicurezza a schermo pieno, aperto
+          dal menu. Il componente e lo stesso del chip: una cosa sola, due
+          porte. */}
+      {mostraNumero && (
+        <div onClick={() => setMostraNumero(false)}
+          style={{position:'fixed', inset:0, zIndex:210, background:'rgba(0,0,0,0.6)',
+            display:'flex', alignItems:'center', justifyContent:'center', padding:20}}>
+          <div onClick={(e) => e.stopPropagation()} style={{width:'min(420px, 100%)'}}>
+            <NumeroSicurezza numero={webrtc?.numeroSicurezza} C={S.colors} />
+            <button onClick={() => setMostraNumero(false)}
+              style={{marginTop:10, width:'100%', minHeight:44, borderRadius:12, cursor:'pointer',
+                background:'transparent', border:`1px solid ${S.colors.cardBorder}`,
+                color:S.colors.textMuted, fontFamily:FONT, fontSize:13}}>
+              {L('closeWord')}
+            </button>
+          </div>
+        </div>
       )}
     </>
   );

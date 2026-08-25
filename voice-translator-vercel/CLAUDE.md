@@ -219,6 +219,35 @@ qualunque refactoring. Non si propone di rimandarlo.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.490** (push #779) — TAVOLE 19 e 20 DEL TEMPLATE, e
+  l'invito che torna raggiungibile.
+  TAVOLA 19 (menu ⋯ della chat): «ogni voce dice cosa fa» — chiamata
+  vocale e azioni AI hanno la spiegazione sotto il nome; il NUMERO DI
+  SICUREZZA entra nel menu con lo scopo scritto («Controlla che nessuno
+  ascolti») e apre l'overlay col componente vero. Compare SOLO quando il
+  collegamento diretto esiste: senza E2E il numero non c'e, e una voce
+  che apre il nulla e un tasto finto.
+  SCOSTAMENTI DICHIARATI: «Chi puo entrare» non ha oggi un controllo da
+  dentro la stanza; «Rapporto tecnico» e «Chiudi la stanza» vivono nel
+  pannello laterale (regola 11 + b.482: un comando rosso a un dito dalla
+  chiamata e una trappola).
+  TAVOLA 20 (numero di sicurezza): il numero e LA COSA GRANDE — 28
+  punti, gruppi gia fatti da improntaChiavi, cifre tabulari — e quando
+  combacia lo si LEGGE, col pallino verde, non da un bordo piu verde.
+  E L'INVITO DAL LOGO (ordine di Luca, 25/08, che corregge il primo
+  «si trova nel + sotto»: «non va nel foglio, viene attivato dal logo»):
+  col ridisegno della Home «Invita una persona» era sparita e QuickInvite
+  — appena rifatta sulla tavola 16 — era una pagina ORFANA. Ora toccare
+  il marchio BarTalk in testata la apre (con aria-label per chi non vede).
+  VERIFICA VISIVA IN PRODUZIONE (#778, prima di queste): tavola 14
+  conforme e provata (entrato da solo con «Entra tu per primo»); tavola
+  15 conforme e provata fino in fondo (caselle riempite digitando,
+  bottone acceso a codice completo, Kenji entrato e ha visto il
+  messaggio); b.486 confermato (niente «Traduzione...» eterna).
+  Chiavi nuove: securityNumberWord/Desc, voiceCallDesc, aiActionsDesc,
+  optInviteTitle — tutte in 38 lingue.
+  PROVE: `menu-e-numero-b490.test.js` + `invita-b489` estesa col gancio.
+
 - Versione: **b.489** (push #778) — TAVOLA 16 DEL TEMPLATE: invita una
   persona (`QuickInvite.js`). «Un link, e i modi per mandarlo.»
   1. IL LINK SI VEDE PER INTERO prima di mandarlo, in una scheda col
