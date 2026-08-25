@@ -219,6 +219,27 @@ qualunque refactoring. Non si propone di rimandarlo.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.489** (push #778) — TAVOLA 16 DEL TEMPLATE: invita una
+  persona (`QuickInvite.js`). «Un link, e i modi per mandarlo.»
+  1. IL LINK SI VEDE PER INTERO prima di mandarlo, in una scheda col
+     tasto copia accanto: nessuno manda una cosa che non ha letto. Prima
+     la pagina mostrava un QR senza mai dire a cosa portasse — ora sopra
+     c'e scritto: «Chi apre il link entra nella tua stanza. Sceglie la
+     sua lingua da solo» (`inviteExplain`, 38 lingue).
+  2. I CANALI PER NOME: WhatsApp, SMS, Email (nomi propri, non si
+     traducono). Il testo dentro parte NELLA LINGUA DI CHI LEGGERA'
+     (`inviteText` via `t(mapLang(guestLang))`, col pacchetto scaldato al
+     cambio di lingua) — non nella mia.
+  3. La lingua dell'invito etichettata per quello che e: «In che lingua
+     lo leggera» (`inviteReadLang`). Le pillole della tavola erano due
+     lingue d'esempio; le 44 vere stanno in tendina, la forma del kit
+     per una scelta lunga.
+  4. VIA I GRADIENTI da titolo e codice (regola 06: colore scritto a
+     mano): testo pieno, cifre tabulari, come la sala d'attesa.
+  QR e codice RESTANO (funzione viva per chi e faccia a faccia),
+  disposti sotto i canali.
+  PROVA: `__tests__/invita-b489.test.js`.
+
 - Versione: **b.488** (push #777) — TAVOLA 15 DEL TEMPLATE: entra col
   codice (`JoinView.js`). CASELLE, NON UN CAMPO: si vede quanto e lungo
   il codice prima di cominciare a scriverlo. La tavola le disegna per un

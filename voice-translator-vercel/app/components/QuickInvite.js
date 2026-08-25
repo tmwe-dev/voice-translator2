@@ -5,6 +5,7 @@ import Icon from './Icon.js';
 import { PALETTE } from '../lib/palette.js';
 import { useApp } from '../contexts/AppContext.js';
 import { disegnaQR } from '../lib/codiceQR.js';
+import { t, preloadLang, mapLang } from '../lib/i18n.js';
 
 // b.482 — I COLORI ARRIVANO DAL TEMA, non da valori scritti a mano dentro
 // la schermata: l'invito restava scuro e verde-acqua anche col tema chiaro,
@@ -72,6 +73,14 @@ function QuickInvite({ handleCreateRoom, roomId, setViewAfterCreate }) {
 
   const getUrl = () => `${APP_URL}?room=${createdRoomId}&lang=${lang}&auto=1&gl=${guestLang}`;
 
+  // b.489 — tavola 16: il messaggio dei canali (WhatsApp/SMS/Email) parte
+  // NELLA LINGUA DI CHI LO LEGGERA', non nella mia. Il pacchetto si
+  // scalda appena si sceglie la lingua; se non fa in tempo, t() ripiega
+  // sull'inglese — che per un invito e comunque meglio dell'italiano a
+  // un giapponese.
+  useEffect(() => { preloadLang(mapLang(guestLang)); }, [guestLang]);
+  const testoInvito = () => `${t(mapLang(guestLang), 'inviteText')} ${getUrl()}`;
+
   const copyLink = useCallback(() => {
     if (!createdRoomId) return;
     navigator.clipboard.writeText(getUrl()).then(() => {
@@ -111,12 +120,11 @@ function QuickInvite({ handleCreateRoom, roomId, setViewAfterCreate }) {
           {'‹'}
         </button>
         <div style={{ flex: 1 }}>
-          <div style={{
-            fontSize: 18, fontWeight: 300, letterSpacing: -0.5,
-            background: `linear-gradient(135deg, ${accento2}, ${accento1})`,
-            WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
-            backgroundClip: 'text',
-          }}>
+          {/* b.489 — tavola 16: il titolo e testo pieno, come su ogni altra
+              pagina. Il gradiente sul titolo era un colore scritto a mano
+              (regola 06 del template) e rendeva questa testata diversa da
+              tutte le altre senza dire niente in cambio. */}
+          <div style={{ fontSize: 17, fontWeight: 600, color: glass.text.primary }}>
             {L('inviteShort')}
           </div>
         </div>
@@ -158,10 +166,58 @@ function QuickInvite({ handleCreateRoom, roomId, setViewAfterCreate }) {
         {/* QR + LINGUA */}
         {createdRoomId && !creating && (
           <>
-            {/* Lingua invitato */}
+            {/* b.489 — tavola 16: PRIMA di tutto si dice cosa succede.
+                «Chi apre il link entra nella tua stanza. Sceglie la sua
+                lingua da solo.» Era il pezzo che mancava: la pagina
+                mostrava un QR senza mai dire a cosa portasse. */}
+            <div style={{ fontSize: 13, color: glass.text.muted, textAlign: 'center',
+              lineHeight: 1.5, marginBottom: 14, maxWidth: 300 }}>
+              {L('inviteExplain')}
+            </div>
+
+            {/* b.489 — tavola 16: IL LINK SI VEDE PER INTERO prima di
+                mandarlo. «Nessuno manda una cosa che non ha letto.» */}
+            <div style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10,
+              padding: '12px 14px', borderRadius: 14, marginBottom: 10, boxSizing: 'border-box',
+              background: C.inputBg || 'rgba(140,170,255,0.05)',
+              border: `1px solid ${C.inputBorder || 'rgba(160,190,255,0.16)'}` }}>
+              <span style={{ flex: 1, fontSize: 13, color: glass.text.secondary,
+                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                fontVariantNumeric: 'tabular-nums' }}>{getUrl()}</span>
+              <button onClick={copyLink} aria-label={L('copyLink')}
+                style={{ width: 38, height: 38, borderRadius: 12, flexShrink: 0, cursor: 'pointer',
+                  ...glass.btn, color: copied ? accento2 : glass.text.primary,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                {copied ? '\u2713' : <Icon name="link" size={15} color="currentColor" />}
+              </button>
+            </div>
+
+            {/* b.489 — tavola 16: i canali per mandarlo, per nome. WhatsApp,
+                SMS ed Email sono NOMI PROPRI: non si traducono. Il testo
+                dentro parte nella lingua che l'ospite leggera. */}
+            <div style={{ display: 'flex', gap: 8, width: '100%', marginBottom: 16 }}>
+              {[
+                ['WhatsApp', () => window.open(`https://wa.me/?text=${encodeURIComponent(testoInvito())}`, '_blank')],
+                ['SMS', () => { window.location.href = `sms:?&body=${encodeURIComponent(testoInvito())}`; }],
+                ['Email', () => { window.location.href = `mailto:?subject=BarTalk&body=${encodeURIComponent(testoInvito())}`; }],
+              ].map(([nome, via]) => (
+                <button key={nome} onClick={() => { vibrate(); via(); }}
+                  style={{ flex: 1, minHeight: 44, borderRadius: 14, cursor: 'pointer',
+                    ...glass.btn, color: glass.text.primary, fontFamily: FONT,
+                    fontSize: 13.5, fontWeight: 600 }}>
+                  {nome}
+                </button>
+              ))}
+            </div>
+
+            {/* Lingua invitato — tavola 16: «IN CHE LINGUA LO LEGGERA'».
+                Le pillole della tavola mostrano due lingue d'esempio; qui
+                le lingue sono quarantaquattro e stanno in una tendina, che
+                e la forma del kit per una scelta lunga. */}
             <div style={{ width: '100%', marginBottom: 16 }}>
-              <div style={{ fontSize: 11, color: glass.text.muted, marginBottom: 6, textAlign: 'center' }}>
-                {L('guestLanguage')}
+              <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: 1, textTransform: 'uppercase',
+                color: glass.text.muted, marginBottom: 6, textAlign: 'center' }}>
+                {L('inviteReadLang')}
               </div>
               {/* b.482 — la scelta della lingua e un bersaglio da toccare:
                   almeno quarantaquattro di altezza utile. */}
@@ -192,11 +248,11 @@ function QuickInvite({ handleCreateRoom, roomId, setViewAfterCreate }) {
                 display: 'block', margin: '0 auto 16px', maxWidth: 240, width: '100%',
               }} />
 
+            {/* b.489 — il codice in testo pieno, cifre tabulari: come nella
+                sala d'attesa (tavola 14). Il gradiente era decorazione. */}
             <div style={{
-              fontSize: 26, fontWeight: 300, letterSpacing: 5, textAlign: 'center',
-              background: `linear-gradient(135deg, ${accento2}, ${accento1})`,
-              WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
-              backgroundClip: 'text', marginBottom: 16,
+              fontSize: 26, fontWeight: 600, letterSpacing: 5, textAlign: 'center',
+              color: glass.text.primary, fontVariantNumeric: 'tabular-nums', marginBottom: 16,
             }}>
               {createdRoomId}
             </div>
