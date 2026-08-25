@@ -15,6 +15,14 @@ import { useApp } from '../contexts/AppContext.js';
 // aggiungeranno come nuove voci di STRUMENTI.
 // ═══════════════════════════════════════════════════════════════
 
+// ═══ b.492 — TAVOLA 05 DEL TEMPLATE: «Strumenti, non riquadri.
+// Ognuno dice cosa fa in una riga.» La SCANSIONE e la cosa grande in
+// cima (e il motivo per cui si apre questa pagina); la RUBRICA e una
+// riga e apre i contatti dello scanner (ponte additivo bartalk-tab.js,
+// il codice BizCard resta intatto); PeepOff resta una riga.
+// SCOSTAMENTO DICHIARATO: la scheda «Il tuo biglietto da visita» del
+// template non c'e — quella funzione nel sistema non esiste ancora, e
+// una scheda senza niente dietro e una scatola vuota (regola 2). ═══
 const STRUMENTI = [
   {
     id: 'bizcard',
@@ -54,6 +62,9 @@ function BusinessView({ onBack }) {
   const { L, S } = useApp();
   const nomeDi = (s) => (s.nomeKey ? L(s.nomeKey) : s.nome);
   const [aperto, setAperto] = useState(null); // strumento aperto | null = elenco
+  // b.492 — Aa come su ogni pagina: ingrandisce i testi dell'elenco.
+  const [zoomTesto, setZoomTesto] = useState(0);
+  const ingr = 1 + zoomTesto * 0.15;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100dvh', background: S.colors.bg }}>
@@ -65,27 +76,59 @@ function BusinessView({ onBack }) {
         </button>
         {/* b.479 — il nome della sezione era scritto a mano: la chiave esiste gia. */}
         <div style={{ fontFamily: FONT, color: S.colors.textPrimary, flex: 1, minWidth: 0 }}>
-          <div style={{ fontWeight: 600, fontSize: 15 }}>{L('businessEntry')}{aperto ? ` — ${nomeDi(aperto)}` : ''}</div>
+          <div style={{ fontWeight: 600, fontSize: 15 }}>{L('businessEntry')}{aperto ? ` — ${aperto.titolo || nomeDi(aperto)}` : ''}</div>
           <div style={{ fontSize: 11, color: S.colors.textMuted }}>
             {aperto ? L(aperto.descKey) : L('businessSubtitle')}
           </div>
         </div>
+        {/* b.492 — tavola 05: Aa in testata, come ovunque. */}
+        {!aperto && (
+          <button onClick={() => setZoomTesto((v) => (v >= 3 ? 0 : v + 1))}
+            title={L('textBigger')} aria-label={L('textBigger')}
+            style={{ width: 44, height: 44, borderRadius: 12, flexShrink: 0, cursor: 'pointer',
+              background: zoomTesto ? `${S.colors.accent1 || '#5b8cff'}22` : 'none',
+              border: `1px solid ${S.colors.cardBorder}`, color: S.colors.textSecondary,
+              fontFamily: FONT, fontSize: 15, fontWeight: 600 }}>
+            Aa
+          </button>
+        )}
       </div>
 
       {!aperto && (
         <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 10, overflowY: 'auto', ...COLONNA }}>
-          {STRUMENTI.map((s) => (
-            <button key={s.id} onClick={() => setAperto(s)}
+          {/* b.492 — LA COSA GRANDE IN CIMA: la scansione. E il motivo
+              per cui si apre questa pagina (tavola 05). */}
+          <button onClick={() => setAperto({ ...STRUMENTI[0], titolo: L('scanCardTitle'), descKey: 'scanCardDesc' })}
+            style={{ display: 'flex', alignItems: 'center', gap: 14, padding: 20, borderRadius: 16, cursor: 'pointer', textAlign: 'left',
+              background: S.colors.cardBg, border: `1px solid ${S.colors.cardBorder}`, fontFamily: FONT }}>
+            <span style={{ width: 56, height: 56, borderRadius: 14, display: 'flex', alignItems: 'center', justifyContent: 'center',
+              background: S.colors.accentGradient, flexShrink: 0 }}>
+              <Icon name="credit" size={26} color={S.colors.bg} />
+            </span>
+            <span style={{ flex: 1, minWidth: 0 }}>
+              <span style={{ display: 'block', fontWeight: 600, color: S.colors.textPrimary, fontSize: 17 * ingr }}>{L('scanCardTitle')}</span>
+              <span style={{ display: 'block', fontSize: 12.5 * ingr, color: S.colors.textMuted, marginTop: 2 }}>{L('scanCardDesc')}</span>
+            </span>
+            <Icon name="chevRight" size={16} color={S.colors.textMuted} />
+          </button>
+
+          {/* Le righe, come sulla Home: stessa forma, stesso gesto. */}
+          {[
+            { id: 'rubrica', icona: 'user', titolo: L('addressBook'), desc: L('addressBookDesc'),
+              apri: () => setAperto({ ...STRUMENTI[0], url: '/scanner/index.html?skin=bartalk&tab=contacts', titolo: L('addressBook'), descKey: 'addressBookDesc' }) },
+            { id: 'peepoff', icona: 'lock', titolo: L('peepoffName'), desc: L('peepoffDesc'),
+              apri: () => setAperto(STRUMENTI[1]) },
+          ].map((r) => (
+            <button key={r.id} onClick={r.apri}
               style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 16, borderRadius: 14, cursor: 'pointer', textAlign: 'left',
                 background: S.colors.cardBg, border: `1px solid ${S.colors.cardBorder}`, fontFamily: FONT }}>
               <span style={{ width: 44, height: 44, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                background: S.colors.accentGradient, flexShrink: 0 }}>
-                <Icon name={s.icona} size={20} color={S.colors.bg} />
+                background: S.colors.overlayBg, border: `1px solid ${S.colors.cardBorder}`, flexShrink: 0 }}>
+                <Icon name={r.icona} size={18} color={S.colors.textSecondary} />
               </span>
               <span style={{ flex: 1, minWidth: 0 }}>
-                {/* b.479 — se tutto pesa niente pesa: il titolo di riga sta a 500. */}
-                <span style={{ display: 'block', fontWeight: 500, color: S.colors.textPrimary, fontSize: 15 }}>{nomeDi(s)}</span>
-                <span style={{ display: 'block', fontSize: 12, color: S.colors.textMuted }}>{L(s.descKey)}</span>
+                <span style={{ display: 'block', fontWeight: 500, color: S.colors.textPrimary, fontSize: 15 * ingr }}>{r.titolo}</span>
+                <span style={{ display: 'block', fontSize: 12 * ingr, color: S.colors.textMuted }}>{r.desc}</span>
               </span>
               <Icon name="chevRight" size={16} color={S.colors.textMuted} />
             </button>

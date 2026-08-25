@@ -219,6 +219,21 @@ qualunque refactoring. Non si propone di rimandarlo.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.492** (push #781) — TAVOLA 05 DEL TEMPLATE: BUSINESS.
+  «Strumenti, non riquadri. Ognuno dice cosa fa in una riga.» La
+  SCANSIONE e la cosa grande in cima (e il motivo per cui si apre la
+  pagina) e apre lo scanner; la RUBRICA e una riga e apre i contatti
+  dello scanner tramite `bartalk-tab.js` — file ADDITIVO col patto di
+  bartalk-doc.js: con ?tab=contacts preme la tab giusta al load, il
+  codice BizCard resta intatto. PeepOff resta una riga con la sua
+  descrizione. Aa in testata come ovunque (ingrandisce l'elenco).
+  SCOSTAMENTO DICHIARATO: la scheda «Il tuo biglietto da visita» del
+  cartellino non c'e — la funzione nel sistema non esiste ancora e una
+  scheda senza niente dietro e una scatola vuota (regola 2); si fara
+  quando esistera il biglietto personale.
+  Chiavi nuove x38: scanCardTitle, scanCardDesc, addressBookDesc.
+  PROVE: `business-tavola-05-b492.test.js` (rossa prima, verde dopo).
+
 - Versione: **b.491** (push #780) — TAVOLE 17 e 18 DEL TEMPLATE.
   TAVOLA 17 (stanza video di gruppo): la testata dice DOVE SEI — il
   codice della stanza, non «Stanza video» — e il tasto Aa c'e anche qui
