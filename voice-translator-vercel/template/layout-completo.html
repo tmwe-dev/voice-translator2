@@ -2039,9 +2039,9 @@
     </div>
 
     <div class="colonna aggiornata">
-      <div class="cartellino"><span class="lettera">30</span><span class="nome">Rubrica</span><span class="stato dafare">DA FARE</span><span class="bollo-agg">aggiornata</span></div>
+      <div class="cartellino"><span class="lettera">30</span><span class="nome">Rubrica</span><span class="stato dafare">DA FARE · nuova</span><span class="bollo-agg">aggiornata</span></div>
       <div class="destinazione">&rarr; app/components/ContactsView.js</div>
-      <p class="didascalia">Chi hai incontrato, in che lingua parlava, e se e online adesso.</p>
+      <p class="didascalia">Una scheda per persona, tre livelli. L'address col cancelletto e il nome nella rete.</p>
       <div class="telefono">
         <div class="linguetta" title="Apri il pannello"><svg class="ic"><use href="#i-menu"/></svg></div>
         <div class="schermo">
@@ -2049,22 +2049,42 @@
             <span class="tondino nudo"><svg class="ic"><use href="#i-back"/></svg></span><span class="titolo">Rubrica</span><span class="tondino" title="Ingrandisci il carattere">Aa</span>
           </div>
           <div class="corpo">
-            <div class="riga-voce"><div style="display:flex;align-items:center;gap:11px">
+            <!-- ── RICONOSCIUTO: impronta verificata, lucchetto verde, address pieno ── -->
+            <!-- data-comp: riga rubrica livello 2 · onClick → apri scheda contatto -->
+            <div class="riga-voce" style="min-height:64px"><div style="display:flex;align-items:center;gap:11px">
               <div style="width:40px;height:40px;border-radius:999px;position:relative;background-image:var(--img-av3);background-size:cover;background-position:center"><span style="position:absolute;right:0;bottom:0;width:11px;height:11px;border-radius:999px;background:var(--verde);border:2px solid var(--bg)"></span></div>
-              <div><div class="t">Kenji</div><div class="d">🇯🇵 日本語 · online</div></div></div><span class="frec">›</span></div>
-            <div class="riga-voce"><div style="display:flex;align-items:center;gap:11px">
+              <div>
+                <div class="t" style="display:flex;align-items:center;gap:6">Kenji
+                  <svg class="ic" style="width:12px;height:12px;color:var(--verde)"><use href="#i-lock"/></svg></div>
+                <div class="d" style="font-family:ui-monospace,Menlo,monospace;font-size:11px">kenji<span style="color:var(--giallo)">#</span>gmail.com</div>
+                <div class="d">🇯🇵 日本語 · online</div>
+              </div></div><span class="frec">›</span></div>
+            <!-- ── IN RETE: registrato, address noto, non ancora riconosciuto ── -->
+            <div class="riga-voce" style="min-height:64px"><div style="display:flex;align-items:center;gap:11px">
               <div class="faccia" style="width:40px;height:40px;background-image:var(--img-av4)"></div>
-              <div><div class="t">Rosa</div><div class="d">🇪🇸 Español · vista 2 giorni fa</div></div></div><span class="frec">›</span></div>
-            <div class="riga-voce" style="border-bottom:none"><div style="display:flex;align-items:center;gap:11px">
-              <div class="faccia" style="width:40px;height:40px;background-image:var(--img-av5)"></div>
-              <div><div class="t">Marcus</div><div class="d">🇩🇪 Deutsch · vista lunedi</div></div></div><span class="frec">›</span></div>
+              <div>
+                <div class="t">Rosa</div>
+                <div class="d" style="font-family:ui-monospace,Menlo,monospace;font-size:11px">rosa<span style="color:var(--giallo)">#</span>hotmail.es</div>
+                <div class="d">🇪🇸 Español · vista 2 giorni fa</div>
+              </div></div><span class="frec">›</span></div>
+            <!-- ── FUORI RETE: viene dalla rubrica del telefono, solo numero.
+                 Niente address (non esiste ancora), niente freccia: al suo
+                 posto il tasto per invitarlo — esplicito, MAI automatico ── -->
+            <div class="riga-voce" style="min-height:64px;border-bottom:none;opacity:0.75"><div style="display:flex;align-items:center;gap:11px">
+              <div class="faccia" style="width:40px;height:40px;display:flex;align-items:center;justify-content:center;background:var(--card)"><svg class="ic" style="color:var(--muto)"><use href="#i-user"/></svg></div>
+              <div>
+                <div class="t">Paolo</div>
+                <div class="d">+39 333 ··· ·· ·· · fuori rete</div>
+              </div></div><span class="pillola" style="height:44px">Invitalo</span></div>
           </div>
           <div class="riga-campo"><div class="pillola on" style="flex:1;justify-content:center;height:54px"><svg class="ic"><use href="#i-plus"/></svg>Aggiungi in rubrica</div></div>
         </div>
       </div>
-      <div class="spiega"><span class="ril">Cosa cambia.</span><ul>
-        <li>La <span class="ril">lingua accanto al nome</span>: e cio che ti dice se potete parlarvi adesso.</li>
-        <li>Il pallino verde sull'avatar, non una parola in piu.</li></ul></div>
+      <div class="spiega"><span class="ril">Una scheda, tre livelli — e la scheda sale da sola.</span><ul>
+        <li><span class="ril">Riconosciuto</span> (lucchetto verde): l'impronta delle sue chiavi e salvata sulla scheda. Se un giorno cambia, la scheda alza l'allarme invece di fidarsi.</li>
+        <li><span class="ril">In rete</span>: l'address risolve — si vede col cancelletto in giallo, ed e la SUA email riscritta, mai un dato nuovo da chiedere.</li>
+        <li><span class="ril">Fuori rete</span> (spenta): dal telefono, solo numero. Il numero e un canale per invitarlo, MAI un'identita — e l'invito e un gesto per persona, esplicito, non una raffica automatica.</li>
+        <li>Quando Paolo accetta l'invito, la STESSA scheda si accende e prende l'address: nessun doppione.</li></ul></div>
     </div>
 
     <div class="colonna aggiornata">
