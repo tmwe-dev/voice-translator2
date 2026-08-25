@@ -55,7 +55,7 @@ export default function NumeroSicurezza({ numero, C, compatto = false }) {
         style={{
           display: 'flex', alignItems: 'center', gap: 6, padding: '4px 9px',
           borderRadius: 8, cursor: 'pointer', fontFamily: FONT, fontSize: 10,
-          fontWeight: 700, background: 'transparent', border: `1px solid ${bordo}`,
+          fontWeight: 600, background: 'transparent', border: `1px solid ${bordo}`,
           color: verificato ? verde : testoMuto,
         }}
         aria-label={verificato ? L('secVerifiedAria') : L('secVerifyAria')}
@@ -71,18 +71,18 @@ export default function NumeroSicurezza({ numero, C, compatto = false }) {
       padding: 14, borderRadius: 12, background: fondo,
       border: `1px solid ${verificato ? `${verde}40` : bordo}`, fontFamily: FONT,
     }}>
-      <div style={{ fontSize: 12, fontWeight: 700, color: testoVivo, marginBottom: 8 }}>
+      <div style={{ fontSize: 12, fontWeight: 600, color: testoVivo, marginBottom: 8 }}>
         {L('secWhoTitle')}
       </div>
 
       {/* Le due frasi, tenute separate apposta. */}
       <div style={{ fontSize: 11, color: testoMuto, lineHeight: 1.6, marginBottom: 12 }}>
         <div style={{ display: 'flex', gap: 7 }}>
-          <span aria-hidden="true" style={{ color: verde, fontWeight: 800 }}>✓</span>
+          <span aria-hidden="true" style={{ color: verde, fontWeight: 600 }}>✓</span>
           <span>{L('secLine1')}</span>
         </div>
         <div style={{ display: 'flex', gap: 7, marginTop: 6 }}>
-          <span aria-hidden="true" style={{ color: verificato ? verde : ambra, fontWeight: 800 }}>
+          <span aria-hidden="true" style={{ color: verificato ? verde : ambra, fontWeight: 600 }}>
             {verificato ? '✓' : '!'}
           </span>
           <span style={{ color: verificato ? testoMuto : testoVivo }}>
@@ -115,7 +115,7 @@ export default function NumeroSicurezza({ numero, C, compatto = false }) {
               onClick={() => setVerificato(true)}
               style={{
                 marginTop: 11, width: '100%', padding: '9px 12px', borderRadius: 9,
-                cursor: 'pointer', fontFamily: FONT, fontSize: 12, fontWeight: 700,
+                cursor: 'pointer', fontFamily: FONT, fontSize: 12, fontWeight: 600,
                 background: `${verde}18`, border: `1px solid ${verde}40`, color: verde,
               }}
             >

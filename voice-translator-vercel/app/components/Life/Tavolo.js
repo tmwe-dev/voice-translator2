@@ -197,7 +197,7 @@ function Tavolo({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
               <button key={c.id} onClick={() => { vibrate(6); toggle(c.id); }}
                 style={{ padding: '10px 6px', borderRadius: 12, cursor: 'pointer', textAlign: 'center', background: on ? `${c.colore}22` : card, border: `1px solid ${on ? c.colore : bordo.split(' ').pop()}`, fontFamily: FONT }}>
                 <img src={c.avatar} alt="" width={46} height={46} style={{ borderRadius: 12, display: 'block', margin: '0 auto 6px', objectFit: 'cover' }} />
-                <div style={{ fontSize: 12, fontWeight: 700, color: testoP }}>{c.nome}</div>
+                <div style={{ fontSize: 12, fontWeight: 600, color: testoP }}>{c.nome}</div>
               </button>
             );
           })}
@@ -211,20 +211,20 @@ function Tavolo({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
           <label style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '11px 12px', borderRadius: 12, background: card, border: bordo, cursor: 'pointer', fontFamily: FONT }}>
             <input type="checkbox" checked={conFonti} onChange={(e) => setConFonti(e.target.checked)} style={{ width: 20, height: 20, accentColor: accent }} />
             <span style={{ flex: 1 }}>
-              <span style={{ display: 'block', fontSize: 14, fontWeight: 700, color: testoP }}>🔎 {tt('lifeTableSources', 'Parti da fonti reali')}</span>
+              <span style={{ display: 'block', fontSize: 14, fontWeight: 600, color: testoP }}>🔎 {tt('lifeTableSources', 'Parti da fonti reali')}</span>
               <span style={{ display: 'block', fontSize: 11.5, color: muto }}>{tt('lifeTableSourcesDesc', 'Cerca online e dai agli esperti dei fatti da cui partire')}</span>
             </span>
           </label>
           <label style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '11px 12px', borderRadius: 12, background: card, border: bordo, cursor: 'pointer', fontFamily: FONT }}>
             <input type="checkbox" checked={conDocumento} onChange={(e) => setConDocumento(e.target.checked)} style={{ width: 20, height: 20, accentColor: accent }} />
             <span style={{ flex: 1 }}>
-              <span style={{ display: 'block', fontSize: 14, fontWeight: 700, color: testoP }}>📄 {tt('lifeTableDoc', 'Produci un documento')}</span>
+              <span style={{ display: 'block', fontSize: 14, fontWeight: 600, color: testoP }}>📄 {tt('lifeTableDoc', 'Produci un documento')}</span>
               <span style={{ display: 'block', fontSize: 11.5, color: muto }}>{tt('lifeTableDocDesc', 'Alla fine, un documento da conservare — o chiedilo quando vuoi durante')}</span>
             </span>
           </label>
         </div>
         <button onClick={avviaTavola} disabled={attende}
-          style={{ width: '100%', padding: 14, borderRadius: 14, border: 'none', cursor: 'pointer', background: accent, color: '#04121c', fontWeight: 800, fontSize: 15, fontFamily: FONT, opacity: attende ? 0.6 : 1 }}>
+          style={{ width: '100%', padding: 14, borderRadius: 14, border: 'none', cursor: 'pointer', background: accent, color: '#04121c', fontWeight: 600, fontSize: 15, fontFamily: FONT, opacity: attende ? 0.6 : 1 }}>
           {attende ? '…' : `⚖️ ${tt('lifeDebateStart', 'Apri la Tavola rotonda')}`}
         </button>
         {errore && <div style={{ color: '#f87171', fontSize: 13, marginTop: 10 }}>{errore}</div>}
@@ -257,11 +257,11 @@ function Tavolo({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
               <div key={i} style={{ alignSelf: 'stretch', margin: '2px 0 8px', padding: '12px 14px', borderRadius: 14, background: card, border: bordo, color: testoP, fontSize: 13.5, lineHeight: 1.55, whiteSpace: 'pre-wrap' }}>
                 {/* b.380 — il titolo dice la verita su cosa c'e sotto. */}
                 {m.senzaFonti ? (
-                  <div style={{ fontWeight: 800, color: '#e08a5e', marginBottom: 6 }}>
+                  <div style={{ fontWeight: 600, color: '#e08a5e', marginBottom: 6 }}>
                     ⚠ {tt('lifeTableNoSources', 'Senza fonti: la ricerca non ha trovato niente')}
                   </div>
                 ) : (
-                  <div style={{ fontWeight: 800, color: accent, marginBottom: 6 }}>🔎 {tt('lifeTableBrief', 'Da cui partiamo (fonti)')}</div>
+                  <div style={{ fontWeight: 600, color: accent, marginBottom: 6 }}>🔎 {tt('lifeTableBrief', 'Da cui partiamo (fonti)')}</div>
                 )}
                 {m.senzaFonti && (
                   <div style={{ fontSize: 12, color: muto, marginBottom: 8, lineHeight: 1.5, whiteSpace: 'normal' }}>
@@ -282,7 +282,7 @@ function Tavolo({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
           if (m.ruolo === '__sintesi') {
             return (
               <div key={i} style={{ alignSelf: 'stretch', margin: '6px 0', padding: '12px 14px', borderRadius: 14, background: `${accent}18`, border: `1px solid ${accent}`, color: testoP, fontSize: 14, lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>
-                <div style={{ fontWeight: 800, color: accent, marginBottom: 6 }}>⚖️ {tt('lifeDebateSynthesis', 'Conclusione condivisa')}</div>
+                <div style={{ fontWeight: 600, color: accent, marginBottom: 6 }}>⚖️ {tt('lifeDebateSynthesis', 'Conclusione condivisa')}</div>
                 {m.testo}
               </div>
             );
@@ -290,7 +290,7 @@ function Tavolo({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
           const mio = m.ruolo === 'persona';
           return (
             <div key={i} style={{ alignSelf: mio ? 'flex-end' : 'flex-start', maxWidth: '84%' }}>
-              {!mio && <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, fontWeight: 700, color: m.colore || accent, margin: '0 4px 2px' }}>{m.avatar && <img src={m.avatar} alt="" width={16} height={16} style={{ borderRadius: 5, objectFit: 'cover' }} />}{m.ruolo}</div>}
+              {!mio && <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, fontWeight: 600, color: m.colore || accent, margin: '0 4px 2px' }}>{m.avatar && <img src={m.avatar} alt="" width={16} height={16} style={{ borderRadius: 5, objectFit: 'cover' }} />}{m.ruolo}</div>}
               <div style={{ padding: '9px 12px', borderRadius: 14, fontSize: 14, lineHeight: 1.45, fontFamily: FONT,
                 background: mio ? accent : card, color: mio ? '#04121c' : testoP, border: mio ? 'none' : bordo }}>
                 {m.testo}
@@ -307,9 +307,9 @@ function Tavolo({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
       {documento && (
         <div style={{ alignSelf: 'stretch', margin: '6px 0', padding: '14px 16px', borderRadius: 14, background: `${accent}14`, border: `2px solid ${accent}`, color: testoP, fontSize: 14, lineHeight: 1.55, whiteSpace: 'pre-wrap' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-            <span style={{ fontWeight: 800, color: accent }}>📄 {tt('lifeTableDoc', 'Documento')}</span>
+            <span style={{ fontWeight: 600, color: accent }}>📄 {tt('lifeTableDoc', 'Documento')}</span>
             <button onClick={() => { try { navigator.clipboard.writeText(documento); } catch { /* il browser non concede gli appunti in questo contesto: il testo resta comunque a schermo */ } }}
-              style={{ background: 'none', border: `1px solid ${accent}`, color: accent, borderRadius: 8, padding: '4px 10px', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: FONT }}>
+              style={{ background: 'none', border: `1px solid ${accent}`, color: accent, borderRadius: 8, padding: '4px 10px', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: FONT }}>
               {tt('lifeCopy', 'Copia')}
             </button>
           </div>
@@ -318,10 +318,10 @@ function Tavolo({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
       )}
       {messaggi.length >= 2 && (
         <div style={{ display: 'flex', gap: 8, alignSelf: 'center', margin: '6px 0', flexWrap: 'wrap', justifyContent: 'center' }}>
-          <button onClick={concludi} disabled={attende} style={{ padding: '7px 14px', borderRadius: 10, border: `1px solid ${accent}`, background: 'transparent', color: accent, fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: FONT }}>
+          <button onClick={concludi} disabled={attende} style={{ padding: '7px 14px', borderRadius: 10, border: `1px solid ${accent}`, background: 'transparent', color: accent, fontWeight: 600, fontSize: 13, cursor: 'pointer', fontFamily: FONT }}>
             ⚖️ {tt('lifeDebateConclude', 'Conclusione condivisa')}
           </button>
-          <button onClick={creaDocumento} disabled={genDoc} style={{ padding: '7px 14px', borderRadius: 10, border: `1px solid ${accent}`, background: 'transparent', color: accent, fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: FONT, opacity: genDoc ? 0.6 : 1 }}>
+          <button onClick={creaDocumento} disabled={genDoc} style={{ padding: '7px 14px', borderRadius: 10, border: `1px solid ${accent}`, background: 'transparent', color: accent, fontWeight: 600, fontSize: 13, cursor: 'pointer', fontFamily: FONT, opacity: genDoc ? 0.6 : 1 }}>
             {genDoc ? '…' : `📄 ${tt('lifeTableMakeDoc', 'Fai il documento')}`}
           </button>
         </div>
@@ -330,7 +330,7 @@ function Tavolo({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
       <div style={{ display: 'flex', gap: 8, paddingTop: 10 }}>
         <input value={testo} onChange={(e) => setTesto(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') invia(); }}
           aria-label={L('lifeChatPh')} placeholder={L('lifeChatPh')} style={{ flex: 1, padding: 12, borderRadius: 12, border: bordo, background: card, color: testoP, fontSize: 15, fontFamily: FONT }} />
-        <button onClick={invia} disabled={attende} aria-label={L('send')} style={{ padding: '0 16px', borderRadius: 12, border: 'none', background: accent, color: '#04121c', fontWeight: 800, cursor: 'pointer', fontFamily: FONT }}>
+        <button onClick={invia} disabled={attende} aria-label={L('send')} style={{ padding: '0 16px', borderRadius: 12, border: 'none', background: accent, color: '#04121c', fontWeight: 600, cursor: 'pointer', fontFamily: FONT }}>
           <Icon name="send" size={16} color="#04121c" />
         </button>
       </div>

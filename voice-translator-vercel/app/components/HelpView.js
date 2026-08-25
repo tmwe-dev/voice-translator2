@@ -85,7 +85,7 @@ function HelpView() {
           color: C.textMuted, fontSize: 18, WebkitTapHighlightColor: 'transparent',
         }}>‹</button>
         <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 17, fontWeight: 800, color: C.textPrimary, letterSpacing: -0.5 }}>
+          <div style={{ fontSize: 17, fontWeight: 600, color: C.textPrimary, letterSpacing: -0.5 }}>
             ❓ {L('helpTitle')}
           </div>
           <div style={{ fontSize: 11, color: C.textMuted, marginTop: 1 }}>{L('helpSubtitle')}</div>
@@ -99,7 +99,7 @@ function HelpView() {
         {/* Feature cards grid */}
         <div style={{ marginBottom: 20 }}>
           <div style={{
-            fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1.5,
+            fontSize: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 1.5,
             color: C.textMuted, marginBottom: 10, padding: '0 2px',
           }}>
             {L('helpFeaturesTitle')}
@@ -113,7 +113,7 @@ function HelpView() {
                 animation: `vtSlideUp 0.3s ease-out ${i * 0.05}s both`,
               }}>
                 {f.icon && <div style={{ fontSize: 24, marginBottom: 6 }}>{f.icon}</div>}
-                <div style={{ fontSize: 12, fontWeight: 700, color: C.textPrimary, marginBottom: 2 }}>{f.title || L(f.titleKey)}</div>
+                <div style={{ fontSize: 12, fontWeight: 600, color: C.textPrimary, marginBottom: 2 }}>{f.title || L(f.titleKey)}</div>
                 <div style={{ fontSize: 10, color: C.textMuted, lineHeight: 1.4 }}>{L(f.descKey)}</div>
               </div>
             ))}
@@ -123,7 +123,7 @@ function HelpView() {
         {/* FAQ Accordion */}
         <div style={{ marginBottom: 20 }}>
           <div style={{
-            fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1.5,
+            fontSize: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 1.5,
             color: C.textMuted, marginBottom: 10, padding: '0 2px',
           }}>
             {L('landingFaqTitle')}

@@ -111,7 +111,7 @@ export default function LettoreArticolo({ url, titolo, fonte, C, L, onIndietro }
 
         <span style={{ flex: 1, minWidth: 0 }}>
           <span style={{
-            display: 'block', fontSize: 13, fontWeight: 700, color: C.textPrimary, fontFamily: FONT,
+            display: 'block', fontSize: 13, fontWeight: 600, color: C.textPrimary, fontFamily: FONT,
             overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
           }}>{titolo || dominio}</span>
           <span style={{ display: 'block', fontSize: 10.5, color: C.textMuted, fontFamily: FONT }}>
@@ -159,7 +159,7 @@ export default function LettoreArticolo({ url, titolo, fonte, C, L, onIndietro }
                 display: 'flex', alignItems: 'center', gap: 8, textDecoration: 'none',
                 padding: '11px 18px', borderRadius: 13, fontFamily: FONT,
                 background: `${C.accent}1E`, border: `1px solid ${C.accent}55`,
-                color: C.accent, fontSize: 13, fontWeight: 800,
+                color: C.accent, fontSize: 13, fontWeight: 600,
               }}>
               <Icon name="link" size={14} color={C.accent} />
               {L('openOutside')} · {dominio}

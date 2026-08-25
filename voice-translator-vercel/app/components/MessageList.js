@@ -269,7 +269,7 @@ const MessageList = memo(function MessageList({
                       );
                       return (
                         <button onClick={() => traduciQui(m)} disabled={locale === '…'}
-                          style={{marginTop:4, padding:'3px 10px', borderRadius:8, cursor:'pointer', border:`1px solid ${S.colors.cardBorder}`, background:'transparent', color:S.colors.accent1 || S.colors.textSecondary, fontSize:11, fontWeight:700, fontFamily:'inherit'}}>
+                          style={{marginTop:4, padding:'3px 10px', borderRadius:8, cursor:'pointer', border:`1px solid ${S.colors.cardBorder}`, background:'transparent', color:S.colors.accent1 || S.colors.textSecondary, fontSize:11, fontWeight: 600, fontFamily:'inherit'}}>
                           {locale === '…' ? '…' : (L('showTranslation') !== 'showTranslation' ? L('showTranslation') : 'Traduci')}
                         </button>
                       );
@@ -362,7 +362,7 @@ const MessageList = memo(function MessageList({
                       opacity: m._status === 'in-coda' ? 0.55 : 1,
                     }}>
                     {m._status === 'fallito'
-                      ? <span style={{fontSize:12, fontWeight:800}}>!</span>
+                      ? <span style={{fontSize:12, fontWeight: 600}}>!</span>
                       : m._status === 'in-coda'
                         ? <span style={{fontSize:12, lineHeight:1}}>·</span>
                         : (m._status === 'letto' || m._status === 'consegnato')

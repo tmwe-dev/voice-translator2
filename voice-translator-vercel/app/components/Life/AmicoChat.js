@@ -204,7 +204,7 @@ function AmicoChat({ compagni, L, lingua, userToken, testoP, muto, accent, card,
               style={{ display: 'flex', alignItems: 'center', gap: 10, padding: 10, borderRadius: 12, background: card, border: bordo, cursor: 'pointer', textAlign: 'left', fontFamily: FONT }}>
               <img src={c.avatar} alt="" width={42} height={42} style={{ borderRadius: 10, display: 'block', flexShrink: 0, objectFit: 'cover' }} />
               <span style={{ flex: 1, minWidth: 0 }}>
-                <span style={{ display: 'block', fontWeight: 700, color: testoP, fontSize: 14 }}>{c.nome} {c.memoria ? '🧠' : ''}</span>
+                <span style={{ display: 'block', fontWeight: 600, color: testoP, fontSize: 14 }}>{c.nome} {c.memoria ? '🧠' : ''}</span>
                 <span style={{ display: 'block', fontSize: 11, color: muto }}>{c.ruolo}</span>
               </span>
               <span style={{ color: muto }}>›</span>
@@ -227,17 +227,17 @@ function AmicoChat({ compagni, L, lingua, userToken, testoP, muto, accent, card,
           <Icon name="back" size={16} color={testoP} />
         </button>
         <img src={scelto.avatar} alt={scelto.nome} width={32} height={32} style={{ borderRadius: 8, display: 'block', objectFit: 'cover' }} />
-        <span style={{ fontWeight: 700, color: testoP, flex: 1 }}>{scelto.nome} {scelto.memoria ? '🧠' : ''}</span>
+        <span style={{ fontWeight: 600, color: testoP, flex: 1 }}>{scelto.nome} {scelto.memoria ? '🧠' : ''}</span>
         {scelto.lingua && scelto.lingua !== lingua && (
           <button onClick={valutaAssi} disabled={assiLavoro} title="Valuta i tuoi ultimi messaggi su 5 assi"
-            style={{ padding: '8px 10px', borderRadius: 12, cursor: 'pointer', fontFamily: FONT, fontSize: 12, fontWeight: 800,
+            style={{ padding: '8px 10px', borderRadius: 12, cursor: 'pointer', fontFamily: FONT, fontSize: 12, fontWeight: 600,
               border: `1px solid ${accent}`, background: 'transparent', color: accent, opacity: assiLavoro ? 0.6 : 1 }}>
             {assiLavoro ? '…' : '5 assi'}
           </button>
         )}
         {/* b.316 — parla DAL VIVO col Compagno: voce in tempo reale. */}
         <button onClick={() => { vibrate(8); setDalVivo((v) => !v); }} aria-pressed={dalVivo}
-          style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 12px', borderRadius: 12, cursor: 'pointer', fontFamily: FONT, fontSize: 13, fontWeight: 800,
+          style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 12px', borderRadius: 12, cursor: 'pointer', fontFamily: FONT, fontSize: 13, fontWeight: 600,
             background: dalVivo ? `${accent}22` : accent, color: dalVivo ? accent : '#04121c', border: dalVivo ? `1px solid ${accent}` : 'none' }}>
           <Icon name="mic" size={14} color={dalVivo ? accent : '#04121c'} /> {dalVivo ? 'Chiudi' : 'Dal vivo'}
         </button>
@@ -261,7 +261,7 @@ function AmicoChat({ compagni, L, lingua, userToken, testoP, muto, accent, card,
       {assi && (
         <div style={{ padding: 12, borderRadius: 12, background: card, border: `1px solid ${accent}44`, marginBottom: 10 }}>
           <div style={{ display: 'flex', alignItems: 'center', marginBottom: 8 }}>
-            <span style={{ flex: 1, fontSize: 12, fontWeight: 800, color: testoP }}>I tuoi 5 assi (mai un numero solo)</span>
+            <span style={{ flex: 1, fontSize: 12, fontWeight: 600, color: testoP }}>I tuoi 5 assi (mai un numero solo)</span>
             <button onClick={() => setAssi(null)} style={{ background: 'none', border: 'none', color: muto, cursor: 'pointer', fontSize: 16 }}>✕</button>
           </div>
           {[['comprensibilita', 'Comprensibilità'], ['grammatica', 'Grammatica'], ['vocabolario', 'Vocabolario'], ['fluidita', 'Fluidità'], ['contenuto', 'Contenuto']].map(([k, et]) => {

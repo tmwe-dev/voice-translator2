@@ -341,7 +341,7 @@ const RoomHeader = memo(function RoomHeader({
                       <span style={{fontSize:13, fontWeight:500, color:S.colors.textPrimary}}>
                         {freeLimitExceeded ? L('freeDailyLimitHit') : L('freePlan')}
                       </span>
-                      <span style={{marginLeft:'auto', fontSize:12, fontWeight:700, color:battColor, fontFamily:'monospace'}}>
+                      <span style={{marginLeft:'auto', fontSize:12, fontWeight: 600, color:battColor, fontFamily:'monospace'}}>
                         {freeLimitExceeded ? '0%' : `${Math.round(remaining)}%`}
                       </span>
                     </div>

@@ -189,7 +189,7 @@ function TaxiDestinationPanel({ onDestinationReady, onClose, targetLang, S }) {
         {/* Header */}
         <div style={{ padding: '0 20px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
-            <div style={{ fontSize: 18, fontWeight: 800, color: textPrimary, fontFamily: FONT }}>
+            <div style={{ fontSize: 18, fontWeight: 600, color: textPrimary, fontFamily: FONT }}>
               {L('whereTo')}
             </div>
             <div style={{ fontSize: 11, color: textMuted, marginTop: 2 }}>
@@ -264,7 +264,7 @@ function TaxiDestinationPanel({ onDestinationReady, onClose, targetLang, S }) {
             }}>
               <span style={{ fontSize: 20 }}></span>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: textPrimary }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: textPrimary }}>
                   {selectedPlace.displayName.split(',').slice(0, 2).join(',')}
                 </div>
                 <div style={{ fontSize: 10, color: textMuted, marginTop: 1 }}>
@@ -314,7 +314,7 @@ function TaxiDestinationPanel({ onDestinationReady, onClose, targetLang, S }) {
                     padding: '6px 10px', borderRadius: 8,
                     background: `${purple}10`, border: `1px solid ${purple}20`,
                   }}>
-                    <span style={{ fontSize: 10, color: purple, fontWeight: 700 }}>{i + 1}</span>
+                    <span style={{ fontSize: 10, color: purple, fontWeight: 600 }}>{i + 1}</span>
                     <span style={{ flex: 1, fontSize: 12, color: textPrimary }}>{stop}</span>
                     <button onClick={() => removeStop(i)} style={{
                       background: 'none', border: 'none', color: textMuted, cursor: 'pointer', fontSize: 12,
@@ -332,7 +332,7 @@ function TaxiDestinationPanel({ onDestinationReady, onClose, targetLang, S }) {
                     background: newStop.trim() ? `${purple}20` : 'transparent',
                     border: `1px solid ${newStop.trim() ? `${purple}30` : cardBorder}`,
                     color: newStop.trim() ? purple : textMuted,
-                    fontSize: 12, fontWeight: 700, fontFamily: FONT,
+                    fontSize: 12, fontWeight: 600, fontFamily: FONT,
                   }}>+</button>
                 </div>
               </div>
@@ -348,7 +348,7 @@ function TaxiDestinationPanel({ onDestinationReady, onClose, targetLang, S }) {
               ? `linear-gradient(135deg, ${accent}, ${purple})`
               : 'rgba(255,255,255,0.06)',
             border: 'none', color: selectedPlace ? '#fff' : textMuted,
-            fontSize: 15, fontWeight: 700, fontFamily: FONT,
+            fontSize: 15, fontWeight: 600, fontFamily: FONT,
             boxShadow: selectedPlace ? `0 4px 20px ${accent}35` : 'none',
           }}>
             {selectedPlace ? L('generateDestQR') : L('selectDestination')}

@@ -51,7 +51,7 @@ export default function TelecomandoVoce({ L, accent = '#26D9B0', testoP = '#eaf0
       border: `1px solid ${accent}55`, boxShadow: '0 8px 30px rgba(0,0,0,0.5)', fontFamily: FONT,
     }}>
       <span style={{
-        fontSize: 13, fontWeight: 700, color: testoP, maxWidth: 120,
+        fontSize: 13, fontWeight: 600, color: testoP, maxWidth: 120,
         overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
       }}>
         {'\u{1F509}'} {voce.etichetta || parola('lifeAudio', 'Audio')}

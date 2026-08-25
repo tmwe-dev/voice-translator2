@@ -65,13 +65,13 @@ export default function PannelloModerazione({ roomId, roomSessionToken, membri =
   };
   const pill = (colore, pieno) => ({
     padding: '7px 12px', borderRadius: 10, cursor: 'pointer', fontFamily: FONT,
-    fontSize: 12.5, fontWeight: 700, whiteSpace: 'nowrap',
+    fontSize: 12.5, fontWeight: 600, whiteSpace: 'nowrap',
     background: pieno ? colore : 'transparent',
     border: `1px solid ${pieno ? colore : `${colore}55`}`,
     color: pieno ? '#fff' : colore,
   });
   const titoletto = {
-    fontSize: 10, fontWeight: 800, letterSpacing: 1.5, textTransform: 'uppercase',
+    fontSize: 10, fontWeight: 600, letterSpacing: 1.5, textTransform: 'uppercase',
     color: C.textMuted, margin: '14px 0 7px', fontFamily: FONT,
   };
 
@@ -87,7 +87,7 @@ export default function PannelloModerazione({ roomId, roomSessionToken, membri =
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
         <Icon name="lock" size={16} color={C.accent1} />
-        <span style={{ fontSize: 14, fontWeight: 800, color: C.textPrimary }}>{L('modWhoEnters')}</span>
+        <span style={{ fontSize: 14, fontWeight: 600, color: C.textPrimary }}>{L('modWhoEnters')}</span>
         {onChiudi && (
           <button onClick={onChiudi} aria-label={L('closeWord')} style={{
             marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer',

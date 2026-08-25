@@ -38,7 +38,9 @@ const PageHeader = ({ title, subtitle, onBack, S, rightAction }) => {
       )}
       <div style={{ flex: 1, minWidth: 0 }}>
         <h1 style={{
-          fontSize: 18, fontWeight: 700, color: C.textPrimary || '#fafafa',
+          // b.481 — niente grassetto: e la testata condivisa, quindi questo
+          // 700 pesava su ogni schermata che la usa.
+          fontSize: 18, fontWeight: 600, color: C.textPrimary || '#fafafa',
           fontFamily: FONT, margin: 0, lineHeight: 1.3,
           overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
         }}>

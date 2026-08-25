@@ -166,7 +166,7 @@ function CreateRoomSheet({ open, onClose, onCreate, preimpostato }) {
         {/* Header */}
         <div style={{ padding: '0 20px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
-            <div style={{ fontSize: 18, fontWeight: 800, color: textPrimary, fontFamily: FONT }}>
+            <div style={{ fontSize: 18, fontWeight: 600, color: textPrimary, fontFamily: FONT }}>
               {L('createBarTalk')}
             </div>
             <div style={{ fontSize: 11, color: textMuted, marginTop: 2 }}>
@@ -221,7 +221,7 @@ function CreateRoomSheet({ open, onClose, onCreate, preimpostato }) {
                   }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
                       <span style={{ fontSize: 16 }}>{rt.icon}</span>
-                      <span style={{ fontSize: 12, fontWeight: 700, color: sel ? accent : textPrimary }}>{L(rt.label)}</span>
+                      <span style={{ fontSize: 12, fontWeight: 600, color: sel ? accent : textPrimary }}>{L(rt.label)}</span>
                     </div>
                     <div style={{ fontSize: 10, color: textMuted, lineHeight: 1.4 }}>{L(rt.desc)}</div>
                   </button>
@@ -248,7 +248,7 @@ function CreateRoomSheet({ open, onClose, onCreate, preimpostato }) {
                 textAlign: 'left', fontFamily: FONT, display: 'flex', gap: 10, alignItems: 'center',
               }}>
               <span style={{ flex: 1 }}>
-                <span style={{ display: 'block', fontSize: 12, fontWeight: 700, color: textPrimary, marginBottom: 2 }}>
+                <span style={{ display: 'block', fontSize: 12, fontWeight: 600, color: textPrimary, marginBottom: 2 }}>
                   {L('whoPaysTitle')}
                 </span>
                 <span style={{ display: 'block', fontSize: 11, color: textMuted, lineHeight: 1.5 }}>
@@ -285,11 +285,11 @@ function CreateRoomSheet({ open, onClose, onCreate, preimpostato }) {
                 textAlign: 'left', fontFamily: FONT, display: 'flex', gap: 10, alignItems: 'flex-start',
               }}>
               <span aria-hidden="true" style={{
-                fontSize: 13, fontWeight: 800, lineHeight: '18px', width: 18, textAlign: 'center',
+                fontSize: 13, fontWeight: 600, lineHeight: '18px', width: 18, textAlign: 'center',
                 color: diretta ? '#26D9B0' : textMuted,
               }}>{diretta ? '✓' : '·'}</span>
               <span style={{ flex: 1 }}>
-                <span style={{ display: 'block', fontSize: 12, fontWeight: 700, color: diretta ? '#26D9B0' : textPrimary, marginBottom: 2 }}>
+                <span style={{ display: 'block', fontSize: 12, fontWeight: 600, color: diretta ? '#26D9B0' : textPrimary, marginBottom: 2 }}>
                   {L('directRoomTitle')}
                 </span>
                 <span style={{ display: 'block', fontSize: 10, color: textMuted, lineHeight: 1.5 }}>
@@ -315,7 +315,7 @@ function CreateRoomSheet({ open, onClose, onCreate, preimpostato }) {
                 background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.25)',
                 fontSize: 10, color: textMuted, lineHeight: 1.6,
               }}>
-                <span style={{ display: 'block', fontWeight: 700, color: '#F59E0B', marginBottom: 4 }}>
+                <span style={{ display: 'block', fontWeight: 600, color: '#F59E0B', marginBottom: 4 }}>
                   {L('directRoomCostTitle')}
                 </span>
                 {L('directRoomCostBody')}
@@ -339,11 +339,11 @@ function CreateRoomSheet({ open, onClose, onCreate, preimpostato }) {
               }}>
               {/* Nessuna emoji: un segno tipografico, come ovunque nell'app. */}
               <span aria-hidden="true" style={{
-                fontSize: 13, fontWeight: 800, lineHeight: '18px', width: 18, textAlign: 'center',
+                fontSize: 13, fontWeight: 600, lineHeight: '18px', width: 18, textAlign: 'center',
                 color: hot ? '#FF7A5C' : textMuted,
               }}>{hot ? '!' : '·'}</span>
               <span style={{ flex: 1 }}>
-                <span style={{ display: 'block', fontSize: 12, fontWeight: 700, color: hot ? '#FF7A5C' : textPrimary, marginBottom: 2 }}>
+                <span style={{ display: 'block', fontSize: 12, fontWeight: 600, color: hot ? '#FF7A5C' : textPrimary, marginBottom: 2 }}>
                   {L('freeFightTitle')}
                 </span>
                 <span style={{ display: 'block', fontSize: 10, color: textMuted, lineHeight: 1.5 }}>
@@ -465,7 +465,7 @@ function CreateRoomSheet({ open, onClose, onCreate, preimpostato }) {
             cursor: creating || !nomeValido ? 'default' : 'pointer',
             background: `linear-gradient(135deg, ${accent}, ${purple})`,
             border: 'none', color: '#fff',
-            fontSize: 15, fontWeight: 700, fontFamily: FONT,
+            fontSize: 15, fontWeight: 600, fontFamily: FONT,
             boxShadow: `0 4px 20px ${accent}35`,
             opacity: creating || !nomeValido ? 0.45 : 1,
           }}>

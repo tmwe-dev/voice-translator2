@@ -435,7 +435,13 @@ export default function getStyles(theme = 'deep') {
     // difetto e di chiunque usi questa cornice, non di quella pagina.
     scrollCenter: { display:'flex', flexDirection:'column', alignItems:'center',
       height:'100%', boxSizing:'border-box',
-      padding:'12px 16px calc(106px + env(safe-area-inset-bottom))',
+      // b.481 — VENTI di margine, come la Home, la chat e il template. Erano
+      // sedici, e le schermate che usano questa cornice risultavano
+      // rientrate diversamente da quelle che si scrivono i margini da se:
+      // passando dall'una all'altra il contenuto saltava di quattro punti.
+      // Il fondo resta 106 + zona sicura: sotto c'e la barra dei quattro
+      // posti, e senza quello spazio l'ultima riga ci finisce dietro.
+      padding:'12px 20px calc(106px + env(safe-area-inset-bottom))',
       overflowY:'auto', WebkitOverflowScrolling:'touch' },
 
     // === TYPOGRAPHY ===
@@ -478,7 +484,9 @@ export default function getStyles(theme = 'deep') {
       fontFamily:FONT, WebkitTapHighlightColor:'transparent',
       transition:'transform 0.3s cubic-bezier(0.2,0.8,0.2,1), border-color 0.3s',
       color: colors.textPrimary },
-    settingsBtn: { padding:'8px 16px', borderRadius:12, background: colors.buttonOverlay,
+    // b.481 — il disegno resta, il bersaglio sale a 44: si alza l'altezza
+    // utile, non la scatola che si vede.
+    settingsBtn: { minHeight:44, padding:'8px 16px', borderRadius:12, background: colors.buttonOverlay,
       border: `1px solid ${colors.cardBorder}`, color: colors.textSecondary, fontSize:12, fontWeight:500,
       cursor:'pointer', fontFamily:FONT, WebkitTapHighlightColor:'transparent',
       backdropFilter:'blur(12px)', transition:'all 0.2s', display:'flex', alignItems:'center', gap:6 },
@@ -508,11 +516,15 @@ export default function getStyles(theme = 'deep') {
 
     // === TOP BAR ===
     topBar: { display:'flex', alignItems:'center', gap:10, width:'100%', maxWidth:380, marginBottom:14, flexShrink:0 },
-    backBtn: { width:36, height:36, borderRadius:12, background: colors.buttonOverlay,
+    // b.481 — QUARANTAQUATTRO anche qui. Era trentasei: il tasto piu premuto
+    // dell'applicazione — quello per tornare indietro — era l'unico sotto la
+    // soglia che vale per tutti gli altri. In un telefono, sotto quella
+    // misura le dita sbagliano bersaglio.
+    backBtn: { width:44, height:44, borderRadius:12, background: colors.buttonOverlay,
       border: `1px solid ${colors.cardBorder}`, color: colors.textPrimary, fontSize:16, cursor:'pointer',
       display:'flex', alignItems:'center', justifyContent:'center', fontFamily:FONT,
       WebkitTapHighlightColor:'transparent', backdropFilter:'blur(16px)', transition:'all 0.2s' },
-    shareBtn: { padding:'8px 20px', borderRadius:12, border: `1px solid ${colors.cardBorder}`,
+    shareBtn: { minHeight:44, padding:'8px 20px', borderRadius:12, border: `1px solid ${colors.cardBorder}`,
       background: colors.buttonOverlay, color: colors.textSecondary, fontSize:12, cursor:'pointer',
       fontFamily:FONT, WebkitTapHighlightColor:'transparent', backdropFilter:'blur(16px)', fontWeight:500 },
     statusMsg: { marginTop:8, fontSize:11, color: colors.accent3, textAlign:'center', fontWeight:600 },

@@ -118,7 +118,7 @@ function RigaPaese({ p, selezionato, c, lingua, onScegli, onConferma, ritardo })
         transform: acceso ? 'scale(1.05)' : 'scale(1)',
         transition: 'transform 0.26s cubic-bezier(0.34,1.4,0.64,1)',
       }}>
-        <span style={{ display: 'block', fontSize: 15, fontWeight: 700,
+        <span style={{ display: 'block', fontSize: 15, fontWeight: 600,
           color: selezionato ? (c.accent1 || '#26D9B0') : (c.textPrimary || '#fff'),
           overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {p.nome}
@@ -288,7 +288,7 @@ export default function SceltaPaeseView({ onFatto }) {
       paddingTop: 'max(20px, env(safe-area-inset-top))',
     }}>
       <div style={{ padding: '0 20px 12px', width: '100%', maxWidth: 480, margin: '0 auto', boxSizing: 'border-box' }}>
-        <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: 3, textTransform: 'uppercase',
+        <div style={{ fontSize: 12, fontWeight: 600, letterSpacing: 3, textTransform: 'uppercase',
           color: c.accent1 || '#26D9B0', marginBottom: 10 }}>BARTALK</div>
         <h1 style={{ fontSize: 26, fontWeight: 900, margin: 0, lineHeight: 1.2, letterSpacing: -0.4 }}>
           {L('countryTitle')}
@@ -319,7 +319,7 @@ export default function SceltaPaeseView({ onFatto }) {
             durante una ricerca l'unica cosa che conta e cio che si cerca. */}
         {!ricerca && proposto && (
           <>
-            <div style={{ fontSize: 9.5, fontWeight: 800, letterSpacing: '0.3em', textTransform: 'uppercase',
+            <div style={{ fontSize: 9.5, fontWeight: 600, letterSpacing: '0.3em', textTransform: 'uppercase',
               color: c.textMuted || 'rgba(255,255,255,0.4)', padding: '4px 4px 8px' }}>
               {L('countrySuggested')}
             </div>
@@ -330,7 +330,7 @@ export default function SceltaPaeseView({ onFatto }) {
           </>
         )}
 
-        <div style={{ fontSize: 9.5, fontWeight: 800, letterSpacing: '0.3em', textTransform: 'uppercase',
+        <div style={{ fontSize: 9.5, fontWeight: 600, letterSpacing: '0.3em', textTransform: 'uppercase',
           color: c.textMuted || 'rgba(255,255,255,0.4)', padding: '4px 4px 8px' }}>
           {L('countryAll')}
         </div>
@@ -361,7 +361,7 @@ export default function SceltaPaeseView({ onFatto }) {
           style={{
             width: '100%', padding: 15, borderRadius: 16,
             cursor: attivo ? 'pointer' : 'default', fontFamily: FONT,
-            fontSize: 15.5, fontWeight: 800, color: attivo ? '#fff' : (c.textMuted || 'rgba(255,255,255,0.35)'),
+            fontSize: 15.5, fontWeight: 600, color: attivo ? '#fff' : (c.textMuted || 'rgba(255,255,255,0.35)'),
             // b.142 — il vetro inventato in b.140 non c'entrava niente
             // col resto: i tasti principali di questa applicazione sono
             // a gradiente pieno d'accento. Questo e uno di quelli.

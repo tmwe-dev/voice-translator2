@@ -92,13 +92,13 @@ function LinguettaLingua({ prefs, savePrefs, L, onScegliVoce, accent = '#26D9B0'
 
             <div style={{ padding: 16, overflowY: 'auto', flex: 1 }}>
               {/* VOCE — timbro + scegli voce */}
-              <div style={{ fontSize: 12, fontWeight: 800, color: 'rgba(255,255,255,0.55)', marginBottom: 8 }}>{tt('voiceTimbre', 'Voce')}</div>
+              <div style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.55)', marginBottom: 8 }}>{tt('voiceTimbre', 'Voce')}</div>
               <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
                 {[{ id: 'female', et: `♀ ${tt('femaleWord', 'Femminile')}` }, { id: 'male', et: `♂ ${tt('maleWord', 'Maschile')}` }].map((o) => {
                   const on = timbro === o.id;
                   return (
                     <button key={o.id} onClick={() => cambiaTimbro(o.id)} aria-pressed={on}
-                      style={{ flex: 1, padding: '10px 8px', borderRadius: 12, cursor: 'pointer', fontFamily: FONT, fontSize: 13, fontWeight: 700,
+                      style={{ flex: 1, padding: '10px 8px', borderRadius: 12, cursor: 'pointer', fontFamily: FONT, fontSize: 13, fontWeight: 600,
                         background: on ? `${accent}22` : 'rgba(255,255,255,0.05)', color: '#fff',
                         border: `2px solid ${on ? accent : 'transparent'}` }}>{o.et}</button>
                   );
@@ -106,14 +106,14 @@ function LinguettaLingua({ prefs, savePrefs, L, onScegliVoce, accent = '#26D9B0'
               </div>
               {onScegliVoce && (
                 <button onClick={() => { setAperto(false); onScegliVoce(); }}
-                  style={{ width: '100%', padding: '11px 12px', borderRadius: 12, cursor: 'pointer', fontFamily: FONT, fontSize: 13, fontWeight: 700, marginBottom: 18,
+                  style={{ width: '100%', padding: '11px 12px', borderRadius: 12, cursor: 'pointer', fontFamily: FONT, fontSize: 13, fontWeight: 600, marginBottom: 18,
                     background: 'transparent', color: accent, border: `1px solid ${accent}`, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
                   <Icon name="mic" size={15} color={accent} /> {tt('linguettaChooseVoice', 'Scegli e prova le voci')}
                 </button>
               )}
 
               {/* LINGUA PARLATA — con bandiere e ricerca */}
-              <div style={{ fontSize: 12, fontWeight: 800, color: 'rgba(255,255,255,0.55)', marginBottom: 8 }}>{tt('spokenLanguage', 'Lingua parlata')}</div>
+              <div style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.55)', marginBottom: 8 }}>{tt('spokenLanguage', 'Lingua parlata')}</div>
               <input value={cerca} onChange={(e) => setCerca(e.target.value)} placeholder={tt('search', 'Cerca…')}
                 style={{ width: '100%', padding: 10, borderRadius: 10, border: bordo, background: 'rgba(255,255,255,0.05)', color: '#fff', fontSize: 14, fontFamily: FONT, boxSizing: 'border-box', marginBottom: 8 }} />
               <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>

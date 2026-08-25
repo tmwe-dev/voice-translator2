@@ -50,7 +50,7 @@ export default function Scelta({ etichetta, valore, opzioni, onCambia, C, icona 
       {(etichetta || icona) && (
         <div style={{
           display: 'flex', alignItems: 'center', gap: 7,
-          fontSize: 12, fontWeight: 700, color: COLORE_TITOLO, fontFamily: FONT,
+          fontSize: 12, fontWeight: 600, color: COLORE_TITOLO, fontFamily: FONT,
           marginBottom: 6, letterSpacing: 0.2,
         }}>
           {icona && <Icon name={icona} size={13} color={COLORE_TITOLO} />}
@@ -75,12 +75,12 @@ export default function Scelta({ etichetta, valore, opzioni, onCambia, C, icona 
         {scelta?.icona && <Icon name={scelta.icona} size={14} color={COLORE_VALORE} />}
         {scelta?.bandiera && <span style={{ fontSize: 15, lineHeight: 1, flexShrink: 0 }}>{scelta.bandiera}</span>}
         <span style={{
-          flex: 1, minWidth: 0, fontSize: 13.5, fontWeight: 700, color: COLORE_VALORE,
+          flex: 1, minWidth: 0, fontSize: 13.5, fontWeight: 600, color: COLORE_VALORE,
           overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
         }}>
           {scelta?.etichetta}
           {scelta?.conto != null && (
-            <span style={{ color: C.accent, fontWeight: 800 }}> {scelta.conto}</span>
+            <span style={{ color: C.accent, fontWeight: 600 }}> {scelta.conto}</span>
           )}
         </span>
         <span style={{
@@ -121,7 +121,7 @@ export default function Scelta({ etichetta, valore, opzioni, onCambia, C, icona 
                   overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                 }}>
                   {o.etichetta}
-                  {o.conto != null && <span style={{ color: scelto ? C.accent : 'rgba(150,168,196,0.85)', fontWeight: 700 }}> {o.conto}</span>}
+                  {o.conto != null && <span style={{ color: scelto ? C.accent : 'rgba(150,168,196,0.85)', fontWeight: 600 }}> {o.conto}</span>}
                 </span>
                 {scelto && <span style={{ color: C.accent, fontSize: 12, flexShrink: 0 }}>✓</span>}
               </button>

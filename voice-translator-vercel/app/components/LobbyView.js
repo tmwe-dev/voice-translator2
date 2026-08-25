@@ -44,7 +44,7 @@ const LobbyView = memo(function LobbyView({ roomId, roomInfo, partnerConnected, 
         <div style={S.card}>
           <div style={{textAlign:'center', marginBottom:16}}>
             <div style={S.label}>{L('code')}</div>
-            <div style={{fontSize:30, fontWeight:700, letterSpacing:8, color:S.colors.accent2}}>{roomId}</div>
+            <div style={{fontSize:30, fontWeight: 600, letterSpacing:8, color:S.colors.accent2}}>{roomId}</div>
           </div>
           <div style={{textAlign:'center', marginBottom:14, position:'relative'}}>
             <canvas ref={canvasRef}

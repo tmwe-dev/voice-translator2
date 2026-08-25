@@ -214,6 +214,15 @@ qualunque refactoring. Non si propone di rimandarlo.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.481** (push #770) — LA CORNICE COMUNE, che era l'ultimo posto
+  dove le vecchie misure resistevano: i margini delle schermate che non se li
+  scrivono da se salgono da 16 a 20 (passando da una pagina all'altra il
+  contenuto saltava di quattro punti), il tasto INDIETRO — il piu premuto
+  dell'applicazione — da 36 a 44, e il titolo della testata condivisa perde il
+  grassetto. E via il grassetto dalle ULTIME 386 righe rimaste in tutta
+  l'applicazione: Life, Mondo, gli ingressi, il taxi, le voci. Il pianeta e
+  l'agente dal vivo non sono stati toccati.
+
 - Versione: **b.480** (push #769) — LO STANDARD DEL TEMPLATE APPLICATO a sei
   schermate (archivio, dettaglio, sommario, rubrica, business, credito, pila,
   profilo, voci): niente grassetto, niente caselle di icona rimaste vuote,

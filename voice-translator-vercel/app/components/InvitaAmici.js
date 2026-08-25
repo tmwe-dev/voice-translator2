@@ -98,7 +98,7 @@ function InvitaAmici({ aperta, onClose }) {
           }}>
             <Icon name="user" size={24} color="#fff" />
           </div>
-          <h2 style={{ margin: 0, fontSize: 19, fontWeight: 800, color: C.textPrimary, letterSpacing: -0.4 }}>
+          <h2 style={{ margin: 0, fontSize: 19, fontWeight: 600, color: C.textPrimary, letterSpacing: -0.4 }}>
             {L('invitaTitolo')}
           </h2>
           <p style={{ margin: '8px 0 0', fontSize: 13, lineHeight: 1.55, color: C.textSecondary }}>
@@ -134,7 +134,7 @@ function InvitaAmici({ aperta, onClose }) {
             <button onClick={scegliDaRubrica} style={{
               padding: '12px 0', borderRadius: 13, cursor: 'pointer',
               background: `linear-gradient(135deg, ${C.accent1 || '#5b8cff'}, ${C.accent2 || '#8b6aff'})`,
-              border: 'none', color: '#fff', fontSize: 14, fontWeight: 700, fontFamily: FONT,
+              border: 'none', color: '#fff', fontSize: 14, fontWeight: 600, fontFamily: FONT,
             }}>
               {L('invitaScegli')}
             </button>
@@ -144,7 +144,7 @@ function InvitaAmici({ aperta, onClose }) {
             background: pickerDisponibile() ? 'transparent' : `linear-gradient(135deg, ${C.accent1 || '#5b8cff'}, ${C.accent2 || '#8b6aff'})`,
             border: pickerDisponibile() ? bordo : 'none',
             color: pickerDisponibile() ? C.textSecondary : '#fff',
-            fontSize: 14, fontWeight: 700, fontFamily: FONT,
+            fontSize: 14, fontWeight: 600, fontFamily: FONT,
           }}>
             {L('invitaCondividi')}
           </button>

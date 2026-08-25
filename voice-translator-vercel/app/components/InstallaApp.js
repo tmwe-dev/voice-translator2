@@ -170,7 +170,7 @@ export default function InstallaApp({ pwa, theme }) {
             <Icon name={suIPhone ? 'share' : 'plus'} size={20} color={C.accento} />
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 15, fontWeight: 700, color: C.testo, marginBottom: 4 }}>
+            <div style={{ fontSize: 15, fontWeight: 600, color: C.testo, marginBottom: 4 }}>
               {bloccate ? L('notifBlockedTitle') : L('installOnDeviceTitle')}
             </div>
             <div style={{ fontSize: 13, lineHeight: 1.45, color: C.testoTenue }}>
@@ -214,7 +214,7 @@ export default function InstallaApp({ pwa, theme }) {
             style={{
               flex: 1, padding: '13px 16px', borderRadius: 14, border: 'none',
               background: C.accento, color: '#fff',
-              fontSize: 15, fontWeight: 700, fontFamily: FONT, cursor: 'pointer',
+              fontSize: 15, fontWeight: 600, fontFamily: FONT, cursor: 'pointer',
               WebkitTapHighlightColor: 'transparent',
             }}
           >

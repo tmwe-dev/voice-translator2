@@ -75,7 +75,7 @@ function GestioneObiettivi({ L, userToken, testoP, muto, accent, card, bordo }) 
         <div style={{ display: 'flex', gap: 8 }}>
           {[1, 2, 3].map((p) => (
             <button key={p} onClick={() => setBozza((b) => ({ ...b, priorita: p }))}
-              style={{ flex: 1, padding: 10, borderRadius: 10, cursor: 'pointer', fontFamily: FONT, fontWeight: 700,
+              style={{ flex: 1, padding: 10, borderRadius: 10, cursor: 'pointer', fontFamily: FONT, fontWeight: 600,
                 border: bordo, background: bozza.priorita === p ? accent : 'transparent', color: bozza.priorita === p ? '#04121c' : testoP }}>
               {p === 1 ? tt('lifeGoalLow', 'Bassa') : p === 2 ? tt('lifeGoalMed', 'Media') : tt('lifeGoalHigh', 'Alta')}
             </button>
@@ -97,7 +97,7 @@ function GestioneObiettivi({ L, userToken, testoP, muto, accent, card, bordo }) 
           </select>
         </>}
 
-        <button onClick={salva} disabled={!bozza.titolo.trim()} style={{ width: '100%', marginTop: 16, padding: 14, borderRadius: 14, border: 'none', cursor: 'pointer', background: accent, color: '#04121c', fontWeight: 800, fontSize: 15, fontFamily: FONT, opacity: bozza.titolo.trim() ? 1 : 0.6 }}>
+        <button onClick={salva} disabled={!bozza.titolo.trim()} style={{ width: '100%', marginTop: 16, padding: 14, borderRadius: 14, border: 'none', cursor: 'pointer', background: accent, color: '#04121c', fontWeight: 600, fontSize: 15, fontFamily: FONT, opacity: bozza.titolo.trim() ? 1 : 0.6 }}>
           ✅ {tt('lifeGoalSave', 'Salva obiettivo')}
         </button>
       </div>
@@ -112,7 +112,7 @@ function GestioneObiettivi({ L, userToken, testoP, muto, accent, card, bordo }) 
         {tt('lifeGoalIntro', 'Imposta i tuoi obiettivi di vita. I tuoi Compagni li conoscono e ti accompagnano a raggiungerli.')}
       </div>
 
-      <button onClick={() => { vibrate(8); setBozza(vuoto()); }} style={{ width: '100%', padding: 13, borderRadius: 14, border: bordo, cursor: 'pointer', background: 'transparent', color: testoP, fontWeight: 700, fontSize: 14, fontFamily: FONT, marginBottom: 16 }}>
+      <button onClick={() => { vibrate(8); setBozza(vuoto()); }} style={{ width: '100%', padding: 13, borderRadius: 14, border: bordo, cursor: 'pointer', background: 'transparent', color: testoP, fontWeight: 600, fontSize: 14, fontFamily: FONT, marginBottom: 16 }}>
         ➕ {tt('lifeGoalNew', 'Nuovo obiettivo')}
       </button>
 
@@ -130,7 +130,7 @@ function GestioneObiettivi({ L, userToken, testoP, muto, accent, card, bordo }) 
                     ? <Icon name="trophy" size={20} color="#f1c40f" />
                     : <span style={{ fontSize: 18 }}>{iconaCat(o.categoria)}</span>}
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontWeight: 700, color: vinto ? '#f1c40f' : testoP, fontSize: 14 }}>{o.titolo}</div>
+                    <div style={{ fontWeight: 600, color: vinto ? '#f1c40f' : testoP, fontSize: 14 }}>{o.titolo}</div>
                     {o.descrizione && <div style={{ fontSize: 12, color: muto, overflow: 'hidden', textOverflow: 'ellipsis' }}>{o.descrizione}</div>}
                   </div>
                   <button onClick={() => setBozza({ ...o })} aria-label={tt('lifeGoalEdit', 'Modifica')} style={{ background: 'none', border: bordo, borderRadius: 8, padding: 7, cursor: 'pointer' }}><Icon name="settings" size={14} color={testoP} /></button>

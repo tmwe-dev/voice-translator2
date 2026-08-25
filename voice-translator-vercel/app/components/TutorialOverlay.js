@@ -235,7 +235,7 @@ export default function TutorialOverlay({ tutorialStep, setTutorialStep, setShow
                 padding: '12px 32px', borderRadius: 12,
                 border: 'none',
                 background: `linear-gradient(135deg, ${current.accent}, ${current.accent}cc)`,
-                color: '#000', fontSize: 14, fontWeight: 700, cursor: 'pointer',
+                color: '#000', fontSize: 14, fontWeight: 600, cursor: 'pointer',
                 fontFamily: FONT,
                 boxShadow: `0 8px 24px ${current.accent}35`,
                 transition: 'all 0.3s',

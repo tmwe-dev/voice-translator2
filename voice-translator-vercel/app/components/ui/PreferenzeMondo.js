@@ -137,7 +137,7 @@ export default function PreferenzeMondo({ C, bandieraMia }) {
       }}>
         <Icon name="settings" size={13} color={accento} />
         <span style={{
-          fontSize: 10.5, fontWeight: 800, letterSpacing: 1.2, color: accento,
+          fontSize: 10.5, fontWeight: 600, letterSpacing: 1.2, color: accento,
           textTransform: 'uppercase', fontFamily: FONT,
         }}>
           {L('preferencesWord')}
@@ -151,7 +151,7 @@ export default function PreferenzeMondo({ C, bandieraMia }) {
             {/* b.367 — icona grande, nome, e basta. */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 11, marginBottom: 9 }}>
               <Icon name={p.icona} size={22} color={accento} />
-              <span style={{ fontSize: 15, fontWeight: 700, color: COLORE_TITOLO, fontFamily: FONT }}>
+              <span style={{ fontSize: 15, fontWeight: 600, color: COLORE_TITOLO, fontFamily: FONT }}>
                 {L(p.titoloKey)}
               </span>
             </div>

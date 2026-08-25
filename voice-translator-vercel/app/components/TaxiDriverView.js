@@ -252,7 +252,7 @@ function TaxiDriverView({ destId, decryptionKey }) {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100dvh', background: C.bg, fontFamily: FONT }}>
         <div style={{ textAlign: 'center', padding: 24 }}>
           <div style={{ marginBottom: 16 }}><Icon name="car" size={40} color={(_S?.colors?.textMuted) || 'rgba(255,255,255,0.35)'} /></div>
-          <div style={{ fontSize: 16, fontWeight: 700, color: C.textPrimary, marginBottom: 8 }}>{error}</div>
+          <div style={{ fontSize: 16, fontWeight: 600, color: C.textPrimary, marginBottom: 8 }}>{error}</div>
           <button onClick={() => setView('home')} style={{
             padding: '10px 24px', borderRadius: 12, cursor: 'pointer',
             background: `${C.accent}15`, border: `1px solid ${C.accent}25`,
@@ -275,7 +275,7 @@ function TaxiDriverView({ destId, decryptionKey }) {
           alignItems: 'center', justifyContent: 'center', padding: 24,
         }}>
           <div style={{ marginBottom: 16 }}><Icon name="car" size={40} color={(_S?.colors?.textMuted) || 'rgba(255,255,255,0.35)'} /></div>
-          <div style={{ fontSize: 22, fontWeight: 800, color: C.textPrimary, marginBottom: 6, textAlign: 'center' }}>
+          <div style={{ fontSize: 22, fontWeight: 600, color: C.textPrimary, marginBottom: 6, textAlign: 'center' }}>
             TaxiTalk
           </div>
           <div style={{ fontSize: 13, color: C.textMuted, marginBottom: 24, textAlign: 'center' }}>
@@ -322,10 +322,10 @@ function TaxiDriverView({ destId, decryptionKey }) {
         padding: '14px 16px', flexShrink: 0,
       }}>
         <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 17, fontWeight: 800, color: C.textPrimary, display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div style={{ fontSize: 17, fontWeight: 600, color: C.textPrimary, display: 'flex', alignItems: 'center', gap: 8 }}>
             TaxiTalk
             <span style={{
-              fontSize: 9, fontWeight: 700, padding: '2px 8px', borderRadius: 6,
+              fontSize: 9, fontWeight: 600, padding: '2px 8px', borderRadius: 6,
               background: `${C.accent}12`, color: C.accent,
             }}>
               {driverLangInfo?.flag} {driverLangInfo?.name}
@@ -360,7 +360,7 @@ function TaxiDriverView({ destId, decryptionKey }) {
                 {L('destinationWord')}
               </div>
               <div style={{
-                fontSize: 22, fontWeight: 800, color: C.textPrimary, lineHeight: 1.3, marginBottom: 8,
+                fontSize: 22, fontWeight: 600, color: C.textPrimary, lineHeight: 1.3, marginBottom: 8,
               }}>
                 {translatedAddress || destination.normalizedAddress}
               </div>
@@ -410,7 +410,7 @@ function TaxiDriverView({ destId, decryptionKey }) {
                       fontSize: 12, color: C.textPrimary,
                       display: 'flex', alignItems: 'center', gap: 6,
                     }}>
-                      <span style={{ fontSize: 10, fontWeight: 700, color: C.purple }}>{i + 1}</span>
+                      <span style={{ fontSize: 10, fontWeight: 600, color: C.purple }}>{i + 1}</span>
                       {stop}
                     </div>
                   ))}
@@ -440,14 +440,14 @@ function TaxiDriverView({ destId, decryptionKey }) {
               flex: 1, padding: '14px', borderRadius: 14, textAlign: 'center',
               background: C.card, border: `1px solid ${C.cardBorder}`,
             }}>
-              <div style={{ fontSize: 24, fontWeight: 800, color: C.accent }}>{routeInfo.distKm}</div>
+              <div style={{ fontSize: 24, fontWeight: 600, color: C.accent }}>{routeInfo.distKm}</div>
               <div style={{ fontSize: 10, color: C.textMuted }}>{L('unitKm')}</div>
             </div>
             <div style={{
               flex: 1, padding: '14px', borderRadius: 14, textAlign: 'center',
               background: C.card, border: `1px solid ${C.cardBorder}`,
             }}>
-              <div style={{ fontSize: 24, fontWeight: 800, color: C.purple }}>{routeInfo.durationMin}</div>
+              <div style={{ fontSize: 24, fontWeight: 600, color: C.purple }}>{routeInfo.durationMin}</div>
               <div style={{ fontSize: 10, color: C.textMuted }}>{L('unitMin')}</div>
             </div>
           </div>
@@ -467,7 +467,7 @@ function TaxiDriverView({ destId, decryptionKey }) {
             background: `${C.accent}10`, border: `1px solid ${C.accent}25`,
             textAlign: 'center',
           }}>
-            <div style={{ fontSize: 14, fontWeight: 700, color: C.accent }}>
+            <div style={{ fontSize: 14, fontWeight: 600, color: C.accent }}>
               ✓ {L('destConfirmed')}
             </div>
           </div>
@@ -483,7 +483,7 @@ function TaxiDriverView({ destId, decryptionKey }) {
           <button onClick={handleConfirm} style={{
             flex: 1, padding: '14px', borderRadius: 14, cursor: 'pointer',
             background: `linear-gradient(135deg, ${C.accent}, ${C.purple})`,
-            border: 'none', color: '#fff', fontSize: 15, fontWeight: 700, fontFamily: FONT,
+            border: 'none', color: '#fff', fontSize: 15, fontWeight: 600, fontFamily: FONT,
             boxShadow: `0 4px 20px ${C.accent}35`,
           }}>
             ✓ {L('confirmDestination')}
@@ -493,14 +493,14 @@ function TaxiDriverView({ destId, decryptionKey }) {
             <button onClick={openInMaps} style={{
               flex: 1, padding: '14px', borderRadius: 14, cursor: 'pointer',
               background: `${C.accent}12`, border: `1px solid ${C.accent}25`,
-              color: C.accent, fontSize: 13, fontWeight: 700, fontFamily: FONT,
+              color: C.accent, fontSize: 13, fontWeight: 600, fontFamily: FONT,
             }}>
               {L('openNavigator')}
             </button>
             <button onClick={() => setView('speaker')} style={{
               flex: 1, padding: '14px', borderRadius: 14, cursor: 'pointer',
               background: `linear-gradient(135deg, ${C.accent}, ${C.purple})`,
-              border: 'none', color: '#fff', fontSize: 13, fontWeight: 700, fontFamily: FONT,
+              border: 'none', color: '#fff', fontSize: 13, fontWeight: 600, fontFamily: FONT,
               boxShadow: `0 4px 20px ${C.accent}35`,
             }}>
               {L('talkToPassenger')}

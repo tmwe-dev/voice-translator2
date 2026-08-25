@@ -87,7 +87,7 @@ function VoiceCallOverlay({
               <img src={avatarUrl} alt={partnerName}
                 style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
             ) : (
-              <span style={{ fontSize: 48, color: '#fff', fontWeight: 700 }}>
+              <span style={{ fontSize: 48, color: '#fff', fontWeight: 600 }}>
                 {partnerName.charAt(0).toUpperCase()}
               </span>
             )}

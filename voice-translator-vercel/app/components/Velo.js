@@ -62,7 +62,7 @@ export default function Velo({ motivo, C, children }) {
           borderRadius: 12,
           backdropFilter: 'blur(3px)', WebkitBackdropFilter: 'blur(3px)',
         }}>
-        <span style={{ fontSize: 11.5, fontWeight: 800, color: C.textSecondary }}>
+        <span style={{ fontSize: 11.5, fontWeight: 600, color: C.textSecondary }}>
           {motivo === 'sta urlando' ? L('veloShouting') : L('veloHeavy')}
         </span>
         <span style={{ fontSize: 10.5, color: C.textMuted }}>{L('veloTapToRead')}</span>

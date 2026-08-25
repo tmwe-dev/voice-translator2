@@ -67,7 +67,7 @@ export default function PannelloLaterale({ aperto, onChiudi, titolo, C, children
           padding: 'max(16px, calc(env(safe-area-inset-top) + 12px)) 14px 12px',
           borderBottom: bordo,
         }}>
-          <span style={{ flex: 1, fontSize: 15, fontWeight: 800, color: C.textPrimary }}>{titolo}</span>
+          <span style={{ flex: 1, fontSize: 15, fontWeight: 600, color: C.textPrimary }}>{titolo}</span>
           <button onClick={() => { vibrate(6); onChiudi?.(); }} aria-label="✕"
             style={{
               width: 34, height: 34, borderRadius: 12, cursor: 'pointer',

@@ -101,7 +101,7 @@ function TaxiQRView({ destination, onClose, onStartConversation, S }) {
           color: textMuted, fontSize: 18,
         }}>‹</button>
         <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 17, fontWeight: 800, color: textPrimary }}>
+          <div style={{ fontSize: 17, fontWeight: 600, color: textPrimary }}>
             Mostra al tassista
           </div>
           <div style={{ fontSize: 10, color: textMuted }}>
@@ -133,7 +133,7 @@ function TaxiQRView({ destination, onClose, onStartConversation, S }) {
           width: '100%', maxWidth: 340, padding: '16px 18px', borderRadius: 16,
           background: cardBg, border: `1px solid ${cardBorder}`,
         }}>
-          <div style={{ fontSize: 14, fontWeight: 700, color: textPrimary, marginBottom: 6 }}>
+          <div style={{ fontSize: 14, fontWeight: 600, color: textPrimary, marginBottom: 6 }}>
             {destination.normalizedAddress}
           </div>
           {destination.terminal && (
@@ -180,7 +180,7 @@ function TaxiQRView({ destination, onClose, onStartConversation, S }) {
         <button onClick={onStartConversation} style={{
           flex: 1, padding: '14px', borderRadius: 14, cursor: 'pointer',
           background: `linear-gradient(135deg, ${accent}, ${purple})`,
-          border: 'none', color: '#fff', fontSize: 13, fontWeight: 700, fontFamily: FONT,
+          border: 'none', color: '#fff', fontSize: 13, fontWeight: 600, fontFamily: FONT,
           boxShadow: `0 4px 20px ${accent}35`,
         }}>
           Parla col tassista

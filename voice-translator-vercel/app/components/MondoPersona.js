@@ -65,7 +65,7 @@ function MondoPersona({ publicId, onClose, onOpenDiscussione }) {
   const accent = C.accent1 || '#26D9B0';
 
   const sezione = (titolo) => (
-    <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: 1.2, color: muto, textTransform: 'uppercase', margin: '16px 0 8px' }}>{titolo}</div>
+    <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: 1.2, color: muto, textTransform: 'uppercase', margin: '16px 0 8px' }}>{titolo}</div>
   );
   const voce = (testo, onClick) => (
     <button onClick={onClick} style={{
@@ -83,12 +83,12 @@ function MondoPersona({ publicId, onClose, onOpenDiscussione }) {
           display: 'flex', alignItems: 'center', justifyContent: 'center', color: muto, fontSize: 18,
         }}>‹</button>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 16, fontWeight: 800, color: testoP }}>{p?.nome || (caricando ? '…' : '—')}</div>
+          <div style={{ fontSize: 16, fontWeight: 600, color: testoP }}>{p?.nome || (caricando ? '…' : '—')}</div>
           <div style={{ fontSize: 11, color: muto }}>{(p?.seguaci ?? 0)} {L('followersLabel')}</div>
         </div>
         {userToken && (
           <button onClick={toggleSegui} style={{
-            padding: '7px 16px', borderRadius: 999, cursor: 'pointer', fontFamily: FONT, fontSize: 12, fontWeight: 800,
+            padding: '7px 16px', borderRadius: 999, cursor: 'pointer', fontFamily: FONT, fontSize: 12, fontWeight: 600,
             background: seguito ? 'transparent' : `linear-gradient(135deg, ${accent}, ${C.accent2 || '#5b8cff'})`,
             border: seguito ? bordo : 'none', color: seguito ? muto : '#fff',
           }}>{seguito ? L('following') : L('follow')}</button>

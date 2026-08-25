@@ -67,7 +67,7 @@ function Riquadro({ nome, stream, stato, lingua, battuta, C, mio, volume = 1, mu
           position: 'absolute', left: 6, bottom: 6,
           padding: '2px 8px', borderRadius: 999,
           background: 'rgba(0,0,0,0.55)',
-          fontSize: 11, fontWeight: 700, color: '#fff', fontFamily: FONT,
+          fontSize: 11, fontWeight: 600, color: '#fff', fontFamily: FONT,
           display: 'flex', alignItems: 'center', gap: 4,
         }}>
           {l?.flag} {mio ? L('youWord') : nome}
@@ -211,7 +211,7 @@ export default function StanzaVideoGruppo({ roomId, roomSessionToken, mioNome, o
           style={{ background: 'none', border: 'none', cursor: 'pointer', color: C.textPrimary, display: 'flex' }}>
           <Icon name="back" size={20} color={C.textPrimary} />
         </button>
-        <div style={{ fontSize: 16, fontWeight: 800, color: C.textPrimary }}>{L('videoRoom')}</div>
+        <div style={{ fontSize: 16, fontWeight: 600, color: C.textPrimary }}>{L('videoRoom')}</div>
         <div style={{ marginLeft: 'auto', fontSize: 11.5, color: C.textMuted }}>
           {stanza.partecipanti.length + 1}/{stanza.MAX_PARTECIPANTI}
         </div>
@@ -229,7 +229,7 @@ export default function StanzaVideoGruppo({ roomId, roomSessionToken, mioNome, o
           <button onClick={() => { vibrate(); stanza.entra(); }} style={{
             padding: '13px 22px', borderRadius: 13, border: 'none', cursor: 'pointer',
             background: C.btnGradient || `linear-gradient(90deg, ${C.accent1}, ${C.accent2})`,
-            color: '#fff', fontSize: 14.5, fontWeight: 800, fontFamily: FONT,
+            color: '#fff', fontSize: 14.5, fontWeight: 600, fontFamily: FONT,
           }}>
             Entra in video
           </button>
@@ -290,14 +290,14 @@ export default function StanzaVideoGruppo({ roomId, roomSessionToken, mioNome, o
                 <button onClick={() => { vibrate(); stanza.mossaPalco('chiudo'); }}
                   style={{ width: '100%', padding: '14px 14px', borderRadius: 16, cursor: 'pointer',
                     background: 'rgba(56,225,255,0.14)', border: '2px solid #38e1ff',
-                    color: C.textPrimary, fontSize: 15, fontWeight: 800, fontFamily: FONT }}>
+                    color: C.textPrimary, fontSize: 15, fontWeight: 600, fontFamily: FONT }}>
                   {'\u2705'} {L('floorDone')}
                 </button>
               ) : miaPosizioneInCoda >= 0 ? (
                 <button onClick={() => { vibrate(); stanza.mossaPalco('rinuncia'); }}
                   style={{ width: '100%', padding: '14px 14px', borderRadius: 16, cursor: 'pointer',
                     background: C.overlayBg, border: `2px solid ${C.cardBorder}`,
-                    color: C.textPrimary, fontSize: 14, fontWeight: 800, fontFamily: FONT }}>
+                    color: C.textPrimary, fontSize: 14, fontWeight: 600, fontFamily: FONT }}>
                   {'\u23F3'} {L('floorInQueue')} · {miaPosizioneInCoda + 1}\u00B0 — {L('floorLeave')}
                 </button>
               ) : (
@@ -326,7 +326,7 @@ export default function StanzaVideoGruppo({ roomId, roomSessionToken, mioNome, o
                   border: `2px solid ${b.acceso ? '#3ddc84' : '#ef4444'}`, color: C.textPrimary,
                   display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
                 <span style={{ fontSize: 20, lineHeight: 1 }}>{b.icona}</span>
-                <span style={{ fontSize: 10.5, fontWeight: 800 }}>{b.parola}</span>
+                <span style={{ fontSize: 10.5, fontWeight: 600 }}>{b.parola}</span>
               </button>
             ))}
             {[['off','\u{1F6AB}'],['testo','\u{1F4D6}'],['voce','\u{1F50A}']].map(([id, icona]) => (
@@ -337,7 +337,7 @@ export default function StanzaVideoGruppo({ roomId, roomSessionToken, mioNome, o
                   border: `2px solid ${sceltaTraduzione === id ? '#38e1ff' : C.cardBorder}`, color: C.textPrimary,
                   display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
                 <span style={{ fontSize: 20, lineHeight: 1 }}>{icona}</span>
-                <span style={{ fontSize: 10.5, fontWeight: 800 }}>
+                <span style={{ fontSize: 10.5, fontWeight: 600 }}>
                   {id === 'off' ? L('autoTransOff').split(':')[0] : id === 'testo' ? L('autoTransTextOnly') : L('autoTransVoiceText')}
                 </span>
               </button>

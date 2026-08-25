@@ -88,7 +88,7 @@ function NetworkStatus() {
           position: 'fixed', top: 12, left: '50%', transform: 'translateX(-50%)',
           zIndex: 10000, padding: '8px 20px', borderRadius: 20,
           background: 'linear-gradient(135deg, #10B981, #34D399)',
-          fontFamily: FONT, fontSize: 12, fontWeight: 700, color: '#fff',
+          fontFamily: FONT, fontSize: 12, fontWeight: 600, color: '#fff',
           animation: 'vtSlideDown 0.3s ease-out',
           boxShadow: '0 4px 16px rgba(16,185,129,0.3)',
         }}>
@@ -102,7 +102,7 @@ function NetworkStatus() {
           position: 'fixed', top: showReconnect ? 48 : 12, right: 12,
           zIndex: 10000, padding: '6px 12px', borderRadius: 12,
           background: 'rgba(108,99,255,0.9)',
-          fontFamily: FONT, fontSize: 10, fontWeight: 700, color: '#fff',
+          fontFamily: FONT, fontSize: 10, fontWeight: 600, color: '#fff',
           display: 'flex', alignItems: 'center', gap: 6,
           backdropFilter: 'blur(8px)',
         }}>

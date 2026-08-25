@@ -129,7 +129,7 @@ function QuickInvite({ handleCreateRoom, roomId, setViewAfterCreate }) {
               style={{
                 padding: '14px 32px', borderRadius: 14, cursor: 'pointer', border: 'none',
                 background: 'linear-gradient(135deg, #26D9B0 0%, #1EB898 100%)',
-                color: '#000', fontFamily: FONT, fontSize: 15, fontWeight: 700,
+                color: '#000', fontFamily: FONT, fontSize: 15, fontWeight: 600,
               }}>
               {L('retryWord')}
             </button>
@@ -209,7 +209,7 @@ function QuickInvite({ handleCreateRoom, roomId, setViewAfterCreate }) {
               style={{
                 width: '100%', padding: '16px 0', borderRadius: 16, cursor: 'pointer', border: 'none',
                 background: 'linear-gradient(135deg, #26D9B0 0%, #1EB898 50%, #178F78 100%)',
-                color: '#000', fontFamily: FONT, fontSize: 16, fontWeight: 700,
+                color: '#000', fontFamily: FONT, fontSize: 16, fontWeight: 600,
                 boxShadow: '0 8px 32px rgba(38,217,176,0.25)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
               }}>

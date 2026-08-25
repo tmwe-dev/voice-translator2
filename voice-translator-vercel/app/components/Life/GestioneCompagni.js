@@ -300,11 +300,11 @@ function GestioneCompagni({ miei, onCambiato, L, C = {}, lingua, userToken, test
 
         {/* b.212 — carattere a barre (stile ElevenLabs): regoli a vista */}
         <div style={{ marginTop: 10, padding: 12, borderRadius: 12, background: card, border: bordo }}>
-          <div style={{ fontSize: 11, color: muto, marginBottom: 6, fontWeight: 700 }}>{tt('lifeCharacter', 'Carattere')}</div>
+          <div style={{ fontSize: 11, color: muto, marginBottom: 6, fontWeight: 600 }}>{tt('lifeCharacter', 'Carattere')}</div>
           {BARRE.map((s) => (
             <div key={s.k} style={{ margin: '9px 0' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: testoP, marginBottom: 3 }}>
-                <span style={{ fontWeight: 700 }}>{s.nome}</span>
+                <span style={{ fontWeight: 600 }}>{s.nome}</span>
               </div>
               <input type="range" min={0} max={100} value={barre[s.k]} onChange={cambiaBarra(s.k)}
                 style={{ width: '100%', accentColor: accent, cursor: 'pointer' }} />
@@ -332,15 +332,15 @@ function GestioneCompagni({ miei, onCambiato, L, C = {}, lingua, userToken, test
           <img src={bozza.avatar} alt="" width={48} height={48}
             style={{ borderRadius: 10, display: 'block', flexShrink: 0, objectFit: 'cover', border: `2px solid ${bozza.avatar?.startsWith('data:') ? accent : bordo}` }} />
           <button onClick={() => creaAvatar(null)} disabled={genImg || nGenImg >= MAX_GEN_IMG}
-            style={{ padding: '0 14px', height: 42, borderRadius: 10, border: 'none', background: accent, color: '#04121c', fontWeight: 800, cursor: 'pointer', fontFamily: FONT, opacity: (genImg || nGenImg >= MAX_GEN_IMG) ? 0.55 : 1 }}>
+            style={{ padding: '0 14px', height: 42, borderRadius: 10, border: 'none', background: accent, color: '#04121c', fontWeight: 600, cursor: 'pointer', fontFamily: FONT, opacity: (genImg || nGenImg >= MAX_GEN_IMG) ? 0.55 : 1 }}>
             {genImg ? '…' : `✨ ${tt('lifeAvatarGen', 'Genera avatar')}`}
           </button>
           <button onClick={() => creaAvatar(bozza.avatar)} disabled={genImg || nGenImg >= MAX_GEN_IMG}
-            style={{ padding: '0 12px', height: 42, borderRadius: 10, border: bordo, background: 'transparent', color: testoP, fontWeight: 700, cursor: 'pointer', fontFamily: FONT, opacity: (genImg || nGenImg >= MAX_GEN_IMG) ? 0.55 : 1 }}>
+            style={{ padding: '0 12px', height: 42, borderRadius: 10, border: bordo, background: 'transparent', color: testoP, fontWeight: 600, cursor: 'pointer', fontFamily: FONT, opacity: (genImg || nGenImg >= MAX_GEN_IMG) ? 0.55 : 1 }}>
             ↻ {tt('lifeAvatarRestyle', 'Ridisegna')}
           </button>
           <button onClick={() => fileRef.current?.click()} disabled={genImg}
-            style={{ padding: '0 12px', height: 42, borderRadius: 10, border: bordo, background: 'transparent', color: testoP, fontWeight: 700, cursor: 'pointer', fontFamily: FONT }}>
+            style={{ padding: '0 12px', height: 42, borderRadius: 10, border: bordo, background: 'transparent', color: testoP, fontWeight: 600, cursor: 'pointer', fontFamily: FONT }}>
             ⤒ {tt('lifeAvatarUpload', 'Carica')}
           </button>
           <input ref={fileRef} type="file" accept="image/*" onChange={caricaImmagine} style={{ display: 'none' }} />
@@ -403,7 +403,7 @@ function GestioneCompagni({ miei, onCambiato, L, C = {}, lingua, userToken, test
               <div style={{ marginTop: 8, padding: '9px 12px', borderRadius: 10, background: `${accent}12`, border: `1px solid ${accent}44`, fontSize: 12, color: testoP, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
                 <span>{tt('lifeVoceConsiglio', 'Per questa lingua c’è una voce che rende meglio')}{nomeCons ? ` (${nomeCons})` : ''}.</span>
                 <button onClick={() => setBozza((b) => ({ ...b, voce: { id: comp.consiglio.id, nome: nomeCons || b.voce?.nome || '' } }))}
-                  style={{ padding: '5px 10px', borderRadius: 8, border: 'none', background: accent, color: '#04121c', fontWeight: 700, cursor: 'pointer', fontFamily: FONT, fontSize: 12 }}>
+                  style={{ padding: '5px 10px', borderRadius: 8, border: 'none', background: accent, color: '#04121c', fontWeight: 600, cursor: 'pointer', fontFamily: FONT, fontSize: 12 }}>
                   {tt('lifeVoceUsala', 'Usa quella')}
                 </button>
               </div>
@@ -453,7 +453,7 @@ function GestioneCompagni({ miei, onCambiato, L, C = {}, lingua, userToken, test
 
         {errore && <div style={{ color: '#f87171', fontSize: 13, margin: '10px 0' }}>{errore}</div>}
 
-        <button onClick={salva} disabled={salvando} style={{ width: '100%', marginTop: 16, padding: 14, borderRadius: 14, border: 'none', cursor: 'pointer', background: accent, color: '#04121c', fontWeight: 800, fontSize: 15, fontFamily: FONT, opacity: salvando ? 0.6 : 1 }}>
+        <button onClick={salva} disabled={salvando} style={{ width: '100%', marginTop: 16, padding: 14, borderRadius: 14, border: 'none', cursor: 'pointer', background: accent, color: '#04121c', fontWeight: 600, fontSize: 15, fontFamily: FONT, opacity: salvando ? 0.6 : 1 }}>
           {salvando ? L('lifeGenerating') : `✨ ${L('lifeSave')}`}
         </button>
       </div>
@@ -465,7 +465,7 @@ function GestioneCompagni({ miei, onCambiato, L, C = {}, lingua, userToken, test
     <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: 12, ...clayCard(card) }}>
       <img src={c.avatar} alt="" width={38} height={38} style={{ borderRadius: 8 }} />
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontWeight: 700, color: testoP, fontSize: 14 }}>{c.nome}</div>
+        <div style={{ fontWeight: 600, color: testoP, fontSize: 14 }}>{c.nome}</div>
         <div style={{ fontSize: 11, color: muto, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.ruolo}</div>
       </div>
       {/* b.411 · P1.17 — «Dimentica»: cancella cio che questo Compagno
@@ -474,7 +474,7 @@ function GestioneCompagni({ miei, onCambiato, L, C = {}, lingua, userToken, test
       <button onClick={() => dimentica(c.id)} aria-label={tt('lifeForget', 'Dimentica cio che ricorda di me')}
         title={tt('lifeForget', 'Dimentica cio che ricorda di me')}
         style={{ background: 'none', border: bordo, borderRadius: 8, padding: '7px 9px', cursor: 'pointer',
-          color: dimenticato === c.id ? accent : muto, fontSize: 11, fontWeight: 700, fontFamily: FONT }}>
+          color: dimenticato === c.id ? accent : muto, fontSize: 11, fontWeight: 600, fontFamily: FONT }}>
         {dimenticato === c.id ? tt('lifeForgotten', 'fatto') : tt('lifeForgetShort', 'dimentica')}
       </button>
       {mio
@@ -482,7 +482,7 @@ function GestioneCompagni({ miei, onCambiato, L, C = {}, lingua, userToken, test
             <button onClick={() => modifica(c)} aria-label={L('lifeEdit')} style={{ background: 'none', border: bordo, borderRadius: 8, padding: 7, cursor: 'pointer' }}><Icon name="settings" size={14} color={testoP} /></button>
             <button onClick={() => elimina(c.id)} aria-label={L('lifeDelete')} style={{ background: 'none', border: bordo, borderRadius: 8, padding: 7, cursor: 'pointer' }}><Icon name="x" size={14} color="#f87171" /></button>
           </>
-        : <button onClick={() => daBase(c)} style={{ background: 'none', border: bordo, borderRadius: 8, padding: '7px 10px', cursor: 'pointer', color: accent, fontSize: 12, fontWeight: 700, fontFamily: FONT }}>{L('lifeDuplicate')}</button>}
+        : <button onClick={() => daBase(c)} style={{ background: 'none', border: bordo, borderRadius: 8, padding: '7px 10px', cursor: 'pointer', color: accent, fontSize: 12, fontWeight: 600, fontFamily: FONT }}>{L('lifeDuplicate')}</button>}
     </div>
   );
 
@@ -490,19 +490,19 @@ function GestioneCompagni({ miei, onCambiato, L, C = {}, lingua, userToken, test
     <div>
       {/* b.212 — costruzione automatica: scrivi un personaggio e l'AI crea tutto */}
       <div style={{ padding: 14, ...clayCard(card), marginBottom: 12 }}>
-        <div style={{ fontSize: 13, fontWeight: 800, color: testoP, marginBottom: 8 }}>{tt('lifeCreateFrom', 'Crea da un personaggio')}</div>
+        <div style={{ fontSize: 13, fontWeight: 600, color: testoP, marginBottom: 8 }}>{tt('lifeCreateFrom', 'Crea da un personaggio')}</div>
         <div style={{ display: 'flex', gap: 8 }}>
           <input value={descAg} onChange={(e) => setDescAg(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter' && !generando) crea(false); }}
             placeholder={tt('lifeCreateFromPh', 'Es. Elvis Presley, oppure una coach diretta')}
             style={{ ...input, flex: 1 }} />
           <button onClick={() => crea(false)} disabled={generando}
-            style={{ padding: '0 16px', borderRadius: 10, border: 'none', background: accent, color: '#04121c', fontWeight: 800, cursor: 'pointer', fontFamily: FONT, opacity: generando ? 0.6 : 1 }}>
+            style={{ padding: '0 16px', borderRadius: 10, border: 'none', background: accent, color: '#04121c', fontWeight: 600, cursor: 'pointer', fontFamily: FONT, opacity: generando ? 0.6 : 1 }}>
             {generando ? '…' : `✨ ${tt('lifeCreate', 'Crea')}`}
           </button>
         </div>
         <button onClick={() => crea(true)} disabled={generando}
-          style={{ marginTop: 8, background: 'none', border: 'none', color: accent, fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: FONT, padding: 4 }}>
+          style={{ marginTop: 8, background: 'none', border: 'none', color: accent, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: FONT, padding: 4 }}>
           🎲 {tt('lifeSurprise', 'Sorprendimi')}
         </button>
         {/* b.215 — la lista non rendeva mai `errore`: un fallimento di
@@ -510,7 +510,7 @@ function GestioneCompagni({ miei, onCambiato, L, C = {}, lingua, userToken, test
         {errore && <div style={{ color: '#f87171', fontSize: 13, marginTop: 10 }}>{errore}</div>}
       </div>
 
-      <button onClick={() => { vibrate(8); nuovo(); }} style={{ width: '100%', padding: 13, borderRadius: 14, border: bordo, cursor: 'pointer', background: 'transparent', color: testoP, fontWeight: 700, fontSize: 14, fontFamily: FONT, marginBottom: 16 }}>
+      <button onClick={() => { vibrate(8); nuovo(); }} style={{ width: '100%', padding: 13, borderRadius: 14, border: bordo, cursor: 'pointer', background: 'transparent', color: testoP, fontWeight: 600, fontSize: 14, fontFamily: FONT, marginBottom: 16 }}>
         {tt('lifeCreateManual', 'Crea a mano')}
       </button>
 

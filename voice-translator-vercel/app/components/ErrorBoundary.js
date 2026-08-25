@@ -89,7 +89,7 @@ export default class ErrorBoundary extends Component {
           color: '#e0e0e0', fontFamily: '-apple-system, BlinkMacSystemFont, sans-serif',
         }}>
           <div style={{ fontSize: 48, marginBottom: 16 }}>{'\u26A0\uFE0F'}</div>
-          <h2 style={{ fontSize: 22, fontWeight: 700, margin: '0 0 8px', color: '#fff' }}>
+          <h2 style={{ fontSize: 22, fontWeight: 600, margin: '0 0 8px', color: '#fff' }}>
             {this.getErrorText('errorTitle')}
           </h2>
           <p style={{ fontSize: 14, color: '#aaa', maxWidth: 400, lineHeight: 1.5, margin: '0 0 24px' }}>

@@ -67,7 +67,7 @@ const ToastContainer = memo(function ToastContainer() {
           }}>
             <span style={{
               flexShrink: 0, width: 20, height: 20, borderRadius: 999,
-              display: 'grid', placeItems: 'center', fontSize: 12, fontWeight: 800,
+              display: 'grid', placeItems: 'center', fontSize: 12, fontWeight: 600,
               color: c.text, border: `1px solid ${c.border}`,
             }}>{c.icon}</span>
             <span style={{ flex: 1, fontSize: 13, color: c.text, lineHeight: 1.4 }}>

@@ -50,7 +50,7 @@ function CondivisoSheet({ condiviso, onParlane, onLife, onChiudi, L }) {
       style={{ position: 'fixed', inset: 0, zIndex: 320, background: 'rgba(3,5,12,0.72)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
       <div style={{ width: '100%', maxWidth: 560, background: card, borderRadius: '20px 20px 0 0', border: bordo, borderBottom: 'none', fontFamily: FONT, padding: 16, paddingBottom: 'calc(16px + env(safe-area-inset-bottom))' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-          <span style={{ flex: 1, fontSize: 12, fontWeight: 800, color: 'rgba(255,255,255,0.55)', letterSpacing: 0.5 }}>{tt('sharedWithBartalk', 'Hai condiviso')}{fonte ? ` · ${fonte}` : ''}</span>
+          <span style={{ flex: 1, fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.55)', letterSpacing: 0.5 }}>{tt('sharedWithBartalk', 'Hai condiviso')}{fonte ? ` · ${fonte}` : ''}</span>
           <button onClick={onChiudi} aria-label={tt('close', 'Chiudi')} style={{ width: 30, height: 30, borderRadius: 9, cursor: 'pointer', background: 'rgba(255,255,255,0.06)', border: bordo, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <Icon name="x" size={13} color="rgba(255,255,255,0.7)" />
           </button>
@@ -58,22 +58,22 @@ function CondivisoSheet({ condiviso, onParlane, onLife, onChiudi, L }) {
 
         {immagine && <AnteprimaCoperta src={immagine} contenuto={{ url: condiviso.url, source: fonte }} L={tt ? (k) => tt(k, 'Tocca per vedere') : null}
           stile={{ width: '100%', maxHeight: 180, height: 180, objectFit: 'cover', borderRadius: 12, marginBottom: 10, display: 'block' }} />}
-        <div style={{ fontSize: 15, fontWeight: 800, color: '#fff', lineHeight: 1.35 }}>{titolo}</div>
+        <div style={{ fontSize: 15, fontWeight: 600, color: '#fff', lineHeight: 1.35 }}>{titolo}</div>
         {sintesi && <div style={{ fontSize: 12.5, color: 'rgba(255,255,255,0.6)', marginTop: 5, lineHeight: 1.45 }}>{sintesi}</div>}
 
-        <div style={{ fontSize: 12, fontWeight: 700, color: 'rgba(255,255,255,0.5)', margin: '14px 0 8px' }}>{tt('sharedWhatToDo', 'Cosa vuoi farne?')}</div>
+        <div style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.5)', margin: '14px 0 8px' }}>{tt('sharedWhatToDo', 'Cosa vuoi farne?')}</div>
         <button onClick={() => onParlane({ titolo, sintesi: sintesi || (fonte ? `da ${fonte}` : ''), url: condiviso.url })}
-          style={{ width: '100%', padding: 13, borderRadius: 13, border: 'none', cursor: 'pointer', background: accent, color: '#04121c', fontWeight: 800, fontSize: 15, fontFamily: FONT, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+          style={{ width: '100%', padding: 13, borderRadius: 13, border: 'none', cursor: 'pointer', background: accent, color: '#04121c', fontWeight: 600, fontSize: 15, fontFamily: FONT, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
           <Icon name="mic" size={16} color="#04121c" /> {tt('newsTalkAbout', 'Parlane')}
         </button>
         <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
           {/* b.334 — le altre destinazioni del piano: Spiegamelo (Impara) e la Tavola. */}
           <button onClick={() => onLife?.('impara', titolo)}
-            style={{ flex: 1, padding: 11, borderRadius: 12, border: bordo, background: 'transparent', color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: FONT }}>
+            style={{ flex: 1, padding: 11, borderRadius: 12, border: bordo, background: 'transparent', color: '#fff', fontWeight: 600, fontSize: 13, cursor: 'pointer', fontFamily: FONT }}>
             {tt('sharedExplain', 'Spiegamelo')}
           </button>
           <button onClick={() => onLife?.('tavolo', titolo)}
-            style={{ flex: 1, padding: 11, borderRadius: 12, border: bordo, background: 'transparent', color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: FONT }}>
+            style={{ flex: 1, padding: 11, borderRadius: 12, border: bordo, background: 'transparent', color: '#fff', fontWeight: 600, fontSize: 13, cursor: 'pointer', fontFamily: FONT }}>
             {tt('sharedTable', 'Alla Tavola')}
           </button>
         </div>

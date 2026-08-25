@@ -83,7 +83,7 @@ const VoiceEngineBar = memo(function VoiceEngineBar({
               un absolute in RoomView che copriva il selettore modalita. */}
           {badge}
           {isHost && (
-            <span style={{fontSize:9, fontWeight:700, letterSpacing:0.5, padding:'2px 8px', borderRadius:6,
+            <span style={{fontSize:9, fontWeight: 600, letterSpacing:0.5, padding:'2px 8px', borderRadius:6,
               background: isTrial ? S.colors.accent4Bg : isTopPro ? `${S.colors.goldAccent}26` : S.colors.accent3Bg,
               color: isTrial ? S.colors.statusOk : isTopPro ? S.colors.goldAccent : S.colors.accent3,
               border: `1px solid ${isTrial ? S.colors.accent4Border : isTopPro ? `${S.colors.goldAccent}40` : S.colors.accent3Border}`}}>
@@ -140,7 +140,7 @@ const VoiceEngineBar = memo(function VoiceEngineBar({
               background: motoreAttivo === 'elevenlabs' ? (S.colors.goldAccent || '#d4a24e')
                 : motoreAttivo === 'openai' ? (S.colors.accent2 || S.colors.accent1)
                 : S.colors.textMuted}} />
-            <span style={{fontSize:10, fontWeight:700, whiteSpace:'nowrap',
+            <span style={{fontSize:10, fontWeight: 600, whiteSpace:'nowrap',
               color: motoreAttivo === 'elevenlabs' ? (S.colors.goldAccent || '#d4a24e') : S.colors.textSecondary}}>
               {motoreAttivo === 'elevenlabs' ? 'ElevenLabs' : motoreAttivo === 'openai' ? 'OpenAI' : 'Edge TTS'}
             </span>
@@ -162,7 +162,7 @@ const VoiceEngineBar = memo(function VoiceEngineBar({
                       color:S.colors.textPrimary, fontSize:12}}>
                     <span style={{width:6, height:6, borderRadius:3, background:m.colore, flexShrink:0}} />
                     <span style={{flex:1}}>
-                      <span style={{display:'block', fontWeight:700}}>{m.nome}</span>
+                      <span style={{display:'block', fontWeight: 600}}>{m.nome}</span>
                       <span style={{display:'block', fontSize:10, color:S.colors.textMuted}}>{m.sotto}</span>
                     </span>
                     {(prefs.voiceEngine || 'auto') === m.id && <IconCheck size={12}/>}
@@ -211,7 +211,7 @@ const VoiceEngineBar = memo(function VoiceEngineBar({
             {!isTrial && <span style={{fontSize:7, color:S.colors.textMuted}}>{<IconChevronDown size={8}/>}</span>}
           </button>
           {!audioEnabled && (
-            <span style={{fontSize:8, fontWeight:700, padding:'1px 4px', borderRadius:3,
+            <span style={{fontSize:8, fontWeight: 600, padding:'1px 4px', borderRadius:3,
               background:S.colors.accent3Bg, color:S.colors.statusError, border:`1px solid ${S.colors.accent3Border}`}}>
               MUTED
             </span>
@@ -231,7 +231,7 @@ const VoiceEngineBar = memo(function VoiceEngineBar({
             border:`1px solid ${S.colors.cardBorder}`,
             borderRadius:12, padding:'4px 0', width:220, maxHeight:260, overflowY:'auto',
             boxShadow:'0 8px 32px rgba(0,0,0,0.5)'}}>
-            <div style={{padding:'6px 12px', fontSize:9, fontWeight:700, color:S.colors.textMuted,
+            <div style={{padding:'6px 12px', fontSize:9, fontWeight: 600, color:S.colors.textMuted,
               textTransform:'uppercase', letterSpacing:0.5, borderBottom:`1px solid ${S.colors.overlayBorder}`}}>
               AI Translation Model
             </div>
@@ -286,7 +286,7 @@ const VoiceEngineBar = memo(function VoiceEngineBar({
               // OpenAI voices
               if (activeEngine === 'openai') return (
                 <>
-                  <div style={{padding:'6px 12px', fontSize:9, fontWeight:700, color:S.colors.textMuted,
+                  <div style={{padding:'6px 12px', fontSize:9, fontWeight: 600, color:S.colors.textMuted,
                     textTransform:'uppercase', letterSpacing:0.5, borderBottom:`1px solid ${S.colors.overlayBorder}`}}>
                     Voce OpenAI
                   </div>
@@ -311,7 +311,7 @@ const VoiceEngineBar = memo(function VoiceEngineBar({
               // ElevenLabs voices
               if (activeEngine === 'elevenlabs') return (
                 <>
-                  <div style={{padding:'6px 12px', fontSize:9, fontWeight:700, color:S.colors.textMuted,
+                  <div style={{padding:'6px 12px', fontSize:9, fontWeight: 600, color:S.colors.textMuted,
                     textTransform:'uppercase', letterSpacing:0.5, borderBottom:`1px solid ${S.colors.overlayBorder}`}}>
                     Voce ElevenLabs
                   </div>
@@ -408,7 +408,7 @@ const VoiceEngineBar = memo(function VoiceEngineBar({
                       let paeseCorr = null;
                       return (
                         <div key={g.label}>
-                          <div style={{padding:'4px 12px', fontSize:8, fontWeight:700, color:S.colors.textMuted,
+                          <div style={{padding:'4px 12px', fontSize:8, fontWeight: 600, color:S.colors.textMuted,
                             textTransform:'uppercase', letterSpacing:0.5, background:S.colors.overlayBg,
                             borderTop:`1px solid ${S.colors.overlayBorder}`}}>
                             {g.label} ({g.voices.length})
@@ -421,7 +421,7 @@ const VoiceEngineBar = memo(function VoiceEngineBar({
                               <div key={v.id}>
                                 {nuovoPaese && (
                                   <div style={{display:'flex', alignItems:'center', gap:6, padding:'5px 12px 3px',
-                                    fontSize:9, fontWeight:700, color:S.colors.textSecondary || S.colors.textMuted,
+                                    fontSize:9, fontWeight: 600, color:S.colors.textSecondary || S.colors.textMuted,
                                     textTransform:'uppercase', letterSpacing:0.4}}>
                                     <span style={{fontSize:12}}>{bv.f}</span>{bv.p}
                                   </div>
@@ -463,7 +463,7 @@ const VoiceEngineBar = memo(function VoiceEngineBar({
               // Edge TTS
               return (
                 <>
-                  <div style={{padding:'6px 12px', fontSize:9, fontWeight:700, color:S.colors.textMuted,
+                  <div style={{padding:'6px 12px', fontSize:9, fontWeight: 600, color:S.colors.textMuted,
                     textTransform:'uppercase', letterSpacing:0.5, borderBottom:`1px solid ${S.colors.overlayBorder}`}}>
                     Voce Edge TTS
                   </div>

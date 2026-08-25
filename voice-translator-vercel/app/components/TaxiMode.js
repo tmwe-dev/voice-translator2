@@ -222,7 +222,7 @@ const TaxiMode = memo(function TaxiMode({
         <div
           style={{
             fontSize: '28px',
-            fontWeight: '700',
+            fontWeight: '600',
             background: accentGradient,
             backgroundClip: 'text',
             WebkitBackgroundClip: 'text',

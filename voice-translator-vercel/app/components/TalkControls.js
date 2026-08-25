@@ -265,7 +265,7 @@ const TalkControls = memo(function TalkControls({
                   non ridisegna la stanza sessanta volte al secondo. */}
               <BarraLivelloMicrofono livelloRef={vadLivelloRef} attiva={isListening} C={S.colors} />
               {vadSilenceCountdown !== null && vadSilenceCountdown > 0 && (
-                <span style={{fontSize:9, color:S.colors.accent3, fontWeight:700, fontVariantNumeric:'tabular-nums'}}>
+                <span style={{fontSize:9, color:S.colors.accent3, fontWeight: 600, fontVariantNumeric:'tabular-nums'}}>
                   {vadSilenceCountdown}s
                 </span>
               )}

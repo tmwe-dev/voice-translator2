@@ -198,7 +198,7 @@ function MondoDiscussioni({ discussionId, onClose, onOpenPersona }) {
           display: 'flex', alignItems: 'center', justifyContent: 'center', color: muto, fontSize: 18,
         }}>‹</button>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 15, fontWeight: 800, color: testoP, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          <div style={{ fontSize: 15, fontWeight: 600, color: testoP, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {tradotti.title || disc?.title || (caricando ? '…' : L('worldNowTitle'))}
           </div>
           {disc && (
@@ -206,7 +206,7 @@ function MondoDiscussioni({ discussionId, onClose, onOpenPersona }) {
               {disc.comment_count} · {disc.author_name || ''}
               {disc.title && (
                 <button onClick={() => traduci('title', disc.title, disc.title_lang)} style={{
-                  marginLeft: 8, background: 'none', border: 'none', color: accent, cursor: 'pointer', fontSize: 10, fontWeight: 700, padding: 0,
+                  marginLeft: 8, background: 'none', border: 'none', color: accent, cursor: 'pointer', fontSize: 10, fontWeight: 600, padding: 0,
                 }}>{tradotti.title ? (L('original')) : (L('seeTranslation'))}</button>
               )}
             </div>
@@ -221,7 +221,7 @@ function MondoDiscussioni({ discussionId, onClose, onOpenPersona }) {
             style={{
               flexShrink: 0, background: 'none', border: 'none', padding: 6,
               cursor: discSegnalata ? 'default' : 'pointer', color: muto,
-              fontSize: 11, fontWeight: 700, fontFamily: FONT, opacity: discSegnalata ? 0.45 : 1,
+              fontSize: 11, fontWeight: 600, fontFamily: FONT, opacity: discSegnalata ? 0.45 : 1,
             }}>
             {discSegnalata ? L('reportCopied') : L('reportWord')}
           </button>
@@ -251,22 +251,22 @@ function MondoDiscussioni({ discussionId, onClose, onOpenPersona }) {
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
               <button onClick={() => onOpenPersona?.(c.author_user_id)} style={{
                 background: 'none', border: 'none', padding: 0, cursor: 'pointer',
-                fontSize: 12, fontWeight: 700, color: testoP, fontFamily: FONT,
+                fontSize: 12, fontWeight: 600, color: testoP, fontFamily: FONT,
               }}>{c.author_name || '—'}</button>
               {c.like_count > 0 && <span style={{ fontSize: 10, color: muto }}>· {c.like_count} ♥</span>}
               <button onClick={() => toggleSegui(c.author_user_id)} style={{
                 marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', padding: 0,
-                fontSize: 10, fontWeight: 700, color: seguiti.has(c.author_user_id) ? muto : accent,
+                fontSize: 10, fontWeight: 600, color: seguiti.has(c.author_user_id) ? muto : accent,
               }}>{seguiti.has(c.author_user_id) ? L('following') : L('follow')}</button>
             </div>
             <div style={{ fontSize: 14, color: testoP, lineHeight: 1.45, whiteSpace: 'pre-wrap' }}>
               {tradotti[c.id] && tradotti[c.id] !== '…' ? tradotti[c.id] : c.text}
             </div>
             <div style={{ display: 'flex', gap: 14, marginTop: 6 }}>
-              <button onClick={() => traduci(c.id, c.text, c.lang)} style={{ background: 'none', border: 'none', color: accent, cursor: 'pointer', fontSize: 11, fontWeight: 700, padding: 0 }}>
+              <button onClick={() => traduci(c.id, c.text, c.lang)} style={{ background: 'none', border: 'none', color: accent, cursor: 'pointer', fontSize: 11, fontWeight: 600, padding: 0 }}>
                 {tradotti[c.id] ? (L('original')) : (L('seeTranslation'))}
               </button>
-              <button onClick={() => metti(c.id)} style={{ background: 'none', border: 'none', color: muto, cursor: 'pointer', fontSize: 11, fontWeight: 700, padding: 0 }}>
+              <button onClick={() => metti(c.id)} style={{ background: 'none', border: 'none', color: muto, cursor: 'pointer', fontSize: 11, fontWeight: 600, padding: 0 }}>
                 ♥ {L('like')}
               </button>
               {/* b.363 — la segnalazione ESISTEVA solo sul server: nessuno
@@ -279,12 +279,12 @@ function MondoDiscussioni({ discussionId, onClose, onOpenPersona }) {
                 aria-label={L('blockPerson')} title={L('blockPerson')}
                 style={{
                   background: 'none', border: 'none', cursor: 'pointer', padding: '2px 6px',
-                  fontSize: 10, fontWeight: 700, color: muto, fontFamily: FONT,
+                  fontSize: 10, fontWeight: 600, color: muto, fontFamily: FONT,
                 }}>
                 {L('blockPerson')}
               </button>
               <button onClick={() => segnalaCommento(c.id)} disabled={segnalati.has(c.id)}
-                style={{ marginLeft: 'auto', background: 'none', border: 'none', color: muto, cursor: segnalati.has(c.id) ? 'default' : 'pointer', fontSize: 11, fontWeight: 700, padding: 0, opacity: segnalati.has(c.id) ? 0.45 : 1 }}>
+                style={{ marginLeft: 'auto', background: 'none', border: 'none', color: muto, cursor: segnalati.has(c.id) ? 'default' : 'pointer', fontSize: 11, fontWeight: 600, padding: 0, opacity: segnalati.has(c.id) ? 0.45 : 1 }}>
                 {segnalati.has(c.id) ? L('reportCopied') : L('reportWord')}
               </button>
             </div>
@@ -316,7 +316,7 @@ function MondoDiscussioni({ discussionId, onClose, onOpenPersona }) {
           <button onClick={invia} disabled={inviando || !testo.trim()} style={{
             padding: '10px 16px', borderRadius: 12, cursor: inviando || !testo.trim() ? 'default' : 'pointer',
             background: `linear-gradient(135deg, ${accent}, ${C.accent2 || '#5b8cff'})`, border: 'none', color: '#fff',
-            fontSize: 13, fontWeight: 800, fontFamily: FONT, opacity: inviando || !testo.trim() ? 0.5 : 1,
+            fontSize: 13, fontWeight: 600, fontFamily: FONT, opacity: inviando || !testo.trim() ? 0.5 : 1,
           }}>{L('sendWord')}</button>
         </div>
       </div>

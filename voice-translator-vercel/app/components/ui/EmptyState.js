@@ -19,7 +19,7 @@ const EmptyState = ({ icon, title, desc, actionLabel, onAction, S }) => {
         <div style={{ fontSize: 48, marginBottom: 16, opacity: 0.6 }}>{icon}</div>
       )}
       <div style={{
-        fontSize: 16, fontWeight: 700, color: C.textPrimary || '#fafafa',
+        fontSize: 16, fontWeight: 600, color: C.textPrimary || '#fafafa',
         fontFamily: FONT, marginBottom: 6,
       }}>
         {title}

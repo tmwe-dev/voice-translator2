@@ -46,13 +46,13 @@ export default function AvvisoSessione() {
       boxShadow: '0 8px 30px rgba(0,0,0,0.5)', fontFamily: FONT,
       maxWidth: 'min(420px, calc(100vw - 24px))',
     }}>
-      <span style={{ fontSize: 13, fontWeight: 700, color: '#e08a5e' }}>
+      <span style={{ fontSize: 13, fontWeight: 600, color: '#e08a5e' }}>
         {t(lingua, 'sessionExpired')}
       </span>
       <button onClick={() => { try { window.location.reload(); } catch { /* niente da fare */ } }}
         style={{
           padding: '7px 14px', borderRadius: 999, border: 'none', cursor: 'pointer',
-          background: '#e08a5e', color: '#1a0d06', fontSize: 12.5, fontWeight: 800,
+          background: '#e08a5e', color: '#1a0d06', fontSize: 12.5, fontWeight: 600,
           fontFamily: FONT, flexShrink: 0,
         }}>
         {t(lingua, 'signInAgain')}

@@ -229,7 +229,7 @@ export default function PannelloPronuncia({ frase, lingua, userToken, onEsito, v
   return (
     <div style={{ marginTop: 12, padding: 14, borderRadius: 14, background: card, border: `1px solid ${accent}` }}>
       <div style={{ fontSize: 12, color: muto, marginBottom: 6 }}>Dillo ad alta voce</div>
-      <div style={{ fontSize: 17, fontWeight: 800, color: testoP, marginBottom: 10 }}>{frase}</div>
+      <div style={{ fontSize: 17, fontWeight: 600, color: testoP, marginBottom: 10 }}>{frase}</div>
 
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
         {/* b.404 — il triangolo era scritto a mano nel testo (`▶ Lenta`),
@@ -246,7 +246,7 @@ export default function PannelloPronuncia({ frase, lingua, userToken, onEsito, v
           parola="Lenta" etichetta="La stessa frase, rallentata"
           colore={testoP} bordo={bordo} />
         <button onClick={registra} disabled={stato === 'valuto'}
-          style={{ padding: '10px 16px', borderRadius: 12, border: 'none', fontFamily: FONT, fontWeight: 800, cursor: stato === 'valuto' ? 'default' : 'pointer',
+          style={{ padding: '10px 16px', borderRadius: 12, border: 'none', fontFamily: FONT, fontWeight: 600, cursor: stato === 'valuto' ? 'default' : 'pointer',
             background: stato === 'registro' ? '#f87171' : accent, color: '#04121c', opacity: stato === 'valuto' ? 0.6 : 1 }}>
           {stato === 'registro' ? 'Ho finito' : stato === 'valuto' ? 'Ascolto…' : stato === 'fatto' ? 'Riprova' : 'Registra'}
         </button>
@@ -286,7 +286,7 @@ export default function PannelloPronuncia({ frase, lingua, userToken, onEsito, v
               <div style={{ display: 'flex', gap: 6, marginTop: 10, flexWrap: 'wrap' }}>
                 {rosse.map((w) => (
                   <button key={w} onClick={() => allena(w)} disabled={drillCarico}
-                    style={{ padding: '6px 11px', borderRadius: 9, border: `1px solid ${accent}`, background: 'transparent', color: accent, fontWeight: 700, fontSize: 12, cursor: 'pointer', fontFamily: FONT, opacity: drillCarico ? 0.6 : 1 }}>
+                    style={{ padding: '6px 11px', borderRadius: 9, border: `1px solid ${accent}`, background: 'transparent', color: accent, fontWeight: 600, fontSize: 12, cursor: 'pointer', fontFamily: FONT, opacity: drillCarico ? 0.6 : 1 }}>
                     {drillCarico ? '…' : `Alleniamo «${w}»`}
                   </button>
                 ))}
@@ -295,7 +295,7 @@ export default function PannelloPronuncia({ frase, lingua, userToken, onEsito, v
           })()}
           {drill && (
             <div style={{ marginTop: 10, padding: 12, borderRadius: 12, background: 'rgba(255,255,255,0.04)', border: bordo }}>
-              <div style={{ fontSize: 12, fontWeight: 700, color: testoP, marginBottom: 8 }}>
+              <div style={{ fontSize: 12, fontWeight: 600, color: testoP, marginBottom: 8 }}>
                 Coppie minime — {drill.suono || `il suono di «${drill.parola}»`}
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>

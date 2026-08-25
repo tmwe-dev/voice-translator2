@@ -83,7 +83,7 @@ export default function AnteprimaCoperta({ src, contenuto, stile = {}, alt = '',
             parola andrebbe a capo tre volte e diventerebbe sporcizia. */}
         {!piccola && (
           <span style={{
-            fontSize: 11, fontWeight: 700, fontFamily: FONT,
+            fontSize: 11, fontWeight: 600, fontFamily: FONT,
             color: 'rgba(226,236,252,0.92)', letterSpacing: 0.2,
           }}>
             {L ? L('tapToReveal') : 'Tocca per vedere'}

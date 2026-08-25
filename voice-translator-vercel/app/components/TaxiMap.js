@@ -234,7 +234,7 @@ export default function TaxiMap({ lat, lng, altezza = 340, comandi = true, inter
 
   const btn = {
     width: 42, height: 42, borderRadius: 13, border: '1px solid rgba(160,190,255,0.2)',
-    background: 'rgba(5,7,15,0.75)', color: '#eef2ff', fontSize: 20, fontWeight: 800,
+    background: 'rgba(5,7,15,0.75)', color: '#eef2ff', fontSize: 20, fontWeight: 600,
     cursor: 'pointer', backdropFilter: 'blur(12px)', fontFamily: 'inherit',
     display: 'flex', alignItems: 'center', justifyContent: 'center',
   };

@@ -420,7 +420,7 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
           style={{
             padding: '0 18px', borderRadius: 14, cursor: 'pointer',
             background: `linear-gradient(135deg, ${C.accent}, ${C.purple})`,
-            border: 'none', color: '#fff', fontSize: 13, fontWeight: 700,
+            border: 'none', color: '#fff', fontSize: 13, fontWeight: 600,
             fontFamily: FONT, opacity: cercando || (!query.trim() && !chipAttiva) ? 0.5 : 1,
             WebkitTapHighlightColor: 'transparent',
           }}>
@@ -438,7 +438,7 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
           {[3, 6, 10].map(n => (
             <button key={n} onClick={() => { setNumFonti(n); vibrate(8); }}
               style={{
-                width: 30, height: 28, borderRadius: 9, cursor: 'pointer', fontFamily: FONT, fontSize: 12, fontWeight: 700,
+                width: 30, height: 28, borderRadius: 9, cursor: 'pointer', fontFamily: FONT, fontSize: 12, fontWeight: 600,
                 background: numFonti === n ? `${C.accent}20` : C.card,
                 border: numFonti === n ? `1px solid ${C.accent}45` : bordo,
                 color: numFonti === n ? C.accent : C.textSecondary,
@@ -496,7 +496,7 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
               width: 8, height: 8, borderRadius: 4, background: C.accent,
               animation: 'vtPulse 1.2s infinite ease-in-out',
             }} />
-            <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: 1.5, color: C.accent }}>
+            <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: 1.5, color: C.accent }}>
               COBRA
             </span>
           </div>
@@ -524,7 +524,7 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
       {/* ─── LIVELLO 0: ne stanno gia parlando ─── */}
       {stanze.length > 0 && (
         <div style={{ marginBottom: 14 }}>
-          <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 1, color: C.textMuted, margin: '4px 0 8px' }}>
+          <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: 1, color: C.textMuted, margin: '4px 0 8px' }}>
             {L('newsTalkingRooms')}
           </div>
           {stanze.map(s => (
@@ -562,7 +562,7 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
           style={{
             width: '100%', marginBottom: 16, padding: '12px 14px', borderRadius: 12,
             background: 'none', border: `1px solid ${C.border || 'rgba(255,255,255,0.12)'}`,
-            color: C.textMuted, fontSize: 12, fontWeight: 700, fontFamily: FONT, cursor: 'pointer',
+            color: C.textMuted, fontSize: 12, fontWeight: 600, fontFamily: FONT, cursor: 'pointer',
           }}>
           {L('newsError')} · {L('retryWord')}
         </button>
@@ -571,7 +571,7 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
       {/* ─── b.187 · Feed delle discussioni pubbliche persistenti ─── */}
       {feedMostrato.length > 0 && (
         <div style={{ marginBottom: 16 }}>
-          <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: 1.2, color: C.textMuted, textTransform: 'uppercase', marginBottom: 8 }}>
+          <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: 1.2, color: C.textMuted, textTransform: 'uppercase', marginBottom: 8 }}>
             {L('worldNowTitle')}
           </div>
           {feedMostrato.slice(0, 12).map(d => (
@@ -643,7 +643,7 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
                           qualcosa di decente. */}
                       <span style={{
                         position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        fontSize: 34, fontWeight: 800, color: `${C.accent}55`, letterSpacing: 1,
+                        fontSize: 34, fontWeight: 600, color: `${C.accent}55`, letterSpacing: 1,
                       }}>{(fonte || d.title || '\u00b7').slice(0, 1).toUpperCase()}</span>
                       {foto && (
                         <AnteprimaCoperta src={foto} contenuto={d.media} L={L}
@@ -712,7 +712,7 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
                     <span style={{ display: 'block', padding: '10px 12px 8px' }}>
                       <span style={{
                         display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
-                        overflow: 'hidden', fontSize: 15, fontWeight: 700, lineHeight: 1.35,
+                        overflow: 'hidden', fontSize: 15, fontWeight: 600, lineHeight: 1.35,
                         color: C.textPrimary,
                       }}>{d.title || '\u2014'}</span>
                       <span style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 6, flexWrap: 'wrap' }}>
@@ -748,7 +748,7 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
                       <button onClick={() => { vibrate(6); setLettura({ url: d.media.url, titolo: d.title, fonte }); }}
                         style={{
                           display: 'flex', alignItems: 'center', gap: 6, padding: '7px 13px',
-                          borderRadius: 10, cursor: 'pointer', fontFamily: FONT, fontSize: 12, fontWeight: 800,
+                          borderRadius: 10, cursor: 'pointer', fontFamily: FONT, fontSize: 12, fontWeight: 600,
                           background: `${C.accent}1A`, border: `1px solid ${C.accent}44`, color: C.accent,
                           WebkitTapHighlightColor: 'transparent',
                         }}>
@@ -783,7 +783,7 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
               background: `linear-gradient(135deg, ${C.accent}14, ${C.purple}18)`,
               overflow: 'hidden',
             }}>
-              <span style={{ fontSize: 26, fontWeight: 800, color: `${C.accent}55`, letterSpacing: 1 }}>
+              <span style={{ fontSize: 26, fontWeight: 600, color: `${C.accent}55`, letterSpacing: 1 }}>
                 {(t.fonti[0]?.fonte || '·').slice(0, 1).toUpperCase()}
               </span>
               {/* eslint-disable-next-line @next/next/no-img-element -- immagine
@@ -804,7 +804,7 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
             {/* b.153 — il titolo apre la scheda di lettura: sintesi
                 BarTalk, citazione attribuita, e "Leggi su [fonte]". */}
             <h3 onClick={() => { vibrate(8); setScheda({ tipo: 'articolo', dati: t }); }} style={{
-              margin: 0, fontSize: 15, fontWeight: 700, lineHeight: 1.35,
+              margin: 0, fontSize: 15, fontWeight: 600, lineHeight: 1.35,
               color: C.textPrimary, letterSpacing: -0.2, cursor: 'pointer',
             }}>
               {t.titolo}
@@ -841,7 +841,7 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
                 style={{
                   flex: 1.4, padding: '9px 0', borderRadius: 11, cursor: 'pointer',
                   background: `linear-gradient(135deg, ${C.accent}, ${C.purple})`,
-                  border: 'none', color: '#fff', fontSize: 12.5, fontWeight: 700,
+                  border: 'none', color: '#fff', fontSize: 12.5, fontWeight: 600,
                   fontFamily: FONT, display: 'flex', alignItems: 'center',
                   justifyContent: 'center', gap: 6,
                   WebkitTapHighlightColor: 'transparent',
@@ -855,7 +855,7 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
               style={{
                 width: '100%', marginTop: 8, padding: '9px 0', borderRadius: 11, cursor: 'pointer',
                 background: `${C.accent}12`, border: `1px solid ${C.accent}30`, color: C.accent,
-                fontSize: 12, fontWeight: 700, fontFamily: FONT,
+                fontSize: 12, fontWeight: 600, fontFamily: FONT,
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
                 opacity: creando ? 0.6 : 1, WebkitTapHighlightColor: 'transparent',
               }}>
@@ -874,7 +874,7 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
       {/* ─── I VIDEO (b.153): YouTube per la via ufficiale ─── */}
       {videoAttivi && video?.length > 0 && (
         <div style={{ marginTop: 4 }}>
-          <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 1, color: C.textMuted, margin: '4px 0 8px' }}>
+          <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: 1, color: C.textMuted, margin: '4px 0 8px' }}>
             {L('catVideo')}
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 10 }}>
@@ -916,7 +916,7 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
                     onKeyDown={(e) => { if (e.key === 'Enter') { e.stopPropagation(); onParlane?.({ titolo: v.titolo, sintesi: v.canale ? `YouTube · ${v.canale}` : '' }); } }}
                     style={{ display: 'inline-block', marginTop: 7, padding: '4px 10px', borderRadius: 8,
                       background: `${C.accent}1f`, border: `1px solid ${C.accent}55`, color: C.accent,
-                      fontSize: 11, fontWeight: 700 }}>
+                      fontSize: 11, fontWeight: 600 }}>
                     {L('newsTalkAbout')}
                   </span>
                 </div>
@@ -983,7 +983,7 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
               padding: `16px 16px calc(24px + env(safe-area-inset-bottom))`,
             }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
-              <span style={{ fontSize: 15, fontWeight: 800, color: C.textPrimary, flex: 1 }}>
+              <span style={{ fontSize: 15, fontWeight: 600, color: C.textPrimary, flex: 1 }}>
                 {L('whatWorldThinks')}
               </span>
               <button onClick={() => setTemaMondo(null)} aria-label={L('closeWord')}
@@ -992,7 +992,7 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
                 {'\u2715'}
               </button>
             </div>
-            <div style={{ fontSize: 12.5, fontWeight: 700, color: C.accent, marginBottom: 12 }}>{temaMondo}</div>
+            <div style={{ fontSize: 12.5, fontWeight: 600, color: C.accent, marginBottom: 12 }}>{temaMondo}</div>
 
             {confrontoGuasto && (
               <div style={{ fontSize: 13, color: C.textMuted, padding: '10px 0' }}>{L('loadError')}</div>
@@ -1012,7 +1012,7 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
             {confronto && confronto.paesi?.length > 0 && (
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0 12px 6px' }}>
                 <span style={{ flex: 1 }} />
-                <span style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: 0.3, color: C.textMuted, whiteSpace: 'nowrap' }}>
+                <span style={{ fontSize: 10.5, fontWeight: 600, letterSpacing: 0.3, color: C.textMuted, whiteSpace: 'nowrap' }}>
                   {`${L('discussionsLabel')} ${PUNTO} ${L('commentsWord')}`}
                 </span>
               </div>
@@ -1027,11 +1027,11 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
                   fontFamily: FONT, textAlign: 'left',
                 }}>
                 <span style={{ fontSize: 19 }}>{bandieraPaese(p.paese)}</span>
-                <span style={{ flex: 1, fontSize: 13.5, fontWeight: 700, color: C.textPrimary,
+                <span style={{ flex: 1, fontSize: 13.5, fontWeight: 600, color: C.textPrimary,
                   overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {nomePaese(p.paese)}
                 </span>
-                <span style={{ fontSize: 12, fontWeight: 700, color: C.textMuted, whiteSpace: 'nowrap' }}>
+                <span style={{ fontSize: 12, fontWeight: 600, color: C.textMuted, whiteSpace: 'nowrap' }}>
                   {`${p.discussioni} ${PUNTO} ${p.commenti}`}
                 </span>
               </button>

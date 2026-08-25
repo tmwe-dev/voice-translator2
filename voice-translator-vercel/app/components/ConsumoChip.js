@@ -40,7 +40,7 @@ function ConsumoChip({ roomId }) {
   const riga = (etichetta, valore) => (
     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: bordo }}>
       <span style={{ fontSize: 12, color: muto }}>{etichetta}</span>
-      <span style={{ fontSize: 13, fontWeight: 700, color: testoP }}>{fmt(valore)} <span style={{ fontSize: 10, color: muto, fontWeight: 400 }}>{L('consumoChars')}</span></span>
+      <span style={{ fontSize: 13, fontWeight: 600, color: testoP }}>{fmt(valore)} <span style={{ fontSize: 10, color: muto, fontWeight: 400 }}>{L('consumoChars')}</span></span>
     </div>
   );
 
@@ -54,7 +54,7 @@ function ConsumoChip({ roomId }) {
           WebkitTapHighlightColor: 'transparent',
         }}>
         <Icon name="zap" size={12} color={accent} />
-        <span style={{ fontSize: 11, fontWeight: 700, color: testoP }}>{fmt(dQuestaChat || oggi)}</span>
+        <span style={{ fontSize: 11, fontWeight: 600, color: testoP }}>{fmt(dQuestaChat || oggi)}</span>
       </button>
 
       {aperto && (
@@ -68,7 +68,7 @@ function ConsumoChip({ roomId }) {
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
               <Icon name="zap" size={16} color={accent} />
-              <span style={{ fontSize: 15, fontWeight: 800, color: testoP }}>{L('consumoTitle')}</span>
+              <span style={{ fontSize: 15, fontWeight: 600, color: testoP }}>{L('consumoTitle')}</span>
             </div>
             {riga(L('consumoThisChat'), dQuestaChat)}
             {riga(L('consumoToday'), oggi)}

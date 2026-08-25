@@ -14,7 +14,7 @@ export default function SkipToContent() {
         padding: '8px 16px',
         zIndex: 10000,
         fontSize: 14,
-        fontWeight: 700,
+        fontWeight: 600,
         textDecoration: 'none',
         borderRadius: '0 0 8px 0',
         transition: 'top 0.2s',
