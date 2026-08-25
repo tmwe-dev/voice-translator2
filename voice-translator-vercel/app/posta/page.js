@@ -33,6 +33,36 @@ const STATI = {
   scaduto: ['Scaduto (7 giorni senza incontro)', C.rosso], errore: ['Aggancio fallito — riprovo', C.ambra],
 };
 
+// b.486 — IL MARCHIO, nelle due versioni date da Luca: una per il tema
+// chiaro (scritta nera e blu) e una per lo scuro (argento e arancio).
+// I file vivono in public/; finche non ci sono, resta la scritta —
+// l'immagine che manca non deve lasciare un buco.
+const LOGO_CHIARO = '/peepoff-logo-chiaro.png';
+const LOGO_SCURO = '/peepoff-logo-scuro.png';
+
+function temaChiaro() {
+  try {
+    const p = memGet('vt-prefs');
+    const prefs = typeof p === 'string' ? JSON.parse(p) : p;
+    // 'dawn' e l'unico tema chiaro dell'applicazione (styles.js: isDark).
+    return prefs?.theme === 'dawn';
+  } catch { return false; }
+}
+
+// Il marchio con la rete di sicurezza: se il file non c'e (o non e ancora
+// stato caricato sul server), si torna alla scritta senza lasciare vuoti.
+function MarchioPeepOff({ altezza = 40 }) {
+  const [manca, setManca] = useState(false);
+  if (manca) return <h1 style={{ fontSize: 22, margin: 0 }}>PeepOff</h1>;
+  return (
+    /* eslint-disable-next-line @next/next/no-img-element -- marchio locale
+       in public/, misura fissa: next/image non aggiunge niente qui */
+    <img src={temaChiaro() ? LOGO_CHIARO : LOGO_SCURO} alt="PeepOff"
+      height={altezza} style={{ display: 'block', width: 'auto' }}
+      onError={() => setManca(true)} />
+  );
+}
+
 export default function Posta() {
   const [stato, setStato] = useState('avvio'); // avvio | login | pronto
   const [indirizzo, setIndirizzo] = useState('');
@@ -232,7 +262,7 @@ export default function Posta() {
   if (stato === 'avvio') return <main style={S.pagina}><p style={{ color: C.muto }}>Apro la cassaforte…</p></main>;
   if (stato === 'login') return (
     <main style={S.pagina}>
-      <h1 style={{ fontSize: 22, margin: '20px 0 8px' }}>PeepOff</h1>
+      <div style={{ margin: '20px 0 8px' }}><MarchioPeepOff altezza={44} /></div>
       <p style={{ color: C.muto, lineHeight: 1.6 }}>Messaggi che non passano mai da un server. Per avere il tuo indirizzo serve l'accesso BarTalk: entra dall'app e torna qui.</p>
       <Link href="/" style={{ ...S.bottone, display: 'inline-block', marginTop: 12, textDecoration: 'none' }}>Vai a BarTalk e accedi</Link>
     </main>
@@ -242,7 +272,7 @@ export default function Posta() {
     <main style={S.pagina}>
       <header style={{ marginBottom: 14 }}>
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
-          <h1 style={{ fontSize: 22, margin: 0 }}>PeepOff</h1>
+          <MarchioPeepOff altezza={40} />
           <span style={{ color: C.ciano, fontWeight: 800 }}>{indirizzo}</span>
         </div>
         <div style={{ fontSize: 11, color: C.muto, marginTop: 4 }}>
