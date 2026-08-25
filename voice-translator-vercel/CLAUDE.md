@@ -219,6 +219,32 @@ qualunque refactoring. Non si propone di rimandarlo.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.491** (push #780) — TAVOLE 17 e 18 DEL TEMPLATE.
+  TAVOLA 17 (stanza video di gruppo): la testata dice DOVE SEI — il
+  codice della stanza, non «Stanza video» — e il tasto Aa c'e anche qui
+  (regola del template: Aa sempre in testata) e ingrandisce le battute
+  tradotte sotto i riquadri. SOLO interfaccia: useStanzaVideo, palco e
+  traduzioni non toccati.
+  NOTA ARCHITETTURA: il cartellino 17 vorrebbe che il video di gruppo
+  si accendesse DENTRO la chat, non in una vista a se. Oggi e una vista
+  a se PER SCELTA DIFENSIVA (b.102: se si rompe, la chiamata a due
+  vive); cambiarla senza due dispositivi in mano violerebbe la regola
+  sul percorso video. Se ne riparla al test a due telefoni.
+  TAVOLA 18 (videochiamata a pieno schermo): TRE COMANDI SOLI in barra
+  — microfono, telecamera, chiudi — tondi da 54, e il rosso e solo per
+  chiudere. Ruota, interprete, sottotitoli, voce, volumi e schermo
+  stanno nel cassetto «Altro» (regola 11), stessi onClick: NIENTE
+  funzioni perse. I comandi spariscono da soli dopo 6 secondi, un tocco
+  ovunque li riporta; la X rossa in testata resta SEMPRE (b.352). Il
+  PiP e verticale come un telefono (84x112, raggio 14). Chi parla ha
+  bandiera e nome sull'immagine, in alto a sinistra.
+  La vista compatta (video sopra la chat) NON e stata toccata.
+  Nessuna chiave nuova (otherWord, textBigger ecc. esistevano gia).
+  PROVE: `video-tavole-17-18-b491.test.js` (rossa prima, verde dopo),
+  piu le prove video esistenti tutte verdi.
+  LIMITE DICHIARATO: verificato senza collegamento WebRTC vero — la
+  chiamata con due peer si prova al test a due telefoni.
+
 - Versione: **b.490** (push #779) — TAVOLE 19 e 20 DEL TEMPLATE, e
   l'invito che torna raggiungibile.
   TAVOLA 19 (menu ⋯ della chat): «ogni voce dice cosa fa» — chiamata

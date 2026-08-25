@@ -8,6 +8,7 @@ import { traccia } from '../lib/monitorSviluppo.js';
 import { toast } from '../lib/avvisi.js';
 import { getVolumeTTS, setVolumeTTS, getAttenuazione, setAttenuazione, PRESET_ATTENUAZIONE } from '../lib/audioPrefs.js';
 import { useApp } from '../contexts/AppContext.js';
+import { getLang } from '../lib/constants.js';
 
 // ── I mattoni della videochiamata ──
 //
@@ -160,6 +161,21 @@ const VideoCallOverlay = memo(function VideoCallOverlay({
   // b.352 — il pannello Volumi: l'unico secondario sopravvissuto alla
   // demolizione delle tre superfici di comandi accumulate.
   const [volumiAperti, setVolumiAperti] = useState(false);
+  // ═══ b.491 — tavola 18: TRE COMANDI SOLI in barra (camera, microfono,
+  // chiudi). Il resto — ruota, interprete, sottotitoli, voce, volumi,
+  // schermo — sta dentro «Altro»: stessi onClick, stessi aria, niente
+  // perso. E i comandi SPARISCONO DA SOLI dopo qualche secondo: un tocco
+  // in qualunque punto li riporta. La X rossa in alto resta SEMPRE
+  // visibile (b.352: la chiusura non deve mai sparire). ═══
+  const [altroAperto, setAltroAperto] = useState(false);
+  const [comandiVisibili, setComandiVisibili] = useState(true);
+  const [toccoTick, setToccoTick] = useState(0);
+  useEffect(() => {
+    if (!comandiVisibili || volumiAperti || altroAperto) return undefined;
+    const t = setTimeout(() => setComandiVisibili(false), 6000);
+    return () => clearTimeout(t);
+  }, [comandiVisibili, volumiAperti, altroAperto, toccoTick]);
+  const risveglia = () => { setComandiVisibili(true); setToccoTick(x => x + 1); };
   const volTTSPrimaRef = useRef(volTTS > 0.01 ? volTTS : 0.7);
   // Il contatore € deve usare la tariffa VERA (premium se voce ElevenLabs)
   const { L, prefs, savePrefs } = useApp();
@@ -201,7 +217,7 @@ const VideoCallOverlay = memo(function VideoCallOverlay({
       {/* b.352 — IL CONTAINER: anche a pieno schermo la chiamata vive in una
           cornice da app (larghezza contenuta sui grandi schermi, bordi e
           colori del design system), non in un buco nero senza forma. */}
-      <div style={{
+      <div onPointerDown={risveglia} style={{
         position: 'relative', display: 'flex', flexDirection: 'column',
         width: 'min(920px, 100vw)', height: '100%',
         background: '#000', overflow: 'hidden',
@@ -243,7 +259,9 @@ const VideoCallOverlay = memo(function VideoCallOverlay({
           {/* Local video PiP */}
           {webrtc.localStream && webrtc.videoEnabled && (
             <div style={{
-              position: 'absolute', top: 60, right: 16, width: 120, height: 90,
+              /* b.491 — tavola 18: il PiP e VERTICALE come un telefono. */
+              position: 'absolute', top: 'max(64px, calc(env(safe-area-inset-top) + 48px))', right: 16,
+              width: 84, height: 112,
               borderRadius: 14, overflow: 'hidden', border: '2px solid rgba(255,255,255,0.25)',
               boxShadow: '0 4px 24px rgba(0,0,0,0.5)',
             }}>
@@ -296,9 +314,19 @@ const VideoCallOverlay = memo(function VideoCallOverlay({
               <IconPhoneOff size={20}/>
             </button>
           </div>
-          {/* Recording / Partner activity, sotto la testata */}
-          <div style={{ position: 'absolute', top: 'max(64px, calc(env(safe-area-inset-top) + 48px))', right: 16,
-            display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-end', zIndex: 6 }}>
+          {/* b.491 — tavola 18: chi parla ha la SUA BANDIERA sull'immagine,
+              in alto a sinistra: con piu persone non si indovina. I badge
+              di attivita stanno sotto (la destra ora e del PiP). */}
+          <div style={{ position: 'absolute', top: 'max(64px, calc(env(safe-area-inset-top) + 48px))', left: 16,
+            display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-start', zIndex: 6 }}>
+            {partner?.name && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6,
+                padding: '4px 10px', borderRadius: 999, background: 'rgba(5,7,15,0.72)',
+                fontSize: 12, fontWeight: 600, color: '#fff' }}>
+                {partner.lang ? <span aria-hidden="true">{getLang(partner.lang).flag}</span> : null}
+                {partner.name}
+              </div>
+            )}
             <RecordingIndicator L={L} recording={recording} isListening={isListening} />
             <PartnerActivityBadge L={L} partner={partner} partnerSpeaking={partnerSpeaking} partnerTyping={partnerTyping} />
           </div>
@@ -500,96 +528,121 @@ const VideoCallOverlay = memo(function VideoCallOverlay({
           </div>
         )}
 
-        {/* LA BARRA: sempre visibile, parole sotto le icone, rosso al centro */}
+        {/* ═══ b.491 — IL CASSETTO «ALTRO»: i comandi di riserva della
+            tavola 18. Ruota, interprete, sottotitoli, voce, volumi e
+            schermo non stanno piu in barra: un tocco su «Altro» e sono
+            qui, con gli STESSI onClick di prima. Regola 11 del template:
+            il resto va nella sidebar. ═══ */}
+        {altroAperto && (
+          <div style={{
+            position: 'absolute', left: '50%', transform: 'translateX(-50%)',
+            bottom: 'calc(96px + env(safe-area-inset-bottom))', zIndex: 8,
+            width: 'min(360px, calc(100vw - 28px))',
+            background: S?.colors?.cardBg || 'rgba(10,14,26,0.96)',
+            border: `1px solid ${S?.colors?.overlayBorder || 'rgba(160,190,255,0.18)'}`,
+            borderRadius: 18, padding: 10, backdropFilter: 'blur(20px)',
+            boxShadow: '0 14px 48px rgba(0,0,0,0.55)',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', marginBottom: 6, padding: '2px 4px' }}>
+              <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: '#eef2ff' }}>{L('otherWord')}</span>
+              <button onClick={() => setAltroAperto(false)} aria-label={L('close')}
+                style={{ background: 'none', border: 'none', color: 'rgba(238,242,255,0.6)', fontSize: 16, cursor: 'pointer', padding: 4 }}>{'\u2715'}</button>
+            </div>
+            {[
+              { chiave: 'ruota', icona: <IconFlipCamera size={17}/>, parola: L('rotateWord'), acceso: false,
+                fa: () => webrtc.flipCamera() },
+              ...(setInterpreterActive ? [{ chiave: 'interprete', icona: <IconGlobe size={17}/>,
+                parola: interpreterActive ? L('translatingWord') : L('translateWord'),
+                acceso: interpreterActive && !stanzaDiretta && !stanzaConPiuDiDue,
+                fa: () => {
+                  if (stanzaDiretta) { toast.info(L('directNoCloud')); return; }
+                  if (stanzaConPiuDiDue) { toast.info(L('interpreterTwoOnly')); return; }
+                  setInterpreterActive(!interpreterActive);
+                } }] : []),
+              { chiave: 'cc', icona: <span style={{ fontSize: 12, fontWeight: 900, letterSpacing: 0.5 }}>CC</span>,
+                parola: L('subtitlesWord'), acceso: mostraTesto, fa: () => setMostraTesto(v => !v) },
+              { chiave: 'voce', icona: volTTS > 0.01 ? <IconVolume size={17}/> : <IconVolumeOff size={17}/>,
+                parola: L('voiceWord'), acceso: volTTS > 0.01,
+                fa: () => {
+                  if (volTTS > 0.01) { volTTSPrimaRef.current = volTTS; setVolTTS(0); setVolumeTTS(0); try { window.dispatchEvent(new CustomEvent('bartalk:vol-tts')); } catch { /* fuori dal browser nessuno ascolta */ } }
+                  else { const v = volTTSPrimaRef.current > 0.01 ? volTTSPrimaRef.current : 0.7; setVolTTS(v); setVolumeTTS(v); }
+                } },
+              { chiave: 'volumi', icona: <IconVolumeLow size={17}/>, parola: L('volumesWord'), acceso: volumiAperti,
+                fa: () => { setAltroAperto(false); setVolumiAperti(true); } },
+              ...((typeof navigator !== 'undefined' && navigator.mediaDevices?.getDisplayMedia && webrtc.condividiSchermo)
+                ? [{ chiave: 'schermo', icona: <IconExpand size={17}/>, parola: L('screenWord'),
+                    acceso: !!webrtc.schermoCondiviso, fa: () => webrtc.condividiSchermo() }] : []),
+            ].map(vo => (
+              <button key={vo.chiave} onClick={vo.fa} aria-pressed={vo.acceso}
+                style={{
+                  width: '100%', display: 'flex', alignItems: 'center', gap: 12, textAlign: 'left',
+                  padding: '11px 12px', marginBottom: 4, borderRadius: 12, cursor: 'pointer', fontFamily: 'inherit',
+                  background: vo.acceso ? 'rgba(91,140,255,0.16)' : 'rgba(255,255,255,0.04)',
+                  border: `1.5px solid ${vo.acceso ? (S?.colors?.accent1 || '#5b8cff') : 'rgba(160,190,255,0.14)'}`,
+                  color: '#eef2ff', fontSize: 13.5, fontWeight: 600,
+                }}>
+                <span style={{ width: 20, display: 'flex', justifyContent: 'center', color: vo.acceso ? (S?.colors?.accent2 || '#38e1ff') : 'rgba(238,242,255,0.6)' }}>{vo.icona}</span>
+                {vo.parola}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* ═══ b.491 — LA BARRA DELLA TAVOLA 18: tre comandi soli, grandi,
+            e il rosso e solo per chiudere. Sparisce da sola dopo qualche
+            secondo; un tocco ovunque la riporta. ═══ */}
         <div style={{
           padding: '10px 10px', paddingBottom: 'max(14px, env(safe-area-inset-bottom))',
-          display: 'flex', justifyContent: 'center', alignItems: 'flex-end', gap: 10, flexWrap: 'wrap',
+          display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 14,
           background: 'linear-gradient(to top, rgba(3,5,12,0.97) 55%, rgba(0,0,0,0))',
+          opacity: comandiVisibili ? 1 : 0,
+          pointerEvents: comandiVisibili ? 'auto' : 'none',
+          transition: 'opacity 0.35s ease',
         }}>
-          <ControlBtn
-            onClick={() => webrtc.toggleVideo()}
-            active={webrtc.videoEnabled}
-            icon={webrtc.videoEnabled ? <IconCamera size={20}/> : <IconCameraOff size={20}/>}
-            label={L('cameraWord')}
-            color="#3ddc84" activeColor="rgba(61,220,132,0.18)" size={46}
-          />
-          <ControlBtn
-            onClick={() => webrtc.toggleAudio()}
-            active={webrtc.audioEnabled}
-            icon={webrtc.audioEnabled ? <IconMic size={20}/> : <IconVolumeOff size={20}/>}
-            label={L('micWord')}
-            color="#3ddc84" activeColor="rgba(61,220,132,0.18)" size={46}
-          />
-          <ControlBtn
-            onClick={() => webrtc.flipCamera()}
-            active={false}
-            icon={<IconFlipCamera size={18}/>}
-            label={L('rotateWord')}
-            color="#94a3b8" size={46}
-          />
-
-          {/* TERMINA — al centro, impossibile sbagliarsi */}
+          {/* microfono */}
+          <button onClick={() => webrtc.toggleAudio()} aria-pressed={webrtc.audioEnabled}
+            aria-label={L('micWord')}
+            style={{ width: 54, height: 54, borderRadius: 27, border: 'none', cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              background: webrtc.audioEnabled ? 'rgba(5,7,15,0.6)' : 'rgba(239,68,68,0.25)',
+              color: webrtc.audioEnabled ? '#fff' : '#ef4444',
+              WebkitTapHighlightColor: 'transparent' }}>
+            {webrtc.audioEnabled ? <IconMic size={22}/> : <IconVolumeOff size={22}/>}
+          </button>
+          {/* telecamera */}
+          <button onClick={() => webrtc.toggleVideo()} aria-pressed={webrtc.videoEnabled}
+            aria-label={L('cameraWord')}
+            style={{ width: 54, height: 54, borderRadius: 27, border: 'none', cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              background: webrtc.videoEnabled ? 'rgba(5,7,15,0.6)' : 'rgba(239,68,68,0.25)',
+              color: webrtc.videoEnabled ? '#fff' : '#ef4444',
+              WebkitTapHighlightColor: 'transparent' }}>
+            {webrtc.videoEnabled ? <IconCamera size={22}/> : <IconCameraOff size={22}/>}
+          </button>
+          {/* chiudi — il rosso e solo per questo */}
           <button
             onClick={() => { webrtc.disconnect(); setShowVideoCall(false); setVideoFullscreen(false); }}
             aria-label={L('endCall')}
             style={{
-              width: 62, height: 62, borderRadius: 31, border: 'none', cursor: 'pointer',
-              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2,
-              margin: '0 6px',
+              width: 54, height: 54, borderRadius: 27, border: 'none', cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
               background: 'linear-gradient(145deg, #ef4444, #dc2626)', color: '#fff',
               boxShadow: '0 6px 24px rgba(239,68,68,0.5)',
               WebkitTapHighlightColor: 'transparent',
             }}>
             <IconPhoneOff size={24}/>
           </button>
-
-          {setInterpreterActive && (
-            <ControlBtn
-              onClick={() => {
-                if (stanzaDiretta) { toast.info(L('directNoCloud')); return; }
-                if (stanzaConPiuDiDue) { toast.info(L('interpreterTwoOnly')); return; }
-                setInterpreterActive(!interpreterActive);
-              }}
-              active={interpreterActive && !stanzaDiretta && !stanzaConPiuDiDue}
-              icon={<IconGlobe size={18}/>}
-              label={interpreterActive ? L('translatingWord') : L('translateWord')}
-              color={(stanzaDiretta || stanzaConPiuDiDue) ? '#8b93a7' : '#3ddc84'}
-              activeColor="rgba(61,220,132,0.18)" size={46}
-            />
-          )}
-          <ControlBtn
-            onClick={() => setMostraTesto(v => !v)}
-            active={mostraTesto}
-            icon={<span style={{ fontSize: 13, fontWeight: 900, letterSpacing: 0.5 }}>CC</span>}
-            label={L('subtitlesWord')}
-            color="#38e1ff" activeColor="rgba(56,225,255,0.18)" size={46}
-          />
-          <ControlBtn
-            onClick={() => {
-              if (volTTS > 0.01) { volTTSPrimaRef.current = volTTS; setVolTTS(0); setVolumeTTS(0); try { window.dispatchEvent(new CustomEvent('bartalk:vol-tts')); } catch { /* fuori dal browser non c'e nessuno in ascolto dell'evento */ } }
-              else { const v = volTTSPrimaRef.current > 0.01 ? volTTSPrimaRef.current : 0.7; setVolTTS(v); setVolumeTTS(v); }
-            }}
-            active={volTTS > 0.01}
-            icon={volTTS > 0.01 ? <IconVolume size={18}/> : <IconVolumeOff size={18}/>}
-            label={L('voiceWord')}
-            color="#3ddc84" activeColor="rgba(61,220,132,0.18)" size={46}
-          />
-          <ControlBtn
-            onClick={() => setVolumiAperti(v => !v)}
-            active={volumiAperti}
-            icon={<IconVolumeLow size={18}/>}
-            label={L('volumesWord')}
-            color="#94a3b8" activeColor="rgba(148,163,184,0.2)" size={46}
-          />
-          {typeof navigator !== 'undefined' && navigator.mediaDevices?.getDisplayMedia && webrtc.condividiSchermo && (
-            <ControlBtn
-              onClick={() => webrtc.condividiSchermo()}
-              active={!!webrtc.schermoCondiviso}
-              icon={<IconExpand size={18}/>}
-              label={L('screenWord')}
-              color="#38e1ff" activeColor="rgba(56,225,255,0.18)" size={46}
-            />
-          )}
+          {/* Altro — la porta ai comandi di riserva, piu piccola dei tre */}
+          <button onClick={() => { setAltroAperto(v => !v); setVolumiAperti(false); }}
+            aria-expanded={altroAperto} aria-label={L('otherWord')}
+            style={{ width: 44, height: 44, borderRadius: 22, cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              background: altroAperto ? 'rgba(91,140,255,0.25)' : 'rgba(5,7,15,0.6)',
+              border: '1px solid rgba(160,190,255,0.2)', color: '#fff',
+              fontSize: 18, fontWeight: 700, letterSpacing: 1,
+              WebkitTapHighlightColor: 'transparent' }}>
+            {'\u22EF'}
+          </button>
         </div>
       </div>
       </div>

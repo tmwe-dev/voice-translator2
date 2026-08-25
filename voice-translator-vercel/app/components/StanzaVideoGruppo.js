@@ -19,7 +19,10 @@ import useParlatoTradotto, { useTraduzioneInArrivo } from '../hooks/useParlatoTr
 // parallelo di testo che non rallenta nessuno.
 // ═══════════════════════════════════════════════════════════════
 
-function Riquadro({ nome, stream, stato, lingua, battuta, C, mio, volume = 1, muto = false, suVolume, suMuto }) {
+function Riquadro({ nome, stream, stato, lingua, battuta, C, mio, volume = 1, muto = false, suVolume, suMuto, zoom = 0 }) {
+  // b.491 — tavola 17: il tasto Aa della testata ingrandisce le battute
+  // sotto i riquadri. Solo misura del carattere: nient'altro cambia.
+  const ingrandisci = 1 + zoom * 0.2;
   const ref = useRef(null);
   // b.291 — P2-11: il volume del singolo si applica al SUO video/audio.
   useEffect(() => {
@@ -82,11 +85,11 @@ function Riquadro({ nome, stream, stato, lingua, battuta, C, mio, volume = 1, mu
       }}>
         {battuta ? (
           <>
-            <div style={{ fontSize: 12.5, color: C.textPrimary, lineHeight: 1.35 }}>
+            <div style={{ fontSize: 12.5 * ingrandisci, color: C.textPrimary, lineHeight: 1.35 }}>
               {battuta.tradotto || battuta.testo}
             </div>
             {battuta.tradotto && battuta.tradotto !== battuta.testo && (
-              <div style={{ fontSize: 10.5, color: C.textMuted, marginTop: 2, lineHeight: 1.3 }}>
+              <div style={{ fontSize: 10.5 * ingrandisci, color: C.textMuted, marginTop: 2, lineHeight: 1.3 }}>
                 {battuta.testo}
               </div>
             )}
@@ -167,6 +170,9 @@ export default function StanzaVideoGruppo({ roomId, roomSessionToken, mioNome, o
   const [muti, setMuti] = useState({});
   // e i MIEI interruttori: camera e microfono della stanza di gruppo
   const [cameraAccesa, setCameraAccesa] = useState(true);
+  // b.491 — tavola 17: Aa anche qui, come su ogni pagina (regola del
+  // template). Cicla quattro misure e ricomincia.
+  const [zoomBattute, setZoomBattute] = useState(0);
   const [microfonoAcceso, setMicrofonoAcceso] = useState(true);
   useEffect(() => {
     const s = stanza.mioStream;
@@ -216,10 +222,23 @@ export default function StanzaVideoGruppo({ roomId, roomSessionToken, mioNome, o
           style={{ background: 'none', border: 'none', cursor: 'pointer', color: C.textPrimary, display: 'flex' }}>
           <Icon name="back" size={20} color={C.textPrimary} />
         </button>
-        <div style={{ fontSize: 16, fontWeight: 600, color: C.textPrimary }}>{L('videoRoom')}</div>
+        {/* b.491 — tavola 17: la testata dice DOVE SEI — il codice della
+            stanza, come sul telefono della tavola — non una parola
+            generica. Il codice e cio che si legge a voce a chi entra. */}
+        <div style={{ fontSize: 16, fontWeight: 600, color: C.textPrimary, letterSpacing: 1 }}>
+          {roomId || L('videoRoom')}
+        </div>
         <div style={{ marginLeft: 'auto', fontSize: 11.5, color: C.textMuted }}>
           {stanza.partecipanti.length + 1}/{stanza.MAX_PARTECIPANTI}
         </div>
+        <button onClick={() => { vibrate(); setZoomBattute((v) => (v >= 3 ? 0 : v + 1)); }}
+          title={L('textBigger')} aria-label={L('textBigger')}
+          style={{ width: 44, height: 44, borderRadius: 12, flexShrink: 0, cursor: 'pointer',
+            background: zoomBattute ? `${C.accent1 || '#5b8cff'}22` : 'transparent',
+            border: `1px solid ${C.cardBorder}`, color: C.textSecondary,
+            fontFamily: FONT, fontSize: 15, fontWeight: 600 }}>
+          Aa
+        </button>
       </div>
 
       {stanza.stato === 'fermo' && (
@@ -264,10 +283,10 @@ export default function StanzaVideoGruppo({ roomId, roomSessionToken, mioNome, o
             gridTemplateColumns: `repeat(${colonne}, minmax(0, 1fr))`,
           }}>
             <Riquadro mio nome={mioNome} stream={stanza.mioStream} stato="connesso"
-              lingua={miaLingua} battuta={mio.ultimoMio ? { testo: mio.ultimoMio } : null} C={C} />
+              lingua={miaLingua} battuta={mio.ultimoMio ? { testo: mio.ultimoMio } : null} C={C} zoom={zoomBattute} />
             {stanza.partecipanti.map(p => (
               <Riquadro key={p.nome} nome={p.nome} stream={p.stream} stato={p.stato}
-                lingua={ultimaDi[p.nome]?.lingua} battuta={ultimaDi[p.nome]} C={C}
+                lingua={ultimaDi[p.nome]?.lingua} battuta={ultimaDi[p.nome]} C={C} zoom={zoomBattute}
                 volume={volumi[p.nome] ?? 1} muto={!!muti[p.nome]}
                 suVolume={(v) => setVolumi(x => ({ ...x, [p.nome]: v }))}
                 suMuto={(m) => setMuti(x => ({ ...x, [p.nome]: m }))} />
