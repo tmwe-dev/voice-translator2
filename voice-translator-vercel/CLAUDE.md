@@ -219,6 +219,24 @@ qualunque refactoring. Non si propone di rimandarlo.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.495** (push #784) — TAVOLA 21: LA DISCUSSIONE, e una
+  correzione vista a schermo.
+  TAVOLA 21 (MondoDiscussioni): la notizia sta GRANDE in cima al corpo
+  (17pt, bandiera della sua lingua e autore accanto; tradotta,
+  l'originale resta sotto piccolo — non solo compressa in testata);
+  l'etichetta «N COMMENTI» sopra i commenti; ogni commento ha la
+  BANDIERA accanto al nome; un commento tradotto porta l'ORIGINALE
+  sotto piccolo invece di sostituirlo; Aa in testata (ingrandisce
+  notizia e commenti). Composer, follow, like, blocca, segnala:
+  intatti. Nessuna chiave nuova (commentsWord esisteva).
+  CORREZIONE #782: in Business il tasto Aa finiva SOTTO la pila del
+  credito (b.363, angolo fisso in alto a destra) — la testata ora le
+  lascia l'angolo (padding destro 96).
+  VERIFICA VISIVA #782: Business conforme (scansione grande, righe,
+  tratteggiato); Rubrica apre lo scanner GIA sulla tab Contatti
+  (bartalk-tab.js funziona in produzione).
+  PROVE: `discussione-tavola-21-b495.test.js` (rossa prima).
+
 - Versione: **b.494** (push #783) — TAVOLA 10: OBIETTIVI.
   «Poche cose, con quanto manca. Aggiungerne una e una riga sola.»
   I COMPITI DI OGGI (e in ritardo, max 3) sono righe «PER OGGI» dentro

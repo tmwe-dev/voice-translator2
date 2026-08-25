@@ -68,7 +68,10 @@ function BusinessView({ onBack }) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100dvh', background: S.colors.bg }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 20px', borderBottom: `1px solid ${S.colors.headerBorder}`, flexShrink: 0 }}>
+      {/* b.495 — visto a schermo su #782: il tasto Aa finiva SOTTO la
+          pila del credito, che vive fissa nell'angolo in alto a destra
+          (b.363). La testata le lascia l'angolo. */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 96px 12px 20px', borderBottom: `1px solid ${S.colors.headerBorder}`, flexShrink: 0 }}>
         {/* b.479 — il tasto indietro era alto 32: sotto i 44 il dito sbaglia bersaglio. */}
         <button onClick={() => (aperto ? setAperto(null) : onBack())} aria-label={L('backWord')}
           style={{ background: 'none', border: `1px solid ${S.colors.cardBorder}`, borderRadius: 12, width: 44, height: 44, flexShrink: 0, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>

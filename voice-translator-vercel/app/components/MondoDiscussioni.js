@@ -194,6 +194,9 @@ function MondoDiscussioni({ discussionId, onClose, onOpenPersona }) {
   const accent = C.accent1;
 
   const media = disc?.media && disc.media.url ? disc.media : null;
+  // b.495 — tavola 21: Aa come su ogni pagina, ingrandisce i commenti.
+  const [zoomTesto, setZoomTesto] = useState(0);
+  const ingr = 1 + zoomTesto * 0.15;
 
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 90, background: bg, display: 'flex', flexDirection: 'column', fontFamily: FONT }}>
@@ -223,6 +226,14 @@ function MondoDiscussioni({ discussionId, onClose, onOpenPersona }) {
             </div>
           )}
         </div>
+        {/* b.495 — tavola 21: Aa in testata, come ovunque. */}
+        <button onClick={() => { vibrate(6); setZoomTesto((z) => (z >= 3 ? 0 : z + 1)); }}
+          title={L('textBigger')} aria-label={L('textBigger')}
+          style={{ width: 44, height: 44, borderRadius: 12, flexShrink: 0, cursor: 'pointer',
+            background: zoomTesto ? `${accent}22` : card, border: bordo, color: muto,
+            fontFamily: FONT, fontSize: 15, fontWeight: 600 }}>
+          Aa
+        </button>
         {/* b.363 — si segnalava solo il singolo commento: una discussione
             intera fuori posto non aveva alcun modo di essere segnalata,
             benche il server la accettasse gia (tipo 'discussione'). */}
@@ -242,6 +253,23 @@ function MondoDiscussioni({ discussionId, onClose, onOpenPersona }) {
       {/* Corpo: media + commenti */}
       {/* b.482 — rientro a 20: i commenti si incolonnano con la testata. */}
       <div ref={scrollRef} style={{ flex: 1, overflowY: 'auto', padding: '12px 20px', scrollbarWidth: 'none' }}>
+        {/* b.495 — tavola 21: LA NOTIZIA IN CIMA, grande, nel corpo — non
+            solo compressa in testata. La bandiera della sua lingua e
+            l'autore accanto; tradotta, l'originale resta sotto piccolo. */}
+        {disc?.title && (
+          <div style={{ marginBottom: 12 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: muto }}>
+              {disc.title_lang && <span aria-hidden="true">{getLang(disc.title_lang).flag}</span>}
+              {disc.author_name && <span>{disc.author_name}</span>}
+            </div>
+            <div style={{ fontSize: 17 * ingr, fontWeight: 600, lineHeight: 1.35, color: testoP, marginTop: 5 }}>
+              {tradotti.title || disc.title}
+            </div>
+            {tradotti.title && tradotti.title !== disc.title && (
+              <div style={{ fontSize: 11.5 * ingr, color: muto, marginTop: 4 }}>{disc.title}</div>
+            )}
+          </div>
+        )}
         {media && (
           <a href={media.url} target="_blank" rel="noreferrer" style={{
             display: 'block', textDecoration: 'none', marginBottom: 14, borderRadius: 14, overflow: 'hidden', border: bordo, background: card,
@@ -252,6 +280,12 @@ function MondoDiscussioni({ discussionId, onClose, onOpenPersona }) {
           </a>
         )}
 
+        {/* b.495 — tavola 21: l'etichetta di sezione, come sulla tavola. */}
+        {!caricando && commenti.length > 0 && (
+          <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: 1, color: muto, margin: '2px 0 8px', textTransform: 'uppercase' }}>
+            {commenti.length} {L('commentsWord')}
+          </div>
+        )}
         {caricando ? (
           <div style={{ textAlign: 'center', color: muto, padding: 24, fontSize: 13 }}>…</div>
         ) : commenti.length === 0 ? (
@@ -268,8 +302,11 @@ function MondoDiscussioni({ discussionId, onClose, onOpenPersona }) {
               <button onClick={() => onOpenPersona?.(c.author_user_id)} style={{
                 background: 'none', border: 'none', padding: 0, cursor: 'pointer',
                 fontSize: 12, fontWeight: 600, color: testoP, fontFamily: FONT,
-                minHeight: 44, display: 'inline-flex', alignItems: 'center',
-              }}>{c.author_name || '—'}</button>
+                minHeight: 44, display: 'inline-flex', alignItems: 'center', gap: 5,
+              }}>{/* b.495 — tavola 21: la bandiera accanto al nome — e cio
+                    che dice subito da che mondo arriva il commento. */}
+                {c.lang && <span aria-hidden="true">{getLang(c.lang).flag}</span>}
+                {c.author_name || '—'}</button>
               {c.like_count > 0 && <span style={{ fontSize: 10, color: muto }}>· {c.like_count} ♥</span>}
               <button onClick={() => toggleSegui(c.author_user_id)} style={{
                 marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', padding: 0,
@@ -277,9 +314,14 @@ function MondoDiscussioni({ discussionId, onClose, onOpenPersona }) {
                 minHeight: 44, display: 'inline-flex', alignItems: 'center',
               }}>{seguiti.has(c.author_user_id) ? L('following') : L('follow')}</button>
             </div>
-            <div style={{ fontSize: 14, color: testoP, lineHeight: 1.45, whiteSpace: 'pre-wrap' }}>
+            <div style={{ fontSize: 14 * ingr, color: testoP, lineHeight: 1.45, whiteSpace: 'pre-wrap' }}>
               {tradotti[c.id] && tradotti[c.id] !== '…' ? tradotti[c.id] : c.text}
             </div>
+            {/* b.495 — tavola 21: il commento tradotto porta l'ORIGINALE
+                sotto, piccolo — chi vuole controllare puo (come in chat). */}
+            {tradotti[c.id] && tradotti[c.id] !== '…' && tradotti[c.id] !== c.text && (
+              <div style={{ fontSize: 11 * ingr, color: muto, marginTop: 3, whiteSpace: 'pre-wrap' }}>{c.text}</div>
+            )}
             <div style={{ display: 'flex', gap: 14, marginTop: 6 }}>
               <button onClick={() => traduci(c.id, c.text, c.lang)} style={{ background: 'none', border: 'none', color: accent, cursor: 'pointer', fontSize: 11, fontWeight: 600, padding: 0, minHeight: 44, display: 'inline-flex', alignItems: 'center' }}>
                 {tradotti[c.id] ? (L('original')) : (L('seeTranslation'))}
