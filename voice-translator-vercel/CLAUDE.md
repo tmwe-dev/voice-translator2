@@ -188,6 +188,11 @@ l'impressione di aver controllato cio che si e solo letto.
   `.git/HEAD.lock` o `index.lock`, non si riprova: si da all'utente il
   comando esatto (`rm -f .git/*.lock`) e si prosegue.
 - **`zsh` annulla il comando se un glob non trova nulla.** Usare `(N)`.
+  E VALE ANCHE PER I COMANDI DATI A LUCA: il 25/08 gli ho dettato
+  `rm -f .git/*.lock && git push` — senza lock, zsh ha annullato TUTTA
+  la riga e il push non e mai partito, in silenzio. Nei comandi da
+  incollare: mai un glob; i lock si tolgono per nome esplicito
+  (`rm -f .git/index.lock .git/HEAD.lock`), e solo se servono.
 - **I messaggi di commit con apostrofi** vanno passati con `git commit -F`.
 - **`next build` completo va in timeout** nel sandbox. Si usa `eslint` +
   `vitest run --reporter=dot`.
