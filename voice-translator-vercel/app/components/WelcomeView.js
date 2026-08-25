@@ -41,16 +41,19 @@ import { memDel, memSet } from '../lib/memoria.js';
 // scintillio dell'animazione non riparte da zero a ogni battuta e il
 // bottone non si smonta sotto il dito di chi lo sta premendo.
 // I colori, unica cosa che prendeva dalla chiusura, arrivano come `D`.
+// b.482 — altezza minima dichiarata di 44 punti (il bersaglio sotto il
+// quale un dito sbaglia) e bianco preso dal listino colori invece che
+// scritto qui dentro.
 const CTAButton = ({ D, onClick, disabled, children, secondary }) => (
   <button onClick={onClick} disabled={disabled}
     style={{
-      width: '100%', padding: secondary ? '14px' : '16px', borderRadius: 16,
+      width: '100%', minHeight: 44, padding: secondary ? '14px' : '16px', borderRadius: 16,
       cursor: disabled ? 'default' : 'pointer',
       background: disabled ? 'rgba(255,255,255,0.04)'
         : secondary ? 'rgba(255,255,255,0.04)'
         : `linear-gradient(135deg, ${D.neon1}, ${D.neon2})`,
       border: secondary ? `1.5px solid ${D.glassBorder}` : 'none',
-      color: disabled ? D.textMuted : secondary ? D.textSoft : '#fff',
+      color: disabled ? D.textMuted : secondary ? D.textSoft : PALETTE.white,
       fontFamily: FONT, fontSize: secondary ? 14 : 16, fontWeight: 600,
       opacity: disabled ? 0.5 : 1,
       transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
@@ -290,8 +293,10 @@ export default function WelcomeView({ joinCode, userToken, setAuthStep,
             </div>
 
             {/* Hero Title with gradient */}
+            {/* b.482 — era l'ultimo grassetto pesante rimasto nelle porte
+                d'ingresso: il titolo scende al massimo consentito, 600. */}
             <div style={{
-              fontSize: 32, fontWeight: 900, textAlign: 'center', lineHeight: 1.15,
+              fontSize: 32, fontWeight: 600, textAlign: 'center', lineHeight: 1.15,
               letterSpacing: -0.5, marginBottom: 12,
               background: `linear-gradient(135deg, ${D.text} 0%, ${D.neon1} 50%, ${D.neon2} 100%)`,
               WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
@@ -314,7 +319,7 @@ export default function WelcomeView({ joinCode, userToken, setAuthStep,
               {features.map((f, i) => (
                 <div key={i} style={{
                   display: 'flex', alignItems: 'center', gap: 12,
-                  padding: '12px 16px', borderRadius: 14,
+                  padding: '12px 20px', borderRadius: 14,
                   background: 'rgba(255,255,255,0.03)',
                   border: `1px solid ${f.color}18`,
                   ...stagger(3 + i),
@@ -381,7 +386,7 @@ export default function WelcomeView({ joinCode, userToken, setAuthStep,
             {/* Back */}
             <button onClick={() => setPhase(0)}
               style={{ alignSelf: 'flex-start', background: 'none', border: 'none', color: D.textMuted,
-                cursor: 'pointer', fontFamily: FONT, fontSize: 14, marginBottom: 8, padding: '4px 0',
+                cursor: 'pointer', fontFamily: FONT, fontSize: 14, marginBottom: 8, padding: '4px 0', minHeight: 44,
                 WebkitTapHighlightColor: 'transparent', ...stagger(0) }}>
               {'←'} {L('backWord')}
             </button>
@@ -403,7 +408,7 @@ export default function WelcomeView({ joinCode, userToken, setAuthStep,
                 Ora si mostra cosa e stato scelto un attimo prima, con la
                 via per tornare indietro se ci si e sbagliati. */}
             <button onClick={() => setView('paese')}
-              style={{ width: '100%', marginBottom: 20, padding: '13px 15px', borderRadius: 16,
+              style={{ width: '100%', minHeight: 44, marginBottom: 20, padding: '13px 20px', borderRadius: 16,
                 display: 'flex', alignItems: 'center', gap: 12, textAlign: 'left', cursor: 'pointer',
                 background: 'rgba(255,255,255,0.03)', border: `1px solid ${D.glassBorder}`,
                 fontFamily: FONT, WebkitTapHighlightColor: 'transparent', ...stagger(2) }}>
@@ -446,9 +451,13 @@ export default function WelcomeView({ joinCode, userToken, setAuthStep,
                 onFocus={(e) => { e.target.style.borderColor = D.neon1 + '40'; e.target.style.boxShadow = `0 0 16px ${D.neon1}15`; }}
                 onBlur={(e) => { e.target.style.borderColor = D.glassBorder; e.target.style.boxShadow = 'none'; }}
               />
-              {prefs.name.trim().length > 0 && prefs.name.trim().length < 2 && (
-                <div style={{ fontSize: 11, color: D.neon3, marginTop: 6 }}>{L('minChars')}</div>
-              )}
+              {/* b.482 — l'avviso sul nome troppo corto compariva e spariva a
+                  ogni lettera battuta, e il tasto sotto saltava su e giu
+                  sotto il dito. Ora il posto e sempre quello, ad altezza
+                  fissa: cambia solo cosa c'e scritto dentro. */}
+              <div style={{ fontSize: 11, color: D.neon3, marginTop: 6, height: 14, overflow: 'hidden' }}>
+                {prefs.name.trim().length > 0 && prefs.name.trim().length < 2 ? L('minChars') : ''}
+              </div>
             </div>
 
             {/* Next */}
@@ -471,7 +480,7 @@ export default function WelcomeView({ joinCode, userToken, setAuthStep,
             {/* Back */}
             <button onClick={() => setPhase(1)}
               style={{ alignSelf: 'flex-start', background: 'none', border: 'none', color: D.textMuted,
-                cursor: 'pointer', fontFamily: FONT, fontSize: 14, marginBottom: 8, padding: '4px 0',
+                cursor: 'pointer', fontFamily: FONT, fontSize: 14, marginBottom: 8, padding: '4px 0', minHeight: 44,
                 WebkitTapHighlightColor: 'transparent', ...stagger(0) }}>
               {'←'} {L('backWord')}
             </button>

@@ -25,6 +25,7 @@
 import { useEffect, useState } from 'react';
 import { FONT } from '../lib/constants.js';
 import { stato as statoVoce, ascolta, pausa, riprendi, ferma } from '../lib/voce.js';
+import Icon from './Icon.js';
 
 export default function TelecomandoVoce({ L, accent = '#26D9B0', testoP = '#eaf0ff', sopraLaBarra = true }) {
   const [voce, setVoce] = useState(statoVoce);
@@ -50,11 +51,15 @@ export default function TelecomandoVoce({ L, accent = '#26D9B0', testoP = '#eaf0
       WebkitBackdropFilter: 'blur(14px)',
       border: `1px solid ${accent}55`, boxShadow: '0 8px 30px rgba(0,0,0,0.5)', fontFamily: FONT,
     }}>
+      {/* b.482 — era un'EMOJI. La disegna il telefono, a colori e con la sua
+          faccia: in mezzo a icone monocrome sembra incollata da un'altra
+          applicazione, e dove non esiste compare un rettangolo vuoto. */}
       <span style={{
+        display: 'flex', alignItems: 'center', gap: 5,
         fontSize: 13, fontWeight: 600, color: testoP, maxWidth: 120,
         overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
       }}>
-        {'\u{1F509}'} {voce.etichetta || parola('lifeAudio', 'Audio')}
+        <Icon name="speaker" size={13} /> {voce.etichetta || parola('lifeAudio', 'Audio')}
       </span>
 
       {/* Mentre prepara la voce dopo, il telecomando resta ma non finge
@@ -65,7 +70,7 @@ export default function TelecomandoVoce({ L, accent = '#26D9B0', testoP = '#eaf0
           ? parola('lifePreparing', 'Preparo')
           : (voce.inPausa ? parola('lifeResumeWord', 'Riprendi') : parola('lifePauseWord', 'Pausa'))}
         style={{
-          width: 42, height: 42, borderRadius: 21, border: 'none',
+          width: 44, height: 44, borderRadius: 22, border: 'none',
           cursor: voce.preparando ? 'default' : 'pointer',
           background: voce.preparando ? `${accent}44` : accent,
           color: '#04121c', fontSize: 18, fontWeight: 900,
@@ -77,7 +82,7 @@ export default function TelecomandoVoce({ L, accent = '#26D9B0', testoP = '#eaf0
           corso: i cicli si iscrivono a `suInterruzione` (b.363). */}
       <button onClick={() => ferma()} aria-label={parola('stopAudio', 'Interrompi')}
         style={{
-          width: 42, height: 42, borderRadius: 21, cursor: 'pointer',
+          width: 44, height: 44, borderRadius: 22, cursor: 'pointer',
           background: 'transparent', border: `1px solid ${testoP}44`, color: testoP, fontSize: 15,
         }}>
         {'⏹'}

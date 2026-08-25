@@ -64,13 +64,13 @@ export default function PannelloLaterale({ aperto, onChiudi, titolo, C, children
         }}>
         <header style={{
           display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0,
-          padding: 'max(16px, calc(env(safe-area-inset-top) + 12px)) 14px 12px',
+          padding: 'max(16px, calc(env(safe-area-inset-top) + 12px)) 20px 12px',
           borderBottom: bordo,
         }}>
           <span style={{ flex: 1, fontSize: 15, fontWeight: 600, color: C.textPrimary }}>{titolo}</span>
           <button onClick={() => { vibrate(6); onChiudi?.(); }} aria-label="✕"
             style={{
-              width: 34, height: 34, borderRadius: 12, cursor: 'pointer',
+              width: 44, height: 44, borderRadius: 12, cursor: 'pointer',
               background: C.card, border: bordo, color: C.textMuted, fontSize: 15,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               WebkitTapHighlightColor: 'transparent',
@@ -79,7 +79,7 @@ export default function PannelloLaterale({ aperto, onChiudi, titolo, C, children
 
         <div style={{
           flex: 1, overflowY: 'auto', scrollbarWidth: 'none',
-          padding: '14px 14px calc(20px + env(safe-area-inset-bottom))',
+          padding: '14px 20px calc(20px + env(safe-area-inset-bottom))',
           display: 'flex', flexDirection: 'column', gap: 16,
         }}>
           {children}

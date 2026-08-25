@@ -3,6 +3,9 @@
 import { memo, useEffect, useRef, useCallback } from 'react';
 import { getLang } from '../lib/constants';
 import { PALETTE } from '../lib/palette.js';
+// b.482 — i due tasti dell'ascolto erano VUOTI: nessuna icona, nessuna
+// parola, solo un cerchio giallo. Ora portano il disegno comune.
+import Icon from './Icon.js';
 import { useApp } from '../contexts/AppContext.js';
 
 /**
@@ -113,7 +116,8 @@ const TaxiMode = memo(function TaxiMode({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          padding: '12px 16px',
+          // b.482 — rientro laterale a 20, la misura comune delle testate.
+          padding: '12px 20px',
           borderBottom: `1px solid ${borderColor}`,
           backgroundColor: bgColor,
           zIndex: 451,
@@ -123,14 +127,19 @@ const TaxiMode = memo(function TaxiMode({
           {L('taxiModeTitle')}
         </div>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          {/* b.482 — questo tasto era INVISIBILE: nessuna icona, nessuna
+              parola, solo un cerchio giallo che nessuno poteva capire. Ora
+              porta l'altoparlante di Icon.js. E sale a 44×44, la misura
+              sotto la quale il dito sbaglia bersaglio. */}
           <button
             onClick={handlePlayTTS}
+            aria-label={L('playTranslation')}
             style={{
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              width: '40px',
-              height: '40px',
+              width: '44px',
+              height: '44px',
               borderRadius: '50%',
               backgroundColor: statusWarning,
               border: 'none',
@@ -146,16 +155,18 @@ const TaxiMode = memo(function TaxiMode({
             }}
             title={L('playTranslation')}
           >
-           
+            <Icon name="speaker" size={20} color={PALETTE.black} />
           </button>
+          {/* b.482 — anche la crocetta per chiudere sale a 44×44. */}
           <button
             onClick={onClose}
+            aria-label={L('closeTaxiMode')}
             style={{
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              width: '40px',
-              height: '40px',
+              width: '44px',
+              height: '44px',
               borderRadius: '50%',
               backgroundColor: 'transparent',
               border: `1px solid ${textMuted}`,
@@ -274,10 +285,13 @@ const TaxiMode = memo(function TaxiMode({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          padding: '24px 16px 32px',
+          // b.482 — rientro laterale a 20 anche nella fascia dell'ascolto.
+          padding: '24px 20px 32px',
           borderTop: `1px solid ${borderColor}`,
         }}
       >
+        {/* b.482 — anche il tastone grande era VUOTO: un cerchio giallo da
+            ottanta senza niente dentro. Ora dice cosa fa. */}
         <button
           onClick={handlePlayTTS}
           style={{
@@ -303,8 +317,9 @@ const TaxiMode = memo(function TaxiMode({
             e.currentTarget.style.boxShadow = '0 4px 12px rgba(245, 158, 11, 0.3)';
           }}
           title={L('playTranslationRepeat')}
+          aria-label={L('playTranslationRepeat')}
         >
-         
+          <Icon name="speaker" size={32} color={PALETTE.black} />
         </button>
       </div>
     </div>
@@ -321,8 +336,12 @@ const TaxiMode = memo(function TaxiMode({
 // tonde e smorzate. Attirava piu attenzione della videochiamata, e non
 // perche fosse piu importante: perche era piu colorato.
 //
-// Ora ha la stessa veste degli altri — cerchio 36, fondo neutro, icona.
+// Ora ha la stessa veste degli altri — cerchio, fondo neutro, icona.
 // Chi lo cerca lo trova; chi non lo cerca non ne viene distratto.
+//
+// b.482 — il cerchio sale da 36 a 44: e la misura sotto la quale, su un
+// telefono, il dito sbaglia bersaglio. Il disegno del taxi dentro resta
+// della misura di prima, come vuole la regola.
 const TaxiButton = memo(function TaxiButton({ onClick, S = {}, theme = 'dark' }) {
   const { L } = useApp();
   const C = S.colors || {};
@@ -332,7 +351,7 @@ const TaxiButton = memo(function TaxiButton({ onClick, S = {}, theme = 'dark' })
       onClick={onClick}
       style={{
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        width: 36, height: 36, borderRadius: 18,
+        width: 44, height: 44, borderRadius: 22,
         background: C.overlayBg || 'rgba(255,255,255,0.06)',
         color: C.textMuted || 'rgba(255,255,255,0.6)',
         border: 'none', cursor: 'pointer', flexShrink: 0,

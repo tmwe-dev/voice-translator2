@@ -2,6 +2,7 @@
 import { Component } from 'react';
 import { t, preloadLang, linguaInterfacciaFuoriContesto } from '../lib/i18n.js';
 import { PALETTE } from '../lib/palette.js';
+import { IconWarning } from './Icons.js';
 
 /**
  * ErrorBoundary — catches React render errors gracefully
@@ -88,7 +89,10 @@ export default class ErrorBoundary extends Component {
           background: 'linear-gradient(160deg, #09090b 0%, #111113 30%, #18181b 60%, #09090b 100%)',
           color: '#e0e0e0', fontFamily: '-apple-system, BlinkMacSystemFont, sans-serif',
         }}>
-          <div style={{ fontSize: 48, marginBottom: 16 }}>{'\u26A0\uFE0F'}</div>
+          {/* b.482 — era l'emoji del triangolo: su un telefono che non ce
+              l'ha, la schermata di guasto si apriva con un rettangolo
+              vuoto sopra la scritta. */}
+          <div style={{ marginBottom: 16, lineHeight: 0, color: '#ffc44d' }}><IconWarning size={48} /></div>
           <h2 style={{ fontSize: 22, fontWeight: 600, margin: '0 0 8px', color: '#fff' }}>
             {this.getErrorText('errorTitle')}
           </h2>

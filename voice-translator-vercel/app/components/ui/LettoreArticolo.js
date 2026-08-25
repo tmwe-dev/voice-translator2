@@ -102,7 +102,7 @@ export default function LettoreArticolo({ url, titolo, fonte, C, L, onIndietro }
       }}>
         <button onClick={() => { vibrate(6); onIndietro?.(); }} aria-label={L('backWord')}
           style={{
-            width: 34, height: 34, borderRadius: 11, flexShrink: 0, cursor: 'pointer',
+            width: 44, height: 44, borderRadius: 12, flexShrink: 0, cursor: 'pointer',
             background: 'rgba(255,255,255,0.05)', border: bordo,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
@@ -122,7 +122,7 @@ export default function LettoreArticolo({ url, titolo, fonte, C, L, onIndietro }
         <a href={url} target="_blank" rel="noreferrer noopener"
           onClick={() => vibrate(6)} aria-label={L('openOutside')}
           style={{
-            width: 34, height: 34, borderRadius: 11, flexShrink: 0, textDecoration: 'none',
+            width: 44, height: 44, borderRadius: 12, flexShrink: 0, textDecoration: 'none',
             background: 'rgba(255,255,255,0.05)', border: bordo,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>

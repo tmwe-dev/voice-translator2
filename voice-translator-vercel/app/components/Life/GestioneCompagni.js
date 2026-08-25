@@ -30,6 +30,16 @@ const MAX_GEN_IMG = 6;
 // Compagni: nome, ruolo, personalità, avatar, VOCE (con anteprima),
 // LINGUA, modello, libertà. Facile: una lista + un form. Salvataggio via
 // /api/compagni/mie (persistenza nostra). (Luca)
+//
+// b.482 — QUESTA SCHEDA PASSA ALLO STANDARD DEL TEMPLATE, e cambia solo
+// cio che si vede: rientri laterali a venti, ogni cosa che si tocca alta
+// almeno quarantaquattro (i tre tasti dell'immagine erano quarantadue, e
+// sotto quella misura il dito sbaglia mira), niente emoji ne simboli usati
+// come icone, niente grassetto oltre il seicento, e i colori presi dalla
+// tavolozza del tema — che questo file dichiarava gia in cima e poi
+// ignorava in una dozzina di punti. Le parole vengono dai pacchetti
+// lingua: restano scritte a mano solo le tre di «dimentica», che nei
+// pacchetti non ci sono ancora.
 // ═══════════════════════════════════════════════════════════════
 
 function GestioneCompagni({ miei, onCambiato, L, C = {}, lingua, userToken, testoP, muto, accent, card, bordo }) {
@@ -37,6 +47,10 @@ function GestioneCompagni({ miei, onCambiato, L, C = {}, lingua, userToken, test
   // tema scuro anche sul chiaro, dove l'errore e il fondo sono altri due colori.
   const rosso = C.statusError;   // avvisi ed errori
   const suAccento = C.bg;        // il testo sopra una superficie in accento
+  // b.482 — anche il riquadro dell'avviso prende fondo e bordo dai token:
+  // erano lo stesso rosso, scritto a mano in due trasparenze diverse.
+  const rossoFondo = C.accent3Bg;
+  const rossoBordo = C.accent3Border;
   const [bozza, setBozza] = useState(null); // null = lista; oggetto = form aperto
   const [salvando, setSalvando] = useState(false);
   const [errore, setErrore] = useState('');
@@ -238,12 +252,12 @@ function GestioneCompagni({ miei, onCambiato, L, C = {}, lingua, userToken, test
         setBozza((b) => b ? { ...b, avatar: leggero } : b);
         setNGenImg((n) => n + 1);
         salvaImmagine(leggero, { nome }).then(() => elencoImmagini(12)).then(setGalleria).catch(() => {});
-      } else setErrImg(tt('lifeAvatarErr', 'Immagine non riuscita, riprova.'));
+      } else setErrImg(L('lifeAvatarErr'));
     } catch (e) {
       setErrImg(e.creditoEsaurito ? L('lifeNoCredit')
         : e.status === 401 ? L('lifeLoginNeeded')
-        : e.status === 422 ? tt('lifeAvatarRifiuto', 'Il modello ha rifiutato l’immagine: prova a cambiare nome o descrizione.')
-        : tt('lifeAvatarErr', 'Immagine non riuscita, riprova.'));
+        : e.status === 422 ? L('lifeAvatarRifiuto')
+        : L('lifeAvatarErr'));
     } finally { setGenImg(false); }
   }, [genImg, nGenImg, urlToDataUrl, userToken, L]);
 
@@ -265,8 +279,8 @@ function GestioneCompagni({ miei, onCambiato, L, C = {}, lingua, userToken, test
     const file = e.target?.files?.[0];
     if (e.target) e.target.value = '';
     if (!file) return;
-    if (!/^image\//.test(file.type)) { setErrImg(tt('lifeAvatarTipo', 'Serve un’immagine (PNG/JPEG).')); return; }
-    if (file.size > 6 * 1024 * 1024) { setErrImg(tt('lifeAvatarPesante', 'Immagine troppo grande (max 6MB).')); return; }
+    if (!/^image\//.test(file.type)) { setErrImg(L('lifeAvatarTipo')); return; }
+    if (file.size > 6 * 1024 * 1024) { setErrImg(L('lifeAvatarPesante')); return; }
     const fr = new FileReader();
     fr.onload = () => {
       const dataUrl = fr.result;
@@ -284,7 +298,7 @@ function GestioneCompagni({ miei, onCambiato, L, C = {}, lingua, userToken, test
   if (bozza) {
     return (
       <div>
-        <button onClick={() => setBozza(null)} style={{ background: card, border: bordo, borderRadius: 10, padding: '8px 12px', cursor: 'pointer', color: testoP, fontFamily: FONT, marginBottom: 8 }}>
+        <button onClick={() => setBozza(null)} style={{ background: card, border: bordo, borderRadius: 10, padding: '8px 12px', minHeight: 44, cursor: 'pointer', color: testoP, fontFamily: FONT, marginBottom: 8 }}>
           <Icon name="back" size={14} color={testoP} /> {L('lifeCancel')}
         </button>
 
@@ -299,8 +313,8 @@ function GestioneCompagni({ miei, onCambiato, L, C = {}, lingua, userToken, test
           placeholder="Come parla, cosa sa, cosa evita…" />
 
         {/* b.212 — carattere a barre (stile ElevenLabs): regoli a vista */}
-        <div style={{ marginTop: 10, padding: 12, borderRadius: 12, background: card, border: bordo }}>
-          <div style={{ fontSize: 11, color: muto, marginBottom: 6, fontWeight: 600 }}>{tt('lifeCharacter', 'Carattere')}</div>
+        <div style={{ marginTop: 10, padding: '12px 20px', borderRadius: 12, background: card, border: bordo }}>
+          <div style={{ fontSize: 11, color: muto, marginBottom: 6, fontWeight: 600 }}>{L('lifeCharacter')}</div>
           {BARRE.map((s) => (
             <div key={s.k} style={{ margin: '9px 0' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: testoP, marginBottom: 3 }}>
@@ -332,25 +346,25 @@ function GestioneCompagni({ miei, onCambiato, L, C = {}, lingua, userToken, test
           <img src={bozza.avatar} alt="" width={48} height={48}
             style={{ borderRadius: 10, display: 'block', flexShrink: 0, objectFit: 'cover', border: `2px solid ${bozza.avatar?.startsWith('data:') ? accent : bordo}` }} />
           <button onClick={() => creaAvatar(null)} disabled={genImg || nGenImg >= MAX_GEN_IMG}
-            style={{ padding: '0 14px', height: 42, borderRadius: 10, border: 'none', background: accent, color: '#04121c', fontWeight: 600, cursor: 'pointer', fontFamily: FONT, opacity: (genImg || nGenImg >= MAX_GEN_IMG) ? 0.55 : 1 }}>
-            {genImg ? '…' : `✨ ${tt('lifeAvatarGen', 'Genera avatar')}`}
+            style={{ padding: '0 14px', height: 44, borderRadius: 10, border: 'none', background: accent, color: suAccento, fontWeight: 600, cursor: 'pointer', fontFamily: FONT, opacity: (genImg || nGenImg >= MAX_GEN_IMG) ? 0.55 : 1, display: 'flex', alignItems: 'center', gap: 6 }}>
+            {genImg ? '…' : <><Icon name="star" size={16} color={suAccento} />{L('lifeAvatarGen')}</>}
           </button>
           <button onClick={() => creaAvatar(bozza.avatar)} disabled={genImg || nGenImg >= MAX_GEN_IMG}
-            style={{ padding: '0 12px', height: 42, borderRadius: 10, border: bordo, background: 'transparent', color: testoP, fontWeight: 600, cursor: 'pointer', fontFamily: FONT, opacity: (genImg || nGenImg >= MAX_GEN_IMG) ? 0.55 : 1 }}>
-            ↻ {tt('lifeAvatarRestyle', 'Ridisegna')}
+            style={{ padding: '0 12px', height: 44, borderRadius: 10, border: bordo, background: 'transparent', color: testoP, fontWeight: 600, cursor: 'pointer', fontFamily: FONT, opacity: (genImg || nGenImg >= MAX_GEN_IMG) ? 0.55 : 1, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <Icon name="refresh" size={16} color={testoP} />{L('lifeAvatarRestyle')}
           </button>
           <button onClick={() => fileRef.current?.click()} disabled={genImg}
-            style={{ padding: '0 12px', height: 42, borderRadius: 10, border: bordo, background: 'transparent', color: testoP, fontWeight: 600, cursor: 'pointer', fontFamily: FONT }}>
-            ⤒ {tt('lifeAvatarUpload', 'Carica')}
+            style={{ padding: '0 12px', height: 44, borderRadius: 10, border: bordo, background: 'transparent', color: testoP, fontWeight: 600, cursor: 'pointer', fontFamily: FONT, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <Icon name="share" size={16} color={testoP} />{L('lifeAvatarUpload')}
           </button>
           <input ref={fileRef} type="file" accept="image/*" onChange={caricaImmagine} style={{ display: 'none' }} />
           {nGenImg > 0 && <span style={{ fontSize: 11, color: muto }}>{nGenImg}/{MAX_GEN_IMG}</span>}
         </div>
-        {errImg && <div style={{ color: '#f87171', fontSize: 12, marginTop: 6 }}>{errImg}</div>}
+        {errImg && <div style={{ color: rosso, fontSize: 12, marginTop: 6 }}>{errImg}</div>}
 
         {/* b.223 — galleria delle immagini salvate sul dispositivo: riusale senza ripagare. */}
         {galleria.length > 0 && <>
-          <div style={{ fontSize: 11, color: muto, margin: '10px 0 4px' }}>{tt('lifeAvatarGallery', 'Le tue immagini (sul dispositivo)')}</div>
+          <div style={{ fontSize: 11, color: muto, margin: '10px 0 4px' }}>{L('lifeAvatarGallery')}</div>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             {galleria.map((g) => (
               <button key={g.id} onClick={() => setBozza((b) => ({ ...b, avatar: g.dataUrl }))}
@@ -366,7 +380,7 @@ function GestioneCompagni({ miei, onCambiato, L, C = {}, lingua, userToken, test
           <select value={bozza.voce?.id || ''} onChange={(e) => { const v = VOCI_ELENCO.find(x => x.id === e.target.value); setBozza((b) => ({ ...b, voce: v || b.voce })); }} style={{ ...input, flex: 1 }}>
             {VOCI_ELENCO.map((v) => <option key={v.id} value={v.id}>{v.nome}</option>)}
           </select>
-          <Ascolta onAscolta={() => provaVoce(bozza.voce?.id)} parola={L('lifeTryVoice')} sfondo={accent} colore="#04121c" etichetta={L('lifeTryVoice')} />
+          <Ascolta onAscolta={() => provaVoce(bozza.voce?.id)} parola={L('lifeTryVoice')} sfondo={accent} colore={suAccento} etichetta={L('lifeTryVoice')} />
         </div>
 
         <div style={{ display: 'flex', gap: 8 }}>
@@ -393,18 +407,18 @@ function GestioneCompagni({ miei, onCambiato, L, C = {}, lingua, userToken, test
           const comp = compatibilitaVoceLingua({ voceId: bozza.voce?.id, lingua: bozza.lingua, genere: bozza.genere || 'neutral' });
           if (!bozza.lingua) return null;
           if (!comp.ok) return (
-            <div style={{ marginTop: 8, padding: '9px 12px', borderRadius: 10, background: 'rgba(248,113,113,0.10)', border: '1px solid rgba(248,113,113,0.4)', fontSize: 12, color: '#f87171' }}>
-              {tt('lifeVoceLinguaNo', 'Questa lingua non ha una voce dedicata: la pronuncia potrebbe essere approssimativa.')}
+            <div style={{ marginTop: 8, padding: '9px 20px', borderRadius: 10, background: rossoFondo, border: `1px solid ${rossoBordo}`, fontSize: 12, color: rosso }}>
+              {L('lifeVoceLinguaNo')}
             </div>
           );
           if (comp.consiglio) {
             const nomeCons = VOCI_ELENCO.find((v) => v.id === comp.consiglio.id)?.nome;
             return (
-              <div style={{ marginTop: 8, padding: '9px 12px', borderRadius: 10, background: `${accent}12`, border: `1px solid ${accent}44`, fontSize: 12, color: testoP, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                <span>{tt('lifeVoceConsiglio', 'Per questa lingua c’è una voce che rende meglio')}{nomeCons ? ` (${nomeCons})` : ''}.</span>
+              <div style={{ marginTop: 8, padding: '9px 20px', borderRadius: 10, background: `${accent}12`, border: `1px solid ${accent}44`, fontSize: 12, color: testoP, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                <span>{L('lifeVoceConsiglio')}{nomeCons ? ` (${nomeCons})` : ''}.</span>
                 <button onClick={() => setBozza((b) => ({ ...b, voce: { id: comp.consiglio.id, nome: nomeCons || b.voce?.nome || '' } }))}
-                  style={{ padding: '5px 10px', borderRadius: 8, border: 'none', background: accent, color: '#04121c', fontWeight: 600, cursor: 'pointer', fontFamily: FONT, fontSize: 12 }}>
-                  {tt('lifeVoceUsala', 'Usa quella')}
+                  style={{ padding: '5px 10px', minHeight: 44, borderRadius: 8, border: 'none', background: accent, color: suAccento, fontWeight: 600, cursor: 'pointer', fontFamily: FONT, fontSize: 12 }}>
+                  {L('lifeVoceUsala')}
                 </button>
               </div>
             );
@@ -417,12 +431,12 @@ function GestioneCompagni({ miei, onCambiato, L, C = {}, lingua, userToken, test
           {MODELLI.map((m) => <option key={`${m.provider}|${m.modello}`} value={`${m.provider}|${m.modello}`}>{m.label}</option>)}
         </select>
 
-        <label style={{ ...etich, display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', marginTop: 14 }}
+        <label style={{ ...etich, display: 'flex', alignItems: 'center', gap: 10, minHeight: 44, cursor: 'pointer', marginTop: 14 }}
           onClick={() => setBozza((b) => ({ ...b, memoria: !b.memoria }))}>
           <span style={{ width: 42, height: 24, borderRadius: 999, background: bozza.memoria ? accent : card, border: bordo, position: 'relative', flexShrink: 0, transition: 'background 0.15s' }}>
             <span style={{ position: 'absolute', top: 2, left: bozza.memoria ? 20 : 2, width: 18, height: 18, borderRadius: '50%', background: '#fff', transition: 'left 0.15s' }} />
           </span>
-          <span><b style={{ color: testoP }}>{L('lifeMemory')}</b> — {L('lifeMemoryHint')}</span>
+          <span><span style={{ color: testoP, fontWeight: 600 }}>{L('lifeMemory')}</span> — {L('lifeMemoryHint')}</span>
         </label>
 
         {/* b.237 — DEEP SETTING: identità stabile, comportamento per superficie.
@@ -451,10 +465,10 @@ function GestioneCompagni({ miei, onCambiato, L, C = {}, lingua, userToken, test
           </div>
         </details>
 
-        {errore && <div style={{ color: '#f87171', fontSize: 13, margin: '10px 0' }}>{errore}</div>}
+        {errore && <div style={{ color: rosso, fontSize: 13, margin: '10px 0' }}>{errore}</div>}
 
-        <button onClick={salva} disabled={salvando} style={{ width: '100%', marginTop: 16, padding: 14, borderRadius: 14, border: 'none', cursor: 'pointer', background: accent, color: '#04121c', fontWeight: 600, fontSize: 15, fontFamily: FONT, opacity: salvando ? 0.6 : 1 }}>
-          {salvando ? L('lifeGenerating') : `✨ ${L('lifeSave')}`}
+        <button onClick={salva} disabled={salvando} style={{ width: '100%', marginTop: 16, padding: 14, minHeight: 44, borderRadius: 14, border: 'none', cursor: 'pointer', background: accent, color: suAccento, fontWeight: 600, fontSize: 15, fontFamily: FONT, opacity: salvando ? 0.6 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+          {salvando ? L('lifeGenerating') : <><Icon name="star" size={18} color={suAccento} />{L('lifeSave')}</>}
         </button>
       </div>
     );
@@ -462,7 +476,7 @@ function GestioneCompagni({ miei, onCambiato, L, C = {}, lingua, userToken, test
 
   // ── LISTA ──
   const carta = (c, mio) => (
-    <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: 12, ...clayCard(card) }}>
+    <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 20px', ...clayCard(card) }}>
       <img src={c.avatar} alt="" width={38} height={38} style={{ borderRadius: 8 }} />
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontWeight: 600, color: testoP, fontSize: 14 }}>{c.nome}</div>
@@ -473,45 +487,45 @@ function GestioneCompagni({ miei, onCambiato, L, C = {}, lingua, userToken, test
           predefiniti, perche anche loro possono ricordare. */}
       <button onClick={() => dimentica(c.id)} aria-label={tt('lifeForget', 'Dimentica cio che ricorda di me')}
         title={tt('lifeForget', 'Dimentica cio che ricorda di me')}
-        style={{ background: 'none', border: bordo, borderRadius: 8, padding: '7px 9px', cursor: 'pointer',
+        style={{ background: 'none', border: bordo, borderRadius: 8, padding: '7px 9px', minHeight: 44, cursor: 'pointer',
           color: dimenticato === c.id ? accent : muto, fontSize: 11, fontWeight: 600, fontFamily: FONT }}>
         {dimenticato === c.id ? tt('lifeForgotten', 'fatto') : tt('lifeForgetShort', 'dimentica')}
       </button>
       {mio
         ? <>
-            <button onClick={() => modifica(c)} aria-label={L('lifeEdit')} style={{ background: 'none', border: bordo, borderRadius: 8, padding: 7, cursor: 'pointer' }}><Icon name="settings" size={14} color={testoP} /></button>
-            <button onClick={() => elimina(c.id)} aria-label={L('lifeDelete')} style={{ background: 'none', border: bordo, borderRadius: 8, padding: 7, cursor: 'pointer' }}><Icon name="x" size={14} color="#f87171" /></button>
+            <button onClick={() => modifica(c)} aria-label={L('lifeEdit')} style={{ background: 'none', border: bordo, borderRadius: 8, padding: 7, minHeight: 44, cursor: 'pointer' }}><Icon name="settings" size={14} color={testoP} /></button>
+            <button onClick={() => elimina(c.id)} aria-label={L('lifeDelete')} style={{ background: 'none', border: bordo, borderRadius: 8, padding: 7, minHeight: 44, cursor: 'pointer' }}><Icon name="x" size={14} color={rosso} /></button>
           </>
-        : <button onClick={() => daBase(c)} style={{ background: 'none', border: bordo, borderRadius: 8, padding: '7px 10px', cursor: 'pointer', color: accent, fontSize: 12, fontWeight: 600, fontFamily: FONT }}>{L('lifeDuplicate')}</button>}
+        : <button onClick={() => daBase(c)} style={{ background: 'none', border: bordo, borderRadius: 8, padding: '7px 10px', minHeight: 44, cursor: 'pointer', color: accent, fontSize: 12, fontWeight: 600, fontFamily: FONT }}>{L('lifeDuplicate')}</button>}
     </div>
   );
 
   return (
     <div>
       {/* b.212 — costruzione automatica: scrivi un personaggio e l'AI crea tutto */}
-      <div style={{ padding: 14, ...clayCard(card), marginBottom: 12 }}>
-        <div style={{ fontSize: 13, fontWeight: 600, color: testoP, marginBottom: 8 }}>{tt('lifeCreateFrom', 'Crea da un personaggio')}</div>
+      <div style={{ padding: '14px 20px', ...clayCard(card), marginBottom: 12 }}>
+        <div style={{ fontSize: 13, fontWeight: 600, color: testoP, marginBottom: 8 }}>{L('lifeCreateFrom')}</div>
         <div style={{ display: 'flex', gap: 8 }}>
           <input value={descAg} onChange={(e) => setDescAg(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter' && !generando) crea(false); }}
-            placeholder={tt('lifeCreateFromPh', 'Es. Elvis Presley, oppure una coach diretta')}
+            placeholder={L('lifeCreateFromPh')}
             style={{ ...input, flex: 1 }} />
           <button onClick={() => crea(false)} disabled={generando}
-            style={{ padding: '0 16px', borderRadius: 10, border: 'none', background: accent, color: '#04121c', fontWeight: 600, cursor: 'pointer', fontFamily: FONT, opacity: generando ? 0.6 : 1 }}>
-            {generando ? '…' : `✨ ${tt('lifeCreate', 'Crea')}`}
+            style={{ padding: '0 16px', minHeight: 44, borderRadius: 10, border: 'none', background: accent, color: suAccento, fontWeight: 600, cursor: 'pointer', fontFamily: FONT, opacity: generando ? 0.6 : 1, display: 'flex', alignItems: 'center', gap: 6 }}>
+            {generando ? '…' : <><Icon name="star" size={16} color={suAccento} />{L('lifeCreate')}</>}
           </button>
         </div>
         <button onClick={() => crea(true)} disabled={generando}
-          style={{ marginTop: 8, background: 'none', border: 'none', color: accent, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: FONT, padding: 4 }}>
-          🎲 {tt('lifeSurprise', 'Sorprendimi')}
+          style={{ marginTop: 8, background: 'none', border: 'none', color: accent, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: FONT, padding: 4, minHeight: 44, display: 'flex', alignItems: 'center', gap: 6 }}>
+          <Icon name="zap" size={15} color={accent} />{L('lifeSurprise')}
         </button>
         {/* b.215 — la lista non rendeva mai `errore`: un fallimento di
             generazione (credito, rete, 401) spariva in silenzio. Ora si vede. */}
-        {errore && <div style={{ color: '#f87171', fontSize: 13, marginTop: 10 }}>{errore}</div>}
+        {errore && <div style={{ color: rosso, fontSize: 13, marginTop: 10 }}>{errore}</div>}
       </div>
 
-      <button onClick={() => { vibrate(8); nuovo(); }} style={{ width: '100%', padding: 13, borderRadius: 14, border: bordo, cursor: 'pointer', background: 'transparent', color: testoP, fontWeight: 600, fontSize: 14, fontFamily: FONT, marginBottom: 16 }}>
-        {tt('lifeCreateManual', 'Crea a mano')}
+      <button onClick={() => { vibrate(8); nuovo(); }} style={{ width: '100%', padding: 13, minHeight: 44, borderRadius: 14, border: bordo, cursor: 'pointer', background: 'transparent', color: testoP, fontWeight: 600, fontSize: 14, fontFamily: FONT, marginBottom: 16 }}>
+        {L('lifeCreateManual')}
       </button>
 
       {miei.length > 0 && <>

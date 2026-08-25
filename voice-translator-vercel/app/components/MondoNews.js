@@ -386,7 +386,11 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
       // sono meta della sezione Mondo. Prima l'ascolto c'era solo sulle
       // Stanze, quindi scorrendo le notizie il globo restava identico.
       <div onScroll={suScorrimento} style={{ flex: 1, minHeight: 0, overflowY: 'auto', scrollbarWidth: 'none' }}>
-      <div style={{ padding: '0 16px 106px', fontFamily: FONT, ...COLONNA }}>
+      {/* b.482 — IL RIENTRO LATERALE SALE DA 16 A 20, la misura del
+          template. Era l'ultimo posto di Mondo dove le vecchie misure
+          resistevano: passando da una schermata all'altra il contenuto
+          saltava di quattro punti. */}
+      <div style={{ padding: '0 20px 106px', fontFamily: FONT, ...COLONNA }}>
 
       {/* b.363 — GLI STRUMENTI STANNO DIETRO IL GIORNALE. Sopra il pianeta
           restavano accesi tre blocchi — il campo "cosa vuoi seguire", i due
@@ -411,6 +415,9 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
             background: C.input, border: bordo, outline: 'none',
             color: C.textPrimary, fontSize: 14, fontFamily: FONT,
           }} />
+        {/* b.482 — il tasto aveva solo il rientro: su un telefono restava
+            sotto i 44 punti, cioe sotto la misura in cui un dito comincia
+            a sbagliare bersaglio. */}
         <button
           onClick={() => (chipAttiva
             ? cercaChip(CATEGORIE.find(c => c.id === chipAttiva))
@@ -418,7 +425,7 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
           disabled={cercando || (!query.trim() && !chipAttiva)}
           aria-label={L('newsUpdate')}
           style={{
-            padding: '0 18px', borderRadius: 14, cursor: 'pointer',
+            padding: '0 18px', minHeight: 44, borderRadius: 14, cursor: 'pointer',
             background: `linear-gradient(135deg, ${C.accent}, ${C.purple})`,
             border: 'none', color: '#fff', fontSize: 13, fontWeight: 600,
             fontFamily: FONT, opacity: cercando || (!query.trim() && !chipAttiva) ? 0.5 : 1,
@@ -435,10 +442,12 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
       {profonda && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
           <span style={{ fontSize: 11, color: C.textMuted, fontFamily: FONT }}>{L('newsSourcesShort')}</span>
+          {/* b.482 — erano tondini da 30x28: un bersaglio piu piccolo del
+              polpastrello. Portati alla misura minima del template. */}
           {[3, 6, 10].map(n => (
             <button key={n} onClick={() => { setNumFonti(n); vibrate(8); }}
               style={{
-                width: 30, height: 28, borderRadius: 9, cursor: 'pointer', fontFamily: FONT, fontSize: 12, fontWeight: 600,
+                width: 44, height: 44, borderRadius: 9, cursor: 'pointer', fontFamily: FONT, fontSize: 12, fontWeight: 600,
                 background: numFonti === n ? `${C.accent}20` : C.card,
                 border: numFonti === n ? `1px solid ${C.accent}45` : bordo,
                 color: numFonti === n ? C.accent : C.textSecondary,
@@ -487,7 +496,7 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
       {/* ─── Il pannello COBRA: il lavoro si vede ─── */}
       {(cercando || (processo.length > 0 && argomenti === null)) && (
         <div style={{
-          margin: '6px 0 12px', padding: '12px 14px', borderRadius: 14,
+          margin: '6px 0 12px', padding: '12px 20px', borderRadius: 14,
           background: C.card, border: bordo,
           backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
         }}>
@@ -531,7 +540,7 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
             <button key={s.roomId} onClick={() => { vibrate(10); onJoinRoom?.(s.roomId); }}
               style={{
                 display: 'flex', alignItems: 'center', gap: 10, width: '100%',
-                padding: '10px 12px', marginBottom: 6, borderRadius: 12, cursor: 'pointer',
+                padding: '10px 20px', minHeight: 44, marginBottom: 6, borderRadius: 12, cursor: 'pointer',
                 background: `${C.accent}0E`, border: `1px solid ${C.accent}28`,
                 color: C.textPrimary, fontFamily: FONT, textAlign: 'left',
                 WebkitTapHighlightColor: 'transparent',
@@ -557,11 +566,15 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
           pagina. Il fondo translucido basta; il blur vive solo su
           elementi singoli come il pannello COBRA. */}
       {/* b.363 — il feed e caduto: si dice, e si puo riprovare */}
+      {/* b.482 — il bordo chiedeva un colore che in Mondo NON ESISTE
+          (C.border): vinceva sempre il ripiego scritto a mano, quindi
+          questo tasto aveva un bordo suo, diverso da tutti gli altri e
+          sordo al tema. Ora usa lo stesso bordo delle schede. */}
       {feedGuasto && (!feed || feed.length === 0) && (
         <button onClick={() => { vibrate(8); setFeedGuasto(false); setRiprova(n => n + 1); }}
           style={{
-            width: '100%', marginBottom: 16, padding: '12px 14px', borderRadius: 12,
-            background: 'none', border: `1px solid ${C.border || 'rgba(255,255,255,0.12)'}`,
+            width: '100%', marginBottom: 16, padding: '12px 20px', minHeight: 44, borderRadius: 12,
+            background: 'none', border: bordo,
             color: C.textMuted, fontSize: 12, fontWeight: 600, fontFamily: FONT, cursor: 'pointer',
           }}>
           {L('newsError')} · {L('retryWord')}
@@ -666,7 +679,13 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
                             width: 46, height: 46, borderRadius: 999, background: 'rgba(6,9,18,0.62)',
                             border: '1px solid rgba(255,255,255,0.25)', display: 'flex',
                             alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 17,
-                          }}>&#9654;</span>
+                          }}>
+                            {/* b.482 — il triangolo era un carattere
+                                disegnato dal telefono: cambiava forma e
+                                peso da un apparecchio all'altro. Ora e
+                                l'icona di casa, uguale dappertutto. */}
+                            <Icon name="play" size={17} color="#fff" />
+                          </span>
                         </span>
                       )}
                       {/* DA DOVE, DI COSA, QUANDO — sopra la foto, in alto */}
@@ -682,6 +701,7 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
                             style={{
                               fontSize: 14, lineHeight: 1, cursor: 'pointer', borderRadius: 5,
                               padding: '2px 4px', background: 'rgba(6,9,18,0.6)',
+                              display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minHeight: 44,
                               outline: paeseFiltro === d.country ? `1px solid ${C.accent}` : 'none',
                             }}>{bandiera}</span>
                         )}
@@ -690,14 +710,21 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
                           // la porta del confronto fra Paesi: e il posto
                           // giusto, perche il confronto e SUL TEMA e il tema
                           // e gia scritto qui.
+                          // b.482 — il mappamondo era un'EMOJI dentro il
+                          // testo: cambia forma da telefono a telefono e
+                          // qui dentro non ne vogliamo. Adesso e l'icona
+                          // di casa, che segue il tratto di tutte le altre.
                           <span role="button" tabIndex={0}
                             aria-label={`${L('whatWorldThinks')} \u2014 ${d.topic}`}
                             onClick={(e) => { e.stopPropagation(); vibrate(6); setTemaMondo(d.topic); }}
                             onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); setTemaMondo(d.topic); } }}
                             style={{
                               ...eti, background: 'rgba(6,9,18,0.6)', borderRadius: 5, padding: '2px 6px',
-                              color: 'rgba(226,236,252,0.9)', cursor: 'pointer',
-                            }}>{`\u{1F30D} ${d.topic}`}</span>
+                              color: 'rgba(226,236,252,0.9)', cursor: 'pointer', minHeight: 44,
+                            }}>
+                            <Icon name="globe" size={12} color="rgba(226,236,252,0.9)" />
+                            {d.topic}
+                          </span>
                         )}
                         {tipo && tipo !== 'articolo' && (
                           <span style={{
@@ -709,7 +736,9 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
                     </span>
 
                     {/* IL TITOLO: il pezzo piu grosso, sotto la foto */}
-                    <span style={{ display: 'block', padding: '10px 12px 8px' }}>
+                    {/* b.482 — rientro a 20 come la colonna: il testo
+                        della scheda si incolonna con tutto il resto. */}
+                    <span style={{ display: 'block', padding: '10px 20px 8px' }}>
                       <span style={{
                         display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
                         overflow: 'hidden', fontSize: 15, fontWeight: 600, lineHeight: 1.35,
@@ -726,17 +755,21 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
                   {/* LA RIGA DEI GESTI: leggere e commentare sono due cose
                       diverse e vanno toccate separatamente. Prima erano lo
                       stesso tocco e non si poteva scegliere. */}
+                  {/* b.482 — rientro a 20 come il titolo qui sopra, tasti
+                      da 44, e via il grassetto: la differenza fra una
+                      conversazione viva e una spenta la fa gia il colore,
+                      non serviva anche il nero pesante. */}
                   <div style={{
                     display: 'flex', alignItems: 'center', gap: 8,
-                    padding: '8px 12px 10px', borderTop: bordo,
+                    padding: '8px 20px 10px', borderTop: bordo,
                   }}>
                     <button onClick={() => { vibrate(6); setDiscAperta(d.id); }}
                       style={{
-                        display: 'flex', alignItems: 'center', gap: 6, padding: '7px 11px',
+                        display: 'flex', alignItems: 'center', gap: 6, padding: '7px 11px', minHeight: 44,
                         borderRadius: 10, cursor: 'pointer', fontFamily: FONT, fontSize: 12,
                         background: 'rgba(255,255,255,0.045)', border: bordo,
                         color: vita.accesa ? C.accent : C.textMuted,
-                        fontWeight: vita.accesa ? 800 : 700, WebkitTapHighlightColor: 'transparent',
+                        fontWeight: 600, WebkitTapHighlightColor: 'transparent',
                       }}>
                       <Icon name="chat" size={13} color={vita.accesa ? C.accent : C.textMuted} />
                       {vita.n > 0 ? `${vita.n} ${L('commentsWord')}` : L('commentsWord')}
@@ -747,7 +780,7 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
                     {leggibile && (
                       <button onClick={() => { vibrate(6); setLettura({ url: d.media.url, titolo: d.title, fonte }); }}
                         style={{
-                          display: 'flex', alignItems: 'center', gap: 6, padding: '7px 13px',
+                          display: 'flex', alignItems: 'center', gap: 6, padding: '7px 13px', minHeight: 44,
                           borderRadius: 10, cursor: 'pointer', fontFamily: FONT, fontSize: 12, fontWeight: 600,
                           background: `${C.accent}1A`, border: `1px solid ${C.accent}44`, color: C.accent,
                           WebkitTapHighlightColor: 'transparent',
@@ -800,12 +833,17 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
             </div>
           )}
 
-          <div style={{ padding: '12px 14px 13px' }}>
+          {/* b.482 — rientro a 20, la misura del template. */}
+          <div style={{ padding: '12px 20px 13px' }}>
             {/* b.153 — il titolo apre la scheda di lettura: sintesi
                 BarTalk, citazione attribuita, e "Leggi su [fonte]". */}
+            {/* b.482 — il titolo e un tasto (apre la scheda) e su un
+                titolo di una riga sola restava alto una ventina di punti:
+                troppo poco per un dito. */}
             <h3 onClick={() => { vibrate(8); setScheda({ tipo: 'articolo', dati: t }); }} style={{
               margin: 0, fontSize: 15, fontWeight: 600, lineHeight: 1.35,
               color: C.textPrimary, letterSpacing: -0.2, cursor: 'pointer',
+              minHeight: 44, display: 'flex', alignItems: 'center',
             }}>
               {t.titolo}
             </h3>
@@ -830,7 +868,8 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
               <a href={t.url} target="_blank" rel="noopener noreferrer"
                 onClick={() => vibrate(8)}
                 style={{
-                  flex: 1, padding: '9px 0', borderRadius: 11, textAlign: 'center',
+                  flex: 1, padding: '9px 0', minHeight: 44, borderRadius: 11, textAlign: 'center',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
                   background: 'transparent', border: bordo, color: C.textSecondary,
                   fontSize: 12.5, fontWeight: 600, textDecoration: 'none',
                   WebkitTapHighlightColor: 'transparent',
@@ -839,7 +878,7 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
               </a>
               <button onClick={() => { vibrate(12); onParlane?.(t); }}
                 style={{
-                  flex: 1.4, padding: '9px 0', borderRadius: 11, cursor: 'pointer',
+                  flex: 1.4, padding: '9px 0', minHeight: 44, borderRadius: 11, cursor: 'pointer',
                   background: `linear-gradient(135deg, ${C.accent}, ${C.purple})`,
                   border: 'none', color: '#fff', fontSize: 12.5, fontWeight: 600,
                   fontFamily: FONT, display: 'flex', alignItems: 'center',
@@ -853,7 +892,7 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
             {/* b.186 — apri una discussione pubblica PERSISTENTE col link */}
             <button onClick={() => apriDiscussione(t)} disabled={creando}
               style={{
-                width: '100%', marginTop: 8, padding: '9px 0', borderRadius: 11, cursor: 'pointer',
+                width: '100%', marginTop: 8, padding: '9px 0', minHeight: 44, borderRadius: 11, cursor: 'pointer',
                 background: `${C.accent}12`, border: `1px solid ${C.accent}30`, color: C.accent,
                 fontSize: 12, fontWeight: 600, fontFamily: FONT,
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
@@ -901,7 +940,7 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
                     </span>
                   </span>
                 </div>
-                <div style={{ padding: '8px 10px 10px' }}>
+                <div style={{ padding: '8px 20px 10px' }}>
                   <div style={{
                     fontSize: 12.5, fontWeight: 600, lineHeight: 1.3, color: C.textPrimary,
                     display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
@@ -914,7 +953,8 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
                   <span role="button" tabIndex={0}
                     onClick={(e) => { e.stopPropagation(); vibrate(10); onParlane?.({ titolo: v.titolo, sintesi: v.canale ? `YouTube · ${v.canale}` : '' }); }}
                     onKeyDown={(e) => { if (e.key === 'Enter') { e.stopPropagation(); onParlane?.({ titolo: v.titolo, sintesi: v.canale ? `YouTube · ${v.canale}` : '' }); } }}
-                    style={{ display: 'inline-block', marginTop: 7, padding: '4px 10px', borderRadius: 8,
+                    style={{ display: 'inline-flex', alignItems: 'center', minHeight: 44,
+                      marginTop: 7, padding: '4px 10px', borderRadius: 8,
                       background: `${C.accent}1f`, border: `1px solid ${C.accent}55`, color: C.accent,
                       fontSize: 11, fontWeight: 600 }}>
                     {L('newsTalkAbout')}
@@ -980,16 +1020,21 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
               width: '100%', maxWidth: 560, maxHeight: '72dvh', overflowY: 'auto',
               background: C.card, border: `1px solid ${C.cardBorder}`,
               borderRadius: '20px 20px 0 0', fontFamily: FONT,
-              padding: `16px 16px calc(24px + env(safe-area-inset-bottom))`,
+              padding: `16px 20px calc(24px + env(safe-area-inset-bottom))`,
             }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
               <span style={{ fontSize: 15, fontWeight: 600, color: C.textPrimary, flex: 1 }}>
                 {L('whatWorldThinks')}
               </span>
+              {/* b.482 — la crocetta era un carattere da 32 punti: sotto
+                  la misura minima per un dito, e disegnato dal telefono
+                  invece che dal nostro tratto. Ora e l'icona di casa, in
+                  un bersaglio da 44. */}
               <button onClick={() => setTemaMondo(null)} aria-label={L('closeWord')}
-                style={{ width: 32, height: 32, borderRadius: 999, cursor: 'pointer',
+                style={{ width: 44, height: 44, borderRadius: 999, cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
                   background: 'transparent', border: `1px solid ${C.cardBorder}`, color: C.textMuted, fontSize: 15 }}>
-                {'\u2715'}
+                <Icon name="x" size={15} color={C.textMuted} />
               </button>
             </div>
             <div style={{ fontSize: 12.5, fontWeight: 600, color: C.accent, marginBottom: 12 }}>{temaMondo}</div>
@@ -1010,7 +1055,7 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
                 parole in cima e lasciando alle righe i soli numeri, il
                 problema non esiste in nessuna lingua. */}
             {confronto && confronto.paesi?.length > 0 && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0 12px 6px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0 20px 6px' }}>
                 <span style={{ flex: 1 }} />
                 <span style={{ fontSize: 10.5, fontWeight: 600, letterSpacing: 0.3, color: C.textMuted, whiteSpace: 'nowrap' }}>
                   {`${L('discussionsLabel')} ${PUNTO} ${L('commentsWord')}`}
@@ -1022,7 +1067,7 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
                 onClick={() => { vibrate(8); scegliPaese(p.paese); setTemaMondo(null); }}
                 style={{
                   width: '100%', display: 'flex', alignItems: 'center', gap: 10,
-                  padding: '11px 12px', marginBottom: 8, borderRadius: 14, cursor: 'pointer',
+                  padding: '11px 20px', minHeight: 44, marginBottom: 8, borderRadius: 14, cursor: 'pointer',
                   background: 'rgba(6,9,18,0.45)', border: `1px solid ${C.cardBorder}`,
                   fontFamily: FONT, textAlign: 'left',
                 }}>

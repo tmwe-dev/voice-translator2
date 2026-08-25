@@ -113,8 +113,13 @@ function opzioniPaese(L, bandieraMia) {
     const dn = new Intl.DisplayNames(undefined, { type: 'region' });
     nome = (c) => dn.of(c) || c;
   } catch { /* il telefono non sa tradurre i paesi: restano i codici */ }
+  // b.482 — NIENTE EMOJI A SCHERMO: la voce «dove sono» ripiegava su uno
+  // spillo disegnato come emoticon quando la bandiera non si ricavava. Al
+  // suo posto c'e l'icona del bersaglio, presa dal set dell'applicazione —
+  // la stessa che intitola questa preferenza. Le bandiere dei paesi
+  // restano: quelle non sono un ornamento, sono il dato.
   return [
-    { valore: 'auto', etichetta: L('prefPositionOnEnter'), bandiera: bandieraMia || '📍' },
+    { valore: 'auto', etichetta: L('prefPositionOnEnter'), bandiera: bandieraMia || null, icona: bandieraMia ? null : 'target' },
     { valore: 'nessuno', etichetta: L('prefPositionNever') },
     ...PAESI.map((c) => ({ valore: c, etichetta: nome(c), bandiera: bandieraPaese(c) }))
       .sort((a, b) => a.etichetta.localeCompare(b.etichetta)),
@@ -174,14 +179,20 @@ export default function PreferenzeMondo({ C, bandieraMia }) {
             ) : (
               <div style={{ display: 'flex', gap: 6 }}>
                 {p.scelte.map((s) => {
+                  // b.482 — DUE COSE DEL TEMPLATE su questi due tasti.
+                  // Il grassetto: il peso della scelta attiva era ottocento,
+                  // e sopra il seicento non si distingue piu niente — a dire
+                  // qual e quella accesa bastano gia il colore e il bordo.
+                  // L'altezza: erano quarantatre punti, uno sotto la soglia
+                  // in cui un dito prende il bersaglio senza sbagliare.
                   const attiva = attuale === s.valore;
                   return (
                     <button key={s.valore} onClick={() => cambia(p.chiave, s.valore)}
                       aria-pressed={attiva}
                       style={{
                         flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                        padding: '13px 12px', borderRadius: 13, cursor: 'pointer', fontFamily: FONT,
-                        fontSize: 14, fontWeight: attiva ? 800 : 600,
+                        padding: '13px 12px', borderRadius: 13, minHeight: 44, cursor: 'pointer', fontFamily: FONT,
+                        fontSize: 14, fontWeight: 600,
                         background: attiva ? `${accento}1E` : 'rgba(255,255,255,0.045)',
                         border: `1px solid ${attiva ? `${accento}55` : 'rgba(255,255,255,0.09)'}`,
                         color: attiva ? accento : 'rgba(214,226,245,0.85)',

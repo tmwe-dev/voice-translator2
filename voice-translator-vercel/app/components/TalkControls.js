@@ -76,7 +76,7 @@ const TalkControls = memo(function TalkControls({
             <button onClick={() => { vibrate(15); cancelRecording(); }}
               aria-label={L('cancelRecording')}
               style={{display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:2,
-                width:40, height:40, borderRadius:20,
+                width:44, height:44, borderRadius:22,
                 border:'none', background:S.colors.overlayBg, color:S.colors.textMuted,
                 cursor:'pointer', WebkitTapHighlightColor:'transparent', transition:'background 0.15s'}}>
               <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -250,7 +250,7 @@ const TalkControls = memo(function TalkControls({
             <button onClick={() => { vibrate(15); cancelRecording(); }}
               title={L('cancelRecording')}
               style={{display:'flex', flexDirection:'column', alignItems:'center', gap:3,
-                width:36, height:36, borderRadius:12, border:`2px solid ${S.colors.statusError}`,
+                width:44, height:44, borderRadius:12, border:`2px solid ${S.colors.statusError}`,
                 background:'rgba(239,68,68,0.1)', color:S.colors.statusError,
                 cursor:'pointer', justifyContent:'center',
                 WebkitTapHighlightColor:'transparent', transition:'all 0.2s'}}>

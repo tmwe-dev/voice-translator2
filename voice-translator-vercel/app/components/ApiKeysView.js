@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { PALETTE } from '../lib/palette.js';
 import { useApp } from '../contexts/AppContext.js';
+import Icon from './Icon.js';
 
 export default function ApiKeysView({ apiKeyInputs, setApiKeyInputs, saveUserApiKeys, authLoading,
   userAccount }) {
@@ -31,7 +32,7 @@ export default function ApiKeysView({ apiKeyInputs, setApiKeyInputs, saveUserApi
       <div style={S.page}>
         <div style={S.scrollCenter}>
           <div style={S.topBar}>
-            <button style={S.backBtn} onClick={() => setView('settings')}>{'←'}</button>
+            <button style={S.backBtn} onClick={() => setView('settings')} aria-label={L('backWord')}><Icon name="back" size={16} /></button>
             <span style={{fontWeight:600, fontSize:17}}>{L('yourApiKeys')}</span>
           </div>
           <div style={S.card}>
@@ -55,7 +56,7 @@ export default function ApiKeysView({ apiKeyInputs, setApiKeyInputs, saveUserApi
     <div style={S.page}>
       <div style={S.scrollCenter}>
         <div style={S.topBar}>
-          <button style={S.backBtn} onClick={() => setView('settings')}>{'←'}</button>
+          <button style={S.backBtn} onClick={() => setView('settings')} aria-label={L('backWord')}><Icon name="back" size={16} /></button>
           <span style={{fontWeight:600, fontSize:17}}>{L('yourApiKeys')}</span>
         </div>
         <div style={S.card}>
@@ -79,7 +80,9 @@ export default function ApiKeysView({ apiKeyInputs, setApiKeyInputs, saveUserApi
           </div>
           <div style={{marginTop:16, paddingTop:16, borderTop:'1px solid rgba(255,215,0,0.1)'}}>
             <div style={{fontSize:13, fontWeight:600, color:'#ffd700', marginBottom:8, display:'flex', alignItems:'center', gap:6}}>
-              {'⭐'} TOP PRO - ElevenLabs
+              {/* b.482 — la stellina era un'emoji: a colori, disegnata dal
+                  telefono, in mezzo a icone monocrome. */}
+              <Icon name="star" size={13} /> TOP PRO - ElevenLabs
             </div>
             <div style={{fontSize:11, color:'rgba(255,255,255,0.75)', marginBottom:10, lineHeight:1.5}}>
               {L('elevenLabsDesc')}

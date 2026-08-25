@@ -3,6 +3,7 @@ import { memo, useState, useEffect, useCallback, useRef } from 'react';
 import { FONT, vibrate, getLang } from '../lib/constants.js';
 import { useApp } from '../contexts/AppContext.js';
 import AnteprimaCoperta from './ui/AnteprimaCoperta.js';
+import Icon from './Icon.js';
 import { eBloccato, cambiaBlocco, senzaBloccati } from '../lib/bloccati.js';
 
 // ═══════════════════════════════════════════════════════════════
@@ -180,23 +181,32 @@ function MondoDiscussioni({ discussionId, onClose, onOpenPersona }) {
     }
   }, [userToken, seguiti, L]);
 
-  const bg = C.bg || '#0a0e1a';
-  const card = C.glassCard || 'rgba(12,16,30,0.65)';
-  const bordo = `1px solid ${C.cardBorder || 'rgba(255,255,255,0.06)'}`;
-  const testoP = C.textPrimary || '#eef2ff';
-  const muto = C.textMuted || 'rgba(242,244,247,0.6)';
-  const accent = C.accent1 || '#26D9B0';
+  // b.482 — I COLORI VENGONO DAL TEMA, non da ripieghi scritti a mano.
+  // Sotto ogni token c'era un colore fisso di riserva, e uno di quelli
+  // (il verde acqua dell'accento) non e il colore di nessun tema di
+  // BarTalk: se fosse entrato in funzione avrebbe tinto la schermata di
+  // una tinta che non esiste da nessun'altra parte nell'applicazione.
+  const bg = C.bg;
+  const card = C.glassCard;
+  const bordo = `1px solid ${C.cardBorder}`;
+  const testoP = C.textPrimary;
+  const muto = C.textMuted;
+  const accent = C.accent1;
 
   const media = disc?.media && disc.media.url ? disc.media : null;
 
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 90, background: bg, display: 'flex', flexDirection: 'column', fontFamily: FONT }}>
       {/* Header */}
-      <header style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 16px', flexShrink: 0, borderBottom: bordo }}>
+      {/* b.482 — rientro laterale a 20 come il resto dell'applicazione, e
+          il tasto INDIETRO — il piu premuto di questa schermata — sale da
+          38 a 44. La freccia era un carattere di punteggiatura disegnato
+          dal telefono: ora e l'icona di casa, uguale su ogni apparecchio. */}
+      <header style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 20px', flexShrink: 0, borderBottom: bordo }}>
         <button onClick={onClose} aria-label={L('closeWord')} style={{
-          width: 38, height: 38, borderRadius: 12, cursor: 'pointer', background: card, border: bordo,
+          width: 44, height: 44, borderRadius: 12, cursor: 'pointer', background: card, border: bordo,
           display: 'flex', alignItems: 'center', justifyContent: 'center', color: muto, fontSize: 18,
-        }}>‹</button>
+        }}><Icon name="back" size={18} color={muto} /></button>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 15, fontWeight: 600, color: testoP, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {tradotti.title || disc?.title || (caricando ? '…' : L('worldNowTitle'))}
@@ -207,6 +217,7 @@ function MondoDiscussioni({ discussionId, onClose, onOpenPersona }) {
               {disc.title && (
                 <button onClick={() => traduci('title', disc.title, disc.title_lang)} style={{
                   marginLeft: 8, background: 'none', border: 'none', color: accent, cursor: 'pointer', fontSize: 10, fontWeight: 600, padding: 0,
+                  minHeight: 44, display: 'inline-flex', alignItems: 'center',
                 }}>{tradotti.title ? (L('original')) : (L('seeTranslation'))}</button>
               )}
             </div>
@@ -219,7 +230,7 @@ function MondoDiscussioni({ discussionId, onClose, onOpenPersona }) {
           <button onClick={segnalaDiscussione} disabled={discSegnalata}
             aria-label={L('reportWord')} title={L('reportWord')}
             style={{
-              flexShrink: 0, background: 'none', border: 'none', padding: 6,
+              flexShrink: 0, background: 'none', border: 'none', padding: 6, minHeight: 44,
               cursor: discSegnalata ? 'default' : 'pointer', color: muto,
               fontSize: 11, fontWeight: 600, fontFamily: FONT, opacity: discSegnalata ? 0.45 : 1,
             }}>
@@ -229,14 +240,15 @@ function MondoDiscussioni({ discussionId, onClose, onOpenPersona }) {
       </header>
 
       {/* Corpo: media + commenti */}
-      <div ref={scrollRef} style={{ flex: 1, overflowY: 'auto', padding: '12px 16px', scrollbarWidth: 'none' }}>
+      {/* b.482 — rientro a 20: i commenti si incolonnano con la testata. */}
+      <div ref={scrollRef} style={{ flex: 1, overflowY: 'auto', padding: '12px 20px', scrollbarWidth: 'none' }}>
         {media && (
           <a href={media.url} target="_blank" rel="noreferrer" style={{
             display: 'block', textDecoration: 'none', marginBottom: 14, borderRadius: 14, overflow: 'hidden', border: bordo, background: card,
           }}>
             {media.thumb && <AnteprimaCoperta src={media.thumb} contenuto={media} L={L}
               stile={{ width: '100%', maxHeight: 180, height: 180, objectFit: 'cover', display: 'block' }} />}
-            <div style={{ padding: '10px 12px', fontSize: 12, color: accent, wordBreak: 'break-all' }}>{media.source || media.url}</div>
+            <div style={{ padding: '10px 20px', fontSize: 12, color: accent, wordBreak: 'break-all' }}>{media.source || media.url}</div>
           </a>
         )}
 
@@ -247,26 +259,32 @@ function MondoDiscussioni({ discussionId, onClose, onOpenPersona }) {
             {L('beFirstToComment')}
           </div>
         ) : senzaBloccati(commenti, prefs).map(c => (
-          <div key={c.id} style={{ marginBottom: 12, padding: '10px 12px', borderRadius: 12, background: card, border: bordo }}>
+          <div key={c.id} style={{ marginBottom: 12, padding: '10px 20px', borderRadius: 12, background: card, border: bordo }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+              {/* b.482 — erano tutti tastini alti dieci o dodici punti:
+                  il nome, il segui, il traduci, il cuore, il blocca e il
+                  segnala. Su un telefono si sbaglia bersaglio quasi
+                  sempre. Ora ognuno e alto 44, la misura del template. */}
               <button onClick={() => onOpenPersona?.(c.author_user_id)} style={{
                 background: 'none', border: 'none', padding: 0, cursor: 'pointer',
                 fontSize: 12, fontWeight: 600, color: testoP, fontFamily: FONT,
+                minHeight: 44, display: 'inline-flex', alignItems: 'center',
               }}>{c.author_name || '—'}</button>
               {c.like_count > 0 && <span style={{ fontSize: 10, color: muto }}>· {c.like_count} ♥</span>}
               <button onClick={() => toggleSegui(c.author_user_id)} style={{
                 marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', padding: 0,
                 fontSize: 10, fontWeight: 600, color: seguiti.has(c.author_user_id) ? muto : accent,
+                minHeight: 44, display: 'inline-flex', alignItems: 'center',
               }}>{seguiti.has(c.author_user_id) ? L('following') : L('follow')}</button>
             </div>
             <div style={{ fontSize: 14, color: testoP, lineHeight: 1.45, whiteSpace: 'pre-wrap' }}>
               {tradotti[c.id] && tradotti[c.id] !== '…' ? tradotti[c.id] : c.text}
             </div>
             <div style={{ display: 'flex', gap: 14, marginTop: 6 }}>
-              <button onClick={() => traduci(c.id, c.text, c.lang)} style={{ background: 'none', border: 'none', color: accent, cursor: 'pointer', fontSize: 11, fontWeight: 600, padding: 0 }}>
+              <button onClick={() => traduci(c.id, c.text, c.lang)} style={{ background: 'none', border: 'none', color: accent, cursor: 'pointer', fontSize: 11, fontWeight: 600, padding: 0, minHeight: 44, display: 'inline-flex', alignItems: 'center' }}>
                 {tradotti[c.id] ? (L('original')) : (L('seeTranslation'))}
               </button>
-              <button onClick={() => metti(c.id)} style={{ background: 'none', border: 'none', color: muto, cursor: 'pointer', fontSize: 11, fontWeight: 600, padding: 0 }}>
+              <button onClick={() => metti(c.id)} style={{ background: 'none', border: 'none', color: muto, cursor: 'pointer', fontSize: 11, fontWeight: 600, padding: 0, minHeight: 44, display: 'inline-flex', alignItems: 'center' }}>
                 ♥ {L('like')}
               </button>
               {/* b.363 — la segnalazione ESISTEVA solo sul server: nessuno
@@ -280,11 +298,12 @@ function MondoDiscussioni({ discussionId, onClose, onOpenPersona }) {
                 style={{
                   background: 'none', border: 'none', cursor: 'pointer', padding: '2px 6px',
                   fontSize: 10, fontWeight: 600, color: muto, fontFamily: FONT,
+                  minHeight: 44, display: 'inline-flex', alignItems: 'center',
                 }}>
                 {L('blockPerson')}
               </button>
               <button onClick={() => segnalaCommento(c.id)} disabled={segnalati.has(c.id)}
-                style={{ marginLeft: 'auto', background: 'none', border: 'none', color: muto, cursor: segnalati.has(c.id) ? 'default' : 'pointer', fontSize: 11, fontWeight: 600, padding: 0, opacity: segnalati.has(c.id) ? 0.45 : 1 }}>
+                style={{ marginLeft: 'auto', background: 'none', border: 'none', color: muto, cursor: segnalati.has(c.id) ? 'default' : 'pointer', fontSize: 11, fontWeight: 600, padding: 0, opacity: segnalati.has(c.id) ? 0.45 : 1, minHeight: 44, display: 'inline-flex', alignItems: 'center' }}>
                 {segnalati.has(c.id) ? L('reportCopied') : L('reportWord')}
               </button>
             </div>
@@ -302,20 +321,25 @@ function MondoDiscussioni({ discussionId, onClose, onOpenPersona }) {
           se lo riservava gia; questa, dietro, no.
           106 non e un numero inventato: e la stessa misura che tutto il
           resto del progetto usa per lasciar posto alla barra. */}
-      <div style={{ padding: '10px 16px', paddingBottom: 'calc(106px + env(safe-area-inset-bottom))', borderTop: bordo, flexShrink: 0 }}>
-        {errore && <div style={{ fontSize: 11, color: C.red || '#ff6b6b', marginBottom: 6 }}>{errore}</div>}
+      {/* b.482 — rientro a 20 come la testata e i commenti, cosi il campo
+          per scrivere sta sulla stessa colonna di tutto il resto. */}
+      <div style={{ padding: '10px 20px', paddingBottom: 'calc(106px + env(safe-area-inset-bottom))', borderTop: bordo, flexShrink: 0 }}>
+        {/* b.482 — il rosso chiedeva un token che in NESSUN tema esiste
+            (C.red): vinceva sempre il rosso scritto a mano, sordo al tema.
+            Il rosso dei temi si chiama accent3. */}
+        {errore && <div style={{ fontSize: 11, color: C.accent3, marginBottom: 6 }}>{errore}</div>}
         <input value={nick} onChange={e => setNick(e.target.value)} maxLength={40}
           onBlur={() => savePrefs?.({ ...prefs, mondoNick: nick.trim() })}
           placeholder={L('publicNickname')}
-          style={{ width: '100%', marginBottom: 8, padding: '8px 10px', borderRadius: 10, background: C.inputBg || 'rgba(14,18,32,0.6)', border: bordo, color: testoP, fontSize: 12, fontFamily: FONT, outline: 'none', boxSizing: 'border-box' }} />
+          style={{ width: '100%', marginBottom: 8, padding: '8px 10px', minHeight: 44, borderRadius: 10, background: C.inputBg, border: bordo, color: testoP, fontSize: 12, fontFamily: FONT, outline: 'none', boxSizing: 'border-box' }} />
         <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
           <textarea value={testo} onChange={e => setTesto(e.target.value)} rows={1}
             placeholder={L('writeComment')}
             onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); invia(); } }}
-            style={{ flex: 1, resize: 'none', padding: '10px 12px', borderRadius: 12, background: C.inputBg || 'rgba(14,18,32,0.6)', border: bordo, color: testoP, fontSize: 14, fontFamily: FONT, outline: 'none', maxHeight: 120 }} />
+            style={{ flex: 1, resize: 'none', padding: '10px 12px', minHeight: 44, borderRadius: 12, background: C.inputBg, border: bordo, color: testoP, fontSize: 14, fontFamily: FONT, outline: 'none', maxHeight: 120, boxSizing: 'border-box' }} />
           <button onClick={invia} disabled={inviando || !testo.trim()} style={{
-            padding: '10px 16px', borderRadius: 12, cursor: inviando || !testo.trim() ? 'default' : 'pointer',
-            background: `linear-gradient(135deg, ${accent}, ${C.accent2 || '#5b8cff'})`, border: 'none', color: '#fff',
+            padding: '10px 16px', minHeight: 44, borderRadius: 12, cursor: inviando || !testo.trim() ? 'default' : 'pointer',
+            background: `linear-gradient(135deg, ${accent}, ${C.accent2})`, border: 'none', color: '#fff',
             fontSize: 13, fontWeight: 600, fontFamily: FONT, opacity: inviando || !testo.trim() ? 0.5 : 1,
           }}>{L('sendWord')}</button>
         </div>

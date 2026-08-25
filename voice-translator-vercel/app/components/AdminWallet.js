@@ -1,6 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { formattaDurata } from '../wallet/tariffe.js';
+import Icon from './Icon.js';
 
 // ═══════════════════════════════════════════════
 // AdminWallet — il monitor economico del wallet.
@@ -88,7 +89,7 @@ export default function AdminWallet() {
   if (!dati) {
     return (
       <div style={{ ...CARD, maxWidth: 420 }}>
-        <h3 style={{ margin: '0 0 12px', fontSize: 16 }}>{'\u{1F4B6}'} Monitor Wallet</h3>
+        <h3 style={{ margin: '0 0 12px', fontSize: 16 }}><Icon name="credit" size={15} /> Monitor Wallet</h3>
         <div style={{ display: 'flex', gap: 8 }}>
           <input type="password" value={pass} onChange={e => setPass(e.target.value)}
             placeholder="ADMIN_PASS" onKeyDown={e => e.key === 'Enter' && carica()}
@@ -122,7 +123,7 @@ export default function AdminWallet() {
 
       {/* ── 2. Andamento per giorno ── */}
       <div style={CARD}>
-        <h3 style={{ margin: '0 0 12px', fontSize: 16 }}>{'\u{1F4C5}'} Ultimi giorni</h3>
+        <h3 style={{ margin: '0 0 12px', fontSize: 16 }}><Icon name="history" size={15} /> Ultimi giorni</h3>
         {(dati.per_giorno || []).length === 0
           ? <div style={{ color: '#71717a', fontSize: 14 }}>Nessun movimento ancora</div>
           : <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -144,7 +145,7 @@ export default function AdminWallet() {
 
       {/* ── 3. Interruttori servizi AI ── */}
       <div style={CARD}>
-        <h3 style={{ margin: '0 0 12px', fontSize: 16 }}>{'\u{1F39B}'} Servizi AI</h3>
+        <h3 style={{ margin: '0 0 12px', fontSize: 16 }}><Icon name="settings" size={15} /> Servizi AI</h3>
         {(dati.servizi || []).map(s => (
           <div key={s.chiave} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '8px 0', borderBottom: '1px solid #1a1a1e' }}>
             <span style={{ flex: 1, fontSize: 14, fontWeight: 600 }}>{s.chiave}</span>
@@ -160,7 +161,7 @@ export default function AdminWallet() {
 
       {/* ── 4. Regala credito a un utente + invio WhatsApp/mail ── */}
       <div style={CARD}>
-        <h3 style={{ margin: '0 0 12px', fontSize: 16 }}>{'\u{1F381}'} Regala credito</h3>
+        <h3 style={{ margin: '0 0 12px', fontSize: 16 }}><Icon name="gift" size={15} /> Regala credito</h3>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <input value={rUtente} onChange={e => { setRUtente(e.target.value); setRegalato(null); }}
             placeholder="email utente" style={{ ...INPUT, width: 240 }} />
@@ -188,7 +189,7 @@ export default function AdminWallet() {
 
       {/* ── 5. Uso per utente ── */}
       <div style={CARD}>
-        <h3 style={{ margin: '0 0 12px', fontSize: 16 }}>{'\u{1F465}'} Per utente</h3>
+        <h3 style={{ margin: '0 0 12px', fontSize: 16 }}><Icon name="users" size={15} /> Per utente</h3>
         <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead><tr>
@@ -206,7 +207,7 @@ export default function AdminWallet() {
                 <td style={TD}>
                   <button onClick={() => { setRUtente(u.user_id); setRegalato(null); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
                     title="Prepara un regalo per questo utente" style={{ ...BTN_MINI, background: '#27272a', color: '#e4e4e7' }}>
-                    {'\u{1F381}'} Regala
+                    <Icon name="gift" size={15} /> Regala
                   </button>
                 </td>
               </tr>
@@ -217,7 +218,7 @@ export default function AdminWallet() {
 
       {/* ── 5. Voucher promozionali ── */}
       <div style={CARD}>
-        <h3 style={{ margin: '0 0 12px', fontSize: 16 }}>{'\u{1F381}'} Voucher</h3>
+        <h3 style={{ margin: '0 0 12px', fontSize: 16 }}><Icon name="gift" size={15} /> Voucher</h3>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 14 }}>
           <input value={vCodice} onChange={e => setVCodice(e.target.value.toUpperCase())} placeholder="CODICE" style={{ ...INPUT, width: 150 }} />
           <input type="number" value={vMinuti} onChange={e => setVMinuti(+e.target.value)} placeholder="Minuti" style={{ ...INPUT, width: 90 }} title="Minuti regalati" />

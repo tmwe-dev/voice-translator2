@@ -78,15 +78,17 @@ function HelpView() {
         padding: '14px 16px 10px', flexShrink: 0, position: 'relative', zIndex: 5,
       }}>
         <button onClick={() => setView('settings')} style={{
-          width: 38, height: 38, borderRadius: 12, cursor: 'pointer',
+          width: 44, height: 44, borderRadius: 12, cursor: 'pointer',
           background: C.card, border: `1px solid ${C.cardBorder}`,
           backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           color: C.textMuted, fontSize: 18, WebkitTapHighlightColor: 'transparent',
         }}>‹</button>
         <div style={{ flex: 1 }}>
+          {/* b.482 — l'emoji del punto interrogativo se ne va: il titolo
+              basta da solo, e sotto c'e gia il sottotitolo che spiega. */}
           <div style={{ fontSize: 17, fontWeight: 600, color: C.textPrimary, letterSpacing: -0.5 }}>
-            ❓ {L('helpTitle')}
+            {L('helpTitle')}
           </div>
           <div style={{ fontSize: 11, color: C.textMuted, marginTop: 1 }}>{L('helpSubtitle')}</div>
         </div>
@@ -94,7 +96,7 @@ function HelpView() {
 
       {/* ═══ CONTENT ═══ */}
       {/* b.206 — bottom alzato: fine contenuto finiva sotto la BottomNav */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: '0 16px calc(88px + env(safe-area-inset-bottom))', scrollbarWidth: 'none' }}>
+      <div style={{ flex: 1, overflowY: 'auto', padding: '0 20px calc(88px + env(safe-area-inset-bottom))', scrollbarWidth: 'none' }}>
 
         {/* Feature cards grid */}
         <div style={{ marginBottom: 20 }}>

@@ -4,7 +4,7 @@ import { LANGS, FONT, getLang, FREE_DAILY_LIMIT } from '../lib/constants.js';
 import ConnectionQuality from './ConnectionQuality.js';
 import AvatarImg from './AvatarImg.js';
 import { IconBack, IconCamera, IconVolume, IconVolumeOff, IconCheck,
-  IconClipboard, IconArchive, IconBattery, IconSwap, IconBrainAI } from './Icons.js';
+  IconClipboard, IconBattery, IconSwap, IconBrainAI } from './Icons.js';
 import { PALETTE } from '../lib/palette.js';
 import { ultimoRapportoTesto } from '../lib/diagnosticaChiamata.js';
 import { rapportoMonitorTesto } from '../lib/monitorSviluppo.js';
@@ -101,7 +101,7 @@ const RoomHeader = memo(function RoomHeader({
 
         {/* ── Sinistra: indietro ── */}
         <button onClick={() => { if (leaveRoomTemporary) leaveRoomTemporary(); }}
-          style={{...veste(S, false), width:38, height:38, borderRadius:12}}
+          style={{...veste(S, false), width:44, height:44, borderRadius:12}}
           title={L('exit')} aria-label={L('exit')}>
           <IconBack size={18}/>
         </button>
@@ -190,7 +190,7 @@ const RoomHeader = memo(function RoomHeader({
               else { webrtc.disconnect(); setShowVideoCall(false); setVideoFullscreen(false); }
             }}
             title={showVideoCall ? L('closeVideo') : L('videoCallWord')} aria-label={showVideoCall ? L('closeVideo') : L('videoCallWord')}
-            style={{...veste(S, showVideoCall), width:38, height:38, borderRadius:12, flexShrink:0}}>
+            style={{...veste(S, showVideoCall), width:44, height:44, borderRadius:12, flexShrink:0}}>
             <IconCamera size={18}/>
           </button>
         )}
@@ -202,7 +202,7 @@ const RoomHeader = memo(function RoomHeader({
         <button onClick={() => { if (!audioEnabled) unlockAudio(); setAudioEnabled(!audioEnabled); }}
           title={audioEnabled ? L('muteTranslations') : L('unmuteTranslations')}
           aria-label={audioEnabled ? L('muteTranslations') : L('unmuteTranslations')}
-          style={{...veste(S, false), width:38, height:38, borderRadius:12, flexShrink:0}}>
+          style={{...veste(S, false), width:44, height:44, borderRadius:12, flexShrink:0}}>
           {audioEnabled ? <IconVolume size={18}/> : <IconVolumeOff size={18}/>}
         </button>
 
@@ -213,7 +213,7 @@ const RoomHeader = memo(function RoomHeader({
         {setZoomTesto && (
           <button onClick={() => setZoomTesto((v) => (v >= 3 ? -2 : v + 1))}
             title={L('textBigger')} aria-label={L('textBigger')}
-            style={{...veste(S, false), width:38, height:38, borderRadius:12, flexShrink:0,
+            style={{...veste(S, false), width:44, height:44, borderRadius:12, flexShrink:0,
               fontFamily:FONT, fontSize:15, fontWeight:600, color:S.colors.textSecondary}}>
             Aa
           </button>
@@ -222,11 +222,21 @@ const RoomHeader = memo(function RoomHeader({
         {/* b.470 — il RAPPORTO TECNICO non sta piu in testata: e uno
             strumento da guasto, si usa una volta ogni mille e occupava un
             posto fisso accanto a cose che si usano parlando. E' nel menu. */}
+        {/* b.482 — LA PILA TORNA NEL SUO ANGOLO. Ordine di Luca guardando
+            questa schermata: «nell'angolo dovrebbe esserci la pila». In
+            tutte le altre pagine sta li, in alto a destra, e si legge senza
+            toccare niente; qui invece era finita DENTRO il menu •••, cioe
+            per sapere quanto credito ti resta dovevi aprire un menu — e la
+            chat e proprio il posto dove il credito si consuma mentre
+            guardi. Durante una videochiamata resta nascosta: li lo schermo
+            e dell'altra persona. */}
+        {!showVideoCall && <span style={{flexShrink:0, display:'flex', alignItems:'center'}}><BatteryPillSlot /></span>}
+
         {/* ── Destra: un solo menu ••• ── */}
         <div style={{position:'relative', flexShrink:0}}>
           <button onClick={() => setShowMoreMenu(!showMoreMenu)}
             title={L('settings')} aria-label={L('settings')}
-            style={{...veste(S, showMoreMenu), width:38, height:38, borderRadius:12}}>
+            style={{...veste(S, showMoreMenu), width:44, height:44, borderRadius:12}}>
             <svg width={20} height={20} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
               <circle cx="5" cy="12" r="1.9"/><circle cx="12" cy="12" r="1.9"/><circle cx="19" cy="12" r="1.9"/>
             </svg>
@@ -274,7 +284,6 @@ const RoomHeader = memo(function RoomHeader({
                   minWidth:0, flex:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>
                   {partnerConnected ? (partner?.name || '') : ''}
                 </span>
-                {!showVideoCall && <span style={{marginLeft:'auto', flexShrink:0}}><BatteryPillSlot /></span>}
               </div>
 
               {/* b.353 — MENU RIPULITO (collaudo di Luca: «il menu in alto
@@ -319,13 +328,15 @@ const RoomHeader = memo(function RoomHeader({
                   <span>{L('aiActionsTitle')}</span>
                 </button>
               )}
-              {/* Chiudi e archivia */}
-              <button onClick={() => { setShowMoreMenu(false); endChatAndSave(); }}
-                style={{...rigaMenu(S), color: S.colors.statusError || PALETTE.coral, fontWeight:600,
-                  borderTop:`1px solid ${S.colors.overlayBorder}`, marginTop:4, paddingTop:12}}>
-                <span style={iconaMenu}><IconArchive size={15}/></span>
-                <span>{L('closeArchive')}</span>
-              </button>
+              {/* b.482 — «CHIUDI E ARCHIVIA» SE NE VA DA QUI, e va nel
+                  pannello laterale, in fondo alle preferenze. Non e sparita:
+                  si apre con la linguetta sul bordo.
+                  Il motivo e che questo menu si apre MENTRE si parla — dentro
+                  ci sono la chiamata vocale e gli strumenti AI — e un comando
+                  rosso che chiude la conversazione, a un dito da quelli, e
+                  una trappola: basta un tocco storto e la chat e finita. Nel
+                  pannello sta con le altre cose di fine sessione, dove ci si
+                  arriva apposta. */}
               {/* Batteria FREE */}
               {isTrial && (() => {
                 const pct = Math.min(100, (freeCharsUsed / FREE_DAILY_LIMIT) * 100);

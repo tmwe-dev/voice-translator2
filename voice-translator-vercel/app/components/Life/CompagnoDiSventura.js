@@ -73,10 +73,13 @@ export default function CompagnoDiSventura({
 
   if (!compagno) return null;
 
+  // b.482 — i fianchi della striscia stanno a 20 come tutte le altre
+  // scatole della schermata: prima erano 12 e la faccia del compagno
+  // arrivava piu vicina al bordo di ogni altra cosa intorno.
   return (
     <div style={{
       display: 'flex', alignItems: 'center', gap: 10,
-      height: ALTEZZA, padding: '0 12px', borderRadius: 14,
+      height: ALTEZZA, padding: '0 20px', borderRadius: 14,
       background: card, border: bordo, fontFamily: FONT,
       marginTop: 12, overflow: 'hidden', flexShrink: 0,
     }}>
@@ -97,10 +100,13 @@ export default function CompagnoDiSventura({
           {pensa ? '…' : battuta ? compagno.nome : L('sideCompanionHere')}
         </span>
       </span>
+      {/* b.482 — il tasto che gli da' una gomitata era 34 per 34: sotto la
+          misura minima di un dito (44), quindi si sbagliava mira. L'icona
+          dentro resta della stessa grandezza: cresce solo il bersaglio. */}
       <button onClick={() => { vibrate(6); reagisci(); }} disabled={pensa}
         aria-label={L('sideCompanionPoke')} title={L('sideCompanionPoke')}
         style={{
-          width: 34, height: 34, borderRadius: 11, flexShrink: 0, cursor: 'pointer',
+          width: 44, height: 44, borderRadius: 11, flexShrink: 0, cursor: 'pointer',
           background: 'none', border: bordo, display: 'flex',
           alignItems: 'center', justifyContent: 'center', opacity: pensa ? 0.5 : 1,
         }}>

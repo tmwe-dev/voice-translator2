@@ -51,7 +51,7 @@ function CondivisoSheet({ condiviso, onParlane, onLife, onChiudi, L }) {
       <div style={{ width: '100%', maxWidth: 560, background: card, borderRadius: '20px 20px 0 0', border: bordo, borderBottom: 'none', fontFamily: FONT, padding: 16, paddingBottom: 'calc(16px + env(safe-area-inset-bottom))' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
           <span style={{ flex: 1, fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.55)', letterSpacing: 0.5 }}>{tt('sharedWithBartalk', 'Hai condiviso')}{fonte ? ` · ${fonte}` : ''}</span>
-          <button onClick={onChiudi} aria-label={tt('close', 'Chiudi')} style={{ width: 30, height: 30, borderRadius: 9, cursor: 'pointer', background: 'rgba(255,255,255,0.06)', border: bordo, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <button onClick={onChiudi} aria-label={tt('close', 'Chiudi')} style={{ width: 44, height: 44, borderRadius: 12, cursor: 'pointer', background: 'rgba(255,255,255,0.06)', border: bordo, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <Icon name="x" size={13} color="rgba(255,255,255,0.7)" />
           </button>
         </div>

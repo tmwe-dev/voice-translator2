@@ -371,12 +371,17 @@ const SettingsView = memo(function SettingsView({ apiKeyInputs, userAccount, log
                 ritrovava spenta — senza un avviso. Una promessa di
                 riservatezza che non sopravvive a un riavvio e peggio che
                 non averla fatta. */}
+            {/* b.482 — bersaglio a 44, levetta identica: era alta ventitre. */}
             <button onClick={() => savePrefs({ ...prefs, e2eEncryption: !prefs.e2eEncryption })}
               aria-pressed={!!prefs.e2eEncryption}
-              style={{ ...S.toggle, width: 40, height: 23, flexShrink: 0,
+              style={{ width: 40, minHeight: 44, flexShrink: 0, padding: 0, border: 'none',
+                background: 'transparent', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <span style={{ ...S.toggle, display: 'block', width: 40, height: 23, flexShrink: 0,
                 background: prefs.e2eEncryption ? c.accent1 : c.toggleOff }}>
-              <div style={{ ...S.toggleDot, width: 17, height: 17,
-                transform: prefs.e2eEncryption ? 'translateX(17px)' : 'translateX(0)' }} />
+                <span style={{ ...S.toggleDot, display: 'block', width: 17, height: 17,
+                  transform: prefs.e2eEncryption ? 'translateX(17px)' : 'translateX(0)' }} />
+              </span>
             </button>
           </div>
         </Gruppo>

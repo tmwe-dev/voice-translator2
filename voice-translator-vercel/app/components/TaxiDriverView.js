@@ -240,7 +240,11 @@ function TaxiDriverView({ destId, decryptionKey }) {
     return (
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100dvh', background: C.bg, fontFamily: FONT }}>
         <div style={{ textAlign: 'center' }}>
-          <div style={{ marginBottom: 16 }}><Icon name="car" size={40} color={(_S?.colors?.textMuted) || 'rgba(255,255,255,0.35)'} /></div>
+          {/* b.482 — qui c'era una casella d'icona VUOTA: si chiedeva un
+              disegno («car») che in Icon.js non esiste, e non compariva
+              niente. Il mappamondo dice cosa fa la schermata: parlarsi
+              fra lingue diverse. */}
+          <div style={{ marginBottom: 16 }}><Icon name="globe" size={40} color={(_S?.colors?.textMuted) || 'rgba(255,255,255,0.35)'} /></div>
           <div style={{ fontSize: 14, color: C.textMuted }}>{L('loadingDestination')}</div>
         </div>
       </div>
@@ -251,10 +255,14 @@ function TaxiDriverView({ destId, decryptionKey }) {
     return (
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100dvh', background: C.bg, fontFamily: FONT }}>
         <div style={{ textAlign: 'center', padding: 24 }}>
-          <div style={{ marginBottom: 16 }}><Icon name="car" size={40} color={(_S?.colors?.textMuted) || 'rgba(255,255,255,0.35)'} /></div>
+          {/* b.482 — qui c'era una casella d'icona VUOTA: si chiedeva un
+              disegno («car») che in Icon.js non esiste, e non compariva
+              niente. Il mappamondo dice cosa fa la schermata: parlarsi
+              fra lingue diverse. */}
+          <div style={{ marginBottom: 16 }}><Icon name="globe" size={40} color={(_S?.colors?.textMuted) || 'rgba(255,255,255,0.35)'} /></div>
           <div style={{ fontSize: 16, fontWeight: 600, color: C.textPrimary, marginBottom: 8 }}>{error}</div>
           <button onClick={() => setView('home')} style={{
-            padding: '10px 24px', borderRadius: 12, cursor: 'pointer',
+            padding: '10px 24px', minHeight: 44, borderRadius: 12, cursor: 'pointer',
             background: `${C.accent}15`, border: `1px solid ${C.accent}25`,
             color: C.accent, fontSize: 13, fontWeight: 600, fontFamily: FONT,
           }}>{L('backHome')}</button>
@@ -274,7 +282,11 @@ function TaxiDriverView({ destId, decryptionKey }) {
           flex: 1, display: 'flex', flexDirection: 'column',
           alignItems: 'center', justifyContent: 'center', padding: 24,
         }}>
-          <div style={{ marginBottom: 16 }}><Icon name="car" size={40} color={(_S?.colors?.textMuted) || 'rgba(255,255,255,0.35)'} /></div>
+          {/* b.482 — qui c'era una casella d'icona VUOTA: si chiedeva un
+              disegno («car») che in Icon.js non esiste, e non compariva
+              niente. Il mappamondo dice cosa fa la schermata: parlarsi
+              fra lingue diverse. */}
+          <div style={{ marginBottom: 16 }}><Icon name="globe" size={40} color={(_S?.colors?.textMuted) || 'rgba(255,255,255,0.35)'} /></div>
           <div style={{ fontSize: 22, fontWeight: 600, color: C.textPrimary, marginBottom: 6, textAlign: 'center' }}>
             TaxiTalk
           </div>
@@ -289,7 +301,7 @@ function TaxiDriverView({ destId, decryptionKey }) {
             {DRIVER_LANGS.map(lang => (
               <button key={lang.code} onClick={() => { setDriverLang(lang.code); setShowLangPicker(false); vibrate(15); }}
                 style={{
-                  padding: '12px 8px', borderRadius: 14, cursor: 'pointer',
+                  padding: '12px 8px', minHeight: 44, borderRadius: 14, cursor: 'pointer',
                   background: driverLang === lang.code ? `${C.accent}18` : C.card,
                   border: `1px solid ${driverLang === lang.code ? `${C.accent}35` : C.cardBorder}`,
                   display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
@@ -316,10 +328,10 @@ function TaxiDriverView({ destId, decryptionKey }) {
       display: 'flex', flexDirection: 'column', height: '100dvh',
       background: C.bg, fontFamily: FONT,
     }}>
-      {/* Header */}
+      {/* b.482 — TESTATA: rientro laterale a venti come nel template. */}
       <header style={{
         display: 'flex', alignItems: 'center', gap: 10,
-        padding: '14px 16px', flexShrink: 0,
+        padding: '14px 20px', flexShrink: 0,
       }}>
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: 17, fontWeight: 600, color: C.textPrimary, display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -332,8 +344,10 @@ function TaxiDriverView({ destId, decryptionKey }) {
             </span>
           </div>
         </div>
+        {/* b.482 — cambiare lingua e un bersaglio da toccare: almeno
+            quarantaquattro di altezza utile, l'icona dentro non cambia. */}
         <button onClick={() => setShowLangPicker(true)} style={{
-          padding: '6px 12px', borderRadius: 10, cursor: 'pointer',
+          padding: '6px 12px', minHeight: 44, borderRadius: 10, cursor: 'pointer',
           background: C.card, border: `1px solid ${C.cardBorder}`,
           color: C.textMuted, fontSize: 10, fontWeight: 600, fontFamily: FONT,
         }}>
@@ -342,11 +356,12 @@ function TaxiDriverView({ destId, decryptionKey }) {
       </header>
 
       {/* Content */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: '0 16px 16px', scrollbarWidth: 'none' }}>
+      {/* b.482 — il corpo della pagina rientra di venti come la testata. */}
+      <div style={{ flex: 1, overflowY: 'auto', padding: '0 20px 16px', scrollbarWidth: 'none' }}>
 
         {/* Destination card — big, prominent */}
         <div style={{
-          padding: '20px 18px', borderRadius: 20, marginBottom: 12,
+          padding: '20px 20px', borderRadius: 20, marginBottom: 12,
           background: `linear-gradient(145deg, ${C.accent}08, ${C.purple}05)`,
           border: `1.5px solid ${C.accent}25`,
         }}>
@@ -377,12 +392,12 @@ function TaxiDriverView({ destId, decryptionKey }) {
               <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                 {destination.terminal && (
                   <div style={{ fontSize: 14, color: C.textPrimary, display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <span></span> <strong>{destination.terminal}</strong>
+                    <span></span> <strong style={{ fontWeight: 600 }}>{destination.terminal}</strong>
                   </div>
                 )}
                 {destination.hotelName && (
                   <div style={{ fontSize: 14, color: C.textPrimary, display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <span></span> <strong>{destination.hotelName}</strong>
+                    <span></span> <strong style={{ fontWeight: 600 }}>{destination.hotelName}</strong>
                   </div>
                 )}
                 {destination.entrance && (
@@ -463,7 +478,7 @@ function TaxiDriverView({ destId, decryptionKey }) {
         {/* Confirmed state */}
         {confirmed && (
           <div style={{
-            padding: '14px 16px', borderRadius: 14, marginBottom: 12,
+            padding: '14px 20px', borderRadius: 14, marginBottom: 12,
             background: `${C.accent}10`, border: `1px solid ${C.accent}25`,
             textAlign: 'center',
           }}>
@@ -476,12 +491,12 @@ function TaxiDriverView({ destId, decryptionKey }) {
 
       {/* Bottom actions */}
       <div style={{
-        padding: '12px 16px', paddingBottom: 'max(12px, env(safe-area-inset-bottom))',
+        padding: '12px 20px', paddingBottom: 'max(12px, env(safe-area-inset-bottom))',
         display: 'flex', gap: 10,
       }}>
         {!confirmed ? (
           <button onClick={handleConfirm} style={{
-            flex: 1, padding: '14px', borderRadius: 14, cursor: 'pointer',
+            flex: 1, padding: '14px', minHeight: 44, borderRadius: 14, cursor: 'pointer',
             background: `linear-gradient(135deg, ${C.accent}, ${C.purple})`,
             border: 'none', color: '#fff', fontSize: 15, fontWeight: 600, fontFamily: FONT,
             boxShadow: `0 4px 20px ${C.accent}35`,
@@ -491,14 +506,14 @@ function TaxiDriverView({ destId, decryptionKey }) {
         ) : (
           <>
             <button onClick={openInMaps} style={{
-              flex: 1, padding: '14px', borderRadius: 14, cursor: 'pointer',
+              flex: 1, padding: '14px', minHeight: 44, borderRadius: 14, cursor: 'pointer',
               background: `${C.accent}12`, border: `1px solid ${C.accent}25`,
               color: C.accent, fontSize: 13, fontWeight: 600, fontFamily: FONT,
             }}>
               {L('openNavigator')}
             </button>
             <button onClick={() => setView('speaker')} style={{
-              flex: 1, padding: '14px', borderRadius: 14, cursor: 'pointer',
+              flex: 1, padding: '14px', minHeight: 44, borderRadius: 14, cursor: 'pointer',
               background: `linear-gradient(135deg, ${C.accent}, ${C.purple})`,
               border: 'none', color: '#fff', fontSize: 13, fontWeight: 600, fontFamily: FONT,
               boxShadow: `0 4px 20px ${C.accent}35`,

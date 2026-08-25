@@ -1,5 +1,6 @@
 'use client';
 import { useState } from 'react';
+import Icon from '../Icon.js';
 
 export default function ComandoZoom({
   zoom, onZoomChange, verticalOffset, onVerticalOffsetChange
@@ -27,7 +28,8 @@ export default function ComandoZoom({
           onChange={(e) => onZoomChange(parseFloat(e.target.value))}
           title={`Zoom: ${Math.round(zoom * 100)}%`}
         />
-        <span className="zoom-icon">🔍</span>
+        {/* b.482 — erano due emoji: la lente e la doppia freccia. */}
+        <span className="zoom-icon"><Icon name="eye" size={13} /></span>
       </div>
 
       <div className="zoom-divider" />
@@ -49,7 +51,7 @@ export default function ComandoZoom({
           onChange={(e) => onVerticalOffsetChange(parseInt(e.target.value))}
           title={`Offset: ${verticalOffset}px`}
         />
-        <span className="zoom-icon">↕️</span>
+        <span className="zoom-icon"><Icon name="swap" size={13} /></span>
       </div>
     </div>
   );

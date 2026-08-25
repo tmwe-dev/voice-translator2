@@ -97,7 +97,7 @@ const NewConversationSheet = ({ open, onClose, onSelect }) => {
         paddingTop: 'max(12px, env(safe-area-inset-top))',
       }}>
         {/* testata: titolo e chiudi */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0, padding: '4px 16px 8px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0, padding: '4px 20px 8px' }}>
           <h2 style={{
             flex: 1, minWidth: 0, margin: 0, fontSize: '20px', fontWeight: 600,
             color: C.textPrimary || '#fff',
@@ -119,7 +119,7 @@ const NewConversationSheet = ({ open, onClose, onSelect }) => {
 
         {/* il corpo scorre: in cima il barcode, sotto le porte */}
         <div style={{ flex: 1, minHeight: 0, overflowY: 'auto',
-          padding: '4px 16px calc(24px + env(safe-area-inset-bottom))' }}>
+          padding: '4px 20px calc(24px + env(safe-area-inset-bottom))' }}>
 
         {/* b.442 — IL BARCODE, la porta faccia-a-faccia: grande, in cima. */}
         <button

@@ -54,12 +54,15 @@ function GlassCard({ children, style = {}, C }) {
   );
 }
 
+// b.482 — il tasto principale dichiara la sua altezza minima di 44: e la
+// misura sotto la quale un dito comincia a sbagliare bersaglio. E il
+// bianco del testo viene dal listino colori, non da un valore scritto qui.
 function PrimaryBtn({ onClick, disabled, children, style = {}, C, FONT }) {
   return (
     <button onClick={onClick} disabled={disabled} style={{
-      width: '100%', padding: '14px 20px', borderRadius: 14, border: 'none',
+      width: '100%', minHeight: 44, padding: '14px 20px', borderRadius: 14, border: 'none',
       background: disabled ? C.card : `linear-gradient(135deg, ${C.accent}, ${C.purple})`,
-      color: '#fff', fontSize: 15, fontWeight: 600, fontFamily: FONT,
+      color: PALETTE.white, fontSize: 15, fontWeight: 600, fontFamily: FONT,
       cursor: disabled ? 'default' : 'pointer',
       opacity: disabled ? 0.4 : 1,
       boxShadow: disabled ? 'none' : `0 4px 20px ${C.accent}35`,
@@ -226,7 +229,7 @@ export default function JoinView({ joinCode,
     return (
       <div style={{
         display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-        minHeight: '100dvh', padding: '20px 16px',
+        minHeight: '100dvh', padding: '20px 20px',
         background: C.bg, fontFamily: FONT, position: 'relative', overflowY: 'auto', overflowX: 'hidden',
       }}>
         {/* Ambient orb */}
@@ -239,9 +242,11 @@ export default function JoinView({ joinCode,
         <GlassCard C={C}>
           {/* Header */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
+            {/* b.482 — il tasto INDIETRO era 36 punti, sotto la misura minima
+                per un dito: sale a 44 come nella cornice comune (b.481). */}
             <button onClick={() => { window.history.replaceState({}, '', window.location.pathname); setView('home'); setJoinCode(''); setInviteMsgLang(null); }}
               style={{
-                width: 36, height: 36, borderRadius: 12, cursor: 'pointer',
+                width: 44, height: 44, borderRadius: 12, cursor: 'pointer',
                 background: `${C.accent}10`, border: `1px solid ${C.accent}20`,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 color: C.textMuted, fontSize: 16, WebkitTapHighlightColor: 'transparent',
@@ -318,7 +323,7 @@ export default function JoinView({ joinCode,
     return (
       <div style={{
         display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-        minHeight: '100dvh', padding: '20px 16px',
+        minHeight: '100dvh', padding: '20px 20px',
         background: C.bg, fontFamily: FONT, position: 'relative', overflowY: 'auto', overflowX: 'hidden',
       }}>
         <div style={{
@@ -349,7 +354,7 @@ export default function JoinView({ joinCode,
     return (
       <div style={{
         display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-        minHeight: '100dvh', padding: '20px 16px',
+        minHeight: '100dvh', padding: '20px 20px',
         background: C.bg, fontFamily: FONT, position: 'relative', overflowY: 'auto', overflowX: 'hidden',
       }}>
         {/* Ambient glow */}
@@ -366,6 +371,9 @@ export default function JoinView({ joinCode,
 
         <GlassCard C={C} style={{ textAlign: 'center', maxWidth: 380 }}>
           {/* Invite image / welcome illustration */}
+          {/* b.482 — questa casella era VUOTA: un riquadro di cento punti col
+              bordo colorato e niente dentro, la prima cosa che vede chi apre
+              un invito. Ci va la porta aperta, la stessa del primo passo. */}
           <div style={{
             width: 100, height: 100, borderRadius: 28, margin: '0 auto 20px',
             background: `linear-gradient(135deg, ${C.accent}20, ${C.purple}20)`,
@@ -373,7 +381,7 @@ export default function JoinView({ joinCode,
             display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 48,
             boxShadow: `0 12px 40px ${C.accent}15`,
           }}>
-          
+            <Icon name="doorOpen" size={48} color={C.accent} />
           </div>
 
           {/* Minimal welcome — just name and big Chat button */}
@@ -393,9 +401,9 @@ export default function JoinView({ joinCode,
             savePrefs(prefs);
             handleJoinRoom();
           }} style={{
-            width: '100%', padding: '20px 24px', borderRadius: 20, border: 'none',
+            width: '100%', minHeight: 44, padding: '20px 24px', borderRadius: 20, border: 'none',
             background: `linear-gradient(135deg, ${C.accent} 0%, #1EB898 50%, ${C.purple} 100%)`,
-            color: '#fff', fontSize: 22, fontWeight: 600, fontFamily: FONT,
+            color: PALETTE.white, fontSize: 22, fontWeight: 600, fontFamily: FONT,
             cursor: 'pointer', letterSpacing: -0.3,
             boxShadow: `0 8px 32px ${C.accent}30, 0 4px 12px rgba(0,0,0,0.3)`,
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12,
@@ -439,7 +447,7 @@ export default function JoinView({ joinCode,
   return (
     <div style={{
       display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-      minHeight: '100dvh', padding: '20px 16px',
+      minHeight: '100dvh', padding: '20px 20px',
       background: C.bg, fontFamily: FONT, position: 'relative', overflow: 'auto',
     }}>
       {/* Ambient orb */}
@@ -503,12 +511,12 @@ export default function JoinView({ joinCode,
                 { key: 'other', icon: '⚧', label: tI('otherWord') },
               ].map(g => (
                 <button key={g.key} onClick={() => setGender(g.key)} style={{
-                  flex: 1, padding: '12px 8px', borderRadius: 14, cursor: 'pointer',
+                  flex: 1, minHeight: 44, padding: '12px 8px', borderRadius: 14, cursor: 'pointer',
                   border: `2px solid ${gender === g.key ? C.accent : C.cardBorder}`,
                   background: gender === g.key ? `${C.accent}12` : 'transparent',
                   fontFamily: FONT, fontSize: 13, textAlign: 'center',
                   color: gender === g.key ? C.accent : C.textPrimary,
-                  fontWeight: gender === g.key ? 700 : 400,
+                  fontWeight: gender === g.key ? 600 : 400,
                   transition: 'all 0.2s', WebkitTapHighlightColor: 'transparent',
                 }}>
                   <div style={{ fontSize: 22, marginBottom: 2 }}>{g.icon}</div>
@@ -540,10 +548,10 @@ export default function JoinView({ joinCode,
             {[...LANGS].sort((a, b) => a.name.localeCompare(b.name, 'en')).map(l => (
               <button key={l.code} onClick={() => { setMyLang(l.code); setPrefs(p => ({...p, lang: l.code})); }}
                 style={{
-                  padding: '10px 6px', borderRadius: 12, textAlign: 'center', cursor: 'pointer', fontFamily: FONT,
+                  minHeight: 44, padding: '10px 6px', borderRadius: 12, textAlign: 'center', cursor: 'pointer', fontFamily: FONT,
                   border: `2px solid ${myLang === l.code ? C.accent : 'transparent'}`,
                   background: myLang === l.code ? `${C.accent}12` : `rgba(255,255,255,0.03)`,
-                  color: C.textPrimary, fontSize: 11, fontWeight: myLang === l.code ? 700 : 400,
+                  color: C.textPrimary, fontSize: 11, fontWeight: myLang === l.code ? 600 : 400,
                   WebkitTapHighlightColor: 'transparent',
                 }}>
                 <div style={{ fontSize: 20, marginBottom: 2 }}>{l.flag}</div>
@@ -559,7 +567,7 @@ export default function JoinView({ joinCode,
               {AVATARS.map((av, i) => (
                 <div key={i} onClick={() => setPrefs(p => ({...p, avatar: av}))}
                   style={{
-                    cursor: 'pointer', flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
+                    cursor: 'pointer', flexShrink: 0, minHeight: 44, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
                     opacity: prefs.avatar === av ? 1 : 0.5,
                     transform: prefs.avatar === av ? 'scale(1.1)' : 'scale(1)',
                     transition: 'all 0.2s',
@@ -599,9 +607,13 @@ export default function JoinView({ joinCode,
           </div>
 
           {/* Auto-play toggle */}
+          {/* b.482 — l'interruttore restava alto 26 punti, meta del bersaglio
+              minimo. La levetta si vede uguale a prima: cio che cresce e la
+              zona che risponde al dito, un bordo trasparente tutto intorno
+              che i margini negativi riassorbono, cosi la riga non si muove. */}
           <div style={{
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            padding: '12px 14px', background: `rgba(255,255,255,0.03)`, borderRadius: 14, marginBottom: 12,
+            padding: '12px 20px', background: `rgba(255,255,255,0.03)`, borderRadius: 14, marginBottom: 12,
             border: `1px solid ${C.cardBorder}`,
           }}>
             <div>
@@ -609,14 +621,16 @@ export default function JoinView({ joinCode,
               <div style={{ fontSize: 10, color: C.textMuted, marginTop: 2 }}>{tI('autoPlayDesc')}</div>
             </div>
             <button onClick={() => setAudioAutoPlay(!audioAutoPlay)} style={{
-              width: 48, height: 26, borderRadius: 13, border: 'none', cursor: 'pointer',
+              width: 48, height: 26, boxSizing: 'content-box', padding: 9, margin: -9,
+              borderRadius: 22, border: 'none', cursor: 'pointer',
               background: audioAutoPlay ? C.accent : `rgba(255,255,255,0.1)`,
+              backgroundClip: 'content-box',
               position: 'relative', transition: 'background 0.2s', flexShrink: 0,
             }}>
               <div style={{
-                width: 20, height: 20, borderRadius: 10, background: 'white',
-                position: 'absolute', top: 3,
-                left: audioAutoPlay ? 25 : 3, transition: 'left 0.2s',
+                width: 20, height: 20, borderRadius: 10, background: PALETTE.white,
+                position: 'absolute', top: 12,
+                left: audioAutoPlay ? 34 : 12, transition: 'left 0.2s',
                 boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
               }} />
             </button>
@@ -628,11 +642,11 @@ export default function JoinView({ joinCode,
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6 }}>
               {VOICES.map(v => (
                 <button key={v} onClick={() => setSelectedVoicePref(v)} style={{
-                  padding: '10px 6px', borderRadius: 12, textAlign: 'center', cursor: 'pointer', fontFamily: FONT,
+                  minHeight: 44, padding: '10px 6px', borderRadius: 12, textAlign: 'center', cursor: 'pointer', fontFamily: FONT,
                   border: `2px solid ${selectedVoicePref === v ? C.accent : 'transparent'}`,
                   background: selectedVoicePref === v ? `${C.accent}12` : `rgba(255,255,255,0.03)`,
                   color: selectedVoicePref === v ? C.accent : C.textPrimary,
-                  fontSize: 12, fontWeight: selectedVoicePref === v ? 700 : 400,
+                  fontSize: 12, fontWeight: selectedVoicePref === v ? 600 : 400,
                   WebkitTapHighlightColor: 'transparent',
                 }}>
                   <div style={{ fontSize: 16, marginBottom: 2 }}>
@@ -648,17 +662,17 @@ export default function JoinView({ joinCode,
           {/* Edge TTS gender */}
           <div style={{
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            padding: '10px 14px', background: `rgba(255,255,255,0.03)`, borderRadius: 12, marginBottom: 14,
+            padding: '10px 20px', background: `rgba(255,255,255,0.03)`, borderRadius: 12, marginBottom: 14,
             border: `1px solid ${C.cardBorder}`,
           }}>
             <div style={{ fontSize: 12, fontWeight: 500, color: C.textPrimary }}>{tI('freeVoiceEdge')}</div>
             <div style={{ display: 'flex', gap: 4 }}>
               {['female', 'male'].map(g => (
                 <button key={g} onClick={() => setPrefs(p => ({...p, edgeTtsVoiceGender: g}))} style={{
-                  padding: '5px 12px', borderRadius: 8, border: 'none', cursor: 'pointer',
+                  minHeight: 44, padding: '5px 12px', borderRadius: 8, border: 'none', cursor: 'pointer',
                   fontFamily: FONT, fontSize: 11,
                   background: (prefs.edgeTtsVoiceGender || 'female') === g ? C.accent : 'transparent',
-                  color: (prefs.edgeTtsVoiceGender || 'female') === g ? '#fff' : C.textMuted,
+                  color: (prefs.edgeTtsVoiceGender || 'female') === g ? PALETTE.white : C.textMuted,
                   fontWeight: (prefs.edgeTtsVoiceGender || 'female') === g ? 600 : 400,
                 }}>
                   {g === 'female' ? '♀' : '♂'} {g === 'female' ? tI('femaleWord') : tI('maleWord')}
@@ -669,7 +683,7 @@ export default function JoinView({ joinCode,
 
           {/* Summary */}
           <div style={{
-            background: `${C.accent}10`, borderRadius: 14, padding: '12px 14px',
+            background: `${C.accent}10`, borderRadius: 14, padding: '12px 20px',
             marginBottom: 8, border: `1px solid ${C.accent}15`,
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -704,7 +718,7 @@ export default function JoinView({ joinCode,
           {!userToken && (
             <button style={{
               marginTop: 10, background: 'none', border: 'none', color: C.textMuted,
-              fontSize: 11, cursor: 'pointer', fontFamily: FONT, padding: 6,
+              fontSize: 11, cursor: 'pointer', fontFamily: FONT, padding: 6, minHeight: 44,
               textDecoration: 'underline', width: '100%', textAlign: 'center',
             }} onClick={() => setShowInvitePopup(true)}>
               {tI('inviteInfoLink')}
@@ -728,11 +742,15 @@ export default function JoinView({ joinCode,
             backdropFilter: 'blur(30px)', WebkitBackdropFilter: 'blur(30px)',
             boxShadow: '0 20px 60px -15px rgba(0,0,0,0.5)',
           }} onClick={e => e.stopPropagation()}>
+            {/* b.482 — anche qui la casella d'icona era rimasta vuota. La
+                finestra parla dell'account personale: ci va la persona. */}
             <div style={{
               width: 56, height: 56, borderRadius: 18, margin: '0 auto 12px',
               background: `linear-gradient(135deg, ${C.accent}15, ${C.purple}15)`,
               display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26,
-            }}></div>
+            }}>
+              <Icon name="user" size={26} color={C.accent} />
+            </div>
             <div style={{ fontSize: 17, fontWeight: 600, color: C.textPrimary, textAlign: 'center', marginBottom: 10 }}>
               {tI('invitePopupTitle')}
             </div>
@@ -741,7 +759,7 @@ export default function JoinView({ joinCode,
             </div>
             <div style={{
               fontSize: 12, color: C.textMuted, lineHeight: 1.5, marginBottom: 14,
-              padding: '10px 12px', background: `${C.purple}10`, borderRadius: 12,
+              padding: '10px 20px', background: `${C.purple}10`, borderRadius: 12,
               border: `1px solid ${C.purple}15`,
             }}>
               {tI('invitePopupFeatures')}
@@ -752,7 +770,7 @@ export default function JoinView({ joinCode,
                 {tI('invitePopupCreateAccount')}
               </PrimaryBtn>
               <button style={{
-                flex: 1, padding: '10px 14px', borderRadius: 14,
+                flex: 1, minHeight: 44, padding: '10px 14px', borderRadius: 14,
                 border: `1px solid ${C.cardBorder}`, background: 'transparent',
                 color: C.textPrimary, fontSize: 13, cursor: 'pointer', fontFamily: FONT,
               }} onClick={() => setShowInvitePopup(false)}>

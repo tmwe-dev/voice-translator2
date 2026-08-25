@@ -2,6 +2,7 @@
 import { memo, useState, useEffect, useRef } from 'react';
 import { LANGS, APP_URL, FONT } from '../lib/constants.js';
 import { useApp } from '../contexts/AppContext.js';
+import Icon from './Icon.js';
 
 const LobbyView = memo(function LobbyView({ roomId, roomInfo, partnerConnected, inviteLang, setInviteLang,
   shareRoom, leaveRoom, unlockAudio, perVideo = false }) {
@@ -52,21 +53,27 @@ const LobbyView = memo(function LobbyView({ roomId, roomInfo, partnerConnected, 
                 maxWidth:180, maxHeight:180, opacity: qrReady ? 1 : 0, transition:'opacity .25s'}} />
             {/* b.90 — prima si vedeva un rettangolo BIANCO vuoto finche il
                 codice non era disegnato: sembrava un QR rotto. */}
+            {/* b.482 — l'attesa era scritta a mano in italiano: chi apriva
+                l'invito in un'altra lingua leggeva una frase che non
+                capiva. Ora viene dal pacchetto lingua come tutto il resto. */}
             {!qrReady && (
               <div style={{position:'absolute', inset:0, display:'grid', placeItems:'center',
                 color:S.colors.textMuted, fontSize:12}}>
-                Preparo il codice…
+                {L('preparingInvite')}
               </div>
             )}
-            {!qrReady && (
-              <div style={{fontSize:11, color:S.colors.textMuted, marginTop:6}}>
-                {`${APP_URL}?room=${roomId}`}
-              </div>
-            )}
+            {/* b.482 — l'indirizzo di ripiego tiene SEMPRE il suo posto ad
+                altezza fissa: prima compariva e spariva insieme al codice e
+                tutto quello che sta sotto saltava su e giu. */}
+            <div style={{fontSize:11, color:S.colors.textMuted, marginTop:6, height:14, overflow:'hidden'}}>
+              {!qrReady ? `${APP_URL}?room=${roomId}` : ''}
+            </div>
           </div>
           <div style={{marginBottom:12}}>
             <div style={S.label}>{L('inviteLangLabel')}</div>
-            <select style={{...S.select, fontSize:14}} value={inviteLang} onChange={e => setInviteLang(e.target.value)}>
+            {/* b.482 — la tendina e un bersaglio da toccare: sotto i 44 punti
+                di altezza il dito sbaglia. */}
+            <select style={{...S.select, fontSize:14, minHeight:44}} value={inviteLang} onChange={e => setInviteLang(e.target.value)}>
               {LANGS.map(l => <option key={l.code} value={l.code}>{l.flag} {l.name}</option>)}
             </select>
           </div>
@@ -92,7 +99,7 @@ const LobbyView = memo(function LobbyView({ roomId, roomInfo, partnerConnected, 
           {perVideo && !partnerConnected && (
             <div style={{
               textAlign:'center', fontSize:12.5, lineHeight:1.5, marginBottom:12,
-              padding:'10px 12px', borderRadius:12,
+              padding:'10px 20px', borderRadius:12,
               background:`${S.colors.accent1}12`, border:`1px solid ${S.colors.accent1}25`,
               color:S.colors.textSecondary,
             }}>
@@ -100,9 +107,12 @@ const LobbyView = memo(function LobbyView({ roomId, roomInfo, partnerConnected, 
             </div>
           )}
           {/* ── FINE b.90 ── */}
+          {/* b.482 — la spunta era un carattere di quelli che il telefono
+              puo disegnare come emoji: qui le figure vengono dal nostro
+              foglio di icone, cosi restano uguali su ogni apparecchio. */}
           <div style={{textAlign:'center', color:S.colors.textMuted, fontSize:13, marginBottom:12}}>
             {partnerConnected
-              ? <span style={{color:S.colors.accent2}}>{roomInfo?.members?.[1]?.name} {'\u2714'}</span>
+              ? <span style={{color:S.colors.accent2}}>{roomInfo?.members?.[1]?.name} <Icon name="check" size={14} color={S.colors.accent2} style={{verticalAlign:'-2px'}} /></span>
               : <span>{L('waitingForPartner')}</span>}
           </div>
           {partnerConnected && (

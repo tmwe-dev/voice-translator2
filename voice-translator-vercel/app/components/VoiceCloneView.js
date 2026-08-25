@@ -132,7 +132,11 @@ export default function VoiceCloneView({ userToken, userTokenRef, onVoiceCloned,
         {/* ═══ STEP 0: MIC SETUP ═══ */}
         {step === 0 && (
           <div style={{...S.card, width:'100%', maxWidth:400, textAlign:'center', padding:'30px 24px'}}>
-            <div style={{fontSize:56, marginBottom:16}}>{'\u{1F3A4}'}</div>
+            {/* b.482 — ERANO EMOJI. Ogni telefono le disegna con la sua faccia e a
+    colori: in mezzo a un'applicazione di icone monocrome sembrano
+    incollate da fuori, e su alcuni Android alcune non esistono e
+    compare un rettangolo vuoto. Ora vengono dal set di casa. */}
+              <div style={{marginBottom:16, lineHeight:0}}><Icon name="mic" size={56} /></div>
             <div style={{fontSize:16, fontWeight: 600, color:C.textPrimary, marginBottom:8}}>
               {L('cloneMicSetup')}
             </div>
@@ -163,7 +167,7 @@ export default function VoiceCloneView({ userToken, userTokenRef, onVoiceCloned,
                 L('cloneTipMinDuration'),
               ].map((tip, i) => (
                 <div key={i} style={{fontSize:11, color:C.textTertiary, display:'flex', alignItems:'center', gap:6, marginBottom:6}}>
-                  <span style={{color:C.accent4 || C.onlineColor}}>{'\u2705'}</span> {tip}
+                  <span style={{color:C.accent4 || C.onlineColor, lineHeight:0}}><Icon name="check" size={14} /></span> {tip}
                 </div>
               ))}
             </div>
@@ -200,7 +204,7 @@ export default function VoiceCloneView({ userToken, userTokenRef, onVoiceCloned,
             <div style={{display:'flex', gap:4, marginBottom:12, justifyContent:'center', flexWrap:'wrap'}}>
               {script.paragraphs.map((_, i) => (
                 <button key={i} onClick={() => setCurrentParagraph(i)}
-                  style={{width:24, height:24, borderRadius:6, fontSize:10, fontWeight: 600, cursor:'pointer',
+                  style={{width:44, height:44, borderRadius:12, fontSize:13, fontWeight: 600, cursor:'pointer',
                     border: i === currentParagraph ? `2px solid ${C.accent1}` : `1px solid ${C.overlayBorder}`,
                     background: i < recorder.segments.length ? (C.accent4Bg || 'rgba(0,255,0,0.1)') : 'transparent',
                     color: i === currentParagraph ? C.accent1 : C.textMuted}}>
@@ -219,7 +223,7 @@ export default function VoiceCloneView({ userToken, userTokenRef, onVoiceCloned,
                   display:'flex', alignItems:'center', justifyContent:'center',
                   boxShadow: recorder.isRecording ? `0 0 20px ${C.accent3 || PALETTE.coral}40` : `0 0 20px ${C.accent1}40`,
                   transition:'all 0.2s'}}>
-                <span style={{fontSize:28}}>{recorder.isRecording ? '\u23F9' : '\u{1F3A4}'}</span>
+                <span style={{lineHeight:0}}><Icon name={recorder.isRecording ? 'stop' : 'mic'} size={28} /></span>
               </button>
             </div>
 
@@ -258,19 +262,19 @@ export default function VoiceCloneView({ userToken, userTokenRef, onVoiceCloned,
                     borderRadius:10, background:C.overlayBg || 'rgba(255,255,255,0.03)',
                     border:`1px solid ${C.overlayBorder}`}}>
                     <button onClick={() => playSegment(i)}
-                      style={{width:28, height:28, borderRadius:8, border:'none', cursor:'pointer',
+                      style={{width:44, height:44, borderRadius:12, border:'none', cursor:'pointer',
                         background:C.accent1 + '20', color:C.accent1, fontSize:12,
                         display:'flex', alignItems:'center', justifyContent:'center'}}>
-                      {playingIdx === i ? '\u23F8' : '\u25B6'}
+                      <Icon name={playingIdx === i ? 'pause' : 'play'} size={16} />
                     </button>
                     <div style={{flex:1, fontSize:12, color:C.textSecondary}}>
                       {L('cloneSegment')} {i + 1} — {Math.floor(seg.duration)}s
                     </div>
                     <button onClick={() => recorder.deleteSegment(i)}
-                      style={{width:24, height:24, borderRadius:6, border:`1px solid ${C.overlayBorder}`,
+                      style={{width:44, height:44, borderRadius:12, border:`1px solid ${C.overlayBorder}`,
                         background:'transparent', color:C.textMuted, cursor:'pointer', fontSize:10,
                         display:'flex', alignItems:'center', justifyContent:'center'}}>
-                      {'\u2716'}
+                      <Icon name="x" size={14} />
                     </button>
                   </div>
                 ))}
@@ -283,7 +287,7 @@ export default function VoiceCloneView({ userToken, userTokenRef, onVoiceCloned,
                 style={{width:'100%', padding:'14px 20px', borderRadius:14, border:'none', cursor:'pointer',
                   background:`linear-gradient(135deg, ${C.accent4 || C.onlineColor}, ${C.accent1})`,
                   color:'#fff', fontSize:14, fontWeight: 600, fontFamily:FONT}}>
-                {L('cloneContinue')} {'\u2192'}
+                {L('cloneContinue')} <Icon name="chevRight" size={15} />
               </button>
             )}
           </div>
@@ -293,7 +297,7 @@ export default function VoiceCloneView({ userToken, userTokenRef, onVoiceCloned,
         {step === 2 && !cloneSuccess && (
           <div style={{width:'100%', maxWidth:400}}>
             <div style={{...S.card, padding:'20px 18px', marginBottom:16, textAlign:'center'}}>
-              <div style={{fontSize:40, marginBottom:12}}>{'\u{1F3B5}'}</div>
+              <div style={{marginBottom:12, lineHeight:0}}><Icon name="music" size={40} /></div>
               <div style={{fontSize:16, fontWeight: 600, color:C.textPrimary, marginBottom:6}}>
                 {L('clonePreview')}
               </div>
@@ -311,10 +315,10 @@ export default function VoiceCloneView({ userToken, userTokenRef, onVoiceCloned,
                 borderRadius:10, background:C.overlayBg || 'rgba(255,255,255,0.03)',
                 border:`1px solid ${C.overlayBorder}`}}>
                 <button onClick={() => playSegment(i)}
-                  style={{width:32, height:32, borderRadius:10, border:'none', cursor:'pointer',
+                  style={{width:44, height:44, borderRadius:12, border:'none', cursor:'pointer',
                     background:C.accent1 + '20', color:C.accent1, fontSize:14,
                     display:'flex', alignItems:'center', justifyContent:'center'}}>
-                  {playingIdx === i ? '\u23F8' : '\u25B6'}
+                  <Icon name={playingIdx === i ? 'pause' : 'play'} size={16} />
                 </button>
                 <div style={{flex:1}}>
                   <div style={{fontSize:13, fontWeight:600, color:C.textPrimary}}>
@@ -323,10 +327,10 @@ export default function VoiceCloneView({ userToken, userTokenRef, onVoiceCloned,
                   <div style={{fontSize:10, color:C.textMuted}}>{Math.floor(seg.duration)}s</div>
                 </div>
                 <button onClick={() => { recorder.deleteSegment(i); if (recorder.segments.length <= 1) setStep(1); }}
-                  style={{width:28, height:28, borderRadius:8, border:`1px solid ${C.overlayBorder}`,
+                  style={{width:44, height:44, borderRadius:12, border:`1px solid ${C.overlayBorder}`,
                     background:'transparent', color:C.textMuted, cursor:'pointer', fontSize:11,
                     display:'flex', alignItems:'center', justifyContent:'center'}}>
-                  {'\u2716'}
+                  <Icon name="x" size={14} />
                 </button>
               </div>
             ))}
@@ -336,7 +340,7 @@ export default function VoiceCloneView({ userToken, userTokenRef, onVoiceCloned,
               style={{width:'100%', marginTop:12, padding:'10px', borderRadius:10,
                 background:'transparent', border:`1px solid ${C.overlayBorder}`,
                 color:C.textSecondary, fontSize:12, cursor:'pointer', fontFamily:FONT}}>
-              {'\u{1F3A4}'} {L('cloneRecordMore')}
+              <Icon name="mic" size={16} /> {L('cloneRecordMore')}
             </button>
 
             {/* Clone button */}
@@ -349,7 +353,7 @@ export default function VoiceCloneView({ userToken, userTokenRef, onVoiceCloned,
               {cloning ? (
                 <>{L('cloneCreating')}</>
               ) : (
-                <><span>{'\u2728'}</span> {L('cloneCreateVoice')}</>
+                <><span style={{lineHeight:0}}><Icon name="star" size={16} /></span> {L('cloneCreateVoice')}</>
               )}
             </button>
 
@@ -379,7 +383,7 @@ export default function VoiceCloneView({ userToken, userTokenRef, onVoiceCloned,
         {cloneSuccess && (
           <div style={{width:'100%', maxWidth:400, textAlign:'center'}}>
             <div style={{...S.card, padding:'30px 24px'}}>
-              <div style={{fontSize:56, marginBottom:16}}>{'\u{1F389}'}</div>
+              <div style={{marginBottom:16, lineHeight:0}}><Icon name="trophy" size={56} /></div>
               <div style={{fontSize:20, fontWeight: 600, color:C.accent4 || C.onlineColor, marginBottom:8}}>
                 {L('cloneDone')}
               </div>

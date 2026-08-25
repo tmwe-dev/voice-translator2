@@ -3,13 +3,20 @@ import { memo, useState, useEffect, useCallback } from 'react';
 import { FONT, vibrate, clayCard, CLAY_OMBRA } from '../../lib/constants.js';
 import Icon from '../Icon.js';
 import { mieiCorsiUtente } from '../../lib/compagni/cliente.js';
-import { conRipiego } from '../../lib/ripiego.js';
 import { elencoObiettivi, salvaObiettivo, rimuoviObiettivo,
   CATEGORIE_OBIETTIVO, STATI_OBIETTIVO, sincronizzaConCorsi } from '../../lib/compagni/obiettivi.js';
 
 // b.224 — OBIETTIVI DI VITA (il "tutor che ti accompagna"). Qui li imposti;
 // quando parli con un Compagno (Amico/Tavolo), lui li CONOSCE e ti aiuta a
 // raggiungerli. Vivono sul dispositivo (localStorage).
+//
+// b.482 — QUESTA SCHEDA PASSA ALLO STANDARD DEL TEMPLATE, e cambia solo
+// cio che si vede: rientri laterali a venti, ogni cosa che si tocca alta
+// almeno quarantaquattro (sotto quella misura il dito sbaglia bersaglio),
+// niente emoji a schermo, e le parole prese dai pacchetti lingua invece
+// che dal ripiego italiano scritto qui dentro — le chiavi c'erano gia
+// tutte, quindi a schermo non cambia una parola: cambia che ora anche
+// chi non parla italiano le legge nella sua lingua.
 
 const STATO_ETI = { attivo: 'Attivo', raggiunto: 'Raggiunto', pausa: 'In pausa' };
 
@@ -19,7 +26,6 @@ function GestioneObiettivi({ L, userToken, testoP, muto, accent, card, bordo }) 
 
   useEffect(() => { setLista(elencoObiettivi()); }, []);
 
-  const tt = conRipiego(L); // b.362 — unica definizione, in lib/ripiego.js
   // b.334 — i corsi dell'utente: per collegare un obiettivo a un corso e per
   // muovere le barre DA SOLE (sincronizzaConCorsi) all'apertura della scheda.
   const [corsiMiei, setCorsiMiei] = useState([]);
@@ -44,45 +50,50 @@ function GestioneObiettivi({ L, userToken, testoP, muto, accent, card, bordo }) 
 
   const input = { width: '100%', padding: 11, borderRadius: 10, border: bordo, background: card, color: testoP, fontSize: 14, fontFamily: FONT, boxSizing: 'border-box' };
   const etich = { fontSize: 12, color: muto, margin: '10px 0 4px', display: 'block' };
-  const iconaCat = (id) => (CATEGORIE_OBIETTIVO.find((c) => c.id === id) || {}).icona || '🎯';
+  // b.482 — l'area dell'obiettivo si mostrava con un'emoji presa dal
+  // catalogo. A schermo le emoji non si usano: qui si sceglie l'icona
+  // del disegno comune, e il catalogo resta com'e.
+  const ICONA_CAT = { studio: 'graduation', lavoro: 'doc', salute: 'wave', relazioni: 'users',
+    hobby: 'music', crescita: 'zap', finanza: 'credit', creativita: 'star', altro: 'target' };
+  const iconaCat = (id) => ICONA_CAT[id] || 'target';
 
   // ── FORM ──
   if (bozza) {
     return (
       <div>
-        <button onClick={() => setBozza(null)} style={{ background: card, border: bordo, borderRadius: 10, padding: '8px 12px', cursor: 'pointer', color: testoP, fontFamily: FONT, marginBottom: 8 }}>
-          <Icon name="back" size={14} color={testoP} /> {tt('lifeGoalBack', 'Indietro')}
+        <button onClick={() => setBozza(null)} style={{ background: card, border: bordo, borderRadius: 10, padding: '8px 12px', minHeight: 44, cursor: 'pointer', color: testoP, fontFamily: FONT, marginBottom: 8 }}>
+          <Icon name="back" size={14} color={testoP} /> {L('lifeGoalBack')}
         </button>
 
-        <label style={etich}>{tt('lifeGoalTitle', 'Obiettivo')}</label>
-        <input value={bozza.titolo} onChange={campo('titolo')} placeholder={tt('lifeGoalTitlePh', 'Es. Imparare lo spagnolo, correre 5 km…')} style={input} />
+        <label style={etich}>{L('lifeGoalTitle')}</label>
+        <input value={bozza.titolo} onChange={campo('titolo')} placeholder={L('lifeGoalTitlePh')} style={input} />
 
-        <label style={etich}>{tt('lifeGoalDesc', 'Dettagli (facoltativo)')}</label>
+        <label style={etich}>{L('lifeGoalDesc')}</label>
         <textarea value={bozza.descrizione} onChange={campo('descrizione')} rows={3}
-          placeholder={tt('lifeGoalDescPh', 'Perché conta, cosa vuoi ottenere…')} style={{ ...input, resize: 'vertical' }} />
+          placeholder={L('lifeGoalDescPh')} style={{ ...input, resize: 'vertical' }} />
 
-        <label style={etich}>{tt('lifeGoalCat', 'Area')}</label>
+        <label style={etich}>{L('lifeGoalCat')}</label>
         <select value={bozza.categoria} onChange={campo('categoria')} style={input}>
-          {CATEGORIE_OBIETTIVO.map((c) => <option key={c.id} value={c.id}>{c.icona} {c.etichetta}</option>)}
+          {CATEGORIE_OBIETTIVO.map((c) => <option key={c.id} value={c.id}>{c.etichetta}</option>)}
         </select>
 
-        <label style={etich}>{tt('lifeGoalProgress', 'Avanzamento')}: {bozza.progresso}%</label>
+        <label style={etich}>{L('lifeGoalProgress')}: {bozza.progresso}%</label>
         <input type="range" min={0} max={100} value={bozza.progresso}
           onChange={(e) => setBozza((b) => ({ ...b, progresso: Number(e.target.value) }))}
           style={{ width: '100%', accentColor: accent, cursor: 'pointer' }} />
 
-        <label style={etich}>{tt('lifeGoalPriority', 'Priorità')}</label>
+        <label style={etich}>{L('lifeGoalPriority')}</label>
         <div style={{ display: 'flex', gap: 8 }}>
           {[1, 2, 3].map((p) => (
             <button key={p} onClick={() => setBozza((b) => ({ ...b, priorita: p }))}
-              style={{ flex: 1, padding: 10, borderRadius: 10, cursor: 'pointer', fontFamily: FONT, fontWeight: 600,
+              style={{ flex: 1, padding: 10, minHeight: 44, borderRadius: 10, cursor: 'pointer', fontFamily: FONT, fontWeight: 600,
                 border: bordo, background: bozza.priorita === p ? accent : 'transparent', color: bozza.priorita === p ? '#04121c' : testoP }}>
-              {p === 1 ? tt('lifeGoalLow', 'Bassa') : p === 2 ? tt('lifeGoalMed', 'Media') : tt('lifeGoalHigh', 'Alta')}
+              {p === 1 ? L('lifeGoalLow') : p === 2 ? L('lifeGoalMed') : L('lifeGoalHigh')}
             </button>
           ))}
         </div>
 
-        <label style={etich}>{tt('lifeGoalStatus', 'Stato')}</label>
+        <label style={etich}>{L('lifeGoalStatus')}</label>
         <select value={bozza.stato} onChange={campo('stato')} style={input}>
           {STATI_OBIETTIVO.map((s) => <option key={s} value={s}>{STATO_ETI[s] || s}</option>)}
         </select>
@@ -90,15 +101,15 @@ function GestioneObiettivi({ L, userToken, testoP, muto, accent, card, bordo }) 
         {/* b.334 — CORSO COLLEGATO: superare le lezioni muove la barra da
             sola; al 100% arriva la coppa. Basta obiettivi spostati a mano. */}
         {corsiMiei.length > 0 && <>
-          <label style={etich}>{tt('lifeGoalCourse', 'Corso collegato (la barra si muove da sola)')}</label>
+          <label style={etich}>{L('lifeGoalCourse')}</label>
           <select value={bozza.corsoId || ''} onChange={(e) => setBozza((b) => ({ ...b, corsoId: e.target.value || null }))} style={input}>
-            <option value="">{tt('lifeGoalNoCourse', '— nessuno')}</option>
+            <option value="">{L('lifeGoalNoCourse')}</option>
             {corsiMiei.map((c) => <option key={c.id} value={c.id}>{c.titolo || c.argomento} ({c.percento}%)</option>)}
           </select>
         </>}
 
-        <button onClick={salva} disabled={!bozza.titolo.trim()} style={{ width: '100%', marginTop: 16, padding: 14, borderRadius: 14, border: 'none', cursor: 'pointer', background: accent, color: '#04121c', fontWeight: 600, fontSize: 15, fontFamily: FONT, opacity: bozza.titolo.trim() ? 1 : 0.6 }}>
-          ✅ {tt('lifeGoalSave', 'Salva obiettivo')}
+        <button onClick={salva} disabled={!bozza.titolo.trim()} style={{ width: '100%', marginTop: 16, padding: 14, minHeight: 44, borderRadius: 14, border: 'none', cursor: 'pointer', background: accent, color: '#04121c', fontWeight: 600, fontSize: 15, fontFamily: FONT, opacity: bozza.titolo.trim() ? 1 : 0.6, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+          <Icon name="check" size={18} color="#04121c" /> {L('lifeGoalSave')}
         </button>
       </div>
     );
@@ -109,38 +120,38 @@ function GestioneObiettivi({ L, userToken, testoP, muto, accent, card, bordo }) 
   return (
     <div>
       <div style={{ fontSize: 13, color: muto, marginBottom: 12, lineHeight: 1.5 }}>
-        {tt('lifeGoalIntro', 'Imposta i tuoi obiettivi di vita. I tuoi Compagni li conoscono e ti accompagnano a raggiungerli.')}
+        {L('lifeGoalIntro')}
       </div>
 
-      <button onClick={() => { vibrate(8); setBozza(vuoto()); }} style={{ width: '100%', padding: 13, borderRadius: 14, border: bordo, cursor: 'pointer', background: 'transparent', color: testoP, fontWeight: 600, fontSize: 14, fontFamily: FONT, marginBottom: 16 }}>
-        ➕ {tt('lifeGoalNew', 'Nuovo obiettivo')}
+      <button onClick={() => { vibrate(8); setBozza(vuoto()); }} style={{ width: '100%', padding: 13, minHeight: 44, borderRadius: 14, border: bordo, cursor: 'pointer', background: 'transparent', color: testoP, fontWeight: 600, fontSize: 14, fontFamily: FONT, marginBottom: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+        <Icon name="plus" size={18} color={testoP} /> {L('lifeGoalNew')}
       </button>
 
       {lista.length === 0
-        ? <div style={{ fontSize: 13, color: muto, textAlign: 'center', padding: '24px 8px' }}>{tt('lifeGoalEmpty', 'Ancora nessun obiettivo. Aggiungine uno: il tuo Compagno inizierà a tenerlo presente.')}</div>
+        ? <div style={{ fontSize: 13, color: muto, textAlign: 'center', padding: '24px 8px' }}>{L('lifeGoalEmpty')}</div>
         : <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {lista.map((o) => {
               // b.320 — decisione di Luca: l'obiettivo COMPLETATO resta in
               // lista con il TROFEO (coppa dorata), non sparisce.
               const vinto = o.stato === 'raggiunto' || o.progresso >= 100;
               return (
-              <div key={o.id} style={{ padding: 14, ...clayCard(card), ...(vinto ? { boxShadow: `${CLAY_OMBRA}, 0 0 0 1.5px #f1c40f` } : o.stato === 'attivo' ? { boxShadow: `${CLAY_OMBRA}, 0 0 0 1.5px ${accent}` } : {}) }}>
+              <div key={o.id} style={{ padding: '14px 20px', ...clayCard(card), ...(vinto ? { boxShadow: `${CLAY_OMBRA}, 0 0 0 1.5px #f1c40f` } : o.stato === 'attivo' ? { boxShadow: `${CLAY_OMBRA}, 0 0 0 1.5px ${accent}` } : {}) }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   {vinto
                     ? <Icon name="trophy" size={20} color="#f1c40f" />
-                    : <span style={{ fontSize: 18 }}>{iconaCat(o.categoria)}</span>}
+                    : <Icon name={iconaCat(o.categoria)} size={20} color={accent} />}
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontWeight: 600, color: vinto ? '#f1c40f' : testoP, fontSize: 14 }}>{o.titolo}</div>
                     {o.descrizione && <div style={{ fontSize: 12, color: muto, overflow: 'hidden', textOverflow: 'ellipsis' }}>{o.descrizione}</div>}
                   </div>
-                  <button onClick={() => setBozza({ ...o })} aria-label={tt('lifeGoalEdit', 'Modifica')} style={{ background: 'none', border: bordo, borderRadius: 8, padding: 7, cursor: 'pointer' }}><Icon name="settings" size={14} color={testoP} /></button>
-                  <button onClick={() => elimina(o.id)} aria-label={tt('lifeGoalDelete', 'Elimina')} style={{ background: 'none', border: bordo, borderRadius: 8, padding: 7, cursor: 'pointer' }}><Icon name="x" size={14} color="#f87171" /></button>
+                  <button onClick={() => setBozza({ ...o })} aria-label={L('lifeGoalEdit')} style={{ background: 'none', border: bordo, borderRadius: 8, padding: 7, minHeight: 44, cursor: 'pointer' }}><Icon name="settings" size={14} color={testoP} /></button>
+                  <button onClick={() => elimina(o.id)} aria-label={L('lifeGoalDelete')} style={{ background: 'none', border: bordo, borderRadius: 8, padding: 7, minHeight: 44, cursor: 'pointer' }}><Icon name="x" size={14} color="#f87171" /></button>
                 </div>
                 <div style={{ marginTop: 8, height: 6, borderRadius: 3, background: 'rgba(255,255,255,0.1)', overflow: 'hidden' }}>
                   <div style={{ width: `${o.progresso}%`, height: '100%', background: vinto ? '#f1c40f' : accent }} />
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4, fontSize: 11, color: vinto ? '#f1c40f' : muto }}>
-                  <span>{vinto ? tt('lifeGoalWon', 'Completato') : (STATO_ETI[o.stato] || o.stato)}</span><span>{o.progresso}%</span>
+                  <span>{vinto ? L('lifeGoalWon') : (STATO_ETI[o.stato] || o.stato)}</span><span>{o.progresso}%</span>
                 </div>
               </div>
               );
@@ -148,7 +159,7 @@ function GestioneObiettivi({ L, userToken, testoP, muto, accent, card, bordo }) 
           </div>}
 
       {attivi.length > 0 && <div style={{ fontSize: 11, color: muto, marginTop: 14, textAlign: 'center' }}>
-        {attivi.length} {attivi.length === 1 ? tt('lifeGoalActive1', 'obiettivo attivo') : tt('lifeGoalActiveN', 'obiettivi attivi')} · {tt('lifeGoalKnown', 'i Compagni li conoscono')}
+        {attivi.length} {attivi.length === 1 ? L('lifeGoalActive1') : L('lifeGoalActiveN')} · {L('lifeGoalKnown')}
       </div>}
     </div>
   );

@@ -37,15 +37,18 @@ function gruppoDi(scadenza) {
   return 'avanti';
 }
 
+// b.482 — i titoli dei gruppi erano scritti in italiano dentro il codice e
+// la loro tinta era un colore scritto a mano: ora la parola passa dal
+// pacchetto lingua (col testo di riserva) e il colore lo decide il tema.
 const GRUPPI = [
-  { id: 'ritardo', titolo: 'In ritardo', colore: '#f87171' },
-  { id: 'oggi', titolo: 'Oggi', colore: '#f59e0b' },
-  { id: 'settimana', titolo: 'Questa settimana', colore: null },
-  { id: 'avanti', titolo: 'Più avanti', colore: null },
-  { id: 'senza', titolo: 'Senza data', colore: null },
+  { id: 'ritardo', chiave: 'lifeHomeworkOverdue', titolo: 'In ritardo', tinta: 'errore' },
+  { id: 'oggi', chiave: 'lifeHomeworkToday', titolo: 'Oggi', tinta: 'attenzione' },
+  { id: 'settimana', chiave: 'lifeHomeworkWeek', titolo: 'Questa settimana', tinta: null },
+  { id: 'avanti', chiave: 'lifeHomeworkLater', titolo: 'Più avanti', tinta: null },
+  { id: 'senza', chiave: 'lifeHomeworkNoDate', titolo: 'Senza data', tinta: null },
 ];
 
-function CompitiView({ L, userToken, lingua, cambiaScheda, testoP, muto, accent, card, bordo }) {
+function CompitiView({ L, C, userToken, lingua, cambiaScheda, testoP, muto, accent, card, bordo }) {
   const [vista, setVista] = useState('agenda'); // agenda | materiali
   const [jobs, setJobs] = useState(null);
   // b.333 — MATERIALI: appunti incollati (gratis) o fotografati (AI, wallet).
@@ -62,6 +65,11 @@ function CompitiView({ L, userToken, lingua, cambiaScheda, testoP, muto, accent,
   const [bozza, setBozza] = useState({ titolo: '', materia: '', scadenza: '', note: '' });
   const [salvando, setSalvando] = useState(false);
   const tt = conRipiego(L); // b.362 — unica definizione, in lib/ripiego.js
+  // b.482 — i colori non si scrivono piu a mano qui: vengono dalla
+  // tavolozza del tema, cosi cambiano insieme a lui.
+  const rosso = C?.statusError || '#f87171';
+  const ambra = C?.statusWarning || '#f59e0b';
+  const accento2 = C?.accent2 || '#06b6d4';
 
   const ricarica = useCallback(() => {
     if (!userToken) { setJobs([]); return; }
@@ -276,12 +284,12 @@ function CompitiView({ L, userToken, lingua, cambiaScheda, testoP, muto, accent,
         </div>
         {jobs.length - fatti > 0 && (
           <button onClick={studiaColCoach} title={tt('lifeCoachHint', 'Porta l’agenda dal tuo Compagno')}
-            style={{ padding: '9px 12px', borderRadius: 12, border: `1px solid ${accent}`, background: 'transparent', color: accent, fontWeight: 600, cursor: 'pointer', fontFamily: FONT, fontSize: 13 }}>
+            style={{ minHeight: 44, padding: '9px 12px', borderRadius: 12, border: `1px solid ${accent}`, background: 'transparent', color: accent, fontWeight: 600, cursor: 'pointer', fontFamily: FONT, fontSize: 13 }}>
             {tt('lifeCoachBtn', 'Coach')}
           </button>
         )}
         <button onClick={() => { vibrate(8); setAggiungo((v) => !v); }}
-          style={{ padding: '9px 14px', borderRadius: 12, border: 'none', background: accent, color: '#04121c', fontWeight: 600, cursor: 'pointer', fontFamily: FONT, fontSize: 13 }}>
+          style={{ minHeight: 44, padding: '9px 14px', borderRadius: 12, border: 'none', background: accent, color: '#04121c', fontWeight: 600, cursor: 'pointer', fontFamily: FONT, fontSize: 13 }}>
           {aggiungo ? tt('lifeCancel', 'Annulla') : `+ ${tt('lifeHomeworkAdd', 'Compito')}`}
         </button>
       </div>
@@ -290,7 +298,7 @@ function CompitiView({ L, userToken, lingua, cambiaScheda, testoP, muto, accent,
       <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
         {[{ id: 'agenda', et: tt('lifeHomeworkAgenda', 'Agenda') }, { id: 'materiali', et: tt('lifeHomeworkMaterials', 'Materiali') }].map((t) => (
           <button key={t.id} onClick={() => setVista(t.id)}
-            style={{ flex: 1, padding: '9px 8px', borderRadius: 12, cursor: 'pointer', fontFamily: FONT, fontSize: 13, fontWeight: 600,
+            style={{ flex: 1, minHeight: 44, padding: '9px 8px', borderRadius: 12, cursor: 'pointer', fontFamily: FONT, fontSize: 13, fontWeight: 600,
               background: vista === t.id ? `${accent}22` : card, color: vista === t.id ? accent : muto,
               border: vista === t.id ? `1px solid ${accent}` : bordo }}>{t.et}</button>
         ))}
@@ -311,13 +319,13 @@ function CompitiView({ L, userToken, lingua, cambiaScheda, testoP, muto, accent,
           <textarea value={bozza.note} onChange={(e) => setBozza((b) => ({ ...b, note: e.target.value }))} rows={2}
             placeholder={tt('lifeHomeworkNotes', 'Note (pagine, esercizi, cosa portare)…')} style={{ ...input, resize: 'vertical', marginBottom: 8 }} />
           <button onClick={salva} disabled={salvando || !bozza.titolo.trim()}
-            style={{ width: '100%', padding: 12, borderRadius: 12, border: 'none', background: accent, color: '#04121c', fontWeight: 600, cursor: 'pointer', fontFamily: FONT, opacity: (salvando || !bozza.titolo.trim()) ? 0.6 : 1 }}>
+            style={{ width: '100%', minHeight: 44, padding: 12, borderRadius: 12, border: 'none', background: accent, color: '#04121c', fontWeight: 600, cursor: 'pointer', fontFamily: FONT, opacity: (salvando || !bozza.titolo.trim()) ? 0.6 : 1 }}>
             {salvando ? '…' : tt('lifeSave', 'Salva')}
           </button>
         </div>
       )}
 
-      {errore && <div style={{ color: '#f87171', fontSize: 13, marginBottom: 10 }}>{errore}</div>}
+      {errore && <div style={{ color: rosso, fontSize: 13, marginBottom: 10 }}>{errore}</div>}
 
       {jobs.length === 0 && !aggiungo && (
         <div style={{ fontSize: 13, color: muto, textAlign: 'center', padding: '24px 10px', lineHeight: 1.6 }}>
@@ -330,19 +338,23 @@ function CompitiView({ L, userToken, lingua, cambiaScheda, testoP, muto, accent,
         if (!lista.length) return null;
         return (
           <div key={g.id} style={{ marginBottom: 14 }}>
-            <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: 0.5, color: g.colore || muto, marginBottom: 6 }}>{g.titolo.toUpperCase()}</div>
+            <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: 0.5, color: g.tinta === 'errore' ? rosso : g.tinta === 'attenzione' ? ambra : muto, marginBottom: 6 }}>{tt(g.chiave, g.titolo).toUpperCase()}</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {lista.map((j) => {
                 const fatto = j.stato === 'fatto';
                 return (
                   <div key={j.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: 12, ...clayCard(card), opacity: fatto ? 0.6 : 1 }}>
                     {/* lo stato avanza a un tocco: da fare -> in corso -> fatto */}
+                    {/* b.482 — la casella era 26: sotto i quarantaquattro il dito la
+                        manca. E quando il compito e IN CORSO ora si vede, invece di
+                        restare una casella vuota che non dice niente. */}
                     <button onClick={() => avanzaStato(j)} aria-label={j.stato}
-                      style={{ width: 26, height: 26, borderRadius: 8, cursor: 'pointer', flexShrink: 0,
-                        border: `2px solid ${fatto ? accent : j.stato === 'in_corso' ? '#f59e0b' : 'rgba(255,255,255,0.25)'}`,
+                      style={{ width: 44, height: 44, borderRadius: 8, cursor: 'pointer', flexShrink: 0,
+                        border: `2px solid ${fatto ? accent : j.stato === 'in_corso' ? ambra : 'rgba(255,255,255,0.25)'}`,
                         background: fatto ? accent : j.stato === 'in_corso' ? 'rgba(245,158,11,0.18)' : 'transparent',
                         display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       {fatto && <Icon name="check" size={13} color="#04121c" />}
+                      {!fatto && j.stato === 'in_corso' && <Icon name="play" size={13} color={ambra} />}
                     </button>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontWeight: 600, color: testoP, fontSize: 14, textDecoration: fatto ? 'line-through' : 'none' }}>{j.titolo}</div>
@@ -352,8 +364,8 @@ function CompitiView({ L, userToken, lingua, cambiaScheda, testoP, muto, accent,
                       {j.note && <div style={{ fontSize: 11, color: muto, marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{j.note}</div>}
                     </div>
                     <button onClick={() => elimina(j.id)} aria-label={tt('lifeDelete', 'Elimina')}
-                      style={{ background: 'none', border: bordo, borderRadius: 8, padding: 7, cursor: 'pointer' }}>
-                      <Icon name="x" size={13} color="#f87171" />
+                      style={{ minWidth: 44, minHeight: 44, background: 'none', border: bordo, borderRadius: 8, padding: 7, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <Icon name="x" size={13} color={rosso} />
                     </button>
                   </div>
                 );
@@ -369,7 +381,7 @@ function CompitiView({ L, userToken, lingua, cambiaScheda, testoP, muto, accent,
           {/* nuovo materiale: INCOLLA (gratis) o FOTO -> AI (wallet) */}
           {!matBozza && !matAperto && (
             <button onClick={() => setMatBozza({ titolo: '', materia: '', testo: '' })}
-              style={{ width: '100%', padding: 13, borderRadius: 14, border: bordo, cursor: 'pointer', background: 'transparent', color: testoP, fontWeight: 600, fontSize: 14, fontFamily: FONT, marginBottom: 12 }}>
+              style={{ width: '100%', minHeight: 44, padding: 13, borderRadius: 14, border: bordo, cursor: 'pointer', background: 'transparent', color: testoP, fontWeight: 600, fontSize: 14, fontFamily: FONT, marginBottom: 12 }}>
               + {tt('lifeMatAdd', 'Aggiungi materiale (appunti, pagine, dispense)')}
             </button>
           )}
@@ -387,24 +399,27 @@ function CompitiView({ L, userToken, lingua, cambiaScheda, testoP, muto, accent,
                   Remoto col QR che collega il telefono, File; multiscansione,
                   scheda dei campi in tempo reale. I dati poi si incollano o
                   esportano qui, e in seguito verranno agganciati in automatico. */}
+              {/* b.482 — questa riga era scritta in italiano dentro il codice:
+                  chi usa l'app in un'altra lingua leggeva comunque l'italiano.
+                  E il secondo colore del gradiente ora viene dal tema. */}
               <button onClick={() => apriScanner({ doc: true, dest: 'materiali' })}
-                style={{ width: '100%', padding: 16, borderRadius: 14, border: 'none', cursor: 'pointer', fontFamily: FONT,
-                  background: `linear-gradient(135deg, ${accent}, #06b6d4)`, color: '#04121c', fontWeight: 600, fontSize: 15 }}>
-                Apri lo Scanner (camera, telefono remoto, file)
+                style={{ width: '100%', minHeight: 44, padding: 16, borderRadius: 14, border: 'none', cursor: 'pointer', fontFamily: FONT,
+                  background: `linear-gradient(135deg, ${accent}, ${accento2})`, color: '#04121c', fontWeight: 600, fontSize: 15 }}>
+                {tt('lifeMatScanner', 'Apri lo Scanner (camera, telefono remoto, file)')}
               </button>
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 8 }}>
                 {/* b.334 — PDF: testo estratto LATO SERVER, gratis (fino a 30 pagine). */}
-                <label style={{ flex: 1, minWidth: 130, padding: 11, borderRadius: 12, border: bordo, background: 'transparent', color: testoP, fontWeight: 600, fontSize: 13, cursor: 'pointer', fontFamily: FONT, textAlign: 'center', opacity: ocrLavoro ? 0.6 : 1 }}>
+                <label style={{ flex: 1, minWidth: 130, minHeight: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 11, borderRadius: 12, border: bordo, background: 'transparent', color: testoP, fontWeight: 600, fontSize: 13, cursor: 'pointer', fontFamily: FONT, textAlign: 'center', opacity: ocrLavoro ? 0.6 : 1 }}>
                   {ocrLavoro ? tt('lifeMatReading', 'Leggo la pagina…') : tt('lifeMatPdf', 'Carica PDF (gratis)')}
                   <input type="file" accept="application/pdf" style={{ display: 'none' }}
                     onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) caricaPdf(f); }} />
                 </label>
                 <button onClick={salvaMat} disabled={!matBozza.testo.trim()}
-                  style={{ flex: 1, minWidth: 120, padding: 11, borderRadius: 12, border: 'none', background: accent, color: '#04121c', fontWeight: 600, cursor: 'pointer', fontFamily: FONT, opacity: matBozza.testo.trim() ? 1 : 0.5 }}>
+                  style={{ flex: 1, minWidth: 120, minHeight: 44, padding: 11, borderRadius: 12, border: 'none', background: accent, color: '#04121c', fontWeight: 600, cursor: 'pointer', fontFamily: FONT, opacity: matBozza.testo.trim() ? 1 : 0.5 }}>
                   {tt('lifeSave', 'Salva')}
                 </button>
                 <button onClick={() => setMatBozza(null)}
-                  style={{ padding: 11, borderRadius: 12, border: bordo, background: 'transparent', color: muto, fontWeight: 600, cursor: 'pointer', fontFamily: FONT }}>
+                  style={{ minHeight: 44, padding: 11, borderRadius: 12, border: bordo, background: 'transparent', color: muto, fontWeight: 600, cursor: 'pointer', fontFamily: FONT }}>
                   {tt('lifeCancel', 'Annulla')}
                 </button>
               </div>
@@ -414,7 +429,7 @@ function CompitiView({ L, userToken, lingua, cambiaScheda, testoP, muto, accent,
           {/* elenco materiali */}
           {!matAperto && (materiali || []).map((m) => (
             <button key={m.id} onClick={() => apriMat(m.id)}
-              style={{ width: '100%', textAlign: 'left', padding: 13, ...clayCard(card), cursor: 'pointer', fontFamily: FONT, color: testoP, marginBottom: 8 }}>
+              style={{ width: '100%', minHeight: 44, textAlign: 'left', padding: 13, ...clayCard(card), cursor: 'pointer', fontFamily: FONT, color: testoP, marginBottom: 8 }}>
               <div style={{ fontWeight: 600 }}>{m.titolo}</div>
               <div style={{ fontSize: 11, color: muto }}>{[m.materia, m.origine].filter(Boolean).join(' · ')}</div>
             </button>
@@ -429,7 +444,7 @@ function CompitiView({ L, userToken, lingua, cambiaScheda, testoP, muto, accent,
           {matAperto && (
             <div>
               <button onClick={() => { setMatAperto(null); setLezioneMat(null); setQuizMat(null); }}
-                style={{ background: card, border: bordo, borderRadius: 10, padding: '8px 12px', cursor: 'pointer', color: testoP, fontFamily: FONT, marginBottom: 10 }}>
+                style={{ minHeight: 44, background: card, border: bordo, borderRadius: 10, padding: '8px 12px', cursor: 'pointer', color: testoP, fontFamily: FONT, marginBottom: 10 }}>
                 <Icon name="back" size={13} color={testoP} /> {tt('lifeHomeworkMaterials', 'Materiali')}
               </button>
               <div style={{ fontWeight: 600, color: testoP, fontSize: 15, marginBottom: 8 }}>{matAperto.titolo}</div>
@@ -438,11 +453,11 @@ function CompitiView({ L, userToken, lingua, cambiaScheda, testoP, muto, accent,
               </div>
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
                 <button onClick={creaLezioneDaMat} disabled={!!lavoroMat}
-                  style={{ flex: 1, minWidth: 140, padding: 12, borderRadius: 12, border: 'none', background: accent, color: '#04121c', fontWeight: 600, cursor: 'pointer', fontFamily: FONT, opacity: lavoroMat ? 0.6 : 1 }}>
+                  style={{ flex: 1, minWidth: 140, minHeight: 44, padding: 12, borderRadius: 12, border: 'none', background: accent, color: '#04121c', fontWeight: 600, cursor: 'pointer', fontFamily: FONT, opacity: lavoroMat ? 0.6 : 1 }}>
                   {lavoroMat === 'lezione' ? tt('lifeGenerating', 'Un momento…') : tt('lifeMatLesson', 'Crea la lezione')}
                 </button>
                 <button onClick={creaQuizDaMat} disabled={!!lavoroMat}
-                  style={{ flex: 1, minWidth: 140, padding: 12, borderRadius: 12, border: `1px solid ${accent}`, background: 'transparent', color: accent, fontWeight: 600, cursor: 'pointer', fontFamily: FONT, opacity: lavoroMat ? 0.6 : 1 }}>
+                  style={{ flex: 1, minWidth: 140, minHeight: 44, padding: 12, borderRadius: 12, border: `1px solid ${accent}`, background: 'transparent', color: accent, fontWeight: 600, cursor: 'pointer', fontFamily: FONT, opacity: lavoroMat ? 0.6 : 1 }}>
                   {lavoroMat === 'quiz' ? tt('lifeGenerating', 'Un momento…') : tt('lifeMatQuiz', 'Test su misura')}
                 </button>
               </div>
@@ -467,7 +482,7 @@ function CompitiView({ L, userToken, lingua, cambiaScheda, testoP, muto, accent,
                             const mia = scelta === j;
                             return (
                               <button key={j} onClick={() => { if (!data) setRisposteMat((r) => ({ ...r, [i]: j })); }}
-                                style={{ textAlign: 'left', padding: '9px 11px', borderRadius: 10, cursor: data ? 'default' : 'pointer', fontFamily: FONT, fontSize: 13,
+                                style={{ textAlign: 'left', minHeight: 44, padding: '9px 11px', borderRadius: 10, cursor: data ? 'default' : 'pointer', fontFamily: FONT, fontSize: 13,
                                   background: data ? (giusta ? 'rgba(52,211,153,0.14)' : mia ? 'rgba(248,113,113,0.12)' : 'transparent') : 'rgba(255,255,255,0.04)',
                                   border: data && giusta ? '1px solid rgba(52,211,153,0.5)' : data && mia ? '1px solid rgba(248,113,113,0.5)' : bordo,
                                   color: testoP }}>

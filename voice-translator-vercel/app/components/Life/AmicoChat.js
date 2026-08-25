@@ -16,6 +16,12 @@ import CompagnoLive from './CompagnoLive.js';
 // cosa era gia scritta a mano in tre punti diversi e ognuno si portava
 // dietro i suoi difetti.
 import { ascolta as ascoltaVoce, dettaturaDisponibile } from '../../lib/dettatura.js';
+// b.482 — IL MICROFONO E' QUELLO DI CASA. Qui era disegnato a mano (un
+// quadrato con un rosso scritto dentro il file) mentre in Home, in «Parla
+// ora» e nella stanza e' sempre lo stesso cerchio con l'alone. Chi impara
+// un microfono deve riconoscerlo ovunque: la veste arriva da un posto
+// solo, il comportamento al tocco non cambia di una virgola.
+import { vesteMicrofono } from '../ui/Microfono.js';
 
 // b.231 — la storia della chat ora PERSISTE per Compagno (prima viveva solo
 // in memoria e spariva a ogni ricarica o cambio Compagno). Sta sul dispositivo.
@@ -38,8 +44,8 @@ function salvaChat(id, messaggi) {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// AmicoChat — parla con un Compagno. Se ha la memoria accesa (🧠) ti
-// ricorda nel tempo. Chat semplice + voce opzionale. (Luca)
+// AmicoChat — parla con un Compagno. Se ha la memoria accesa (il segno
+// del tempo accanto al nome) ti ricorda. Chat semplice + voce. (Luca)
 // ═══════════════════════════════════════════════════════════════
 
 function AmicoChat({ compagni, L, lingua, userToken, testoP, muto, accent, card, bordo }) {
@@ -168,7 +174,7 @@ function AmicoChat({ compagni, L, lingua, userToken, testoP, muto, accent, card,
       // b.363 — anche questa voce passa dal telecomando di Life: prima
       // suonava fuori da ogni comando e i tasti Pausa/Stop non la vedevano.
       // b.405 — registra `parlaTurno`: qui basta dire chi sta parlando.
-      if (d.voceId) parlaTurno({ voceId: d.voceId, testo: d.risposta, lingua: scelto.lingua || lingua, userToken, modoVoce: d.modoVoce, chi: scelto?.nome || 'Amico' });
+      if (d.voceId) parlaTurno({ voceId: d.voceId, testo: d.risposta, lingua: scelto.lingua || lingua, userToken, modoVoce: d.modoVoce, chi: scelto?.nome || L('lifeFriendTab') });
     } catch (e) {
       // b.363 — prima questo guasto non lasciava traccia da nessuna parte: nel
       // registro non compariva nulla, e il motivo vero (rete caduta, attesa
@@ -188,32 +194,48 @@ function AmicoChat({ compagni, L, lingua, userToken, testoP, muto, accent, card,
     if (!m || sentendo >= 0) return;
     setSentendo(i);
     try {
-      await parlaTurno({ voceId: m.voceId || null, testo: m.testo, lingua: scelto?.lingua || lingua, userToken, modoVoce: m.modoVoce || null, chi: scelto?.nome || 'Amico' });
+      await parlaTurno({ voceId: m.voceId || null, testo: m.testo, lingua: scelto?.lingua || lingua, userToken, modoVoce: m.modoVoce || null, chi: scelto?.nome || L('lifeFriendTab') });
     } catch { /* la voce e un di piu: il testo resta leggibile */ }
     finally { setSentendo(-1); }
-  }, [messaggi, sentendo, scelto, lingua, userToken]);
+  }, [messaggi, sentendo, scelto, lingua, userToken, L]);
 
   // ── Scelta del Compagno ──
   if (!scelto) {
     return (
       <div>
         <div style={{ fontSize: 12, color: muto, marginBottom: 8 }}>{L('lifePickFriend')}</div>
+        {/* b.482 — i fianchi delle righe vanno a 20 come tutto il resto;
+            il segno della memoria e la freccetta di fine riga erano due
+            caratteri scritti a mano (un'emoji e un apice), che cambiano
+            forma da un telefono all'altro: ora sono icone del sistema. */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {compagni.map((c) => (
             <button key={c.id} onClick={() => { vibrate(8); setScelto(c); setMessaggi(caricaChat(c.id)); }}
-              style={{ display: 'flex', alignItems: 'center', gap: 10, padding: 10, borderRadius: 12, background: card, border: bordo, cursor: 'pointer', textAlign: 'left', fontFamily: FONT }}>
+              style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 20px', borderRadius: 12, background: card, border: bordo, cursor: 'pointer', textAlign: 'left', fontFamily: FONT }}>
               <img src={c.avatar} alt="" width={42} height={42} style={{ borderRadius: 10, display: 'block', flexShrink: 0, objectFit: 'cover' }} />
               <span style={{ flex: 1, minWidth: 0 }}>
-                <span style={{ display: 'block', fontWeight: 600, color: testoP, fontSize: 14 }}>{c.nome} {c.memoria ? '🧠' : ''}</span>
+                <span style={{ display: 'block', fontWeight: 600, color: testoP, fontSize: 14 }}>
+                  {c.nome}
+                  {c.memoria && (
+                    <span title={L('lifeMemoryOn')} style={{ display: 'inline-flex', verticalAlign: 'middle', marginLeft: 6 }}>
+                      <Icon name="history" size={13} color={muto} />
+                    </span>
+                  )}
+                </span>
                 <span style={{ display: 'block', fontSize: 11, color: muto }}>{c.ruolo}</span>
               </span>
-              <span style={{ color: muto }}>›</span>
+              <Icon name="chevRight" size={16} color={muto} />
             </button>
           ))}
         </div>
       </div>
     );
   }
+
+  // b.482 — la veste del microfono arriva dal file comune: qui si dice
+  // solo quanto grande (54, la misura della riga in basso) e se sta
+  // registrando. Colori del tema, non scritti a mano in questa pagina.
+  const mic = vesteMicrofono({ misura: 54, acceso: detto, C: { accent1: accent, textPrimary: testoP } });
 
   // ── Conversazione ──
   // b.394 — vh non e dvh: su Safari iPhone vh conta lo schermo con le
@@ -223,23 +245,37 @@ function AmicoChat({ compagni, L, lingua, userToken, testoP, muto, accent, card,
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '70dvh' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingBottom: 10, borderBottom: bordo, marginBottom: 10 }}>
-        <button onClick={() => setScelto(null)} aria-label={L('lifeBack')} style={{ background: card, border: bordo, borderRadius: 10, padding: 7, cursor: 'pointer' }}>
+        {/* b.482 — il tasto per tornare indietro e' il piu premuto che ci
+            sia e stava dentro trenta punti scarsi: portato ai 44 di casa,
+            con l'icona della stessa misura di prima. */}
+        <button onClick={() => setScelto(null)} aria-label={L('lifeBack')}
+          style={{ background: card, border: bordo, borderRadius: 10, padding: 7, cursor: 'pointer',
+            width: 44, height: 44, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <Icon name="back" size={16} color={testoP} />
         </button>
         <img src={scelto.avatar} alt={scelto.nome} width={32} height={32} style={{ borderRadius: 8, display: 'block', objectFit: 'cover' }} />
-        <span style={{ fontWeight: 600, color: testoP, flex: 1 }}>{scelto.nome} {scelto.memoria ? '🧠' : ''}</span>
+        <span style={{ fontWeight: 600, color: testoP, flex: 1 }}>
+          {scelto.nome}
+          {scelto.memoria && (
+            <span title={L('lifeMemoryOn')} style={{ display: 'inline-flex', verticalAlign: 'middle', marginLeft: 6 }}>
+              <Icon name="history" size={13} color={muto} />
+            </span>
+          )}
+        </span>
         {scelto.lingua && scelto.lingua !== lingua && (
-          <button onClick={valutaAssi} disabled={assiLavoro} title="Valuta i tuoi ultimi messaggi su 5 assi"
-            style={{ padding: '8px 10px', borderRadius: 12, cursor: 'pointer', fontFamily: FONT, fontSize: 12, fontWeight: 600,
+          <button onClick={valutaAssi} disabled={assiLavoro} title={L('lifeAxesTip')}
+            style={{ padding: '8px 10px', minHeight: 44, borderRadius: 12, cursor: 'pointer', fontFamily: FONT, fontSize: 12, fontWeight: 600,
               border: `1px solid ${accent}`, background: 'transparent', color: accent, opacity: assiLavoro ? 0.6 : 1 }}>
-            {assiLavoro ? '…' : '5 assi'}
+            {assiLavoro ? '…' : L('lifeAxesBtn')}
           </button>
         )}
         {/* b.316 — parla DAL VIVO col Compagno: voce in tempo reale. */}
+        {/* b.482 — toccato solo l'aspetto (misura del bersaglio e parole dal
+            pacchetto lingua): cosa fa il tasto resta esattamente com'era. */}
         <button onClick={() => { vibrate(8); setDalVivo((v) => !v); }} aria-pressed={dalVivo}
-          style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 12px', borderRadius: 12, cursor: 'pointer', fontFamily: FONT, fontSize: 13, fontWeight: 600,
+          style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 12px', minHeight: 44, borderRadius: 12, cursor: 'pointer', fontFamily: FONT, fontSize: 13, fontWeight: 600,
             background: dalVivo ? `${accent}22` : accent, color: dalVivo ? accent : '#04121c', border: dalVivo ? `1px solid ${accent}` : 'none' }}>
-          <Icon name="mic" size={14} color={dalVivo ? accent : '#04121c'} /> {dalVivo ? 'Chiudi' : 'Dal vivo'}
+          <Icon name="mic" size={14} color={dalVivo ? accent : '#04121c'} /> {dalVivo ? L('closeWord') : L('lifeLiveBtn')}
         </button>
       </div>
 
@@ -258,19 +294,27 @@ function AmicoChat({ compagni, L, lingua, userToken, testoP, muto, accent, card,
           {...{ testoP, muto, accent, card, bordo }} />
       )}
 
+      {/* b.482 — i fianchi a 20; il tasto per chiudere era la crocetta
+          scritta a mano, senza nemmeno un nome per chi non vede: ora e'
+          l'icona del sistema, con il suo bersaglio da 44. E i nomi dei
+          cinque assi arrivano dal pacchetto lingua, non dal codice. */}
       {assi && (
-        <div style={{ padding: 12, borderRadius: 12, background: card, border: `1px solid ${accent}44`, marginBottom: 10 }}>
+        <div style={{ padding: '12px 20px', borderRadius: 12, background: card, border: `1px solid ${accent}44`, marginBottom: 10 }}>
           <div style={{ display: 'flex', alignItems: 'center', marginBottom: 8 }}>
-            <span style={{ flex: 1, fontSize: 12, fontWeight: 600, color: testoP }}>I tuoi 5 assi (mai un numero solo)</span>
-            <button onClick={() => setAssi(null)} style={{ background: 'none', border: 'none', color: muto, cursor: 'pointer', fontSize: 16 }}>✕</button>
+            <span style={{ flex: 1, fontSize: 12, fontWeight: 600, color: testoP }}>{L('lifeAxesTitle')}</span>
+            <button onClick={() => setAssi(null)} aria-label={L('closeWord')} title={L('closeWord')}
+              style={{ background: 'none', border: 'none', color: muto, cursor: 'pointer',
+                width: 44, height: 44, flexShrink: 0, padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Icon name="x" size={16} color={muto} />
+            </button>
           </div>
-          {[['comprensibilita', 'Comprensibilità'], ['grammatica', 'Grammatica'], ['vocabolario', 'Vocabolario'], ['fluidita', 'Fluidità'], ['contenuto', 'Contenuto']].map(([k, et]) => {
+          {[['comprensibilita', L('lifeAxisClarity')], ['grammatica', L('lifeAxisGrammar')], ['vocabolario', L('lifeAxisVocabulary')], ['fluidita', L('lifeAxisFluency')], ['contenuto', L('lifeAxisContent')]].map(([k, et]) => {
             const a = assi[k] || { voto: 0, consiglio: '' };
             const col = a.voto >= 70 ? accent : a.voto >= 45 ? '#f59e0b' : '#f87171';
             return (
               <div key={k} style={{ marginBottom: 7 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: testoP }}>
-                  <b>{et}</b><b style={{ color: col }}>{a.voto}</b>
+                  <span style={{ fontWeight: 600 }}>{et}</span><span style={{ fontWeight: 600, color: col }}>{a.voto}</span>
                 </div>
                 <div style={{ height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.08)', overflow: 'hidden', margin: '3px 0' }}>
                   <div style={{ width: `${a.voto}%`, height: '100%', background: col }} />
@@ -279,7 +323,7 @@ function AmicoChat({ compagni, L, lingua, userToken, testoP, muto, accent, card,
               </div>
             );
           })}
-          <div style={{ fontSize: 10, color: muto, marginTop: 4 }}>La pronuncia si valuta a voce (lezioni e lettura guidata), non da qui.</div>
+          <div style={{ fontSize: 10, color: muto, marginTop: 4 }}>{L('lifeAxesPronNote')}</div>
         </div>
       )}
 
@@ -299,8 +343,11 @@ function AmicoChat({ compagni, L, lingua, userToken, testoP, muto, accent, card,
             )}
             {m.testo}
             {m.ruolo === 'compagno' && (
+              // b.482 — l'altoparlante per riascoltare era alto quanto la
+              // sua icona: il dito lo mancava. Ora tiene i 44 minimi senza
+              // che l'icona cambi misura.
               <button onClick={() => riascolta(i)} disabled={sentendo >= 0} aria-label={L('listenWord')} title={L('listenWord')}
-                style={{ display: 'inline-flex', verticalAlign: 'middle', marginLeft: 8, padding: 2, border: 'none',
+                style={{ display: 'inline-flex', alignItems: 'center', verticalAlign: 'middle', marginLeft: 8, padding: 2, minHeight: 44, border: 'none',
                   background: 'transparent', cursor: 'pointer', opacity: sentendo === i ? 1 : 0.55 }}>
                 <Icon name="speaker" size={14} color={sentendo === i ? accent : testoP} />
               </button>
@@ -322,15 +369,12 @@ function AmicoChat({ compagni, L, lingua, userToken, testoP, muto, accent, card,
         <input value={testo} onChange={(e) => setTesto(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') invia(); }}
           aria-label={L('lifeChatPh')} placeholder={L('lifeChatPh')}
           style={{ flex: 1, minWidth: 0, height: 54, padding: '0 14px', borderRadius: 16,
-            border: detto ? '2px solid #ff5470' : bordo, background: card, color: testoP,
+            border: detto ? `2px solid ${mic.accento}` : bordo, background: card, color: testoP,
             fontSize: 16, fontFamily: FONT, outline: 'none' }} />
         {dettaturaDisponibile() && (
           <button onClick={detta} aria-pressed={detto} aria-label={L('dictateWord')} title={L('dictateWord')}
-            style={{ width: 54, height: 54, borderRadius: 16, flexShrink: 0, padding: 0, cursor: 'pointer',
-              border: detto ? '2px solid #ff5470' : `1px solid ${accent}55`,
-              background: detto ? 'rgba(255,84,112,0.16)' : `${accent}22`,
-              display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Icon name="mic" size={22} color={detto ? '#ff5470' : accent} />
+            style={{ ...mic.cerchio, flexShrink: 0 }}>
+            <Icon name="mic" size={mic.icona} color={mic.coloreIcona} />
           </button>
         )}
         <button onClick={invia} disabled={attende || !testo.trim()} aria-label={L('send')}

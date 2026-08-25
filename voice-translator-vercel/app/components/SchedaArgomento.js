@@ -123,12 +123,17 @@ function SchedaArgomento({ aperta, tipo, dati, C, onClose, onParlane }) {
         paddingBottom: 'calc(76px + env(safe-area-inset-bottom))',
       }}>
         {/* ─── Testata della scheda ─── */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 14px 0' }}>
+        {/* b.482 — RIENTRO DI VENTI come dice il template: la testata, la
+            miniatura e il corpo stavano a quattordici e a sedici, cioe due
+            rientri diversi incolonnati nella stessa scheda. */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 20px 0' }}>
           <span style={{ flex: 1, fontSize: 12, fontWeight: 600, color: C.textMuted }}>
             {fontePrima}
           </span>
+          {/* b.482 — il tasto chiudi era trentadue: sotto la soglia del
+              dito. Cresce il bersaglio, l'icona dentro resta com'era. */}
           <button onClick={onClose} aria-label={L('goBack')} style={{
-            width: 32, height: 32, borderRadius: 10, cursor: 'pointer',
+            width: 44, height: 44, borderRadius: 10, cursor: 'pointer',
             background: C.card, border: bordo, color: C.textMuted,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
@@ -138,7 +143,7 @@ function SchedaArgomento({ aperta, tipo, dati, C, onClose, onParlane }) {
 
         {/* ─── VIDEO: il player ufficiale ─── */}
         {tipo === 'video' && (
-          <div style={{ padding: '10px 14px 0' }}>
+          <div style={{ padding: '10px 20px 0' }}>
             <div style={{ position: 'relative', aspectRatio: '16/9', borderRadius: 14, overflow: 'hidden', background: '#000' }}>
               <iframe
                 src={`https://www.youtube-nocookie.com/embed/${dati.id}`}
@@ -152,7 +157,7 @@ function SchedaArgomento({ aperta, tipo, dati, C, onClose, onParlane }) {
 
         {/* ─── ARTICOLO: la miniatura ─── */}
         {tipo === 'articolo' && dati.immagine && (
-          <div style={{ padding: '10px 14px 0' }}>
+          <div style={{ padding: '10px 20px 0' }}>
             <div style={{ position: 'relative', aspectRatio: '16/9', borderRadius: 14, overflow: 'hidden', background: `linear-gradient(135deg, ${C.accent}14, ${C.purple}18)` }}>
               {/* eslint-disable-next-line @next/next/no-img-element -- dominio esterno ignoto */}
               <AnteprimaCoperta src={dati.immagine} L={L}
@@ -163,7 +168,7 @@ function SchedaArgomento({ aperta, tipo, dati, C, onClose, onParlane }) {
           </div>
         )}
 
-        <div style={{ padding: '12px 16px 16px' }}>
+        <div style={{ padding: '12px 20px 16px' }}>
           <h2 style={{ margin: 0, fontSize: 17, fontWeight: 600, lineHeight: 1.3, color: C.textPrimary, letterSpacing: -0.3 }}>
             {dati.titolo}
           </h2>
@@ -175,7 +180,7 @@ function SchedaArgomento({ aperta, tipo, dati, C, onClose, onParlane }) {
 
           {/* ─── La Sintesi di BarTalk (solo articoli) ─── */}
           {tipo === 'articolo' && (
-            <div style={{ marginTop: 14, padding: '12px 14px', borderRadius: 14, background: C.card, border: bordo }}>
+            <div style={{ marginTop: 14, padding: '12px 20px', borderRadius: 14, background: C.card, border: bordo }}>
               <div style={{ fontSize: 10.5, fontWeight: 600, letterSpacing: 1.2, color: C.accent, marginBottom: 6 }}>
                 {L('schedaSintesi')}
               </div>
@@ -183,8 +188,10 @@ function SchedaArgomento({ aperta, tipo, dati, C, onClose, onParlane }) {
                 <p style={{ margin: 0, fontSize: 13.5, lineHeight: 1.6, color: C.textPrimary }}>{sintesiAI}</p>
               ) : (
                 <>
+                  {/* b.482 — il tasto della sintesi era alto trentatre:
+                      il dito lo prende solo da quarantaquattro in su. */}
                   <button onClick={genera} disabled={generando} style={{
-                    padding: '9px 16px', borderRadius: 11, cursor: 'pointer',
+                    padding: '9px 16px', borderRadius: 11, minHeight: 44, cursor: 'pointer',
                     background: `linear-gradient(135deg, ${C.accent}, ${C.purple})`,
                     border: 'none', color: '#fff', fontSize: 12.5, fontWeight: 600,
                     fontFamily: FONT, opacity: generando ? 0.6 : 1,
@@ -205,7 +212,7 @@ function SchedaArgomento({ aperta, tipo, dati, C, onClose, onParlane }) {
           {/* ─── Il breve estratto, virgolettato e attribuito ─── */}
           {tipo === 'articolo' && dati.sintesi && (
             <blockquote style={{
-              margin: '12px 0 0', padding: '2px 0 2px 12px',
+              margin: '12px 0 0', padding: '2px 0 2px 20px',
               borderLeft: `3px solid ${C.accent}50`,
               fontSize: 12.5, lineHeight: 1.55, color: C.textSecondary, fontStyle: 'italic',
             }}>
@@ -219,10 +226,15 @@ function SchedaArgomento({ aperta, tipo, dati, C, onClose, onParlane }) {
               APPICCICATA in fondo alla scheda (sticky): sempre visibile,
               qualunque sia la lunghezza del corpo. */}
           <div style={{ display: 'flex', gap: 8, marginTop: 16, position: 'sticky', bottom: 0, padding: '10px 0 4px', background: C.bg || '#070a14' }}>
+            {/* b.482 — le due azioni in fondo erano alte trentanove: la
+                fila che porta alla fonte e quella che apre la
+                conversazione sono i due tasti piu importanti della scheda
+                e devono stare sopra la soglia del dito. */}
             {tipo === 'articolo' && dati.url && (
               <a href={dati.url} target="_blank" rel="noopener noreferrer" onClick={() => vibrate(8)}
                 style={{
                   flex: 1.4, padding: '11px 0', borderRadius: 12, textAlign: 'center',
+                  minHeight: 44, display: 'flex', alignItems: 'center', justifyContent: 'center',
                   background: `linear-gradient(135deg, ${C.accent}, ${C.purple})`,
                   color: '#fff', fontSize: 13, fontWeight: 600, textDecoration: 'none',
                 }}>
@@ -230,7 +242,7 @@ function SchedaArgomento({ aperta, tipo, dati, C, onClose, onParlane }) {
               </a>
             )}
             <button onClick={() => { vibrate(12); onParlane?.(); }} style={{
-              flex: 1, padding: '11px 0', borderRadius: 12, cursor: 'pointer',
+              flex: 1, padding: '11px 0', borderRadius: 12, minHeight: 44, cursor: 'pointer',
               background: tipo === 'video' ? `linear-gradient(135deg, ${C.accent}, ${C.purple})` : 'transparent',
               border: tipo === 'video' ? 'none' : bordo,
               color: tipo === 'video' ? '#fff' : C.textSecondary,

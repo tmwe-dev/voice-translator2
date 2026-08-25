@@ -27,28 +27,37 @@ const ConnectionQuality = memo(function ConnectionQuality({ webrtcState, partner
   // Determine quality level (0-4)
   let level = 0;
   let label = L('offlineWord');
-  let color = PALETTE.coral;
+  let color = S.colors.statusError || PALETTE.coral;
 
   if (!partnerConnected) {
     level = 0;
     label = L('connWaiting');
     color = S.colors.textTertiary;
+  // b.482 — TRE SIGLE TECNICHE DIVENTANO TRE PAROLE. P2P, Realtime e
+  // Polling sono nomi di protocolli: dicono come viaggia la voce, che
+  // non e una cosa che chi parla debba sapere ne possa cambiare. E
+  // restavano in inglese in tutte e trentotto le lingue, dentro un
+  // suggerimento che il resto della frase traduce. Luca, guardando
+  // questo indicatore dentro la chat: «a cosa serve qui dentro?».
+  // Serve a una cosa sola — dire se la linea regge — e adesso lo dice
+  // con una parola. I colori vengono dai token del tema, non piu da
+  // quattro hex scelti a mano quando i temi erano tutti scuri.
   } else if (webrtcState === 'connected') {
     level = 4;
-    label = 'P2P';
-    color = '#4ADE80';
+    label = L('connDirect');
+    color = S.colors.statusOk;
   } else if (webrtcState === 'connecting') {
     level = 1;
     label = L('connConnecting');
-    color = '#FBBF24';
+    color = S.colors.statusWarning;
   } else if (realtimeConnected) {
     level = 3;
-    label = 'Realtime';
-    color = '#38BDF8';
+    label = L('connGood');
+    color = S.colors.accent1;
   } else if (partnerConnected) {
     level = 2;
-    label = 'Polling';
-    color = '#FB923C';
+    label = L('connWeak');
+    color = S.colors.statusWarning;
   }
 
   const barHeights = [5, 9, 13, 17];

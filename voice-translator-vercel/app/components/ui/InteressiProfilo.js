@@ -1,6 +1,7 @@
 'use client';
 import { FONT, vibrate } from '../../lib/constants.js';
 import { useApp } from '../../contexts/AppContext.js';
+import Icon from '../Icon.js';
 
 // ═══════════════════════════════════════════════════════════════
 // GLI INTERESSI, NEL PROFILO — si scelgono, non si indovinano.
@@ -19,19 +20,16 @@ import { useApp } from '../../contexts/AppContext.js';
 
 // Gli argomenti che il Mondo usa davvero sulle discussioni. Non un
 // catalogo di fantasia: questi sono quelli che esistono nei dati.
+// b.482 — VIA I DODICI PITTOGRAMMI A COLORI. Erano emoji, e qui non c'e
+// un'icona di casa che corrisponda a «cucina», «salute» o «trasporti»:
+// inventarne una a caso sarebbe stato peggio. La parola dice gia tutto,
+// ed e tradotta in trentotto lingue — il disegnino no. Nessun argomento
+// e stato tolto: sono ancora dodici, si legge solo il nome.
 const ARGOMENTI = [
-  { id: 'economia', emoji: '\u{1F4B6}' },
-  { id: 'tecnologia', emoji: '\u{1F4A1}' },
-  { id: 'trasporti', emoji: '\u{1F684}' },
-  { id: 'ambiente', emoji: '\u{1F33F}' },
-  { id: 'lavoro', emoji: '\u{1F4BC}' },
-  { id: 'formazione', emoji: '\u{1F393}' },
-  { id: 'citta', emoji: '\u{1F3D9}' },
-  { id: 'viaggi', emoji: '\u2708' },
-  { id: 'cultura', emoji: '\u{1F3AD}' },
-  { id: 'sport', emoji: '\u26BD' },
-  { id: 'salute', emoji: '\u{1FAC0}' },
-  { id: 'cucina', emoji: '\u{1F373}' },
+  { id: 'economia' }, { id: 'tecnologia' }, { id: 'trasporti' },
+  { id: 'ambiente' }, { id: 'lavoro' }, { id: 'formazione' },
+  { id: 'citta' }, { id: 'viaggi' }, { id: 'cultura' },
+  { id: 'sport' }, { id: 'salute' }, { id: 'cucina' },
 ];
 
 export default function InteressiProfilo({ C }) {
@@ -58,15 +56,18 @@ export default function InteressiProfilo({ C }) {
               style={{
                 display: 'flex', alignItems: 'center', gap: 6,
                 padding: '8px 13px', borderRadius: 999, cursor: 'pointer', fontFamily: FONT,
-                fontSize: 12.5, fontWeight: on ? 800 : 600,
+                fontSize: 12.5, fontWeight: 600, minHeight: 44,
                 background: on ? `${accento}1E` : 'rgba(255,255,255,0.045)',
                 border: `1px solid ${on ? `${accento}55` : 'rgba(255,255,255,0.09)'}`,
                 color: on ? accento : 'rgba(214,226,245,0.85)',
                 WebkitTapHighlightColor: 'transparent',
               }}>
-              <span style={{ fontSize: 14, lineHeight: 1 }}>{a.emoji}</span>
               <span>{L(`topic_${a.id}`)}</span>
-              {on && <span style={{ fontSize: 11 }}>\u2713</span>}
+              {/* b.482 — QUI SI LEGGEVA «\u2713» ALLA LETTERA. Dentro il testo
+                  di un elemento JSX una sequenza di scappamento non e una
+                  scappatoia: e testo. Chi sceglieva un argomento vedeva
+                  comparire sei caratteri di codice accanto alla parola. */}
+              {on && <span style={{ lineHeight: 0 }}><Icon name="check" size={12} /></span>}
             </button>
           );
         })}

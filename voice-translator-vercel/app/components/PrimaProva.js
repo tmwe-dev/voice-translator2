@@ -893,7 +893,7 @@ export default function PrimaProva({ onChiudi }) {
       minHeight: 0,
       display: 'flex', flexDirection: 'column', gap: 10,
       overflow: 'hidden',
-      padding: '10px 14px calc(100px + env(safe-area-inset-bottom))',
+      padding: '10px 20px calc(100px + env(safe-area-inset-bottom))',
     }}>
       {/* ── LA TESTATA. Resta DRITTA anche col ribaltone (a girare e solo
              l'area di lettura), quindi i tastini della misura si toccano

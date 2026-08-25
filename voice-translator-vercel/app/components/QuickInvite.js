@@ -5,14 +5,29 @@ import Icon from './Icon.js';
 import { PALETTE } from '../lib/palette.js';
 import { useApp } from '../contexts/AppContext.js';
 
-const glass = {
-  btn: { background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' },
-  text: { primary: PALETTE.grayLight, secondary: 'rgba(242,244,247,0.75)', muted: 'rgba(242,244,247,0.50)' },
-};
+// b.482 — I COLORI ARRIVANO DAL TEMA, non da valori scritti a mano dentro
+// la schermata: l'invito restava scuro e verde-acqua anche col tema chiaro,
+// e quel verde non esisteva in nessun'altra pagina dell'applicazione.
+const vetroDi = (C) => ({
+  btn: {
+    background: C.glassCard || 'rgba(140,170,255,0.06)',
+    border: `1px solid ${C.cardBorder || 'rgba(160,190,255,0.14)'}`,
+  },
+  text: {
+    primary: C.textPrimary || PALETTE.grayLight,
+    secondary: C.textSecondary || 'rgba(238,242,255,0.82)',
+    muted: C.textMuted || 'rgba(238,242,255,0.52)',
+  },
+});
 
 function QuickInvite({ handleCreateRoom, roomId, setViewAfterCreate }) {
   const { L, S, prefs, theme, setView } = useApp();
   const lang = prefs?.lang || 'it';
+  // b.482 — un posto solo da cui prendere i colori di questa schermata.
+  const C = S?.colors || {};
+  const glass = vetroDi(C);
+  const accento1 = C.accent1 || PALETTE.violet;
+  const accento2 = C.accent2 || PALETTE.teal;
   // b.462 — l'ospite si invita nella LINGUA 2, quella scelta nel carosello,
   // non in un ripiego calcolato sulla mia. Se non c'e, resta il ripiego.
   const [guestLang, setGuestLang] = useState(() => metaScelta(prefs) || (lang === 'en' ? 'it' : 'en'));
@@ -74,17 +89,20 @@ function QuickInvite({ handleCreateRoom, roomId, setViewAfterCreate }) {
   return (
     <div style={{
       display: 'flex', flexDirection: 'column', height: '100dvh',
-      background: 'linear-gradient(160deg, #060810 0%, #0A0E1A 30%, #0D1020 60%, #080A14 100%)',
+      background: C.bgGradient || PALETTE.bgDeep,
       fontFamily: FONT,
     }}>
-      {/* Header */}
+      {/* b.482 — TESTATA: rientro laterale a venti come nel template, cosi
+          passando da una schermata all'altra il contenuto non salta. */}
       <header style={{
         display: 'flex', alignItems: 'center', gap: 12,
-        padding: '14px 16px', flexShrink: 0,
+        padding: '14px 20px', flexShrink: 0,
       }}>
+        {/* b.482 — il tasto indietro e il piu premuto dell'applicazione:
+            quarantaquattro di lato, sotto i quali un dito sbaglia bersaglio. */}
         <button onClick={() => setView('home')}
           style={{
-            width: 36, height: 36, borderRadius: 12, cursor: 'pointer',
+            width: 44, height: 44, borderRadius: 12, cursor: 'pointer',
             ...glass.btn,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             color: glass.text.secondary, fontSize: 18,
@@ -94,7 +112,7 @@ function QuickInvite({ handleCreateRoom, roomId, setViewAfterCreate }) {
         <div style={{ flex: 1 }}>
           <div style={{
             fontSize: 18, fontWeight: 300, letterSpacing: -0.5,
-            background: 'linear-gradient(135deg, #26D9B0, #8B6AFF)',
+            background: `linear-gradient(135deg, ${accento2}, ${accento1})`,
             WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
             backgroundClip: 'text',
           }}>
@@ -104,7 +122,7 @@ function QuickInvite({ handleCreateRoom, roomId, setViewAfterCreate }) {
       </header>
 
       <div style={{
-        flex: 1, overflow: 'auto', padding: '0 16px 20px',
+        flex: 1, overflow: 'auto', padding: '0 20px 20px',
         display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
         maxWidth: 400, width: '100%', margin: '0 auto', boxSizing: 'border-box',
       }}>
@@ -114,7 +132,7 @@ function QuickInvite({ handleCreateRoom, roomId, setViewAfterCreate }) {
           <div style={{ textAlign: 'center' }}>
             <div style={{
               width: 36, height: 36, borderRadius: '50%', margin: '0 auto 12px',
-              border: '3px solid rgba(38,217,176,0.15)', borderTopColor: PALETTE.teal,
+              border: `3px solid ${accento2}26`, borderTopColor: accento2,
               animation: 'vtSpin 0.8s linear infinite',
             }} />
             <div style={{ fontSize: 13, color: glass.text.muted }}>{L('preparingInvite')}</div>
@@ -124,11 +142,11 @@ function QuickInvite({ handleCreateRoom, roomId, setViewAfterCreate }) {
         {/* ERRORE */}
         {error && !creating && !createdRoomId && (
           <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: 14, color: PALETTE.coral, marginBottom: 16 }}>{error}</div>
+            <div style={{ fontSize: 14, color: C.accent3 || PALETTE.coral, marginBottom: 16 }}>{error}</div>
             <button onClick={doCreateRoom}
               style={{
-                padding: '14px 32px', borderRadius: 14, cursor: 'pointer', border: 'none',
-                background: 'linear-gradient(135deg, #26D9B0 0%, #1EB898 100%)',
+                padding: '14px 32px', minHeight: 44, borderRadius: 14, cursor: 'pointer', border: 'none',
+                background: `linear-gradient(135deg, ${accento1} 0%, ${accento2} 100%)`,
                 color: '#000', fontFamily: FONT, fontSize: 15, fontWeight: 600,
               }}>
               {L('retryWord')}
@@ -144,12 +162,15 @@ function QuickInvite({ handleCreateRoom, roomId, setViewAfterCreate }) {
               <div style={{ fontSize: 11, color: glass.text.muted, marginBottom: 6, textAlign: 'center' }}>
                 {L('guestLanguage')}
               </div>
+              {/* b.482 — la scelta della lingua e un bersaglio da toccare:
+                  almeno quarantaquattro di altezza utile. */}
               <select
                 value={guestLang}
                 onChange={e => { vibrate(); setGuestLang(e.target.value); }}
                 style={{
-                  width: '100%', padding: '12px 14px', borderRadius: 14, boxSizing: 'border-box',
-                  background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
+                  width: '100%', padding: '12px 14px', minHeight: 44, borderRadius: 14, boxSizing: 'border-box',
+                  background: C.inputBg || 'rgba(140,170,255,0.05)',
+                  border: `1px solid ${C.inputBorder || 'rgba(160,190,255,0.16)'}`,
                   color: glass.text.primary, fontSize: 15, fontFamily: FONT, outline: 'none',
                   appearance: 'none', WebkitAppearance: 'none',
                   backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='rgba(242,244,247,0.5)' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10l-5 5z'/%3E%3C/svg%3E")`,
@@ -162,7 +183,8 @@ function QuickInvite({ handleCreateRoom, roomId, setViewAfterCreate }) {
               </select>
             </div>
 
-            {/* QR CODE */}
+            {/* b.482 — IL QR RESTA NERO SU BIANCO: e l'unica eccezione ai
+                colori del tema, perche una fotocamera lo deve poter leggere. */}
             <canvas ref={canvasRef}
               style={{
                 borderRadius: 18, background: '#fff', padding: 12,
@@ -171,7 +193,7 @@ function QuickInvite({ handleCreateRoom, roomId, setViewAfterCreate }) {
 
             <div style={{
               fontSize: 26, fontWeight: 300, letterSpacing: 5, textAlign: 'center',
-              background: 'linear-gradient(135deg, #26D9B0, #8B6AFF)',
+              background: `linear-gradient(135deg, ${accento2}, ${accento1})`,
               WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
               backgroundClip: 'text', marginBottom: 16,
             }}>
@@ -182,9 +204,9 @@ function QuickInvite({ handleCreateRoom, roomId, setViewAfterCreate }) {
             <div style={{ display: 'flex', gap: 8, width: '100%', marginBottom: 12 }}>
               <button onClick={copyLink}
                 style={{
-                  flex: 1, padding: '14px 16px', borderRadius: 14, cursor: 'pointer',
-                  background: copied ? 'linear-gradient(135deg, #26D9B0, #1EB898)' : 'rgba(255,255,255,0.04)',
-                  border: copied ? 'none' : '1px solid rgba(255,255,255,0.08)',
+                  flex: 1, padding: '14px 16px', minHeight: 44, borderRadius: 14, cursor: 'pointer',
+                  background: copied ? `linear-gradient(135deg, ${accento1}, ${accento2})` : glass.btn.background,
+                  border: copied ? 'none' : glass.btn.border,
                   color: copied ? '#000' : glass.text.primary,
                   fontFamily: FONT, fontSize: 14, fontWeight: 600,
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
@@ -196,7 +218,7 @@ function QuickInvite({ handleCreateRoom, roomId, setViewAfterCreate }) {
                 else copyLink();
               }}
                 style={{
-                  padding: '14px 16px', borderRadius: 14, cursor: 'pointer',
+                  padding: '14px 16px', minHeight: 44, borderRadius: 14, cursor: 'pointer',
                   ...glass.btn, color: glass.text.primary, fontFamily: FONT,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                 }}>
@@ -207,10 +229,10 @@ function QuickInvite({ handleCreateRoom, roomId, setViewAfterCreate }) {
             {/* Entra */}
             <button onClick={enterRoom}
               style={{
-                width: '100%', padding: '16px 0', borderRadius: 16, cursor: 'pointer', border: 'none',
-                background: 'linear-gradient(135deg, #26D9B0 0%, #1EB898 50%, #178F78 100%)',
+                width: '100%', padding: '16px 0', minHeight: 44, borderRadius: 16, cursor: 'pointer', border: 'none',
+                background: `linear-gradient(135deg, ${accento1} 0%, ${accento2} 100%)`,
                 color: '#000', fontFamily: FONT, fontSize: 16, fontWeight: 600,
-                boxShadow: '0 8px 32px rgba(38,217,176,0.25)',
+                boxShadow: `0 8px 32px ${accento1}40`,
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
               }}>
               <Icon name="doorCreate" size={20} color="#000" /> {L('enterTheRoom')}

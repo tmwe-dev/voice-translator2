@@ -3,6 +3,7 @@ import { memo, useState, useCallback, useRef, useEffect } from 'react';
 import { FONT, vibrate } from '../lib/constants.js';
 import useSheetA11y from '../hooks/useSheetA11y.js';
 import { PALETTE } from '../lib/palette.js';
+import Icon from './Icon.js';
 import { useApp } from '../contexts/AppContext.js';
 
 // ═══════════════════════════════════════════════════════════════
@@ -16,11 +17,15 @@ import { useApp } from '../contexts/AppContext.js';
 const FIELD_CONFIG = [
   // b.139 — etichette e segnaposto erano in italiano dentro la tabella, che
   // nasce col modulo. Ora sono chiavi: si traducono quando si disegna il campo.
-  { key: 'terminal', icon: '', label: 'destTerminal', placeholder: 'destTerminalPh' },
-  { key: 'entrance', icon: '', label: 'destEntrance', placeholder: 'destEntrancePh' },
-  { key: 'hotelName', icon: '', label: 'destHotel', placeholder: 'destHotelPh' },
-  { key: 'flightNumber', icon: '', label: 'destFlight', placeholder: 'destFlightPh' },
-  { key: 'notes', icon: '', label: 'destNotes', placeholder: 'destNotesPh' },
+  // b.482 — la casella dell'icona era VUOTA in tutti e cinque i campi: si
+  // disegnava un riquadro che non conteneva niente, e restava uno spazio
+  // senza spiegazione accanto a ogni etichetta. Adesso il nome e quello di
+  // un disegno che esiste davvero in Icon.js.
+  { key: 'terminal', icon: 'globe', label: 'destTerminal', placeholder: 'destTerminalPh' },
+  { key: 'entrance', icon: 'doorOpen', label: 'destEntrance', placeholder: 'destEntrancePh' },
+  { key: 'hotelName', icon: 'star', label: 'destHotel', placeholder: 'destHotelPh' },
+  { key: 'flightNumber', icon: 'send', label: 'destFlight', placeholder: 'destFlightPh' },
+  { key: 'notes', icon: 'doc', label: 'destNotes', placeholder: 'destNotesPh' },
 ];
 
 function TaxiDestinationPanel({ onDestinationReady, onClose, targetLang, S }) {
@@ -196,8 +201,10 @@ function TaxiDestinationPanel({ onDestinationReady, onClose, targetLang, S }) {
               {L('whereToSub')}
             </div>
           </div>
+          {/* b.482 — la crocetta per chiudere sale a 44×44: sotto quella
+              misura, su un telefono, il dito sbaglia bersaglio. */}
           <button onClick={onClose} aria-label={L('closeWord')} style={{
-            width: 36, height: 36, borderRadius: 10, cursor: 'pointer',
+            width: 44, height: 44, borderRadius: 10, cursor: 'pointer',
             background: cardBg, border: `1px solid ${cardBorder}`,
             color: textMuted, fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>✕</button>
@@ -233,8 +240,9 @@ function TaxiDestinationPanel({ onDestinationReady, onClose, targetLang, S }) {
                 border: `1px solid ${cardBorder}`, background: cardBg,
               }}>
                 {searchResults.map((r, i) => (
+                  // b.482 — ogni riga dell'elenco e un bersaglio da 44.
                   <button key={i} onClick={() => selectPlace(r)} style={{
-                    width: '100%', padding: '10px 14px', cursor: 'pointer',
+                    width: '100%', minHeight: 44, padding: '10px 14px', cursor: 'pointer',
                     background: 'none', border: 'none', borderBottom: i < searchResults.length - 1 ? `1px solid ${cardBorder}` : 'none',
                     color: textPrimary, fontSize: 12, fontFamily: FONT,
                     textAlign: 'left', lineHeight: 1.4,
@@ -262,7 +270,10 @@ function TaxiDestinationPanel({ onDestinationReady, onClose, targetLang, S }) {
               background: `${accent}08`, border: `1px solid ${accent}20`,
               display: 'flex', alignItems: 'center', gap: 10,
             }}>
-              <span style={{ fontSize: 20 }}></span>
+              {/* b.482 — qui c'era una casella di icona VUOTA: un riquadro
+                  largo venti che non conteneva niente. Ora dice cosa e —
+                  il posto scelto. */}
+              <Icon name="target" size={20} color={accent} />
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 13, fontWeight: 600, color: textPrimary }}>
                   {selectedPlace.displayName.split(',').slice(0, 2).join(',')}
@@ -271,15 +282,18 @@ function TaxiDestinationPanel({ onDestinationReady, onClose, targetLang, S }) {
                   {selectedPlace.lat.toFixed(5)}, {selectedPlace.lon.toFixed(5)}
                 </div>
               </div>
-              <button onClick={() => { setSelectedPlace(null); setQuery(''); }} style={{
-                background: 'none', border: 'none', color: textMuted, cursor: 'pointer', fontSize: 14,
+              {/* b.482 — bersaglio da 44 anche per il tasto che toglie il
+                  posto scelto: era un carattere nudo, senza altezza. */}
+              <button onClick={() => { setSelectedPlace(null); setQuery(''); }} aria-label={L('removeDestination')} style={{
+                minWidth: 44, minHeight: 44, background: 'none', border: 'none', color: textMuted, cursor: 'pointer', fontSize: 14,
               }}>✕</button>
             </div>
           )}
 
           {/* Toggle details */}
+          {/* b.482 — la riga che apre i dettagli e un bersaglio da 44. */}
           <button onClick={() => setShowDetails(!showDetails)} style={{
-            width: '100%', padding: '10px 14px', borderRadius: 12, cursor: 'pointer',
+            width: '100%', minHeight: 44, padding: '10px 14px', borderRadius: 12, cursor: 'pointer',
             background: cardBg, border: `1px solid ${cardBorder}`,
             color: textPrimary, fontSize: 12, fontWeight: 600, fontFamily: FONT,
             textAlign: 'left', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -295,7 +309,7 @@ function TaxiDestinationPanel({ onDestinationReady, onClose, targetLang, S }) {
               {FIELD_CONFIG.map(f => (
                 <div key={f.key}>
                   <label style={{ fontSize: 11, fontWeight: 600, color: textMuted, marginBottom: 3, display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <span>{f.icon}</span> {L(f.label)}
+                    <Icon name={f.icon} size={12} color={textMuted} /> {L(f.label)}
                   </label>
                   <input type="text" value={details[f.key]} onChange={e => setDetails(prev => ({ ...prev, [f.key]: e.target.value }))}
                     placeholder={L(f.placeholder)} style={inputStyle}
@@ -305,8 +319,9 @@ function TaxiDestinationPanel({ onDestinationReady, onClose, targetLang, S }) {
 
               {/* Stops */}
               <div>
+                {/* b.482 — anche qui la casella dell'icona era vuota. */}
                 <label style={{ fontSize: 11, fontWeight: 600, color: textMuted, marginBottom: 3, display: 'flex', alignItems: 'center', gap: 4 }}>
-                  <span></span> {L('intermediateStops')}
+                  <Icon name="link" size={12} color={textMuted} /> {L('intermediateStops')}
                 </label>
                 {stops.map((stop, i) => (
                   <div key={i} style={{
@@ -316,8 +331,9 @@ function TaxiDestinationPanel({ onDestinationReady, onClose, targetLang, S }) {
                   }}>
                     <span style={{ fontSize: 10, color: purple, fontWeight: 600 }}>{i + 1}</span>
                     <span style={{ flex: 1, fontSize: 12, color: textPrimary }}>{stop}</span>
-                    <button onClick={() => removeStop(i)} style={{
-                      background: 'none', border: 'none', color: textMuted, cursor: 'pointer', fontSize: 12,
+                    {/* b.482 — bersaglio da 44 per togliere una fermata. */}
+                    <button onClick={() => removeStop(i)} aria-label={L('removeWord')} style={{
+                      minWidth: 44, minHeight: 44, background: 'none', border: 'none', color: textMuted, cursor: 'pointer', fontSize: 12,
                     }}>✕</button>
                   </div>
                 ))}
@@ -327,8 +343,9 @@ function TaxiDestinationPanel({ onDestinationReady, onClose, targetLang, S }) {
                     style={{ ...inputStyle, flex: 1 }}
                     onKeyDown={e => { if (e.key === 'Enter') addStop(); }}
                   />
-                  <button onClick={addStop} disabled={!newStop.trim()} style={{
-                    padding: '8px 14px', borderRadius: 10, cursor: newStop.trim() ? 'pointer' : 'not-allowed',
+                  {/* b.482 — bersaglio da 44 per aggiungere una fermata. */}
+                  <button onClick={addStop} disabled={!newStop.trim()} aria-label={L('addShort')} style={{
+                    minHeight: 44, padding: '8px 14px', borderRadius: 10, cursor: newStop.trim() ? 'pointer' : 'not-allowed',
                     background: newStop.trim() ? `${purple}20` : 'transparent',
                     border: `1px solid ${newStop.trim() ? `${purple}30` : cardBorder}`,
                     color: newStop.trim() ? purple : textMuted,

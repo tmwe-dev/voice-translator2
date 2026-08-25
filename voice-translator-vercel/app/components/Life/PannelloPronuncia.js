@@ -1,6 +1,12 @@
 'use client';
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { FONT } from '../../lib/constants.js';
+// b.482 — qui dentro c'erano una ventina di frasi in italiano scritte a
+// mano, comandi ed errori compresi: chi studia con l'interfaccia in
+// un'altra lingua leggeva «Registra» e «Non ho sentito niente» in
+// italiano. Il traduttore non arriva da chi monta il pannello, quindi lo
+// si prende dal contesto dell'applicazione, che qui c'e gia.
+import { useApp } from '../../contexts/AppContext.js';
 import { valutaPronuncia, paroleDaRivedere } from '../../lib/compagni/corsi/pronuncia.js';
 import { parlaTurno, drillPronuncia } from '../../lib/compagni/cliente.js';
 import { zittisci, suona as registraAudio } from '../../lib/voce.js';
@@ -25,6 +31,7 @@ import Ascolta from '../Ascolta.js';
 // ═══════════════════════════════════════════════════════════════
 
 export default function PannelloPronuncia({ frase, lingua, userToken, onEsito, voceAssistente = null, nomeAssistente = '', testoP, muto, accent, card, bordo }) {
+  const { L } = useApp();
   const [stato, setStato] = useState('pronto'); // pronto | registro | valuto | fatto
   const [esito, setEsito] = useState(null);
   const [errore, setErrore] = useState('');
@@ -106,7 +113,7 @@ export default function PannelloPronuncia({ frase, lingua, userToken, onEsito, v
       // b.317 — GESTIONE VERA degli errori (audit 6.10): un 402 di credito non
       // e un guasto del microfono, e va detto per quello che e.
       if (!r.ok || !d) {
-        if (r.status === 402 || d?.creditoEsaurito) { setErrore('Credito esaurito: ricarica per continuare a esercitarti.'); setStato('pronto'); return; }
+        if (r.status === 402 || d?.creditoEsaurito) { setErrore(L('creditExhausted')); setStato('pronto'); return; }
         throw new Error('trascrizione non riuscita');
       }
       // b.317 — IL BLOCCANTE dell'audit (6.1): la rotta risponde col campo
@@ -127,10 +134,10 @@ export default function PannelloPronuncia({ frase, lingua, userToken, onEsito, v
       // registro non compariva nulla, e il motivo vero (rete caduta, attesa
       // scaduta, credito finito, server rotto) restava irrecuperabile.
       if (e?.name !== 'AbortError') console.warn('[b.363] /api/transcribe:', e?.message || e);
-      setErrore('Non sono riuscito a sentirti. Riprova.');
+      setErrore(L('lifeNoHear'));
       setStato('pronto');
     }
-  }, [frase, lingua, userToken, onEsito, decodifica, confronto, allena]);
+  }, [frase, lingua, userToken, onEsito, decodifica, confronto, allena, L]);
 
   // b.317 — ASCOLTA LA FRASE (audit 6.5): prima si chiedeva di pronunciare
   // una frase MAI SENTITA. Ora la voce la dice, alla velocita giusta,
@@ -171,7 +178,7 @@ export default function PannelloPronuncia({ frase, lingua, userToken, onEsito, v
       // (il file e gia in mano nostra: si rallenta in locale, senza pagare
       // una seconda chiamata). Registrarlo a mano e obbligatorio, se no e
       // l'ultimo buco: lo Stop non lo prende e il microfono lo sente.
-      registraAudio(a, nomeAssistente || 'Lenta');
+      registraAudio(a, nomeAssistente || L('lifeSlow'));
       const liberaUrl = () => { try { URL.revokeObjectURL(a.src); } catch { /* url gia revocato: non e un guasto */ } };
       a.onended = liberaUrl;
       // b.405 — audit P2.3: prima si liberava l'indirizzo SOLO a fine ascolto.
@@ -180,7 +187,7 @@ export default function PannelloPronuncia({ frase, lingua, userToken, onEsito, v
       a.onerror = liberaUrl;
       a.play().catch(() => { liberaUrl(); /* autoplay negato: si riprova col tasto */ });
     } catch { /* la ripetizione lenta e un di piu */ }
-  }, [ascoltaFrase, nomeAssistente]);
+  }, [ascoltaFrase, nomeAssistente, L]);
 
   const registra = useCallback(async () => {
     if (stato === 'registro') { // secondo tocco: si ferma
@@ -213,22 +220,24 @@ export default function PannelloPronuncia({ frase, lingua, userToken, onEsito, v
         chiudiMicrofono();
         const blob = new Blob(pezzi, { type: rec.mimeType || 'audio/webm' });
         if (blob.size > 800) await valuta(blob);
-        else { setErrore('Non ho sentito niente. Riprova.'); setStato('pronto'); }
+        else { setErrore(L('lifeHeardNothing')); setStato('pronto'); }
       };
       recRef.current = rec;
       rec.start();
       setStato('registro');
     } catch {
-      setErrore('Serve il permesso del microfono.');
+      setErrore(L('lifeMicPermission'));
       setStato('pronto');
     }
-  }, [stato, valuta, chiudiMicrofono]);
+  }, [stato, valuta, chiudiMicrofono, L]);
 
   const colorePunteggio = esito ? (esito.punteggio >= 80 ? accent : esito.punteggio >= 50 ? '#f59e0b' : '#f87171') : accent;
 
+  // b.482 — i fianchi della scatola vanno a 20, come tutte le altre della
+  // schermata: erano 14 e questo pannello stava piu stretto degli altri.
   return (
-    <div style={{ marginTop: 12, padding: 14, borderRadius: 14, background: card, border: `1px solid ${accent}` }}>
-      <div style={{ fontSize: 12, color: muto, marginBottom: 6 }}>Dillo ad alta voce</div>
+    <div style={{ marginTop: 12, padding: '14px 20px', borderRadius: 14, background: card, border: `1px solid ${accent}` }}>
+      <div style={{ fontSize: 12, color: muto, marginBottom: 6 }}>{L('lifeSayAloud')}</div>
       <div style={{ fontSize: 17, fontWeight: 600, color: testoP, marginBottom: 10 }}>{frase}</div>
 
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -238,17 +247,19 @@ export default function PannelloPronuncia({ frase, lingua, userToken, onEsito, v
         <Ascolta onAscolta={ascoltaFrase}
           preparando={ascoltoFrase}
           disabilitato={stato === 'registro'}
-          parola={nomeAssistente ? `Ascolta ${nomeAssistente}` : 'Ascolta la frase'}
+          parola={nomeAssistente ? L('lifeListenTo').replace('{x}', nomeAssistente) : L('lifeListenSentence')}
           colore={accent} bordo={`1px solid ${accent}`} />
         <Ascolta onAscolta={ascoltaLenta}
           preparando={ascoltoFrase}
           disabilitato={stato === 'registro'}
-          parola="Lenta" etichetta="La stessa frase, rallentata"
+          parola={L('lifeSlow')} etichetta={L('lifeSlowTip')}
           colore={testoP} bordo={bordo} />
+        {/* b.482 — il tasto della registrazione aveva solo il riempimento e
+            restava sotto la misura di un dito: adesso ha i suoi 44. */}
         <button onClick={registra} disabled={stato === 'valuto'}
-          style={{ padding: '10px 16px', borderRadius: 12, border: 'none', fontFamily: FONT, fontWeight: 600, cursor: stato === 'valuto' ? 'default' : 'pointer',
+          style={{ padding: '10px 16px', minHeight: 44, borderRadius: 12, border: 'none', fontFamily: FONT, fontWeight: 600, cursor: stato === 'valuto' ? 'default' : 'pointer',
             background: stato === 'registro' ? '#f87171' : accent, color: '#04121c', opacity: stato === 'valuto' ? 0.6 : 1 }}>
-          {stato === 'registro' ? 'Ho finito' : stato === 'valuto' ? 'Ascolto…' : stato === 'fatto' ? 'Riprova' : 'Registra'}
+          {stato === 'registro' ? L('lifeImDone') : stato === 'valuto' ? L('listeningDots') : stato === 'fatto' ? L('retryWord') : L('lifeRecord')}
         </button>
       </div>
 
@@ -259,14 +270,16 @@ export default function PannelloPronuncia({ frase, lingua, userToken, onEsito, v
       {confronto && <GraficoFonia confronto={confronto} precedente={confrontoPrec} muto={muto} card="rgba(255,255,255,0.04)" />}
       {confronto && (
         <div style={{ fontSize: 12, color: muto, marginTop: 4 }}>
-          Fonia (melodia e ritmo): <b style={{ color: confronto.somiglianza >= 70 ? accent : confronto.somiglianza >= 45 ? '#f59e0b' : '#f87171' }}>{confronto.somiglianza}%</b>
-          {confronto.rapportoDurata > 1.35 ? ' — sei più lento del riferimento' : confronto.rapportoDurata < 0.7 ? ' — sei più veloce del riferimento' : ''}
+          {L('lifePhonics')}: <span style={{ fontWeight: 600, color: confronto.somiglianza >= 70 ? accent : confronto.somiglianza >= 45 ? '#f59e0b' : '#f87171' }}>{confronto.somiglianza}%</span>
+          {confronto.rapportoDurata > 1.35 ? ` — ${L('lifeSlowerThanRef')}` : confronto.rapportoDurata < 0.7 ? ` — ${L('lifeFasterThanRef')}` : ''}
         </div>
       )}
 
       {esito && (
         <div style={{ marginTop: 12 }}>
-          <div style={{ fontSize: 22, fontWeight: 900, color: colorePunteggio }}>{esito.punteggio}%</div>
+          {/* b.482 — il punteggio era in nerissimo (900): il piu pesante
+              che si ammette a schermo e 600, e vale anche per i numeri. */}
+          <div style={{ fontSize: 22, fontWeight: 600, color: colorePunteggio }}>{esito.punteggio}%</div>
           {/* Parola per parola: si vede DOVE è andata storta, non solo quanto. */}
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
             {esito.parole.map((p, i) => (
@@ -275,7 +288,7 @@ export default function PannelloPronuncia({ frase, lingua, userToken, onEsito, v
                 color: p.ok ? accent : p.vicino ? '#f59e0b' : '#f87171' }}>{p.parola}</span>
             ))}
           </div>
-          {esito.detto && <div style={{ fontSize: 12, color: muto, marginTop: 8 }}>Ho sentito: “{esito.detto}”</div>}
+          {esito.detto && <div style={{ fontSize: 12, color: muto, marginTop: 8 }}>{L('lifeIHeard').replace('{x}', esito.detto)}</div>}
 
           {/* b.331 — le parole ANDATE MALE si allenano: coppie minime sul
               suono che inganna, dette dalla voce madrelingua. */}
@@ -284,30 +297,32 @@ export default function PannelloPronuncia({ frase, lingua, userToken, onEsito, v
             if (!rosse.length) return null;
             return (
               <div style={{ display: 'flex', gap: 6, marginTop: 10, flexWrap: 'wrap' }}>
+                {/* b.482 — anche questi tasti avevano solo il riempimento e
+                    restavano bassi: ora arrivano ai 44 che serve al dito. */}
                 {rosse.map((w) => (
                   <button key={w} onClick={() => allena(w)} disabled={drillCarico}
-                    style={{ padding: '6px 11px', borderRadius: 9, border: `1px solid ${accent}`, background: 'transparent', color: accent, fontWeight: 600, fontSize: 12, cursor: 'pointer', fontFamily: FONT, opacity: drillCarico ? 0.6 : 1 }}>
-                    {drillCarico ? '…' : `Alleniamo «${w}»`}
+                    style={{ padding: '6px 11px', minHeight: 44, borderRadius: 9, border: `1px solid ${accent}`, background: 'transparent', color: accent, fontWeight: 600, fontSize: 12, cursor: 'pointer', fontFamily: FONT, opacity: drillCarico ? 0.6 : 1 }}>
+                    {drillCarico ? '…' : L('lifeTrainWord').replace('{x}', w)}
                   </button>
                 ))}
               </div>
             );
           })()}
           {drill && (
-            <div style={{ marginTop: 10, padding: 12, borderRadius: 12, background: 'rgba(255,255,255,0.04)', border: bordo }}>
+            <div style={{ marginTop: 10, padding: '12px 20px', borderRadius: 12, background: 'rgba(255,255,255,0.04)', border: bordo }}>
               <div style={{ fontSize: 12, fontWeight: 600, color: testoP, marginBottom: 8 }}>
-                Coppie minime — {drill.suono || `il suono di «${drill.parola}»`}
+                {L('lifeMinimalPairs')} — {drill.suono || L('lifeSoundOf').replace('{x}', drill.parola)}
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                 {drill.coppie.map((c, i) => (
                   <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <Ascolta onAscolta={() => diParola(c.a)} parola={c.a} colore={testoP} bordo={bordo} etichetta={`Ascolta ${c.a}`} />
-                    <span style={{ color: muto, fontSize: 12 }}>contro</span>
-                    <Ascolta onAscolta={() => diParola(c.b)} parola={c.b} colore={testoP} bordo={bordo} etichetta={`Ascolta ${c.b}`} />
+                    <Ascolta onAscolta={() => diParola(c.a)} parola={c.a} colore={testoP} bordo={bordo} etichetta={L('lifeListenTo').replace('{x}', c.a)} />
+                    <span style={{ color: muto, fontSize: 12 }}>{L('lifeVersus')}</span>
+                    <Ascolta onAscolta={() => diParola(c.b)} parola={c.b} colore={testoP} bordo={bordo} etichetta={L('lifeListenTo').replace('{x}', c.b)} />
                   </div>
                 ))}
               </div>
-              <div style={{ fontSize: 11, color: muto, marginTop: 8 }}>Ascoltale in coppia, poi riprova la frase: l'orecchio guida la bocca.</div>
+              <div style={{ fontSize: 11, color: muto, marginTop: 8 }}>{L('lifePairsHint')}</div>
             </div>
           )}
         </div>

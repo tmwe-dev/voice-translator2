@@ -104,7 +104,7 @@ function CarouselLingue({ selezionata, onScegli, onLinguaMenu, escludi, C, L }) 
 
   const freccia = (dir, segno) => (
     <button onClick={() => scorri(dir)} aria-label={dir < 0 ? 'precedente' : 'successiva'}
-      style={{ width: 34, height: 34, borderRadius: 17, border: 'none', background: 'transparent',
+      style={{ width: 44, height: 44, borderRadius: 22, border: 'none', background: 'transparent',
         color: C.textMuted, cursor: 'pointer', fontSize: 18, flexShrink: 0, fontFamily: FONT,
         transition: 'transform .25s, color .25s' }}
       onMouseEnter={(e) => { e.currentTarget.style.color = C.textPrimary; e.currentTarget.style.transform = 'scale(1.12)'; }}
@@ -118,7 +118,7 @@ function CarouselLingue({ selezionata, onScegli, onLinguaMenu, escludi, C, L }) 
       {/* il bottone a righine che apre l'elenco completo (dal Wueform) */}
       <button onClick={() => { vibrate(6); setAperto((v) => !v); setCerca(''); }}
         aria-label={L('yourLang')} aria-expanded={aperto}
-        style={{ width: 34, height: 34, borderRadius: 17, border: 'none', cursor: 'pointer',
+        style={{ width: 44, height: 44, borderRadius: 22, border: 'none', cursor: 'pointer',
           background: 'rgba(255,255,255,0.05)', color: C.textMuted, marginBottom: 6,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           backdropFilter: 'blur(12px)', transition: 'transform .3s, background .3s' }}
@@ -167,7 +167,7 @@ function CarouselLingue({ selezionata, onScegli, onLinguaMenu, escludi, C, L }) 
                       padding: '10px 12px', borderRadius: 12, border: 'none', cursor: 'pointer',
                       background: on ? `${C.accent}22` : 'transparent',
                       color: on ? C.accent : C.textPrimary, fontSize: 13,
-                      fontWeight: on ? 700 : 400, fontFamily: FONT, textAlign: 'left',
+                      fontWeight: on ? 600 : 400, fontFamily: FONT, textAlign: 'left',
                       transition: 'background .2s' }}
                     onMouseEnter={(e) => { if (!on) e.currentTarget.style.background = 'rgba(255,255,255,0.07)'; }}
                     onMouseLeave={(e) => { if (!on) e.currentTarget.style.background = 'transparent'; }}>

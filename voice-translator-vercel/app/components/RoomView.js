@@ -17,7 +17,7 @@ const Carosello3D = lazy(() => import('./Carosello3D.js'));
 import ComandoZoom from './ui/ComandoZoom.js';
 import PannelloLaterale, { LinguettaPannello } from './ui/PannelloLaterale.js';
 import { vesteMicrofono } from './ui/Microfono.js';
-import { IconCamera } from './Icons.js';
+import { IconCamera, IconArchive } from './Icons.js';
 import InterpreterView from './InterpreterView.js';
 import ChatActionsPanel from './ChatActionsPanel.js';
 import RoomHeader from './RoomHeader.js';
@@ -672,6 +672,19 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
             <span>{L('settings')}</span>
             <span style={{ marginLeft: 'auto', color: S.colors.textMuted }}>&rsaquo;</span>
           </button>
+
+          {/* b.482 — «CHIUDI E ARCHIVIA», ARRIVATA QUI DAL MENU •••. Li stava
+              a un dito dalla chiamata vocale e dagli strumenti AI, cioe dai
+              comandi che si toccano mentre si parla: un tocco storto e la
+              conversazione finiva. Qui e in fondo alle cose che si fanno una
+              volta sola, e ci si arriva aprendo apposta il pannello.
+              Resta rossa, perche chiude davvero. */}
+          <button onClick={() => { setPannelloVoci(false); endChatAndSave(); }}
+            style={{ ...vocePannello(S), color: S.colors.statusError,
+              borderTop: `1px solid ${S.colors.cardBorder}`, marginTop: 6, paddingTop: 6 }}>
+            <span style={{ display: 'flex', alignItems: 'center' }}><IconArchive size={16} /></span>
+            <span>{L('closeArchive')}</span>
+          </button>
         </div>
 
         <div style={{ fontSize: 10.5, letterSpacing: 1.1, textTransform: 'uppercase',
@@ -966,7 +979,7 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
             {/* il piu: da qui entrano foto, file, posizione, contatto */}
             <button onClick={() => { vibrate(); setShowChatActions(true); }}
               aria-label={L('addShort')}
-              style={{ width: 38, height: 38, borderRadius: 12, flexShrink: 0, padding: 0,
+              style={{ width: 44, height: 44, borderRadius: 12, flexShrink: 0, padding: 0,
                 border: `1px solid ${S.colors.cardBorder}`, background: 'transparent',
                 color: S.colors.textSecondary, cursor: 'pointer',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -988,7 +1001,7 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
             {/* la fotocamera, come nel template */}
             <button onClick={() => { vibrate(); setShowChatActions(true); }}
               aria-label={L('addShort')}
-              style={{ width: 38, height: 38, borderRadius: 12, flexShrink: 0, padding: 0,
+              style={{ width: 44, height: 44, borderRadius: 12, flexShrink: 0, padding: 0,
                 border: `1px solid ${S.colors.accent1}57`, background: `${S.colors.accent1}14`,
                 color: S.colors.textPrimary, cursor: 'pointer',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -1016,7 +1029,7 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
             {textInput.trim() ? (
               <button onClick={() => { vibrate(); inviaConCitazione(); }}
                 aria-label={L('send')}
-                style={{ width: 38, height: 38, borderRadius: 12, flexShrink: 0, padding: 0,
+                style={{ width: 44, height: 44, borderRadius: 12, flexShrink: 0, padding: 0,
                   border: `1px solid ${S.colors.goldAccent || '#ffc44d'}66`,
                   background: `${S.colors.goldAccent || '#ffc44d'}22`,
                   color: S.colors.goldAccent || '#ffc44d', cursor: 'pointer',

@@ -11,6 +11,7 @@ import { CHAT_ACTIONS } from '../lib/chatActions.js';
 import getStyles from '../lib/styles.js';
 import { FONT } from '../lib/constants.js';
 import { PALETTE } from '../lib/palette.js';
+import Icon from './Icon.js';
 
 function ChatActionsPanel({
   theme = 'dark',
@@ -169,7 +170,7 @@ function ChatActionsPanel({
                 }}
               >
                 {/* b.363 — l'ultimo inglese fisso in un pannello tradotto */}
-                {'\u2190'} {t('backWord')}
+                <Icon name="back" size={14} /> {t('backWord')}
               </button>
               <button
                 onClick={shareResult}
@@ -180,7 +181,7 @@ function ChatActionsPanel({
                   borderRadius: 10, fontSize: 14, cursor: 'pointer',
                 }}
               >
-                {copied ? `\u2713 ${t('copiedWord')}` : `\u{1F4E4} ${t('shareWord')}`}
+                <Icon name={copied ? 'check' : 'share'} size={14} /> {copied ? t('copiedWord') : t('shareWord')}
               </button>
             </div>
           </div>

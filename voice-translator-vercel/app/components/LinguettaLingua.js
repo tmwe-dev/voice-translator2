@@ -125,7 +125,7 @@ function LinguettaLingua({ prefs, savePrefs, L, onScegliVoce, accent = '#26D9B0'
                         background: on ? `${accent}1f` : 'transparent', color: '#fff',
                         border: `1px solid ${on ? accent + '55' : 'transparent'}` }}>
                       <span style={{ fontSize: 20 }}>{l.flag}</span>
-                      <span style={{ fontSize: 14, fontWeight: on ? 700 : 500 }}>{l.name}</span>
+                      <span style={{ fontSize: 14, fontWeight: on ? 600 : 500 }}>{l.name}</span>
                       {on && <span style={{ marginLeft: 'auto', color: accent }}>✓</span>}
                     </button>
                   );

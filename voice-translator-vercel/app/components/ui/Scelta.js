@@ -83,10 +83,16 @@ export default function Scelta({ etichetta, valore, opzioni, onCambia, C, icona 
             <span style={{ color: C.accent, fontWeight: 600 }}> {scelta.conto}</span>
           )}
         </span>
+        {/* b.482 — IL TRIANGOLINO E LA SPUNTA DIVENTANO ICONE. Erano due
+            CARATTERI tipografici scritti nel testo: ogni telefono li disegna
+            con la sua faccia, quindi cambiavano forma e peso da un
+            dispositivo all'altro, e su alcuni Android il triangolino non
+            c'e proprio e comparivano due rettangolini vuoti. Adesso vengono
+            dal set dell'applicazione, come tutte le altre. */}
         <span style={{
-          color: COLORE_TITOLO, fontSize: 11, flexShrink: 0,
+          color: COLORE_TITOLO, flexShrink: 0, display: 'flex', alignItems: 'center',
           transform: aperta !== versoAlto ? 'rotate(180deg)' : 'none', transition: 'transform .18s',
-        }}>▾</span>
+        }}><Icon name="chevDown" size={13} /></span>
       </button>
 
       {aperta && (
@@ -116,14 +122,18 @@ export default function Scelta({ etichetta, valore, opzioni, onCambia, C, icona 
                 {o.icona && <Icon name={o.icona} size={14} color={scelto ? C.accent : 'rgba(214,226,245,0.88)'} />}
                 {o.bandiera && <span style={{ fontSize: 15, lineHeight: 1, flexShrink: 0 }}>{o.bandiera}</span>}
                 <span style={{
-                  flex: 1, minWidth: 0, fontSize: 13, fontWeight: scelto ? 800 : 600,
+                  flex: 1, minWidth: 0, fontSize: 13, fontWeight: 600,
                   color: scelto ? C.accent : 'rgba(214,226,245,0.88)',
                   overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                 }}>
                   {o.etichetta}
                   {o.conto != null && <span style={{ color: scelto ? C.accent : 'rgba(150,168,196,0.85)', fontWeight: 600 }}> {o.conto}</span>}
                 </span>
-                {scelto && <span style={{ color: C.accent, fontSize: 12, flexShrink: 0 }}>✓</span>}
+                {scelto && (
+                  <span style={{ color: C.accent, flexShrink: 0, display: 'flex', alignItems: 'center' }}>
+                    <Icon name="check" size={13} />
+                  </span>
+                )}
               </button>
             );
           })}

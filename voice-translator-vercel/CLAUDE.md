@@ -214,6 +214,37 @@ qualunque refactoring. Non si propone di rimandarlo.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.482** (push #771) — LO STANDARD DEL TEMPLATE SU TUTTO IL RESTO:
+  Vita, Mondo, gli ingressi, il taxi, la stanza video, il clone della voce.
+  Nove lavorazioni in parallelo, un pacchetto di schermate ciascuna, coi due
+  divieti rispettati — il pianeta e l'agente dal vivo non sono stati aperti.
+  Margini a venti sui contenitori, bersagli a quarantaquattro (il tasto piu
+  piccolo trovato era ventiquattro), colori dai token, parole dai pacchetti.
+  E QUATTRO DIFETTI VERI, non di sola grafica:
+  · IL DISTINTIVO DELL'ASCOLTATORE ERA UNA CASELLA VUOTA — fondo, bordo,
+    rientro e dentro niente: la parola non esisteva in nessuno dei trentotto
+    pacchetti. Ora c'e.
+  · UNA SPUNTA SI LEGGEVA COME «\u2713» ALLA LETTERA fra gli interessi del
+    profilo: dentro il testo di un elemento JSX una sequenza di scappamento
+    non e una scappatoia, e testo.
+  · OTTO TASTI ERANO INVISIBILI (cerchi gialli vuoti nel taxi, caselle
+    d'icona vuote negli ingressi e nella scheda persona): chiedevano un
+    disegno che nell'archivio delle icone non esiste.
+  · LA GUARDIA SULLE EMOJI AVEVA DUE BUCHI, e da tutti e due sono passate
+    emoji vere: guardava solo i CARATTERI (un'emoji scritta come
+    scappamento passava, ed erano scritte cosi in dieci file) e solo la
+    cartella components, senza entrare in ui/. Ora guarda tutte e due le
+    forme e scende nelle sottocartelle. Le due eccezioni — le reazioni, che
+    SONO emoji, e il messaggio di regalo su WhatsApp — sono dichiarate nel
+    codice invece che dimenticate.
+  E la pila torna nel suo angolo anche nella chat (era finita DENTRO il menu
+  •••: per sapere quanto credito ti resta dovevi aprire un menu, proprio dove
+  il credito si consuma mentre guardi). «Chiudi e archivia» esce da quel menu
+  e va nel pannello laterale: stava a un dito dalla chiamata vocale, e un
+  tocco storto chiudeva la conversazione. E l'indicatore della linea non dice
+  piu P2P, Realtime e Polling — tre nomi di protocolli, in inglese in tutte e
+  trentotto le lingue — ma se la linea e diretta, buona o debole.
+
 - Versione: **b.481** (push #770) — LA CORNICE COMUNE, che era l'ultimo posto
   dove le vecchie misure resistevano: i margini delle schermate che non se li
   scrivono da se salgono da 16 a 20 (passando da una pagina all'altra il

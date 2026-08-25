@@ -289,7 +289,7 @@ const VideoCallOverlay = memo(function VideoCallOverlay({
               aria-label={L('endCall')}
               style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                width: 40, height: 40, borderRadius: 20, border: 'none', cursor: 'pointer',
+                width: 44, height: 44, borderRadius: 22, border: 'none', cursor: 'pointer',
                 background: 'rgba(239,68,68,0.9)', color: '#fff',
                 boxShadow: '0 2px 12px rgba(239,68,68,0.45)',
               }}>

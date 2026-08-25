@@ -80,7 +80,7 @@ const AIView = memo(function AIView({
 
   return (
     <div style={{
-      ...S.page, padding: '20px 16px', display: 'flex', flexDirection: 'column', gap: 16,
+      ...S.page, padding: '20px 20px', display: 'flex', flexDirection: 'column', gap: 16,
       minHeight: '100vh', boxSizing: 'border-box', overflowY: 'auto', paddingBottom: 100,
     }}>
       {/* ── INIZIO b.89 — intestazione con il ritorno a Impostazioni ──
@@ -211,18 +211,28 @@ const AIView = memo(function AIView({
                   <div style={{ fontSize: 14, fontWeight: 600, color: S.colors.textPrimary }}>{L(auto.name)}</div>
                   <div style={{ fontSize: 11, color: S.colors.textMuted, marginTop: 2 }}>{L(auto.desc)}</div>
                 </div>
+                {/* b.482 — IL BERSAGLIO SALE A 44, IL DISEGNO RESTA. La levetta
+                    era alta ventisei: giusta da guardare, stretta da prendere.
+                    Ora il tasto e alto quarantaquattro e trasparente, e la
+                    levetta colorata sta dentro. A schermo non cambia niente. */}
                 <button onClick={() => toggleAutomation(auto.id)}
                   style={{
-                    width: 46, height: 26, borderRadius: 13, border: 'none', cursor: 'pointer',
-                    background: auto.enabled ? S.colors.accent4 : S.colors.toggleOff,
-                    position: 'relative', transition: 'background 0.3s',
+                    width: 46, minHeight: 44, border: 'none', cursor: 'pointer', padding: 0,
+                    background: 'transparent', flexShrink: 0,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
                   }}>
-                  <div style={{
-                    width: 20, height: 20, borderRadius: '50%', background: '#fff',
-                    position: 'absolute', top: 3,
-                    left: auto.enabled ? 23 : 3,
-                    transition: 'left 0.3s', boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
-                  }} />
+                  <span style={{
+                    position: 'relative', display: 'block', width: 46, height: 26, borderRadius: 13,
+                    background: auto.enabled ? S.colors.accent4 : S.colors.toggleOff,
+                    transition: 'background 0.3s',
+                  }}>
+                    <span style={{
+                      display: 'block', width: 20, height: 20, borderRadius: '50%', background: '#fff',
+                      position: 'absolute', top: 3,
+                      left: auto.enabled ? 23 : 3,
+                      transition: 'left 0.3s', boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
+                    }} />
+                  </span>
                 </button>
               </div>
             ))}

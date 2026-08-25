@@ -2,6 +2,7 @@
 import { useEffect, useRef, useMemo, useState } from 'react';
 import { FONT, getLang, vibrate } from '../lib/constants.js';
 import Icon from './Icon.js';
+import { IconHandRaise } from './Icons.js';
 import { useApp } from '../contexts/AppContext.js';
 import useStanzaVideo from '../hooks/useStanzaVideo.js';
 import useParlatoTradotto, { useTraduzioneInArrivo } from '../hooks/useParlatoTradotto.js';
@@ -102,9 +103,13 @@ function Riquadro({ nome, stream, stato, lingua, battuta, C, mio, volume = 1, mu
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6 }}>
             <button onClick={() => suMuto?.(!muto)} aria-pressed={muto}
               aria-label={nome + (muto ? ' — riattiva audio' : ' — silenzia')}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 18,
-                color: muto ? '#ef4444' : C.textPrimary, padding: 2, lineHeight: 1 }}>
-              {muto ? '\u{1F507}' : '\u{1F50A}'}
+              style={{ background: 'none', border: 'none', cursor: 'pointer',
+                width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                color: muto ? C.statusError || '#ef4444' : C.textPrimary, padding: 0, lineHeight: 0 }}>
+              {/* b.482 — erano due EMOJI: ogni telefono le disegna a modo
+                  suo, a colori, e in mezzo a icone monocrome sembrano
+                  incollate da un'altra applicazione. */}
+              <Icon name={muto ? 'mute' : 'speaker'} size={18} />
             </button>
             <input type="range" min="0" max="1" step="0.05" value={muto ? 0 : volume}
               onChange={(e) => { const v = parseFloat(e.target.value); suVolume?.(v); if (v > 0 && muto) suMuto?.(false); }}
@@ -291,21 +296,21 @@ export default function StanzaVideoGruppo({ roomId, roomSessionToken, mioNome, o
                   style={{ width: '100%', padding: '14px 14px', borderRadius: 16, cursor: 'pointer',
                     background: 'rgba(56,225,255,0.14)', border: '2px solid #38e1ff',
                     color: C.textPrimary, fontSize: 15, fontWeight: 600, fontFamily: FONT }}>
-                  {'\u2705'} {L('floorDone')}
+                  <Icon name="check" size={16} /> {L('floorDone')}
                 </button>
               ) : miaPosizioneInCoda >= 0 ? (
                 <button onClick={() => { vibrate(); stanza.mossaPalco('rinuncia'); }}
                   style={{ width: '100%', padding: '14px 14px', borderRadius: 16, cursor: 'pointer',
                     background: C.overlayBg, border: `2px solid ${C.cardBorder}`,
                     color: C.textPrimary, fontSize: 14, fontWeight: 600, fontFamily: FONT }}>
-                  {'\u23F3'} {L('floorInQueue')} · {miaPosizioneInCoda + 1}\u00B0 — {L('floorLeave')}
+                  <Icon name="history" size={16} /> {L('floorInQueue')} · {miaPosizioneInCoda + 1}\u00B0 — {L('floorLeave')}
                 </button>
               ) : (
                 <button onClick={() => { vibrate(); stanza.mossaPalco('chiedi'); }}
                   style={{ width: '100%', padding: '16px 14px', borderRadius: 16, cursor: 'pointer',
                     background: 'rgba(61,220,132,0.14)', border: '2px solid #3ddc84',
-                    color: C.textPrimary, fontSize: 16, fontWeight: 900, fontFamily: FONT }}>
-                  {'\u{1F64B}'} {L('floorAsk')}
+                    color: C.textPrimary, fontSize: 16, fontWeight: 600, fontFamily: FONT }}>
+                  <IconHandRaise size={18} /> {L('floorAsk')}
                 </button>
               )}
             </div>
@@ -317,26 +322,26 @@ export default function StanzaVideoGruppo({ roomId, roomSessionToken, mioNome, o
               la STESSA preferenza del profilo. */}
           <div style={{ marginTop: 12, display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
             {[
-              { id: 'camera', acceso: cameraAccesa, su: () => setCameraAccesa(v => !v), icona: cameraAccesa ? '\u{1F4F9}' : '\u{1F6AB}', parola: cameraAccesa ? L('cameraWord') : L('cameraOffWord') },
-              { id: 'micro', acceso: microfonoAcceso, su: () => setMicrofonoAcceso(v => !v), icona: microfonoAcceso ? '\u{1F3A4}' : '\u{1F507}', parola: microfonoAcceso ? L('micWord') : L('mutedWord') },
+              { id: 'camera', acceso: cameraAccesa, su: () => setCameraAccesa(v => !v), icona: cameraAccesa ? 'video' : 'x', parola: cameraAccesa ? L('cameraWord') : L('cameraOffWord') },
+              { id: 'micro', acceso: microfonoAcceso, su: () => setMicrofonoAcceso(v => !v), icona: microfonoAcceso ? 'mic' : 'mute', parola: microfonoAcceso ? L('micWord') : L('mutedWord') },
             ].map(b => (
               <button key={b.id} onClick={() => { vibrate(); b.su(); }} aria-pressed={b.acceso}
-                style={{ width: 74, padding: '10px 4px', borderRadius: 14, cursor: 'pointer', fontFamily: FONT,
+                style={{ width: 74, minHeight: 62, padding: '10px 4px', borderRadius: 14, cursor: 'pointer', fontFamily: FONT,
                   background: b.acceso ? 'rgba(61,220,132,0.14)' : 'rgba(239,68,68,0.14)',
                   border: `2px solid ${b.acceso ? '#3ddc84' : '#ef4444'}`, color: C.textPrimary,
                   display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
-                <span style={{ fontSize: 20, lineHeight: 1 }}>{b.icona}</span>
+                <span style={{ lineHeight: 0 }}><Icon name={b.icona} size={22} /></span>
                 <span style={{ fontSize: 10.5, fontWeight: 600 }}>{b.parola}</span>
               </button>
             ))}
-            {[['off','\u{1F6AB}'],['testo','\u{1F4D6}'],['voce','\u{1F50A}']].map(([id, icona]) => (
+            {[['off','x'],['testo','doc'],['voce','speaker']].map(([id, icona]) => (
               <button key={id} onClick={() => { vibrate(); savePrefs && savePrefs({ ...prefs, autoTraduzione: id }); }}
                 aria-pressed={sceltaTraduzione === id}
-                style={{ width: 74, padding: '10px 4px', borderRadius: 14, cursor: 'pointer', fontFamily: FONT,
+                style={{ width: 74, minHeight: 62, padding: '10px 4px', borderRadius: 14, cursor: 'pointer', fontFamily: FONT,
                   background: sceltaTraduzione === id ? 'rgba(56,225,255,0.14)' : C.overlayBg,
                   border: `2px solid ${sceltaTraduzione === id ? '#38e1ff' : C.cardBorder}`, color: C.textPrimary,
                   display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
-                <span style={{ fontSize: 20, lineHeight: 1 }}>{icona}</span>
+                <span style={{ lineHeight: 0 }}><Icon name={icona} size={22} /></span>
                 <span style={{ fontSize: 10.5, fontWeight: 600 }}>
                   {id === 'off' ? L('autoTransOff').split(':')[0] : id === 'testo' ? L('autoTransTextOnly') : L('autoTransVoiceText')}
                 </span>

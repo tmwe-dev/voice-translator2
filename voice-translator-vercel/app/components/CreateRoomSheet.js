@@ -174,7 +174,7 @@ function CreateRoomSheet({ open, onClose, onCreate, preimpostato }) {
             </div>
           </div>
           <button onClick={onClose} aria-label={L('closeWord')} style={{
-            width: 36, height: 36, borderRadius: 10, cursor: 'pointer',
+            width: 44, height: 44, borderRadius: 12, cursor: 'pointer',
             background: cardBg, border: `1px solid ${cardBorder}`,
             color: textMuted, fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>✕</button>
@@ -404,7 +404,7 @@ function CreateRoomSheet({ open, onClose, onCreate, preimpostato }) {
                     display: 'flex', alignItems: 'center', gap: 4, fontFamily: FONT,
                   }}>
                     <span style={{ fontSize: 16 }}>{info?.flag}</span>
-                    <span style={{ fontSize: 10, fontWeight: sel ? 700 : 500, color: sel ? accent : textPrimary }}>
+                    <span style={{ fontSize: 10, fontWeight: sel ? 600 : 500, color: sel ? accent : textPrimary }}>
                       {info?.name || code}
                     </span>
                   </button>
@@ -448,7 +448,7 @@ function CreateRoomSheet({ open, onClose, onCreate, preimpostato }) {
                     background: sel ? `${purple}15` : 'transparent',
                     border: `1px solid ${sel ? `${purple}30` : cardBorder}`,
                     color: sel ? purple : textPrimary,
-                    fontSize: 13, fontWeight: sel ? 700 : 500, fontFamily: FONT,
+                    fontSize: 13, fontWeight: sel ? 600 : 500, fontFamily: FONT,
                   }}>
                     {n}
                   </button>

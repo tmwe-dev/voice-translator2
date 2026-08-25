@@ -89,23 +89,27 @@ function TaxiQRView({ destination, onClose, onStartConversation, S }) {
       background: bg, display: 'flex', flexDirection: 'column',
       fontFamily: FONT,
     }}>
-      {/* Header */}
+      {/* b.482 — TESTATA: rientro laterale a venti come nel template, e il
+          tasto indietro portato a quarantaquattro, la misura sotto la quale
+          un dito comincia a sbagliare bersaglio. */}
       <header style={{
         display: 'flex', alignItems: 'center', gap: 10,
-        padding: '14px 16px', flexShrink: 0,
+        padding: '14px 20px', flexShrink: 0,
       }}>
         <button onClick={onClose} aria-label={L('closeWord')} style={{
-          width: 38, height: 38, borderRadius: 12, cursor: 'pointer',
+          width: 44, height: 44, borderRadius: 12, cursor: 'pointer',
           background: cardBg, border: `1px solid ${cardBorder}`,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           color: textMuted, fontSize: 18,
         }}>‹</button>
+        {/* b.482 — le parole vengono dai pacchetti lingua: questa schermata
+            la guarda un tassista che puo non parlare italiano. */}
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: 17, fontWeight: 600, color: textPrimary }}>
-            Mostra al tassista
+            {L('showToDriver')}
           </div>
           <div style={{ fontSize: 10, color: textMuted }}>
-            Apre la mappa sul suo telefono
+            {L('scanWithCamera')}
           </div>
         </div>
       </header>
@@ -130,7 +134,7 @@ function TaxiQRView({ destination, onClose, onStartConversation, S }) {
 
         {/* Destination preview */}
         <div style={{
-          width: '100%', maxWidth: 340, padding: '16px 18px', borderRadius: 16,
+          width: '100%', maxWidth: 340, padding: '16px 20px', borderRadius: 16,
           background: cardBg, border: `1px solid ${cardBorder}`,
         }}>
           <div style={{ fontSize: 14, fontWeight: 600, color: textPrimary, marginBottom: 6 }}>
@@ -143,14 +147,14 @@ function TaxiQRView({ destination, onClose, onStartConversation, S }) {
             <div style={{ fontSize: 12, color: textMuted, marginBottom: 2 }}>{destination.hotelName}</div>
           )}
           {destination.flightNumber && (
-            <div style={{ fontSize: 12, color: textMuted, marginBottom: 2 }}>Volo {destination.flightNumber}</div>
+            <div style={{ fontSize: 12, color: textMuted, marginBottom: 2 }}>{L('destFlight')} {destination.flightNumber}</div>
           )}
           {destination.entrance && (
             <div style={{ fontSize: 12, color: textMuted, marginBottom: 2 }}>{destination.entrance}</div>
           )}
           {destination.stops?.length > 0 && (
             <div style={{ fontSize: 12, color: textMuted, marginBottom: 2 }}>
-              {destination.stops.length} fermat{destination.stops.length === 1 ? 'a' : 'e'}: {destination.stops.join(' → ')}
+              {L('intermediateStops')} ({destination.stops.length}): {destination.stops.join(' → ')}
             </div>
           )}
           {destination.notes && (
@@ -158,9 +162,9 @@ function TaxiQRView({ destination, onClose, onStartConversation, S }) {
           )}
         </div>
 
-        {/* Instructions */}
+        {/* b.482 — anche la spiegazione passa dai pacchetti lingua. */}
         <div style={{ fontSize: 12, color: textMuted, textAlign: 'center', maxWidth: 300, lineHeight: 1.5 }}>
-          Fai inquadrare questo QR al tassista con la fotocamera: si apre la mappa del suo telefono con il percorso verso la destinazione.
+          {L('taxiScanOpensMap')}
         </div>
       </div>
 
@@ -169,21 +173,24 @@ function TaxiQRView({ destination, onClose, onStartConversation, S }) {
         padding: '12px 20px', paddingBottom: 'max(12px, env(safe-area-inset-bottom))',
         display: 'flex', gap: 10,
       }}>
+        {/* b.482 — questo tasto aveva una casella d'icona VUOTA: chiedeva
+            un disegno («car») che in Icon.js non esiste, e non si vedeva
+            niente. Ora porta l'icona del condividere, che e cio che fa. */}
         <button onClick={handleShare} style={{
-          flex: 1, padding: '14px', borderRadius: 14, cursor: 'pointer',
+          flex: 1, padding: '14px', minHeight: 44, borderRadius: 14, cursor: 'pointer',
           background: cardBg, border: `1px solid ${cardBorder}`,
           color: textPrimary, fontSize: 13, fontWeight: 600, fontFamily: FONT,
           display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
         }}>
-          <Icon name="car" size={15} color={textPrimary} /> Condividi link
+          <Icon name="share" size={15} color={textPrimary} /> {L('shareLink')}
         </button>
         <button onClick={onStartConversation} style={{
-          flex: 1, padding: '14px', borderRadius: 14, cursor: 'pointer',
+          flex: 1, padding: '14px', minHeight: 44, borderRadius: 14, cursor: 'pointer',
           background: `linear-gradient(135deg, ${accent}, ${purple})`,
           border: 'none', color: '#fff', fontSize: 13, fontWeight: 600, fontFamily: FONT,
           boxShadow: `0 4px 20px ${accent}35`,
         }}>
-          Parla col tassista
+          {L('talkToDriver')}
         </button>
       </div>
     </div>

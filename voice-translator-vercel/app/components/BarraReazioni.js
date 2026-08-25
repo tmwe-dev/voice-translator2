@@ -41,7 +41,7 @@ function BarraReazioni({ msgId, conte, mie, onReagisci, onRispondi, C, compatta 
     background: attivo ? `${C.accent1}1F` : 'transparent',
     border: `1px solid ${attivo ? `${C.accent1}55` : C.dividerColor || 'rgba(255,255,255,0.08)'}`,
     color: attivo ? C.accent1 : C.textMuted,
-    fontWeight: attivo ? 800 : 600,
+    fontWeight: attivo ? 600 : 600,
   });
 
   return (

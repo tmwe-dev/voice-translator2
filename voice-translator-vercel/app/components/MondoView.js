@@ -61,7 +61,12 @@ const ROLE_BADGES = {
   owner: { labelKey: 'roleHost', color: '#F59E0B', bg: 'rgba(245,158,11,0.12)' },
   moderator: { labelKey: 'roleMod', color: '#8B5CF6', bg: 'rgba(139,106,255,0.12)' },
   participant: null,
-  listener: { label: '', color: '#6B7280', bg: 'rgba(107,114,128,0.12)' },
+  // b.482 — QUI DENTRO NON C'ERA NIENTE. Il distintivo dell'ascoltatore
+  // aveva il fondo, il bordo e il rientro, e la parola era la stringa
+  // vuota: sulla scheda della stanza compariva una macchia grigia che
+  // non diceva niente e non si poteva nemmeno indovinare. La parola non
+  // esisteva in nessuno dei trentotto pacchetti: adesso c'e.
+  listener: { labelKey: 'roleListener', color: '#6B7280', bg: 'rgba(107,114,128,0.12)' },
   invited: { labelKey: 'roleInvited', color: '#3B82F6', bg: 'rgba(59,130,246,0.12)' },
 };
 
@@ -484,9 +489,13 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
           che sezione sei, in cima a una pagina che deve essere fatta di
           elenchi. Ora resta il nome, e la scelta della sezione e scesa
           in fondo, dove arriva il pollice (vedi la tendina sotto). */}
+      {/* b.482 — LA TESTATA RIENTRA DI VENTI, come ogni altra schermata.
+          Erano sedici: passando da una pagina all'altra il contenuto
+          saltava di quattro punti di lato, e quel salto si vede anche da
+          chi non saprebbe dire cosa e cambiato. */}
       <header style={{
         display: 'flex', alignItems: 'center', gap: 10,
-        padding: '10px 16px 4px', flexShrink: 0, position: 'relative', zIndex: 6,
+        padding: '10px 20px 4px', flexShrink: 0, position: 'relative', zIndex: 6,
       }}>
         {/* b.370 — IL SELETTORE TORNA IN ALTO. L'avevo messo in fondo
             perche Luca aveva chiesto «tendina sotto»: ma li sotto
@@ -549,12 +558,21 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
         {/* b.478 — la colonna a destra adesso ha DUE inquilini, la pila e la
             luna: se ne riserva uno solo, la testata finisce sotto la
             seconda. Il conto lo fa il righello, non io. */}
+        {/* b.482 — DUE COSE IN QUESTO ANGOLO. Il tasto del Paese diventa
+            alto quarantaquattro: sotto quella misura un dito comincia a
+            sbagliare bersaglio, e questo e il tasto con cui si esce da un
+            Paese. La testata non si alza di un pixel — la sua altezza la
+            danno le linguette, che sono gia a 44.
+            E il mondo intero non si disegna piu con un'emoji: a schermo
+            vanno le icone del sistema, che sono uguali su ogni apparecchio,
+            non i caratteri illustrati del telefono, che cambiano faccia da
+            un telefono all'altro. */}
         <div style={{ marginLeft: 'auto', marginRight: riservaADestra(2), minHeight: 30, display: 'flex', alignItems: 'center' }}>
           {paeseScelto ? (
             <button onClick={() => { vibrate(8); setPaeseScelto(null); setLangFilter('all'); }}
               aria-label={`${L('changeWord')} — ${nomePaese(paeseScelto)}`}
               style={{
-                display: 'flex', alignItems: 'center', gap: 6, padding: '5px 10px',
+                display: 'flex', alignItems: 'center', gap: 6, minHeight: 44, padding: '5px 10px',
                 borderRadius: 999, cursor: 'pointer', fontFamily: FONT,
                 background: C.card, border: `1px solid ${C.cardBorder}`,
                 color: C.textPrimary, fontSize: 12.5, fontWeight: 600,
@@ -566,8 +584,9 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
               <span style={{ color: C.textMuted }}>›</span>
             </button>
           ) : (
-            <span style={{ fontSize: 12.5, fontWeight: 600, color: C.textMuted, whiteSpace: 'nowrap' }}>
-              {`\u{1F30D} ${L('wholeWorld')}`}
+            <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5, fontWeight: 600, color: C.textMuted, whiteSpace: 'nowrap' }}>
+              <Icon name="globe" size={14} color={C.textMuted} />
+              {L('wholeWorld')}
             </span>
           )}
         </div>
@@ -594,11 +613,17 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
           che si sistemano una volta sola, scendono sotto i filtri. */}
       <div style={{ display: 'flex', justifyContent: 'center' }}>
         <div style={{
-          width: '100%', maxWidth: 420,
+          // b.482 — LA FASCIA DELLA RICERCA HA UN'ALTEZZA SUA, FISSA.
+          // Prima la dava il contenuto: appena si scriveva una lettera
+          // compariva il tasto per svuotare e la fascia cresceva,
+          // spingendo in basso i filtri che stanno sotto. Ora il tasto
+          // (44, come ogni bersaglio) ci sta dentro senza muovere niente.
+          // E il rientro passa da quattordici a venti, come tutto il resto.
+          width: '100%', maxWidth: 420, minHeight: 54,
           display: 'flex', alignItems: 'center', gap: 10,
           background: C.card, border: `1px solid ${C.cardBorder}`,
           backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)',
-          borderRadius: 14, padding: '10px 14px',
+          borderRadius: 14, padding: '0 20px',
         }}>
           <Icon name="globe" size={14} color={C.textMuted} />
           <input type="text" value={search} onChange={e => setSearch(e.target.value)}
@@ -608,10 +633,19 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
               color: C.textPrimary, fontSize: 13, fontFamily: FONT,
             }}
           />
+          {/* b.482 — IL TASTO CHE SVUOTA LA RICERCA era un carattere
+              tipografico alto quanto una lettera: nessuna icona, nessun
+              bersaglio, e su un telefono lo si mancava. Ora e l'icona del
+              sistema dentro una casella da quarantaquattro, come nella
+              rubrica. */}
           {search && (
-            <button onClick={() => setSearch('')} style={{
-              background: 'none', border: 'none', color: C.textMuted, cursor: 'pointer', fontSize: 16, padding: 0,
-            }}>×</button>
+            <button onClick={() => setSearch('')} aria-label={L('resetWord')} style={{
+              background: 'none', border: 'none', color: C.textMuted, cursor: 'pointer',
+              width: 44, height: 44, padding: 0, flexShrink: 0,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              <Icon name="x" size={16} color={C.textMuted} />
+            </button>
           )}
         </div>
       </div>
@@ -662,8 +696,8 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
           eliminare lo sfondo»): un pannello stretto, in mezzo, col pianeta
           che resta dietro. Larghezze rispettate. ═══ */}
       {cercando && risultati && (
-        <div style={{ position: 'absolute', inset: 0, zIndex: 30, display: 'flex', justifyContent: 'center', alignItems: 'flex-start', padding: '4px 16px', pointerEvents: 'none' }}>
-          <div style={{ width: '100%', maxWidth: 420, maxHeight: '68vh', overflowY: 'auto', scrollbarWidth: 'none', pointerEvents: 'auto', background: C.card, backdropFilter: 'blur(28px)', WebkitBackdropFilter: 'blur(28px)', border: `1px solid ${C.cardBorder}`, borderRadius: 18, padding: 14, boxShadow: '0 24px 60px -14px rgba(0,0,0,0.65)' }}>
+        <div style={{ position: 'absolute', inset: 0, zIndex: 30, display: 'flex', justifyContent: 'center', alignItems: 'flex-start', padding: '4px 20px', pointerEvents: 'none' }}>
+          <div style={{ width: '100%', maxWidth: 420, maxHeight: '68vh', overflowY: 'auto', scrollbarWidth: 'none', pointerEvents: 'auto', background: C.card, backdropFilter: 'blur(28px)', WebkitBackdropFilter: 'blur(28px)', border: `1px solid ${C.cardBorder}`, borderRadius: 18, padding: '14px 20px', boxShadow: '0 24px 60px -14px rgba(0,0,0,0.65)' }}>
 
             {risultati.paesi.length > 0 && (<>
               <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: 1, color: C.textMuted, margin: '4px 0 8px' }}>{L('searchCountriesLangs')}</div>
@@ -671,7 +705,7 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
                   viaggia al globo e parte lo zoom che sa gia fare da se */}
               {risultati.paesi.map((l) => (
                 <button key={l.code} onClick={() => { setLangFilter(l.code); setPaeseScelto(paeseDaLingua(l.code)); setSearch(''); setTab('stanze'); }}
-                  style={{ width: '100%', textAlign: 'left', padding: 12, borderRadius: 14, background: C.card, border: `1px solid ${C.cardBorder}`, cursor: 'pointer', fontFamily: FONT, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 10 }}>
+                  style={{ width: '100%', minHeight: 44, textAlign: 'left', padding: 12, borderRadius: 14, background: C.card, border: `1px solid ${C.cardBorder}`, cursor: 'pointer', fontFamily: FONT, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 10 }}>
                   <span style={{ fontSize: 22 }}>{l.flag}</span>
                   <span style={{ flex: 1, fontSize: 13.5, fontWeight: 600, color: C.textPrimary }}>{l.name}</span>
                   {l.vive > 0 && (
@@ -686,23 +720,23 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
             </>)}
 
             {risultati.stanze.length > 0 && (<>
-              <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: 1, color: C.textMuted, margin: '14px 0 8px' }}>{(L('liveRoomsNow') !== 'liveRoomsNow' ? L('liveRoomsNow') : 'STANZE VIVE ADESSO')}</div>
+              <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: 1, color: C.textMuted, margin: '14px 0 8px' }}>{L('liveRoomsNow')}</div>
               {risultati.stanze.map((r) => (
                 <button key={r.roomId} onClick={() => onJoinRoom?.(r.roomId)}
-                  style={{ width: '100%', textAlign: 'left', padding: 12, borderRadius: 14, background: C.card, border: `1px solid ${C.cardBorder}`, cursor: 'pointer', fontFamily: FONT, marginBottom: 8 }}>
+                  style={{ width: '100%', minHeight: 44, textAlign: 'left', padding: 12, borderRadius: 14, background: C.card, border: `1px solid ${C.cardBorder}`, cursor: 'pointer', fontFamily: FONT, marginBottom: 8 }}>
                   <div style={{ fontSize: 13.5, fontWeight: 600, color: C.textPrimary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.nome}</div>
-                  <div style={{ fontSize: 11, color: C.textMuted }}>{r.membri} {(L('inRoomWord') !== 'inRoomWord' ? L('inRoomWord') : 'dentro')}{r.lang ? ` · ${getLangFlag(r.lang)} ${getLangName(r.lang)}` : ''}</div>
+                  <div style={{ fontSize: 11, color: C.textMuted }}>{r.membri} {L('inRoomWord')}{r.lang ? ` · ${getLangFlag(r.lang)} ${getLangName(r.lang)}` : ''}</div>
                 </button>
               ))}
             </>)}
 
             {risultati.discussioni.length > 0 && (<>
-              <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: 1, color: C.textMuted, margin: '14px 0 8px' }}>{(L('trendNow') !== 'trendNow' ? L('trendNow') : 'DI COSA SI PARLA')}</div>
+              <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: 1, color: C.textMuted, margin: '14px 0 8px' }}>{L('trendNow')}</div>
               {risultati.discussioni.map((d, i) => (
                 <button key={d.id || i} onClick={() => { setSearch(''); setTab('news'); setApriDiscussione(d.id || null); }}
-                  style={{ width: '100%', textAlign: 'left', padding: 12, borderRadius: 14, background: C.card, border: `1px solid ${C.cardBorder}`, cursor: 'pointer', fontFamily: FONT, marginBottom: 8 }}>
+                  style={{ width: '100%', minHeight: 44, textAlign: 'left', padding: 12, borderRadius: 14, background: C.card, border: `1px solid ${C.cardBorder}`, cursor: 'pointer', fontFamily: FONT, marginBottom: 8 }}>
                   <div style={{ fontSize: 13.5, fontWeight: 600, color: C.textPrimary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.titolo}</div>
-                  <div style={{ fontSize: 11, color: C.textMuted }}>{d.commenti} {(L('commentsWord') !== 'commentsWord' ? L('commentsWord') : 'commenti')}{d.topic ? ` · ${d.topic}` : ''}</div>
+                  <div style={{ fontSize: 11, color: C.textMuted }}>{d.commenti} {L('commentsWord')}{d.topic ? ` · ${d.topic}` : ''}</div>
                 </button>
               ))}
             </>)}
@@ -711,7 +745,7 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
                 invece di far passare il guasto per un mondo silenzioso. */}
             {feedCaldoGuasto && (
               <button onClick={() => { setFeedCaldoGuasto(false); setRiprovaCaldo((n) => n + 1); }}
-                style={{ width: '100%', margin: '10px 0', padding: '10px 12px', borderRadius: 12, background: 'none',
+                style={{ width: '100%', minHeight: 44, margin: '10px 0', padding: '10px 12px', borderRadius: 12, background: 'none',
                   border: `1px solid ${C.cardBorder}`, color: C.textMuted, fontSize: 12, fontWeight: 600, fontFamily: FONT, cursor: 'pointer' }}>
                 {L('newsError')} · {L('retryWord')}
               </button>
@@ -782,7 +816,9 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
       // b.361 — IL GLOBO SI TRASCINA sotto la lista (collaudo di Luca): la
       // colonna non ruba i tocchi (pointerEvents none), solo le card e i
       // pulsanti veri li riprendono.
-      <div onScroll={seguiScorrimento} style={{ flex: 1, overflowY: 'auto', padding: '4px 16px calc(106px + env(safe-area-inset-bottom))', scrollbarWidth: 'none', pointerEvents: 'none' }}>
+      // b.482 — l'elenco rientra di venti come la testata: erano sedici,
+      // e il contenuto si spostava di lato passando da una scheda all'altra.
+      <div onScroll={seguiScorrimento} style={{ flex: 1, overflowY: 'auto', padding: '4px 20px calc(106px + env(safe-area-inset-bottom))', scrollbarWidth: 'none', pointerEvents: 'none' }}>
         {/* b.324 — D8: colonna centrata anche qui. */}
         <div style={{ ...COLONNA, pointerEvents: 'auto' }}>
 
@@ -805,7 +841,10 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
                 <button key={t.topic}
                   onClick={() => { vibrate(8); setTemaDaMondo(t.topic); setTab('news'); }}
                   style={{
-                    display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px',
+                    // b.482 — alta 44: e una pillola, ma si tocca, e cio
+                    // che si tocca deve stare sotto un dito. Il testo
+                    // dentro non cambia misura.
+                    display: 'flex', alignItems: 'center', gap: 6, minHeight: 44, padding: '7px 12px',
                     borderRadius: 999, cursor: 'pointer', fontFamily: FONT,
                     background: C.card, border: `1px solid ${C.cardBorder}`,
                     color: C.textPrimary, fontSize: 12.5, fontWeight: 600,
@@ -833,7 +872,7 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
           <div style={{ textAlign: 'center', padding: 24 }}>
             <div style={{ fontSize: 13, color: C.red, marginBottom: 12 }}>{error}</div>
             <button onClick={handleRefresh} style={{
-              padding: '8px 20px', borderRadius: 12,
+              minHeight: 44, padding: '8px 20px', borderRadius: 12,
               background: `${C.accent}15`, border: `1px solid ${C.accent}25`,
               color: C.accent, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: FONT,
             }}>
@@ -858,7 +897,7 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
               {L('createPublicRoomDesc')}
             </div>
             <button onClick={onCreateRoom || (() => setView('home'))} style={{
-              padding: '12px 28px', borderRadius: 14, cursor: 'pointer',
+              minHeight: 44, padding: '12px 28px', borderRadius: 14, cursor: 'pointer',
               background: `linear-gradient(135deg, ${C.accent}, ${C.purple})`,
               border: 'none', color: '#fff', fontSize: 13, fontWeight: 600, fontFamily: FONT,
               boxShadow: `0 4px 20px ${C.accent}35`,
@@ -879,7 +918,7 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
               {L('noRoomsFilters')}
             </div>
             <button onClick={() => { setSearch(''); setLangFilter('all'); setModeFilter('all'); }} style={{
-              padding: '7px 18px', borderRadius: 10,
+              minHeight: 44, padding: '7px 18px', borderRadius: 10,
               background: 'none', border: `1px solid ${C.cardBorder}`,
               color: C.textSecondary, fontSize: 11, cursor: 'pointer', fontFamily: FONT,
             }}>
@@ -915,12 +954,18 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
           const eta = quando(room.createdAt, L);
           const dentro = viva(room.membri ?? room.memberCount, 4);
           const eti = stileEtichetta(C);
+          // b.482 — IL FONDO DELLA SCHEDA VIENE DAL TEMA. Era un blu quasi
+          // nero scritto a mano: serviva a restare leggibile sopra il
+          // pianeta, che da b.476 non sta piu dietro questo elenco. Sul
+          // tema chiaro quel fondo restava notturno mentre il testo si
+          // faceva scuro, cioe scritta scura su scheda scura. Ora e il
+          // colore delle schede, lo stesso di tutte le altre.
           return (
             <button key={room.roomId} onClick={() => onJoinRoom(room.roomId)}
               style={{
                 display: 'flex', alignItems: 'flex-start', gap: 12, width: '100%',
-                padding: 12, marginBottom: 8,
-                background: 'rgba(11,15,28,0.94)', border: `1px solid ${C.cardBorder}`,
+                minHeight: 44, padding: 12, marginBottom: 8,
+                background: C.card, border: `1px solid ${C.cardBorder}`,
                 borderRadius: 14, cursor: 'pointer', textAlign: 'left', fontFamily: FONT,
                 WebkitTapHighlightColor: 'transparent',
                 animation: `vtSlideUp 0.3s ease-out ${idx * 0.05}s both`,
@@ -941,16 +986,23 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
                   {eta && <><span style={{ ...eti, opacity: 0.5 }}>{PUNTO}</span><span style={eti}>{eta}</span></>}
                   {/* si bussa e l'host apre: dirlo PRIMA che uno tocchi,
                       altrimenti sembra una stanza che non risponde */}
+                  {/* b.482 — l'ambra e quella della tavolozza: il colore
+                      scritto a mano che le stava accanto non e mai stato
+                      usato, ma stava li pronto a diventare un secondo
+                      giallo il giorno che la tavolozza cambiasse. */}
                   {room.suApprovazione && (
-                    <span style={{ ...eti, color: PALETTE.amber || '#F59E0B', background: `${PALETTE.amber || '#F59E0B'}18`, borderRadius: 5, padding: '1px 6px' }}>
+                    <span style={{ ...eti, color: PALETTE.amber, background: `${PALETTE.amber}18`, borderRadius: 5, padding: '1px 6px' }}>
                       {L('onApproval')}
                     </span>
                   )}
                   {/* b.111 — litigio libero: e la ragione per cui uno sceglie
                       questa stanza, o per cui gira alla larga. Scoprirlo
                       dentro sarebbe un'imboscata. */}
+                  {/* b.482 — il rosso del litigio libero era scritto a
+                      mano: uguale a nient'altro nell'applicazione e cieco
+                      al tema. Ora e il rosso del tema. */}
                   {room.hot && (
-                    <span style={{ ...eti, color: '#FF7A5C', background: 'rgba(255,90,60,0.12)', borderRadius: 5, padding: '1px 6px' }} title={L('freeFightTip')}>
+                    <span style={{ ...eti, color: C.red, background: `${C.red}1F`, borderRadius: 5, padding: '1px 6px' }} title={L('freeFightTip')}>
                       {L('freeFight')}
                     </span>
                   )}
@@ -968,7 +1020,10 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 6, flexWrap: 'wrap' }}>
                   <span style={eti}>{room.host}</span>
                   <span style={{ ...eti, opacity: 0.5 }}>{PUNTO}</span>
-                  <span style={{ ...eti, color: dentro.accesa ? C.accent : C.textMuted, fontWeight: dentro.accesa ? 800 : 700 }}>
+                  {/* b.482 — la stanza piena si distingue dal COLORE, non
+                      dal peso: qui c'erano un 800 e un 700, cioe due
+                      grassetti in una riga di etichette. */}
+                  <span style={{ ...eti, color: dentro.accesa ? C.accent : C.textMuted, fontWeight: 600 }}>
                     {dentro.n}{room.maxPartecipanti ? `/${room.maxPartecipanti}` : ''} {L('insideWord')}
                   </span>
                   {room.myRole && ROLE_BADGES[room.myRole] && (

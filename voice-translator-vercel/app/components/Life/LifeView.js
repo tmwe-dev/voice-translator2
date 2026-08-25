@@ -8,15 +8,17 @@ import { LIVELLI, PROFILI } from '../../lib/compagni/corsi/catalogo.js';
 
 // b.300 — idee per riempire il campo: un tocco mette una frase gia
 // dettagliata, cosi anche un anziano o un bambino non parte dal vuoto.
+// b.482 — via le faccine da queste idee: a schermo non ci vanno, e la
+// parola da sola dice gia di che materia si tratta.
 const IDEE_CORSO = [
-  { ic: '🔢', et: 'Matematica', q: 'Matematica di base: numeri, operazioni ed equazioni semplici' },
-  { ic: '🌍', et: 'Storia', q: 'Storia: dai secoli antichi ai giorni nostri, con date ed eventi chiave' },
-  { ic: '🎵', et: 'Musica', q: 'Storia della musica e dei grandi compositori, con esempi da ascoltare' },
-  { ic: '🗣️', et: 'Inglese', q: 'Inglese per iniziare a parlare: frasi utili di ogni giorno' },
-  { ic: '🔬', et: 'Scienze', q: 'Scienze: il corpo umano, la natura e come funziona il mondo' },
-  { ic: '🍳', et: 'Cucina', q: 'Cucina: ricette semplici passo dopo passo' },
-  { ic: '💻', et: 'Computer', q: 'Usare il computer e internet senza paura, passo dopo passo' },
-  { ic: '🎨', et: 'Arte', q: 'Storia dell\'arte: opere famose e artisti da conoscere' },
+  { et: 'Matematica', q: 'Matematica di base: numeri, operazioni ed equazioni semplici' },
+  { et: 'Storia', q: 'Storia: dai secoli antichi ai giorni nostri, con date ed eventi chiave' },
+  { et: 'Musica', q: 'Storia della musica e dei grandi compositori, con esempi da ascoltare' },
+  { et: 'Inglese', q: 'Inglese per iniziare a parlare: frasi utili di ogni giorno' },
+  { et: 'Scienze', q: 'Scienze: il corpo umano, la natura e come funziona il mondo' },
+  { et: 'Cucina', q: 'Cucina: ricette semplici passo dopo passo' },
+  { et: 'Computer', q: 'Usare il computer e internet senza paura, passo dopo passo' },
+  { et: 'Arte', q: 'Storia dell\'arte: opere famose e artisti da conoscere' },
 ];
 import { generaTurnoPodcast, generaSyllabus, generaLezione, generaQuiz, parlaTurno, parlaBilingue, elencoMiei, corsiDisponibili, pubblicaCorso, generaIllustrazione, generaTavola, arricchisciLezione, registraEsito, chiediAlMaestro, salvaCorsoMio, mieiCorsiUtente, segnaLibroCorso, progressoCorso, profiloStudente, salvaProfiloStudente } from '../../lib/compagni/cliente.js';
 import { pausa as pausaAudio, ferma as fermaAudio, fermaElemento, suInterruzione, apriCiclo } from '../../lib/voce.js';
@@ -127,12 +129,17 @@ function LifeView({ onApriStanza }) {
         60 (due tasti da 42, riempimento 8+8, bordo 1+1) piu lo stacco e
         la zona del trattino di casa. Cosi a scorrimento finito l'ultima
         riga resta sopra la pillola su qualunque telefono. */}
-    <div style={{ maxWidth: 640, margin: '0 auto', padding: '14px 16px calc(60px + max(16px, env(safe-area-inset-bottom)) + 12px)', boxSizing: 'border-box' }}>
+    {/* b.482 — il rientro laterale della colonna sale da 16 a 20, la misura
+        del telaio comune: passando da una pagina all'altra il contenuto
+        saltava di quattro punti. */}
+    <div style={{ maxWidth: 640, margin: '0 auto', padding: '14px 20px calc(60px + max(16px, env(safe-area-inset-bottom)) + 12px)', boxSizing: 'border-box' }}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
-        {/* b.206 — pulsante indietro uniforme (glifo ‹, 38×38, r12) come le altre pagine */}
+        {/* b.206 — pulsante indietro uniforme (glifo ‹, r12) come le altre pagine */}
+        {/* b.482 — il tasto piu premuto della pagina stava a 38: sotto i
+            quarantaquattro il dito manca il bersaglio, e da qui si torna indietro. */}
         <button onClick={() => { vibrate(8); setView('home'); }} aria-label={L('lifeBack')}
-          style={{ width: 38, height: 38, borderRadius: 12, background: card, border: bordo, color: testoP, cursor: 'pointer', fontSize: 18, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          style={{ width: 44, height: 44, borderRadius: 12, background: card, border: bordo, color: testoP, cursor: 'pointer', fontSize: 18, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           {'‹'}
         </button>
         <Icon name="star" size={20} color={accent} />
@@ -154,7 +161,9 @@ function LifeView({ onApriStanza }) {
           // via il ripiego che confrontava il risultato con la chiave stessa.
           { id: 'obiettivi', icon: 'target', label: L('lifeGoalsTab') },
           // b.332 — Ripetizioni e Compiti: l'agenda di studio (piano di Luca).
-          { id: 'compiti', icon: 'history', label: (L('lifeHomeworkTab') !== 'lifeHomeworkTab' ? L('lifeHomeworkTab') : 'Compiti') },
+          // b.482 — la chiave esiste in tutti i pacchetti lingua: il ripiego
+          // in italiano era codice morto che teneva una parola cablata qui.
+          { id: 'compiti', icon: 'history', label: L('lifeHomeworkTab') },
           { id: 'compagni', icon: 'star', label: L('lifeCompanionsTab') },
         ].map((t) => {
           const on = scheda === t.id;
@@ -165,10 +174,10 @@ function LifeView({ onApriStanza }) {
           return (
             <button key={t.id} onClick={() => { vibrate(8); setScheda(t.id); }}
               aria-label={t.label} aria-current={on ? 'page' : undefined}
-              style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5,
+              style={{ flex: 1, minWidth: 0, minHeight: 44, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5,
                 padding: '4px 2px', background: 'none', border: 'none', cursor: 'pointer', color: colore, opacity: on ? 1 : 0.92, fontFamily: FONT }}>
               <Icon name={t.icon} size={26} color={colore} />
-              <span style={{ fontSize: 10.5, fontWeight: on ? 800 : 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%' }}>{t.label}</span>
+              <span style={{ fontSize: 10.5, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%' }}>{t.label}</span>
               <span style={{ width: 16, height: 2, borderRadius: 2, background: on ? accent : 'transparent' }} />
             </button>
           );
@@ -181,7 +190,9 @@ function LifeView({ onApriStanza }) {
       {/* b.302 — 'dossier' non e piu una scheda: chi ci arriva vede la Tavola. */}
       {scheda === 'impara' && <Impara compagni={tutti} argomentoIniziale={imparaPreset} {...{ L, C, lingua, userToken, testoP, muto, accent, card, bordo }} />}
       {scheda === 'obiettivi' && <GestioneObiettivi {...{ L, userToken, testoP, muto, accent, card, bordo }} />}
-      {scheda === 'compiti' && <CompitiView {...{ L, userToken, lingua, testoP, muto, accent, card, bordo }} cambiaScheda={setScheda} />}
+      {/* b.482 — i Compiti ricevono anche la tavolozza del tema: i loro
+          colori di stato erano scritti a mano e non seguivano il tema. */}
+      {scheda === 'compiti' && <CompitiView {...{ L, C, userToken, lingua, testoP, muto, accent, card, bordo }} cambiaScheda={setScheda} />}
       {scheda === 'compagni' && <GestioneCompagni miei={miei} onCambiato={caricaMiei} {...{ L, C, lingua, userToken, testoP, muto, accent, card, bordo }} />}
     </div>
 
@@ -200,7 +211,7 @@ function LifeView({ onApriStanza }) {
 function inlineGrassetto(s, keyBase) {
   return String(s).split(/(\*\*[^*]+\*\*)/g).map((p, i) =>
     (p.startsWith('**') && p.endsWith('**') && p.length > 4)
-      ? <strong key={`${keyBase}-${i}`}>{p.slice(2, -2)}</strong>
+      ? <strong key={`${keyBase}-${i}`} style={{ fontWeight: 600 }}>{p.slice(2, -2)}</strong>
       : <span key={`${keyBase}-${i}`}>{p}</span>);
 }
 function TestoRicco({ testo, testoP, muto }) {
@@ -220,7 +231,7 @@ function TestoRicco({ testo, testoP, muto }) {
 // ─────────────────────────────────────────────────────────────────
 // SCHEDA PODCAST
 // ─────────────────────────────────────────────────────────────────
-function Podcast({ compagni, L, lingua, userToken, testoP, muto, accent, card, bordo }) {
+function Podcast({ compagni, L, C, lingua, userToken, testoP, muto, accent, card, bordo }) {
   const [argomento, setArgomento] = useState('');
   const [scelti, setScelti] = useState([]);
   const [round, setRound] = useState(3);
@@ -232,6 +243,9 @@ function Podcast({ compagni, L, lingua, userToken, testoP, muto, accent, card, b
   // b.363 — lo Stop del telecomando ferma anche questa fabbrica di turni
   useEffect(() => suInterruzione(() => { fermatoRef.current = true; }), []);
   const audioRef = useRef(null);
+  // b.482 — il rosso dell'avviso viene dal tema: scritto a mano restava
+  // lo stesso anche sui temi chiari, dove non era piu leggibile.
+  const rosso = C?.statusError || '#f87171';
 
   const toggle = (id) => {
     setScelti((s) => s.includes(id) ? s.filter(x => x !== id) : (s.length >= 4 ? s : [...s, id]));
@@ -317,7 +331,7 @@ function Podcast({ compagni, L, lingua, userToken, testoP, muto, accent, card, b
           const on = scelti.includes(c.id);
           return (
             <button key={c.id} onClick={() => { vibrate(6); toggle(c.id); }}
-              style={{ padding: '10px 6px', borderRadius: 12, cursor: 'pointer', textAlign: 'center',
+              style={{ minHeight: 44, padding: '10px 6px', borderRadius: 12, cursor: 'pointer', textAlign: 'center',
                 background: on ? `${c.colore}22` : card, border: `1px solid ${on ? c.colore : (bordo.split(' ').pop())}`, fontFamily: FONT }}>
               {/* b.208 — avatar del Compagno, non l'emoji */}
               <img src={c.avatar} alt="" width={46} height={46} style={{ borderRadius: 12, display: 'block', margin: '0 auto 6px', objectFit: 'cover' }} />
@@ -332,22 +346,24 @@ function Podcast({ compagni, L, lingua, userToken, testoP, muto, accent, card, b
         <span style={{ fontSize: 13, color: muto }}>{L('lifeRounds')}</span>
         {[2, 3, 4].map((n) => (
           <button key={n} onClick={() => setRound(n)}
-            style={{ width: 40, height: 36, borderRadius: 10, cursor: 'pointer', fontWeight: 600, fontFamily: FONT,
+            style={{ width: 44, height: 44, borderRadius: 10, cursor: 'pointer', fontWeight: 600, fontFamily: FONT,
               background: round === n ? accent : card, color: round === n ? '#04121c' : testoP, border: bordo }}>{n}</button>
         ))}
       </div>
 
-      {errore && <div style={{ color: '#f87171', fontSize: 13, marginBottom: 10 }}>{errore}</div>}
+      {errore && <div style={{ color: rosso, fontSize: 13, marginBottom: 10 }}>{errore}</div>}
 
+      {/* b.482 — via le faccine dal tasto grande: la parola dice gia tutto,
+          e il bersaglio arriva ai quarantaquattro punti. */}
       {stato !== 'ascolto'
         ? <button onClick={vai} disabled={stato === 'genero'}
-            style={{ width: '100%', padding: 14, borderRadius: 14, border: 'none', cursor: 'pointer',
+            style={{ width: '100%', minHeight: 44, padding: 14, borderRadius: 14, border: 'none', cursor: 'pointer',
               background: accent, color: '#04121c', fontWeight: 600, fontSize: 15, fontFamily: FONT, opacity: stato === 'genero' ? 0.6 : 1 }}>
-            {stato === 'genero' ? L('lifeGenerating') : `🎙️ ${L('lifeGenListen')}`}
+            {stato === 'genero' ? L('lifeGenerating') : L('lifeGenListen')}
           </button>
         : <button onClick={ferma}
-            style={{ width: '100%', padding: 14, borderRadius: 14, border: bordo, cursor: 'pointer', background: 'transparent', color: testoP, fontWeight: 600, fontSize: 15, fontFamily: FONT }}>
-            ⏹ {L('lifeStop')}
+            style={{ width: '100%', minHeight: 44, padding: 14, borderRadius: 14, border: bordo, cursor: 'pointer', background: 'transparent', color: testoP, fontWeight: 600, fontSize: 15, fontFamily: FONT }}>
+            {L('lifeStop')}
           </button>}
 
       {/* Copione / trascrizione */}
@@ -435,7 +451,7 @@ const LINGUE_IMPARABILI = ['en', 'es', 'fr', 'de', 'it', 'pt', 'zh', 'ja', 'ko',
 // accanto c'e scritto che la voce e approssimata. Toglierli sarebbe
 // piu comodo per noi e peggio per chi li vuole imparare.
 
-function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bordo, argomentoIniziale = '' }) {
+function Impara({ compagni, L, C, lingua, userToken, testoP, muto, accent, card, bordo, argomentoIniziale = '' }) {
   const [argomento, setArgomento] = useState(argomentoIniziale || '');
   const [categoria, setCategoria] = useState('altro');
   const [livello, setLivello] = useState('base');
@@ -689,6 +705,10 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
   // b.300 — indice del livello per la barra
   const livelloIdx = Math.max(0, LIVELLI.findIndex((l) => l.id === livello));
   const tt = conRipiego(L); // b.362 — unica definizione, in lib/ripiego.js
+  // b.482 — i colori di stato (avviso e attenzione) vengono dal tema:
+  // scritti a mano restavano gli stessi anche sui temi chiari.
+  const rosso = C?.statusError || '#f87171';
+  const ambra = C?.statusWarning || '#f59e0b';
 
   // b.334 — PROFILO STUDENTE (chi sei, perche studi) + preferenze esperienza
   // (durata, stile, contenuti extra): si compilano QUI, una volta, e il
@@ -770,7 +790,9 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
     }
   }, [sezioneAttiva, ascoltando]);
 
-  const stileSelect = { flex: 1, padding: 10, borderRadius: 10, border: bordo, background: card, color: testoP, fontFamily: FONT, fontSize: 13 };
+  // b.482 — anche i menu a tendina e i campi si toccano col dito: sotto i
+  // quarantaquattro punti il bersaglio e piu piccolo del polpastrello.
+  const stileSelect = { flex: 1, minHeight: 44, padding: 10, borderRadius: 10, border: bordo, background: card, color: testoP, fontFamily: FONT, fontSize: 13 };
 
   // b.228 — apri un corso della libreria: carica struttura e impostazioni; le
   // lezioni si (ri)generano poi nella lingua scelta (conta per i bambini).
@@ -1223,7 +1245,7 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
   if (aperta) {
     return (
       <div>
-        <button onClick={() => { stopLetturaRef.current = true; fermaElemento(audioLezioneRef.current); setSezioneAttiva(-1); setAperta(null); }} style={{ background: card, border: bordo, borderRadius: 10, padding: '8px 12px', cursor: 'pointer', color: testoP, fontFamily: FONT, marginBottom: 12 }}>
+        <button onClick={() => { stopLetturaRef.current = true; fermaElemento(audioLezioneRef.current); setSezioneAttiva(-1); setAperta(null); }} style={{ minHeight: 44, background: card, border: bordo, borderRadius: 10, padding: '8px 12px', cursor: 'pointer', color: testoP, fontFamily: FONT, marginBottom: 12 }}>
           <Icon name="back" size={14} color={testoP} /> {L('lifeLessons')}
         </button>
         {/* b.229 — tutor "compagno di viaggio" accanto al titolo.
@@ -1236,12 +1258,14 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
             const l2c = (linguaStudiata || rilevaLinguaStudiata(argomento.trim(), aperta.lezione?.titolo || ''));
             if (!l2c || l2c === linguaCorso) return null;
             const assist = assistentePer(l2c);
+            // b.482 — le parole di questo tasto erano scritte in italiano dentro
+            // il codice: chi usa l'app in un'altra lingua leggeva l'italiano.
             return (
               <button onClick={() => { vibrate(8); fermaLettura(); setParlaAssist((v) => !v); }}
-                title={`Parla dal vivo con ${assist.nome} (madrelingua)`}
-                style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 9px', borderRadius: 999, background: parlaAssist ? `${accent}22` : card, border: parlaAssist ? `1px solid ${accent}` : bordo, flexShrink: 0, cursor: 'pointer', fontFamily: FONT }}>
+                title={`${tt('lifeSpeakLiveWith', 'Parla dal vivo con')} ${assist.nome}`}
+                style={{ display: 'flex', alignItems: 'center', gap: 6, minHeight: 44, padding: '4px 9px', borderRadius: 999, background: parlaAssist ? `${accent}22` : card, border: parlaAssist ? `1px solid ${accent}` : bordo, flexShrink: 0, cursor: 'pointer', fontFamily: FONT }}>
                 <img src={assist.avatar} alt="" width={22} height={22} style={{ borderRadius: '50%', objectFit: 'cover' }} />
-                <span style={{ fontSize: 11, fontWeight: 600, color: parlaAssist ? accent : muto }}>{parlaAssist ? 'Chiudi' : `Parla con ${assist.nome}`}</span>
+                <span style={{ fontSize: 11, fontWeight: 600, color: parlaAssist ? accent : muto }}>{parlaAssist ? L('closeWord') : `${tt('lifeSpeakWith', 'Parla con')} ${assist.nome}`}</span>
               </button>
             );
           })()}
@@ -1308,13 +1332,13 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
             colore={accent} bordo={`1px solid ${accent}`}
             sfondo={ascoltando ? `${accent}22` : 'transparent'} />
           <button onClick={() => setEvidenzia((v) => !v)} aria-pressed={evidenzia}
-            style={{ padding: '9px 12px', borderRadius: 12, border: bordo, background: evidenzia ? `${accent}14` : 'transparent', color: evidenzia ? accent : muto, fontWeight: 600, fontSize: 13, cursor: 'pointer', fontFamily: FONT }}>
+            style={{ minHeight: 44, padding: '9px 12px', borderRadius: 12, border: bordo, background: evidenzia ? `${accent}14` : 'transparent', color: evidenzia ? accent : muto, fontWeight: 600, fontSize: 13, cursor: 'pointer', fontFamily: FONT }}>
             {evidenzia ? '✓ ' : ''}{tt('lifeHighlight', 'Evidenzia')}
           </button>
           {ascoltando && !manoAlzata && (
             <button onClick={alzaMano}
-              style={{ padding: '9px 12px', borderRadius: 12, border: `1px solid ${accent}`, background: 'transparent', color: accent, fontWeight: 600, fontSize: 13, cursor: 'pointer', fontFamily: FONT, display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span style={{ fontSize: 15 }}>✋</span> {tt('lifeRaiseHand', 'Alza la mano')}
+              style={{ minHeight: 44, padding: '9px 12px', borderRadius: 12, border: `1px solid ${accent}`, background: 'transparent', color: accent, fontWeight: 600, fontSize: 13, cursor: 'pointer', fontFamily: FONT, display: 'flex', alignItems: 'center', gap: 6 }}>
+              <Icon name="chat" size={15} color={accent} /> {tt('lifeRaiseHand', 'Alza la mano')}
             </button>
           )}
         </div>
@@ -1324,8 +1348,8 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
         {illustrazione
           ? <img src={illustrazione} alt="" style={{ width: '100%', borderRadius: 14, marginBottom: 12, display: 'block' }} />
           : contenuti.includes('disegni') && <button onClick={illustra} disabled={genIll}
-              style={{ marginBottom: 12, padding: '8px 12px', borderRadius: 10, border: `1px solid ${accent}`, background: 'transparent', color: accent, fontWeight: 600, fontSize: 13, cursor: 'pointer', fontFamily: FONT, opacity: genIll ? 0.6 : 1 }}>
-              {genIll ? '…' : `🎨 ${tt('lifeLessonIllustrate', 'Genera illustrazione')}`}
+              style={{ minHeight: 44, marginBottom: 12, padding: '8px 12px', borderRadius: 10, border: `1px solid ${accent}`, background: 'transparent', color: accent, fontWeight: 600, fontSize: 13, cursor: 'pointer', fontFamily: FONT, opacity: genIll ? 0.6 : 1 }}>
+              {genIll ? '…' : tt('lifeLessonIllustrate', 'Genera illustrazione')}
             </button>}
 
         {/* b.299 — l'arricchimento dalla community (Cobra): link o video. */}
@@ -1333,9 +1357,9 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
           <div ref={arricchimentoRef} style={{ marginBottom: 12, display: 'flex', flexDirection: 'column', gap: 6 }}>
             {arricchimento.link.map((f, i) => (
               <a key={i} href={f.url || f.link} target="_blank" rel="noopener noreferrer"
-                style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 11px', borderRadius: 10,
+                style={{ display: 'flex', alignItems: 'center', gap: 8, minHeight: 44, padding: '9px 11px', borderRadius: 10,
                   background: card, color: accent, textDecoration: 'none', fontSize: 13, fontWeight: 600, fontFamily: FONT }}>
-                <span>🔗</span><span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.titolo || f.title || f.url}</span>
+                <Icon name="link" size={15} color={accent} /><span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.titolo || f.title || f.url}</span>
               </a>
             ))}
           </div>
@@ -1344,9 +1368,9 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
           <div style={{ marginBottom: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
             {arricchimento.video.map((v, i) => (
               <a key={i} href={v.url || `https://youtube.com/watch?v=${v.id}`} target="_blank" rel="noopener noreferrer"
-                style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 11px', borderRadius: 10,
+                style={{ display: 'flex', alignItems: 'center', gap: 8, minHeight: 44, padding: '9px 11px', borderRadius: 10,
                   background: card, color: accent, textDecoration: 'none', fontSize: 13, fontWeight: 600, fontFamily: FONT }}>
-                <span>🎬</span><span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{v.titolo || v.title || 'Video'}</span>
+                <Icon name="video" size={15} color={accent} /><span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{v.titolo || v.title || 'Video'}</span>
               </a>
             ))}
           </div>
@@ -1375,7 +1399,7 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
                 // vuole copiare una frase.
                 onDoubleClick={() => vaiAlParagrafo(i)}
                 title={tt('lifeJumpHere', 'Tocca due volte: la voce riprende da qui')}
-                style={{ cursor: 'pointer', borderRadius: 12, padding: evid ? '10px 12px' : 0, margin: evid ? '4px -12px 8px' : '0 0 2px',
+                style={{ cursor: 'pointer', minHeight: 44, borderRadius: 12, padding: evid ? '10px 12px' : 0, margin: evid ? '4px -12px 8px' : '0 0 2px',
                   background: evid ? `${accent}14` : 'transparent',
                   borderLeft: `3px solid ${attivo ? accent : 'transparent'}`,
                   transition: 'background 0.3s, border-color 0.3s',
@@ -1420,7 +1444,7 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
                 {attivo && manoAlzata && (
                   <div style={{ marginTop: 10, padding: 14, borderRadius: 14, background: card, border: `1px solid ${accent}55` }}>
                     {maestroStaFinendo
-                      ? <div style={{ fontSize: 12, color: muto, marginBottom: 10 }}>✋ {tt('lifeHandUp', 'Mano alzata — il Maestro finisce la frase e si gira verso di te…')}</div>
+                      ? <div style={{ fontSize: 12, color: muto, marginBottom: 10 }}>{tt('lifeHandUp', 'Mano alzata — il Maestro finisce la frase e si gira verso di te…')}</div>
                       : <div style={{ fontSize: 12, fontWeight: 600, color: accent, marginBottom: 10 }}>{tt('lifeAskNow', 'Il Maestro ti ascolta. Cosa vuoi chiedere?')}</div>}
                     {dialogo.length > 0 && (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 10 }}>
@@ -1445,21 +1469,21 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
                       <button onClick={dettaDomanda}
                         aria-label={tt('lifeDictate', 'Detta la domanda')}
                         style={{ width: 44, height: 44, borderRadius: 12, cursor: 'pointer', flexShrink: 0,
-                          border: micDomanda === 'registro' ? '2px solid #f87171' : `1px solid ${accent}`,
+                          border: micDomanda === 'registro' ? `2px solid ${rosso}` : `1px solid ${accent}`,
                           background: micDomanda === 'registro' ? 'rgba(248,113,113,0.15)' : 'transparent',
                           display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <Icon name="mic" size={17} color={micDomanda === 'registro' ? '#f87171' : accent} />
+                        <Icon name="mic" size={17} color={micDomanda === 'registro' ? rosso : accent} />
                       </button>
                     </div>
-                    {micDomanda === 'registro' && <div style={{ fontSize: 11, color: '#f87171', marginTop: 4 }}>{tt('lifeListeningTap', 'Ti ascolto — parla; tocca di nuovo il microfono per fermare')}</div>}
+                    {micDomanda === 'registro' && <div style={{ fontSize: 11, color: rosso, marginTop: 4 }}>{tt('lifeListeningTap', 'Ti ascolto — parla; tocca di nuovo il microfono per fermare')}</div>}
                     {micDomanda === 'trascrivo' && <div style={{ fontSize: 11, color: muto, marginTop: 4 }}>{tt('lifeTranscribing', 'Trascrivo…')}</div>}
                     <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
                       <button onClick={inviaDomanda} disabled={chiedendo || !domanda.trim()}
-                        style={{ flex: 1, minWidth: 120, padding: 11, borderRadius: 12, border: 'none', background: accent, color: '#04121c', fontWeight: 600, cursor: 'pointer', fontFamily: FONT, opacity: (chiedendo || !domanda.trim()) ? 0.6 : 1 }}>
+                        style={{ flex: 1, minWidth: 120, minHeight: 44, padding: 11, borderRadius: 12, border: 'none', background: accent, color: '#04121c', fontWeight: 600, cursor: 'pointer', fontFamily: FONT, opacity: (chiedendo || !domanda.trim()) ? 0.6 : 1 }}>
                         {chiedendo ? '…' : tt('lifeAsk', 'Chiedi')}
                       </button>
                       <button onClick={riprendiLezione} disabled={chiedendo}
-                        style={{ flex: 1, minWidth: 120, padding: 11, borderRadius: 12, border: bordo, background: 'transparent', color: testoP, fontWeight: 600, cursor: 'pointer', fontFamily: FONT, opacity: chiedendo ? 0.6 : 1 }}>
+                        style={{ flex: 1, minWidth: 120, minHeight: 44, padding: 11, borderRadius: 12, border: bordo, background: 'transparent', color: testoP, fontWeight: 600, cursor: 'pointer', fontFamily: FONT, opacity: chiedendo ? 0.6 : 1 }}>
                         {tt('lifeResumeLesson', 'Riprendi la lezione')} →
                       </button>
                     </div>
@@ -1541,7 +1565,7 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
         )}
         {aperta.fonti.length > 0 && (
           <div style={{ marginTop: 14, fontSize: 12, color: muto }}>
-            <b>{L('lifeSources')}:</b> {aperta.fonti.map((f, i) => <span key={i}>{f.titolo}{i < aperta.fonti.length - 1 ? ' · ' : ''}</span>)}
+            <b style={{ fontWeight: 600 }}>{L('lifeSources')}:</b> {aperta.fonti.map((f, i) => <span key={i}>{f.titolo}{i < aperta.fonti.length - 1 ? ' · ' : ''}</span>)}
           </div>
         )}
         {/* b.304 — dopo la lezione: APPROFONDISCI o PROSEGUI. Approfondisci
@@ -1552,29 +1576,29 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
         {/* b.342 — l'errore si vede QUI, accanto ai tasti che l'hanno causato:
             prima compariva solo in cima, fuori schermo, e "i tasti sembravano
             morti" (collaudo di Luca — era il credito esaurito). */}
-        {errore && <div style={{ marginTop: 12, padding: '9px 12px', borderRadius: 10, background: 'rgba(248,113,113,0.12)', color: '#f87171', fontSize: 13, fontFamily: FONT }}>{errore}</div>}
+        {errore && <div style={{ marginTop: 12, padding: '9px 12px', borderRadius: 10, background: 'rgba(248,113,113,0.12)', color: rosso, fontSize: 13, fontFamily: FONT }}>{errore}</div>}
         <div style={{ marginTop: 16, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <button onClick={approfondisci} disabled={genAppr}
-            style={{ flex: 1, minWidth: 130, padding: 12, borderRadius: 12, border: `2px solid ${accent}`, background: 'transparent', color: accent, fontWeight: 600, cursor: 'pointer', fontFamily: FONT, opacity: genAppr ? 0.6 : 1 }}>
-            {genAppr ? '…' : `🔎 ${tt('lifeDeepen', 'Approfondisci')}`}
+            style={{ flex: 1, minWidth: 130, minHeight: 44, padding: 12, borderRadius: 12, border: `2px solid ${accent}`, background: 'transparent', color: accent, fontWeight: 600, cursor: 'pointer', fontFamily: FONT, opacity: genAppr ? 0.6 : 1 }}>
+            {genAppr ? '…' : tt('lifeDeepen', 'Approfondisci')}
           </button>
           {/* b.334 — il TERZO livello: il Maestro scava oltre e il nuovo pezzo
               si aggiunge alla lezione (diapositive ricalcolate da sole). */}
           <button onClick={vaiAFondo} disabled={fondoLavoro}
-            style={{ flex: 1, minWidth: 130, padding: 12, borderRadius: 12, border: `2px solid ${accent}`, background: `${accent}14`, color: accent, fontWeight: 600, cursor: 'pointer', fontFamily: FONT, opacity: fondoLavoro ? 0.6 : 1 }}>
+            style={{ flex: 1, minWidth: 130, minHeight: 44, padding: 12, borderRadius: 12, border: `2px solid ${accent}`, background: `${accent}14`, color: accent, fontWeight: 600, cursor: 'pointer', fontFamily: FONT, opacity: fondoLavoro ? 0.6 : 1 }}>
             {fondoLavoro ? '…' : tt('lifeGoDeep', 'Vai a fondo')}
           </button>
           {prossimaLezione && (
             <button onClick={() => apri(prossimaLezione)} disabled={lavoro}
-              style={{ flex: 1, minWidth: 130, padding: 12, borderRadius: 12, border: 'none', background: accent, color: '#04121c', fontWeight: 600, cursor: 'pointer', fontFamily: FONT }}>
+              style={{ flex: 1, minWidth: 130, minHeight: 44, padding: 12, borderRadius: 12, border: 'none', background: accent, color: '#04121c', fontWeight: 600, cursor: 'pointer', fontFamily: FONT }}>
               {tt('lifeContinue', 'Prosegui')} →
             </button>
           )}
         </div>
         {!aperta.domande
           ? <div style={{ marginTop: 10, display: 'flex', gap: 8 }}>
-              <button onClick={quiz} disabled={lavoro} style={{ flex: 1, padding: 12, borderRadius: 12, border: 'none', background: card, color: testoP, fontWeight: 600, cursor: 'pointer', fontFamily: FONT }}>
-                {lavoro ? L('lifeGenerating') : `📝 ${L('lifeQuiz')}`}
+              <button onClick={quiz} disabled={lavoro} style={{ flex: 1, minHeight: 44, padding: 12, borderRadius: 12, border: 'none', background: card, color: testoP, fontWeight: 600, cursor: 'pointer', fontFamily: FONT }}>
+                {lavoro ? L('lifeGenerating') : L('lifeQuiz')}
               </button>
               {/* b.320 — decisione di Luca: il quiz NON e obbligatorio, si puo
                   SALTARE. Ma il salto viene REGISTRATO (lezione vista senza
@@ -1587,7 +1611,7 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
                     .catch(() => { /* il ricordo e un di piu */ });
                   if (prossimaLezione) apri(prossimaLezione); else setAperta(null);
                 }} disabled={lavoro}
-                style={{ padding: '12px 14px', borderRadius: 12, border: bordo, background: 'transparent', color: muto, fontWeight: 600, cursor: 'pointer', fontFamily: FONT, fontSize: 13 }}>
+                style={{ minHeight: 44, padding: '12px 14px', borderRadius: 12, border: bordo, background: 'transparent', color: muto, fontWeight: 600, cursor: 'pointer', fontFamily: FONT, fontSize: 13 }}>
                 {tt('lifeQuizSkip', 'Salta')} →
               </button>
             </div>
@@ -1607,10 +1631,10 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
                     {q.opzioni.map((o, j) => {
                       const giusta = j === q.corretta;
                       const miaSbagliata = data && scelta === j && !giusta;
-                      const colore = data ? (giusta ? accent : miaSbagliata ? '#f87171' : muto) : testoP;
+                      const colore = data ? (giusta ? accent : miaSbagliata ? rosso : muto) : testoP;
                       return (
                         <button key={j} onClick={() => !data && rispondi(i, j)} disabled={data}
-                          style={{ display: 'block', width: '100%', textAlign: 'left', fontSize: 14, color: colore,
+                          style={{ display: 'block', width: '100%', minHeight: 44, textAlign: 'left', fontSize: 14, color: colore,
                             padding: '7px 10px', margin: '3px 0', borderRadius: 9, fontFamily: FONT,
                             border: `1px solid ${data && (giusta || miaSbagliata) ? colore : 'transparent'}`,
                             background: data ? 'transparent' : card, cursor: data ? 'default' : 'pointer' }}>
@@ -1648,7 +1672,7 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {mieiCorsi.slice(0, 6).map((c) => (
             <button key={c.id} onClick={() => { vibrate(8); apriMioCorso(c); }}
-              style={{ textAlign: 'left', padding: 13, ...clayCard(card), cursor: 'pointer', fontFamily: FONT, color: testoP }}>
+              style={{ textAlign: 'left', minHeight: 44, padding: 13, ...clayCard(card), cursor: 'pointer', fontFamily: FONT, color: testoP }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.titolo || c.argomento}</div>
@@ -1670,8 +1694,10 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {disponibili.slice(0, 8).map((corso) => (
             <button key={corso.id} onClick={() => apriPubblico(corso)}
-              style={{ textAlign: 'left', padding: 13, ...clayCard(card), cursor: 'pointer', fontFamily: FONT, color: testoP }}>
-              <div style={{ fontWeight: 600 }}>{corso.perBambini ? '🧒 ' : ''}{corso.titolo}</div>
+              style={{ textAlign: 'left', minHeight: 44, padding: 13, ...clayCard(card), cursor: 'pointer', fontFamily: FONT, color: testoP }}>
+              {/* b.482 — la faccina che diceva "per bambini" diventa un'icona:
+                  a schermo le emoticon non ci vanno. */}
+              <div style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>{corso.perBambini ? <Icon name="user" size={13} color={muto} /> : null}{corso.titolo}</div>
               <div style={{ fontSize: 11, color: muto, marginTop: 2 }}>{(LANGS.find(l => l.code === corso.lingua)?.flag || '')} {corso.lezioni?.length || 0} {tt('lifeLessonsCount', 'lezioni')} · {corso.livello}</div>
             </button>
           ))}
@@ -1702,9 +1728,9 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
               }}
               aria-pressed={on}
               style={{
-                flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
+                flex: 1, minHeight: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
                 padding: '10px 12px', borderRadius: 12, cursor: 'pointer', fontFamily: FONT,
-                fontSize: 13.5, fontWeight: on ? 800 : 600,
+                fontSize: 13.5, fontWeight: 600,
                 background: on ? `${accent}1E` : card, border: on ? `1px solid ${accent}55` : bordo,
                 color: on ? accent : testoP,
               }}>
@@ -1736,9 +1762,9 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
                   }}
                   aria-pressed={on}
                   style={{
-                    display: 'flex', alignItems: 'center', gap: 6, padding: '8px 12px',
+                    display: 'flex', alignItems: 'center', gap: 6, minHeight: 44, padding: '8px 12px',
                     borderRadius: 999, cursor: 'pointer', fontFamily: FONT,
-                    fontSize: 13, fontWeight: on ? 800 : 600,
+                    fontSize: 13, fontWeight: 600,
                     background: on ? `${accent}1E` : card, border: on ? `1px solid ${accent}55` : bordo,
                     color: on ? accent : testoP,
                   }}>
@@ -1781,9 +1807,9 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
                   aria-pressed={on}
                   title={pr.minuti ? `${pr.minuti} min` : ''}
                   style={{
-                    display: 'flex', alignItems: 'center', gap: 6, padding: '8px 12px',
+                    display: 'flex', alignItems: 'center', gap: 6, minHeight: 44, padding: '8px 12px',
                     borderRadius: 999, cursor: 'pointer', fontFamily: FONT,
-                    fontSize: 13, fontWeight: on ? 800 : 600,
+                    fontSize: 13, fontWeight: 600,
                     background: on ? `${accent}1E` : card, border: on ? `1px solid ${accent}55` : bordo,
                     color: on ? accent : testoP,
                   }}>
@@ -1808,9 +1834,9 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
                 return (
                   <button key={c.id} onClick={() => scegliSventura(c.id)} aria-pressed={on}
                     style={{
-                      display: 'flex', alignItems: 'center', gap: 6, padding: '6px 11px 6px 6px',
+                      display: 'flex', alignItems: 'center', gap: 6, minHeight: 44, padding: '6px 11px 6px 6px',
                       borderRadius: 999, cursor: 'pointer', fontFamily: FONT,
-                      fontSize: 13, fontWeight: on ? 800 : 600,
+                      fontSize: 13, fontWeight: 600,
                       background: on ? `${accent}1E` : card, border: on ? `1px solid ${accent}55` : bordo,
                       color: on ? accent : testoP,
                     }}>
@@ -1835,9 +1861,9 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
           {IDEE_CORSO.map((idea) => (
             <button key={idea.q} onClick={() => setArgomento(idea.q)}
-              style={{ padding: '7px 12px', borderRadius: 999, cursor: 'pointer', fontFamily: FONT,
+              style={{ minHeight: 44, padding: '7px 12px', borderRadius: 999, cursor: 'pointer', fontFamily: FONT,
                 fontSize: 13, fontWeight: 600, background: card, color: testoP, border: bordo }}>
-              {idea.ic} {idea.et}
+              {idea.et}
             </button>
           ))}
         </div>
@@ -1864,19 +1890,19 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
         <div style={{ fontSize: 12, fontWeight: 600, color: testoP, opacity: 0.7, marginBottom: 6 }}>{tt('lifeContentKind', 'Contenuti della lezione')}</div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8 }}>
           {[
-            { id: 'disegni', ic: '🎨', et: tt('lifeContentDraw', 'Disegni') },
-            { id: 'foto',    ic: '🖼️', et: tt('lifeContentPhoto', 'Immagini') },
-            { id: 'link',    ic: '🔗', et: tt('lifeContentLink', 'Approfondimenti') },
-            { id: 'video',   ic: '🎬', et: tt('lifeContentVideo', 'Video') },
+            { id: 'disegni', ic: 'star', et: tt('lifeContentDraw', 'Disegni') },
+            { id: 'foto',    ic: 'eye', et: tt('lifeContentPhoto', 'Immagini') },
+            { id: 'link',    ic: 'link', et: tt('lifeContentLink', 'Approfondimenti') },
+            { id: 'video',   ic: 'video', et: tt('lifeContentVideo', 'Video') },
           ].map((o) => {
             const on = contenuti.includes(o.id);
             return (
               <button key={o.id} onClick={() => toggleContenuto(o.id)} aria-pressed={on}
-                style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 10px', borderRadius: 12,
+                style={{ minHeight: 44, display: 'flex', alignItems: 'center', gap: 8, padding: '12px 10px', borderRadius: 12,
                   cursor: 'pointer', fontFamily: FONT, fontSize: 14, fontWeight: 600, textAlign: 'left',
                   background: on ? `${accent}22` : card, color: testoP,
                   border: `2px solid ${on ? accent : 'transparent'}` }}>
-                <span style={{ fontSize: 20 }}>{o.ic}</span>{o.et}
+                <Icon name={o.ic} size={20} color={on ? accent : muto} />{o.et}
               </button>
             );
           })}
@@ -1899,15 +1925,15 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
             return (
               <button key={c.id} onClick={() => setDocenteId(on ? '' : c.id)} aria-pressed={on}
                 title={`${c.nome} — ${c.ruolo}`}
-                style={{ flexShrink: 0, width: 74, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5,
+                style={{ flexShrink: 0, width: 74, minHeight: 44, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5,
                   background: 'none', border: 'none', cursor: 'pointer', fontFamily: FONT }}>
                 <span style={{ width: 58, height: 58, borderRadius: '50%', overflow: 'hidden',
                   border: `3px solid ${on ? accent : 'transparent'}`, background: card, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   {c.avatar
                     ? <img src={c.avatar} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    : <span style={{ fontSize: 26 }}>{c.emoji || '🧑\u200d🏫'}</span>}
+                    : <Icon name="user" size={26} color={muto} />}
                 </span>
-                <span style={{ fontSize: 11, fontWeight: on ? 800 : 600, color: on ? accent : testoP,
+                <span style={{ fontSize: 11, fontWeight: 600, color: on ? accent : testoP,
                   maxWidth: 72, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.nome}</span>
               </button>
             );
@@ -1933,7 +1959,7 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
           <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
             {[['breve', tt('lifeDurShort', 'Breve 3-5’')], ['normale', tt('lifeDurNormal', 'Normale 6-10’')], ['approfondita', tt('lifeDurLong', 'Approfondita 10-15’')]].map(([id, et]) => (
               <button key={id} onClick={() => { const x = { ...pref, durata: id }; setPref(x); salvaProf(prof, x); }}
-                style={{ flex: 1, padding: '8px 4px', borderRadius: 10, cursor: 'pointer', fontFamily: FONT, fontSize: 11, fontWeight: 600,
+                style={{ flex: 1, minHeight: 44, padding: '8px 4px', borderRadius: 10, cursor: 'pointer', fontFamily: FONT, fontSize: 11, fontWeight: 600,
                   background: pref.durata === id ? `${accent}22` : 'transparent', color: pref.durata === id ? accent : muto,
                   border: pref.durata === id ? `1px solid ${accent}` : bordo }}>{et}</button>
             ))}
@@ -1942,7 +1968,7 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
           <div style={{ display: 'flex', gap: 6 }}>
             {[['minimi', tt('lifeExtraMin', 'Minimi')], ['bilanciati', tt('lifeExtraMid', 'Bilanciati')], ['ricchi', tt('lifeExtraMax', 'Ricchi')]].map(([id, et]) => (
               <button key={id} onClick={() => { const x = { ...pref, extra: id }; setPref(x); salvaProf(prof, x); }}
-                style={{ flex: 1, padding: '8px 4px', borderRadius: 10, cursor: 'pointer', fontFamily: FONT, fontSize: 11, fontWeight: 600,
+                style={{ flex: 1, minHeight: 44, padding: '8px 4px', borderRadius: 10, cursor: 'pointer', fontFamily: FONT, fontSize: 11, fontWeight: 600,
                   background: pref.extra === id ? `${accent}22` : 'transparent', color: pref.extra === id ? accent : muto,
                   border: pref.extra === id ? `1px solid ${accent}` : bordo }}>{et}</button>
             ))}
@@ -1950,16 +1976,16 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
         </div>
       </details>
 
-      {errore && <div style={{ color: '#f87171', fontSize: 13, marginBottom: 10 }}>{errore}</div>}
+      {errore && <div style={{ color: rosso, fontSize: 13, marginBottom: 10 }}>{errore}</div>}
 
-      <button onClick={crea} disabled={lavoro} style={{ width: '100%', padding: 14, borderRadius: 14, border: 'none', cursor: 'pointer', background: accent, color: '#04121c', fontWeight: 600, fontSize: 15, fontFamily: FONT, opacity: lavoro ? 0.6 : 1 }}>
-        {lavoro ? L('lifeGenerating') : `📚 ${L('lifeCreateCourse')}`}
+      <button onClick={crea} disabled={lavoro} style={{ width: '100%', minHeight: 44, padding: 14, borderRadius: 14, border: 'none', cursor: 'pointer', background: accent, color: '#04121c', fontWeight: 600, fontSize: 15, fontFamily: FONT, opacity: lavoro ? 0.6 : 1 }}>
+        {lavoro ? L('lifeGenerating') : L('lifeCreateCourse')}
       </button>
       {/* b.346 — la lezione puo nascere da un DOCUMENTO SCANSIONATO: si apre
           lo scanner (il BizCard in modo documenti), e al ritorno del testo la
           lezione si costruisce SOLO su quello (via Materiali, come da b.333). */}
       <button onClick={() => apriScanner({ doc: true, dest: 'impara' })} disabled={lavoro}
-        style={{ width: '100%', marginTop: 8, padding: 12, borderRadius: 14, border: `1px solid ${accent}`, cursor: 'pointer', background: 'transparent', color: accent, fontWeight: 600, fontSize: 14, fontFamily: FONT }}>
+        style={{ width: '100%', minHeight: 44, marginTop: 8, padding: 12, borderRadius: 14, border: `1px solid ${accent}`, cursor: 'pointer', background: 'transparent', color: accent, fontWeight: 600, fontSize: 14, fontFamily: FONT }}>
         {tt('lifeFromScan', 'Crea da un documento (scanner)')}
       </button>
 
@@ -1970,7 +1996,7 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
               il ripasso si propone da solo (mai obbligo, sempre invito). */}
           {ripassoDa > 0 && (
             <button onClick={faiRipasso} disabled={lavoro}
-              style={{ padding: 12, borderRadius: 12, border: '1px solid #f59e0b', background: 'rgba(245,158,11,0.10)', color: '#f59e0b', fontWeight: 600, cursor: 'pointer', fontFamily: FONT, textAlign: 'left' }}>
+              style={{ minHeight: 44, padding: 12, borderRadius: 12, border: `1px solid ${ambra}`, background: 'rgba(245,158,11,0.10)', color: ambra, fontWeight: 600, cursor: 'pointer', fontFamily: FONT, textAlign: 'left' }}>
               {tt('lifeReviewDue', 'Ripasso consigliato')} — {ripassoDa} {tt('lifeReviewLessons', 'lezioni da riprendere')} →
             </button>
           )}
@@ -1978,7 +2004,7 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
             // b.232 — difesa sui corsi della libreria (lezioni grezze dal DB):
             // `indice`/`obiettivi` possono mancare → key/NaN e crash su .length.
             <button key={lz.indice ?? i} onClick={() => apri(lz)} disabled={lavoro}
-              style={{ textAlign: 'left', padding: 13, ...clayCard(card), cursor: 'pointer', fontFamily: FONT, color: testoP }}>
+              style={{ textAlign: 'left', minHeight: 44, padding: 13, ...clayCard(card), cursor: 'pointer', fontFamily: FONT, color: testoP }}>
               <div style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8 }}>
                 {/* b.334 — Content Value: i concetti FONDAMENTALI hanno la stella. */}
                 {lz.peso === 'alto' && <Icon name="star" size={12} color="#f1c40f" />}
@@ -1988,7 +2014,7 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
                   const e = esitiLezioni[lz.indice ?? i];
                   if (e === undefined) return null;
                   if (e === null) return <span style={{ fontSize: 11, fontWeight: 600, color: muto }}>{tt('lifeSkippedBadge', 'saltata')}</span>;
-                  return <span style={{ fontSize: 12, fontWeight: 600, color: e >= 80 ? accent : e >= 50 ? '#f59e0b' : '#f87171' }}>✓ {e}%</span>;
+                  return <span style={{ fontSize: 12, fontWeight: 600, color: e >= 80 ? accent : e >= 50 ? ambra : rosso }}>✓ {e}%</span>;
                 })()}
               </div>
               {lz.obiettivi?.length > 0 && <div style={{ fontSize: 12, color: muto, marginTop: 3 }}>{lz.obiettivi.join(' · ')}</div>}
@@ -1996,8 +2022,8 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
           ))}
           {/* b.228 — pubblica il corso nella libreria condivisa. */}
           <button onClick={pubblica} disabled={pubblicato}
-            style={{ marginTop: 6, padding: 12, borderRadius: 12, border: `1px solid ${accent}`, background: 'transparent', color: accent, fontWeight: 600, cursor: pubblicato ? 'default' : 'pointer', fontFamily: FONT, opacity: pubblicato ? 0.6 : 1 }}>
-            {pubblicato ? `✓ ${tt('lifeCoursePublished', 'Pubblicato')}` : `📤 ${tt('lifeCoursePublish', 'Pubblica nella libreria')}`}
+            style={{ minHeight: 44, marginTop: 6, padding: 12, borderRadius: 12, border: `1px solid ${accent}`, background: 'transparent', color: accent, fontWeight: 600, cursor: pubblicato ? 'default' : 'pointer', fontFamily: FONT, opacity: pubblicato ? 0.6 : 1 }}>
+            {pubblicato ? `✓ ${tt('lifeCoursePublished', 'Pubblicato')}` : tt('lifeCoursePublish', 'Pubblica nella libreria')}
           </button>
         </div>
       )}

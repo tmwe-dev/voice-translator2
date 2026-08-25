@@ -9,15 +9,18 @@
 import { memo, useMemo } from 'react';
 import { routeProvider, getRouteDescription } from '../lib/providerRouter.js';
 import { FONT } from '../lib/constants.js';
+import Icon from './Icon.js';
 
 const PROVIDER_COLORS = {
   asia: { bg: 'rgba(255,165,0,0.15)', border: 'rgba(255,165,0,0.3)', text: '#FFA500', label: 'Qwen' },
   global: { bg: 'rgba(99,102,241,0.15)', border: 'rgba(99,102,241,0.3)', text: '#6366F1', label: 'Global' },
 };
 
+// b.482 — erano due EMOJI del mappamondo. Adesso e il nome dell'icona
+// di casa: una sola, monocroma, che prende il colore del distintivo.
 const PROVIDER_ICONS = {
-  asia: '\u{1F30F}',    // globe asia
-  global: '\u{1F310}',  // globe
+  asia: 'globe',
+  global: 'globe',
 };
 
 function ProviderBadge({ sourceLang, targetLang, theme = 'dark', compact = false }) {
@@ -29,7 +32,7 @@ function ProviderBadge({ sourceLang, targetLang, theme = 'dark', compact = false
   if (!route) return null;
 
   const colors = PROVIDER_COLORS[route.provider] || PROVIDER_COLORS.global;
-  const icon = PROVIDER_ICONS[route.provider] || '';
+  const icona = PROVIDER_ICONS[route.provider] || 'globe';
   const confidence = Math.round(route.confidence * 100);
 
   if (compact) {
@@ -43,7 +46,7 @@ function ProviderBadge({ sourceLang, targetLang, theme = 'dark', compact = false
         fontSize: 11, color: colors.text,
         fontFamily: FONT,
       }}>
-        {icon} {colors.label}
+        <Icon name={icona} size={11} /> {colors.label}
       </span>
     );
   }
@@ -58,7 +61,7 @@ function ProviderBadge({ sourceLang, targetLang, theme = 'dark', compact = false
       fontSize: 12, color: colors.text,
       fontFamily: FONT,
     }}>
-      <span>{icon}</span>
+      <span style={{ lineHeight: 0 }}><Icon name={icona} size={12} /></span>
       <span style={{ fontWeight: 500 }}>{colors.label}</span>
       <span style={{ opacity: 0.6 }}>{confidence}%</span>
       <span style={{ opacity: 0.5, fontSize: 11 }} title={getRouteDescription(route)}>

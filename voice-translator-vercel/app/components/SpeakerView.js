@@ -676,7 +676,7 @@ function SpeakerView({ userToken }) {
         {schedaTassista === 'mappa' ? (
           <>
             {/* Mappa a tutto schermo — vettoriale, col tema, con i comandi */}
-            <div style={{ flex: 1, minHeight: 0, padding: '0 12px' }}>
+            <div style={{ flex: 1, minHeight: 0, padding: '0 20px' }}>
               {destCoords ? (
                 <TaxiMap lat={destCoords.lat} lng={destCoords.lon} altezza="100%" raggio={16} />
               ) : (
@@ -721,7 +721,7 @@ function SpeakerView({ userToken }) {
                       background: scelta ? `${C.accent}22` : 'rgba(255,255,255,0.05)',
                       border: `1px solid ${scelta ? `${C.accent}70` : 'rgba(255,255,255,0.10)'}`,
                       color: scelta ? '#fff' : 'rgba(255,255,255,0.65)',
-                      fontSize: 15, fontWeight: scelta ? 800 : 600, whiteSpace: 'nowrap',
+                      fontSize: 15, fontWeight: scelta ? 600 : 600, whiteSpace: 'nowrap',
                       WebkitTapHighlightColor: 'transparent',
                     }}>
                       {l?.flag} {l?.name || codice}
@@ -829,7 +829,7 @@ function SpeakerView({ userToken }) {
         padding: '14px 16px 10px', flexShrink: 0, position: 'relative', zIndex: 5,
       }}>
         <button onClick={() => setView('home')} style={{
-          width: 38, height: 38, borderRadius: 12, cursor: 'pointer',
+          width: 44, height: 44, borderRadius: 12, cursor: 'pointer',
           background: C.card, border: `1px solid ${C.cardBorder}`,
           backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -873,7 +873,7 @@ function SpeakerView({ userToken }) {
         {/* Mirror button */}
         <button onClick={() => { vibrate(); setMirrorMode(true); }}
           style={{
-            width: 38, height: 38, borderRadius: 12, cursor: 'pointer',
+            width: 44, height: 44, borderRadius: 12, cursor: 'pointer',
             background: C.card, border: `1px solid ${C.cardBorder}`,
             backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -910,7 +910,7 @@ function SpeakerView({ userToken }) {
 
         {/* Swap button */}
         <button onClick={swapLangs} style={{
-          width: 40, height: 40, borderRadius: 12, cursor: 'pointer',
+          width: 44, height: 44, borderRadius: 12, cursor: 'pointer',
           background: `linear-gradient(135deg, ${C.accent}, ${C.purple})`,
           border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center',
           flexShrink: 0, WebkitTapHighlightColor: 'transparent',
@@ -958,7 +958,7 @@ function SpeakerView({ userToken }) {
                 padding: '7px 12px', borderRadius: 10, cursor: 'pointer',
                 background: isSel ? `${C.accent}15` : 'transparent',
                 border: isSel ? `1px solid ${C.accent}30` : '1px solid transparent',
-                fontFamily: FONT, fontSize: 12, fontWeight: isSel ? 700 : 500,
+                fontFamily: FONT, fontSize: 12, fontWeight: isSel ? 600 : 500,
                 color: isSel ? C.accent : C.textSecondary,
                 display: 'flex', alignItems: 'center', gap: 6,
                 WebkitTapHighlightColor: 'transparent',
@@ -1135,7 +1135,7 @@ function SpeakerView({ userToken }) {
       {/* ═══ CHAT AREA — translation results ═══ */}
       <div ref={scrollRef} style={{
         flex: 1, overflowY: 'auto', scrollbarWidth: 'none', minHeight: 0,
-        padding: '0 16px', position: 'relative', zIndex: 1,
+        padding: '0 20px', position: 'relative', zIndex: 1,
       }}>
         {/* Current translation (if any) */}
         {(liveText || translatedText) && (
