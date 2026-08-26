@@ -219,7 +219,71 @@ qualunque refactoring. Non si propone di rimandarlo.
 
 ## Stato corrente (aggiornare a ogni versione)
 
-- Versione: **b.509** (push #798) — SOLE E PIANETI RIACCESI, e il
+- Versione: **b.510** (push #799) — TRE RICHIESTE EMERSE DURANTE IL
+  GIRO DI TEST DAL VIVO (Luca in Stanze/Mondo mentre collaudava b.509):
+
+  1. «sono in stanze, permettimi di creare a stanza e invitare anche da
+     dentro la stanza» — prima l'invito si raggiungeva solo dal logo di
+     Home, che crea sempre una stanza NUOVA. `QuickInvite.js` sapeva gia
+     gestire una stanza esistente (prop `roomId`, salta la creazione),
+     e `app/page.js` passava gia `roomId={roomPolling.roomId}` e
+     `setViewAfterCreate={() => setView('room')}` al render di
+     `quickinvite` — mancava solo la PORTA per arrivarci da dentro la
+     stanza. Aggiunta una voce "Invita" (`RoomHeader.js`, menu ···),
+     stesso pattern `VoceMenu` gia usato per Numero di sicurezza. Il
+     tasto indietro di `QuickInvite.js`, prima sempre `setView('home')`,
+     ora torna alla stanza (`setViewAfterCreate`) quando la stanza
+     esisteva gia — altrimenti si usciva dalla stanza per il solo fatto
+     di aver toccato "invita".
+
+  2. «non voglio essere obbligato a uscire dall'applicazione per
+     leggere un testo (da tradurre a richiesta). devi permettermi di
+     leggerlo dentro il contenitore» — la card della fonte in una
+     discussione (`MondoDiscussioni.js`, "Il Post") era un `<a
+     target="_blank">`: apriva una scheda nuova del browser, fuori
+     dall'app. Ora apre un lettore INTERNO (iframe nello stesso
+     contenitore fixed, stessa quota z della discussione +5) con
+     "Apri nel browser" sempre visibile in testata come ripiego.
+     [ASSUNTO] alcuni editori impostano `X-Frame-Options` e rifiutano
+     di essere incorniciati: in quel caso l'iframe resta bianco. Un
+     iframe bloccato non genera un evento leggibile da JavaScript, per
+     cui non e possibile rilevare in automatico quali fonti funzionano
+     e mostrare il ripiego solo li: resta sempre visibile per tutte.
+     Non e stato toccato ne promesso nulla sulla TRADUZIONE del testo
+     dell'articolo stesso (BarTalk non conserva il corpo dell'articolo,
+     solo titolo+link+commenti: tradurre pagine di terzi arbitrarie
+     solleva questioni di copyright e affidabilita che non ho preso in
+     carico qui). La traduzione a richiesta di titolo e commenti,
+     quella si, era gia dentro il contenitore da prima (b.495) e non e
+     stata toccata.
+
+  3. «come faccio a condividere un post da instagram, linkedin o
+     facebook?» — non c'era alcun bottone Condividi su una discussione.
+     Aggiunto in testata, stesso `navigator.share({ title, url })` gia
+     in uso in ChatActionsPanel/QuickInvite/TaxiTalk/CreditsView: su
+     telefono apre il foglio nativo del sistema operativo, che elenca
+     Instagram, LinkedIn, Facebook, WhatsApp — tutto cio che l'utente
+     ha installato. [ASSUNTO, dichiarato onestamente] non esiste un
+     modo di pubblicare direttamente DENTRO Instagram/LinkedIn/Facebook
+     da un sito web senza le rispettive app/SDK nativi: il foglio di
+     condivisione di sistema e la via corretta e universale, la stessa
+     che il resto dell'app usa gia ovunque.
+
+  PROVE: `invito-e-lettura-b510.test.js` (nuova, 5 prove) — verifica la
+  voce Invita nel menu della stanza, il tasto indietro contestuale di
+  QuickInvite, la sparizione del `target="_blank"` sulla card fonte, la
+  presenza del lettore interno con iframe e ripiego, il bottone
+  Condividi con `navigator.share`. Piu tutta la batteria Mondo/Stanze
+  gia esistente (mondo-news, mondo-paese-vero, discussione-tavola-21,
+  finestra-sul-mondo, mondo-m1-m2, invita-b489, menu-e-numero-b490,
+  secondo-collaudo-b394, margini-uguali-b472) rieseguita: verde, nessuna
+  regressione.
+  [ATTESO] verifica dal vivo in produzione dopo il push di Luca su
+  telefono vero: la voce Invita nel menu della stanza, il lettore
+  interno che apre un articolo reale, il foglio di condivisione nativo.
+
+- Versione: **b.509** (push #798) — [VERIFICATO in produzione, #798]
+  SOLE E PIANETI RIACCESI, e il
   difetto vero corretto (ORDINE DIRETTO DI LUCA dopo b.508: «ripristina
   tutto e correggi quel problema grafico [...] altrimenti elimini
   semplicemente quel pianeta. Non tutto»).

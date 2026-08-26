@@ -196,6 +196,11 @@ function MondoDiscussioni({ discussionId, onClose, onOpenPersona }) {
   const media = disc?.media && disc.media.url ? disc.media : null;
   // b.495 — tavola 21: Aa come su ogni pagina, ingrandisce i commenti.
   const [zoomTesto, setZoomTesto] = useState(0);
+  // b.510 — «non voglio essere obbligato a uscire dall'applicazione per
+  // leggere un testo... devi permettermi di leggerlo dentro il
+  // contenitore» (Luca): l'URL aperto nel lettore INTERNO, non in una
+  // scheda nuova del browser.
+  const [lettoreUrl, setLettoreUrl] = useState(null);
   const ingr = 1 + zoomTesto * 0.15;
 
   return (
@@ -234,6 +239,25 @@ function MondoDiscussioni({ discussionId, onClose, onOpenPersona }) {
             fontFamily: FONT, fontSize: 15, fontWeight: 600 }}>
           Aa
         </button>
+        {/* b.510 — Luca cercava un modo di condividere il post e non
+            c'era: usa lo stesso navigator.share gia in uso in
+            ChatActionsPanel/QuickInvite/TaxiTalk — su telefono apre il
+            foglio nativo del sistema, che elenca Instagram, LinkedIn,
+            Facebook, WhatsApp... tutto cio che l'utente ha installato.
+            Non esiste (e non e onesto promettere) un modo di postare
+            direttamente DENTRO Instagram/LinkedIn/Facebook da un sito
+            web senza le loro app native: il foglio di condivisione del
+            sistema e la via corretta e universale. */}
+        {disc && typeof navigator !== 'undefined' && navigator.share && (
+          <button onClick={() => {
+            vibrate(6);
+            navigator.share({ title: disc.title || 'BarTalk', url: media?.url || (typeof window !== 'undefined' ? window.location.href : '') }).catch(() => { /* utente ha annullato: nessuna azione necessaria */ });
+          }} aria-label={L('shareWord')} title={L('shareWord')} style={{
+            flexShrink: 0, width: 44, height: 44, borderRadius: 12, cursor: 'pointer',
+            background: 'none', border: 'none', color: muto,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}><Icon name="share" size={16} color={muto} /></button>
+        )}
         {/* b.363 — si segnalava solo il singolo commento: una discussione
             intera fuori posto non aveva alcun modo di essere segnalata,
             benche il server la accettasse gia (tipo 'discussione'). */}
@@ -271,13 +295,15 @@ function MondoDiscussioni({ discussionId, onClose, onOpenPersona }) {
           </div>
         )}
         {media && (
-          <a href={media.url} target="_blank" rel="noreferrer" style={{
-            display: 'block', textDecoration: 'none', marginBottom: 14, borderRadius: 14, overflow: 'hidden', border: bordo, background: card,
+          <button onClick={() => setLettoreUrl(media.url)} style={{
+            display: 'block', width: '100%', textAlign: 'left', padding: 0, cursor: 'pointer',
+            marginBottom: 14, borderRadius: 14, overflow: 'hidden', border: bordo, background: card,
+            font: 'inherit', color: 'inherit',
           }}>
             {media.thumb && <AnteprimaCoperta src={media.thumb} contenuto={media} L={L}
               stile={{ width: '100%', maxHeight: 180, height: 180, objectFit: 'cover', display: 'block' }} />}
             <div style={{ padding: '10px 20px', fontSize: 12, color: accent, wordBreak: 'break-all' }}>{media.source || media.url}</div>
-          </a>
+          </button>
         )}
 
         {/* b.495 — tavola 21: l'etichetta di sezione, come sulla tavola. */}
@@ -386,6 +412,33 @@ function MondoDiscussioni({ discussionId, onClose, onOpenPersona }) {
           }}>{L('sendWord')}</button>
         </div>
       </div>
+
+      {/* b.510 — il lettore interno: stesso contenitore, iframe della
+          pagina originale al posto di una scheda nuova del browser.
+          [ASSUNTO] alcuni editori impostano X-Frame-Options e rifiutano
+          di essere incorniciati: in quel caso l'iframe resta bianco, e
+          per questo "Apri nel browser" e SEMPRE visibile in testata, mai
+          un ripiego nascosto dietro un errore che non possiamo rilevare
+          in anticipo (un iframe bloccato non genera un evento onError
+          leggibile da JavaScript). */}
+      {lettoreUrl && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 95, background: bg, display: 'flex', flexDirection: 'column' }}>
+          <header style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 20px', flexShrink: 0, borderBottom: bordo }}>
+            <button onClick={() => setLettoreUrl(null)} aria-label={L('closeWord')} style={{
+              width: 44, height: 44, borderRadius: 12, cursor: 'pointer', background: card, border: bordo,
+              display: 'flex', alignItems: 'center', justifyContent: 'center', color: muto, flexShrink: 0,
+            }}><Icon name="back" size={18} color={muto} /></button>
+            <span style={{ flex: 1, minWidth: 0, fontSize: 12, color: muto, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {media?.source || lettoreUrl}
+            </span>
+            <a href={lettoreUrl} target="_blank" rel="noreferrer" style={{
+              display: 'flex', alignItems: 'center', gap: 6, padding: '0 14px', minHeight: 44, borderRadius: 12,
+              background: card, border: bordo, color: accent, fontSize: 12, fontWeight: 600, textDecoration: 'none', fontFamily: FONT, flexShrink: 0,
+            }}><Icon name="link" size={14} color={accent} /> {L('openOutside')}</a>
+          </header>
+          <iframe src={lettoreUrl} title={media?.source || 'articolo'} style={{ flex: 1, border: 'none', width: '100%', background: '#fff' }} />
+        </div>
+      )}
     </div>
   );
 

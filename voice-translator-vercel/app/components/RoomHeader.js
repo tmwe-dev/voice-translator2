@@ -356,6 +356,22 @@ const RoomHeader = memo(function RoomHeader({
                 </button>
               )}
 
+              {/* b.510 — «sono in stanze, permettimi di creare a stanza e
+                  invitare anche da dentro la stanza» (Luca). Prima
+                  l'invito si raggiungeva solo dal logo di Home, che crea
+                  sempre una stanza NUOVA: da dentro una stanza gia aperta
+                  non c'era modo di invitare qualcun altro alla STESSA
+                  stanza. QuickInvite gia sapeva gestire una stanza
+                  esistente (prop roomId): mancava solo la porta da qui.
+                  roomId qui e sempre quello della stanza in cui si e ora
+                  (arriva da roomPolling.roomId in page.js). */}
+              {roomId && setView && (
+                <VoceMenu S={S}
+                  icona={<svg width={15} height={15} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/></svg>}
+                  nome={L('inviteFriend')} spiega={L('inviteExplain')}
+                  onClick={() => { setShowMoreMenu(false); setView('quickinvite'); }} />
+              )}
+
               {/* b.490 — tavola 19: IL NUMERO DI SICUREZZA ENTRA NEL MENU,
                   con la sua spiegazione («Controlla che nessuno ascolti»).
                   Prima viveva solo come chip sopra la chat, visibile ma

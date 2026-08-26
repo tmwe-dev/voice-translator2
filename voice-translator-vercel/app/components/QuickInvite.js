@@ -110,7 +110,13 @@ function QuickInvite({ handleCreateRoom, roomId, setViewAfterCreate }) {
       }}>
         {/* b.482 — il tasto indietro e il piu premuto dell'applicazione:
             quarantaquattro di lato, sotto i quali un dito sbaglia bersaglio. */}
-        <button onClick={() => setView('home')}
+        {/* b.510 — se questo invito e per una stanza gia esistente
+            (roomId arriva da fuori: si e stati mandati qui da dentro la
+            stanza, non dal logo di Home), «indietro» deve tornare LI, non
+            a home — altrimenti si esce dalla stanza solo per aver toccato
+            invita. setViewAfterCreate e la stessa funzione che «entra
+            nella stanza» usa piu sotto: e gia quella giusta. */}
+        <button onClick={() => { if (roomId && setViewAfterCreate) setViewAfterCreate(); else setView('home'); }}
           style={{
             width: 44, height: 44, borderRadius: 12, cursor: 'pointer',
             ...glass.btn,
