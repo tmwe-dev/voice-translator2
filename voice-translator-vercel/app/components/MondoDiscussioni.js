@@ -143,7 +143,7 @@ function MondoDiscussioni({ discussionId, onClose, onOpenPersona }) {
       });
       if (r.status === 401) { setErrore(L('accessToCreate')); }
       else if (!r.ok) { setErrore(L('loadingError')); }
-      else { setTesto(''); await carica(); requestAnimationFrame(() => scrollRef.current?.scrollTo(0, scrollRef.current.scrollHeight)); }
+      else { setTesto(''); setComposerAperto(false); await carica(); requestAnimationFrame(() => scrollRef.current?.scrollTo(0, scrollRef.current.scrollHeight)); }
     } catch (e) {
       // b.363 — prima questo guasto non lasciava traccia da nessuna parte: nel
       // registro non compariva nulla, e il motivo vero (rete caduta, attesa
@@ -201,6 +201,14 @@ function MondoDiscussioni({ discussionId, onClose, onOpenPersona }) {
   // contenitore» (Luca): l'URL aperto nel lettore INTERNO, non in una
   // scheda nuova del browser.
   const [lettoreUrl, setLettoreUrl] = useState(null);
+  // b.511 — «dentro stanze lascia dietro una icona una popup per
+  // commentare. cosi la interfaccia e pulita» (Luca): il modulo per
+  // scrivere (soprannome + testo + invia) stava sempre aperto in fondo,
+  // occupando spazio fisso anche quando non si stava scrivendo. Ora sta
+  // dietro un'icona sola; i tasti veloci per commento (cuore, traduci,
+  // segnala, blocca) restano DOVE ERANO, fuori da qualsiasi popup — non
+  // sono stati toccati.
+  const [composerAperto, setComposerAperto] = useState(false);
   const ingr = 1 + zoomTesto * 0.15;
 
   return (
@@ -391,27 +399,56 @@ function MondoDiscussioni({ discussionId, onClose, onOpenPersona }) {
           resto del progetto usa per lasciar posto alla barra. */}
       {/* b.482 — rientro a 20 come la testata e i commenti, cosi il campo
           per scrivere sta sulla stessa colonna di tutto il resto. */}
-      <div style={{ padding: '10px 20px', paddingBottom: 'calc(106px + env(safe-area-inset-bottom))', borderTop: bordo, flexShrink: 0 }}>
-        {/* b.482 — il rosso chiedeva un token che in NESSUN tema esiste
-            (C.red): vinceva sempre il rosso scritto a mano, sordo al tema.
-            Il rosso dei temi si chiama accent3. */}
-        {errore && <div style={{ fontSize: 11, color: C.accent3, marginBottom: 6 }}>{errore}</div>}
-        <input value={nick} onChange={e => setNick(e.target.value)} maxLength={40}
-          onBlur={() => savePrefs?.({ ...prefs, mondoNick: nick.trim() })}
-          placeholder={L('publicNickname')}
-          style={{ width: '100%', marginBottom: 8, padding: '8px 10px', minHeight: 44, borderRadius: 10, background: C.inputBg, border: bordo, color: testoP, fontSize: 12, fontFamily: FONT, outline: 'none', boxSizing: 'border-box' }} />
-        <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
-          <textarea value={testo} onChange={e => setTesto(e.target.value)} rows={1}
-            placeholder={L('writeComment')}
-            onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); invia(); } }}
-            style={{ flex: 1, resize: 'none', padding: '10px 12px', minHeight: 44, borderRadius: 12, background: C.inputBg, border: bordo, color: testoP, fontSize: 14, fontFamily: FONT, outline: 'none', maxHeight: 120, boxSizing: 'border-box' }} />
-          <button onClick={invia} disabled={inviando || !testo.trim()} style={{
-            padding: '10px 16px', minHeight: 44, borderRadius: 12, cursor: inviando || !testo.trim() ? 'default' : 'pointer',
+      {/* b.511 — solo l'icona: il modulo vero e nella popup qui sotto.
+          Stessa misura 106px di prima (b.394) per lasciare posto alla
+          barra di navigazione fissa. */}
+      <div style={{ padding: '10px 20px', paddingBottom: 'calc(106px + env(safe-area-inset-bottom))', borderTop: bordo, flexShrink: 0, display: 'flex', justifyContent: 'flex-end' }}>
+        <button onClick={() => setComposerAperto(true)} aria-label={L('writeComment')} title={L('writeComment')}
+          style={{
+            width: 44, height: 44, borderRadius: 22, cursor: 'pointer',
             background: `linear-gradient(135deg, ${accent}, ${C.accent2})`, border: 'none', color: '#fff',
-            fontSize: 13, fontWeight: 600, fontFamily: FONT, opacity: inviando || !testo.trim() ? 0.5 : 1,
-          }}>{L('sendWord')}</button>
-        </div>
+            display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+          }}><Icon name="chat" size={18} color="#fff" /></button>
       </div>
+
+      {/* b.511 — la popup per scrivere: stesso soprannome, stesso testo,
+          stesso tasto invia di prima — solo dietro un tocco invece che
+          sempre in vista. Stesso stile a foglio dal basso di
+          CondivisoSheet.js, per restare coerenti col resto dell'app. */}
+      {composerAperto && (
+        <div role="dialog" aria-modal="true"
+          onClick={(e) => { if (e.target === e.currentTarget) setComposerAperto(false); }}
+          style={{ position: 'fixed', inset: 0, zIndex: 96, background: 'rgba(3,5,12,0.72)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
+          <div style={{ width: '100%', maxWidth: 560, background: card, borderRadius: '20px 20px 0 0', border: bordo, borderBottom: 'none', fontFamily: FONT, padding: 16, paddingBottom: 'calc(16px + env(safe-area-inset-bottom))' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+              <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: testoP }}>{L('writeComment')}</span>
+              <button onClick={() => setComposerAperto(false)} aria-label={L('closeWord')} style={{
+                width: 44, height: 44, borderRadius: 12, cursor: 'pointer', background: 'none', border: bordo,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}><Icon name="x" size={14} color={muto} /></button>
+            </div>
+            {/* b.482 — il rosso chiedeva un token che in NESSUN tema esiste
+                (C.red): vinceva sempre il rosso scritto a mano, sordo al tema.
+                Il rosso dei temi si chiama accent3. */}
+            {errore && <div style={{ fontSize: 11, color: C.accent3, marginBottom: 6 }}>{errore}</div>}
+            <input value={nick} onChange={e => setNick(e.target.value)} maxLength={40}
+              onBlur={() => savePrefs?.({ ...prefs, mondoNick: nick.trim() })}
+              placeholder={L('publicNickname')}
+              style={{ width: '100%', marginBottom: 8, padding: '8px 10px', minHeight: 44, borderRadius: 10, background: C.inputBg, border: bordo, color: testoP, fontSize: 12, fontFamily: FONT, outline: 'none', boxSizing: 'border-box' }} />
+            <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
+              <textarea value={testo} onChange={e => setTesto(e.target.value)} rows={1} autoFocus
+                placeholder={L('writeComment')}
+                onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); invia(); } }}
+                style={{ flex: 1, resize: 'none', padding: '10px 12px', minHeight: 44, borderRadius: 12, background: C.inputBg, border: bordo, color: testoP, fontSize: 14, fontFamily: FONT, outline: 'none', maxHeight: 120, boxSizing: 'border-box' }} />
+              <button onClick={invia} disabled={inviando || !testo.trim()} style={{
+                padding: '10px 16px', minHeight: 44, borderRadius: 12, cursor: inviando || !testo.trim() ? 'default' : 'pointer',
+                background: `linear-gradient(135deg, ${accent}, ${C.accent2})`, border: 'none', color: '#fff',
+                fontSize: 13, fontWeight: 600, fontFamily: FONT, opacity: inviando || !testo.trim() ? 0.5 : 1,
+              }}>{L('sendWord')}</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* b.510 — il lettore interno: stesso contenitore, iframe della
           pagina originale al posto di una scheda nuova del browser.

@@ -219,6 +219,44 @@ qualunque refactoring. Non si propone di rimandarlo.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.511** (push #800) — [VERIFICATO dal vivo, #799] b.510
+  confermato in produzione durante il collaudo: invito dal menu della
+  stanza aperto e verificato di persona (stessa stanza, stesso QR, il
+  tasto indietro torna alla stanza); ricerca Stanze verificata dal vivo
+  come filtro live; refresh verificato senza errori; il lettore interno
+  testato su un articolo REALE (il caso concreto delle sue screenshot,
+  "Il treno Milano-Parigi") — [ATTESO confermato] "Apri nel browser"
+  resta l'unico modo di leggerlo perche la fonte (ilpost.it) rifiuta di
+  essere incorniciata (X-Frame-Options), esattamente il caso [ASSUNTO]
+  gia previsto nel diario di b.510: l'utente non e mai uscito dall'app,
+  ha ricevuto un messaggio chiaro invece di una pagina bianca muta, ed
+  e rimasto un tocco dalla via d'uscita.
+
+  Durante lo stesso giro, Luca ha guardato la discussione e ha chiesto
+  un'altra cosa: «dentro stanze lascia dietro una icona una popup per
+  commentare. cosi la interfaccia e pulita. lascia solo cuore e altri
+  tasti veloci utili fuori». Il modulo per scrivere un commento
+  (soprannome + testo + tasto Invia) stava sempre aperto in fondo alla
+  discussione (`MondoDiscussioni.js`, da b.394): un blocco fisso anche
+  quando nessuno stava scrivendo. Ora sta dietro una singola icona a
+  fumetto; toccata apre una popup dal basso (stesso stile a foglio di
+  `CondivisoSheet.js`, per restare coerenti) con lo stesso modulo di
+  prima — nickname, testo, invia — e si chiude da sola dopo un invio
+  riuscito. I TASTI VELOCI PER COMMENTO (cuore/like, traduci, segnala,
+  blocca) NON sono stati toccati: restano dove erano, fuori da
+  qualunque popup, esattamente come Luca ha chiesto («lascia solo
+  cuore e altri tasti veloci utili fuori»).
+
+  PROVE: `composer-popup-b511.test.js` (nuova, 3 prove) — verifica lo
+  stato che apre/chiude la popup, il contenuto della popup, e soprattutto
+  che i tasti veloci per commento restino testualmente PRIMA della
+  sezione Composer nel file (cioe fuori, non spostati dentro). Piu
+  `invito-e-lettura-b510.test.js`, `discussione-tavola-21-b495.test.js`,
+  `mondo-news.test.js` rieseguiti: verdi, nessuna regressione.
+  [ATTESO] verifica visiva dal vivo dopo il push: l'icona sostituisce il
+  modulo fisso, la popup si apre e chiude bene, il resto della scheda
+  (titolo, media, commenti coi loro tasti) resta come prima.
+
 - Versione: **b.510** (push #799) — TRE RICHIESTE EMERSE DURANTE IL
   GIRO DI TEST DAL VIVO (Luca in Stanze/Mondo mentre collaudava b.509):
 
