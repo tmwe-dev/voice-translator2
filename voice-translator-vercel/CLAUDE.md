@@ -219,6 +219,45 @@ qualunque refactoring. Non si propone di rimandarlo.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.509** (push #798) — SOLE E PIANETI RIACCESI, e il
+  difetto vero corretto (ORDINE DIRETTO DI LUCA dopo b.508: «ripristina
+  tutto e correggi quel problema grafico [...] altrimenti elimini
+  semplicemente quel pianeta. Non tutto»).
+  In b.508 avevo SOLO RIPORTATO — non deciso, non toccato — che sole e
+  i tre pianeti decorativi (Marte, Venere, Saturno) erano spenti da un
+  commit di Luca del 21/8 (b4416df) per un difetto grafico su Saturno:
+  «l'anello senza la sua sfera sembra un buco». La formulazione della
+  mia risposta ha fatto sembrare che fosse una scelta mia di oggi — non
+  lo era, ma capisco la reazione: dovevo essere piu chiaro che era una
+  sua decisione passata, non la mia di adesso.
+  [VERIFICATO nel codice] causa reale del difetto: la sfera di ogni
+  pianeta (`public/mondo-globo.html`, componente F6/fw) usava
+  `meshStandardMaterial`, che risente della luce direzionale della
+  scena — sul lato non illuminato diventa quasi nera e si confonde col
+  nero dello spazio. L'anello di Saturno invece usa `meshBasicMaterial`
+  (colore pieno, non risente di nessuna luce, sempre visibile). A certi
+  angoli la sfera "si spegneva" e restava visibile solo l'anello: il
+  buco descritto nel commit originale.
+  FIX applicato: la sfera dei tre pianeti ora usa anche lei
+  `meshBasicMaterial` (stesso trattamento dell'anello: colore pieno,
+  sempre visibile, non dipende dall'angolo della luce). showPlanets e
+  showSun tornati a `true` nell'unico punto di chiamata del componente
+  (la luna era gia accesa). Saturno tiene il suo anello (torusGeometry
+  invariata).
+  PROVE: `pianeti-sole-b509.test.js` (nuova, 3 prove) — verifica che
+  sole/pianeti siano accesi e che la sfera non usi piu il materiale che
+  segue la luce.
+  [ASSUNTO] la causa individuata (materiale che segue la luce vs
+  materiale sempre acceso) e la spiegazione piu diretta del sintomo
+  descritto ("buco con intorno il resto del pianeta"); non ho potuto
+  vedere il rendering dal vivo prima di questo commit (serve il
+  browser in produzione dopo il push).
+  [ATTESO] verifica visiva in produzione dopo il push di Luca: sole e i
+  tre pianeti visibili, Saturno mostra sfera+anello insieme a ogni
+  angolo di passaggio, mai solo l'anello. Se il difetto dovesse
+  persistere anche con questo fix, l'ordine di Luca e chiaro: si toglie
+  SOLO Saturno (non sole/Marte/Venere), mai tutto di nuovo.
+
 - Versione: **b.508** (push #797) — SECONDO GIRO SUL PANNELLO PREFERENZE
   di Mondo/Notizie, guardato dal vivo con Luca (screenshot alla mano).
   Quattro correzioni, tutte in `PreferenzeMondo.js` (condiviso da
