@@ -219,6 +219,117 @@ qualunque refactoring. Non si propone di rimandarlo.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.516** (push #805) — GIRO DI COLLAUDO AUTOMATICO ORARIO
+  (nessuno davanti allo schermo). Ordine di Luca: «devi fare un test di
+  TUTTO, almeno 10 interazioni per ogni funzione». Fatto dal vivo su
+  produzione #804, finestra 657x749 CSS.
+
+  **COSA E RISULTATO SANO** (nessun errore in console, nessuna chiamata
+  di rete rossa oltre a quelle gia note): carosello lingue (scorrimento
+  + conferma "Usa English (US)" -> testata IT->EN), tendina lingua con
+  ricerca, traduzione testo Home ("ciao come stai oggi" -> "Hey, how are
+  you today?"), A+/A- con fermo a fondo corsa in tutte e due le
+  direzioni, TTS (`POST /api/tts-elevenlabs` 200), capovolgi testo,
+  TaxiTalk (ricerca Nominatim 200, 5 risultati, mappa + QR + Condividi),
+  globo (carica in ~14s, gira, punta i pallini), pannello laterale
+  Preferenze (passo "Ogni quanto cerca" che gira su tutti i valori e il
+  click fuori che chiude — la correzione b.514 REGGE), le quattro porte
+  del "+", codice sbagliato -> 404 gestito con messaggio, creazione
+  stanza reale (4 tipi, 3 interruttori con testi che cambiano davvero,
+  3 categorie, codice 3896C2E4 + QR), dentro la stanza: messaggio
+  tradotto IT->EN, reazioni, menu "···".
+  Delle novita b.515: "Apri e traduci" genera la Sintesi SUBITO
+  [VERIFICATO], il filtro a tre stati del feed persiste
+  (`mondoFeedFiltro`), l'interruttore autoplay persiste
+  (`mondoAutoplayVideo`).
+
+  **DUE DIFETTI VERI TROVATI E CORRETTI QUI.**
+
+  **1 — LA TRAPPOLA DI b.514 ERA RIMASTA APERTA IN ALTRE TRE
+  SCHERMATE.** b.514 aveva capito la causa (un antenato `absolute` +
+  `transform` fa da containing block a qualunque `fixed`; un antenato
+  `relative; z-index:5` incapsula lo z-index dichiarato dentro) ma
+  l'aveva chiusa per UN SOLO componente. Misurato in produzione con
+  `getBoundingClientRect` e `elementsFromPoint`:
+  - `SchedaArgomento` (la scheda "Apri e traduci"): il tasto CHIUDI sta
+    a (484,26) 44x44, ma `elementsFromPoint` in quel punto restituisce
+    `BUTTON aria-label="Italia"` dell'intestazione Notizie (`z:6`).
+    RIPRODOTTO: premendolo si apre il pannello laterale Notizie e la
+    scheda NON si chiude. Su desktop resta Esc; **su telefono non c'e
+    via d'uscita**, ed e li che vive BarTalk.
+  - `FeedNotizieMondo` (il "feed a tutta pagina" di b.515) e
+    `MondoDiscussioni`: dichiarano `fixed inset:0` ma uscivano
+    **440x691 a (109,58)** dentro una finestra 657x749 — cioe grandi
+    quanto la colonna, non quanto lo schermo.
+  FATTO: nuovo componente condiviso `app/components/ui/Sovrapposizione.js`
+  (createPortal in `document.body`, con la stessa guardia SSR di
+  PannelloLaterale) e le tre schermate ci passano dentro. Un posto solo,
+  cosi la prossima schermata a tutta pagina non ricasca nella buca.
+
+  **2 — LE LINGUE NON SI TROVAVANO COL LORO NOME.** Riprodotto dal vivo
+  con interfaccia italiana: nella tendina della Home «giapponese»,
+  «cinese», «inglese», «tedesco» davano ZERO risultati; il giapponese
+  usciva solo scrivendo «ja» o «日本語». Si cercava solo nel nome
+  MOSTRATO (che e l'endonimo) e nella sigla, e per una ventina di lingue
+  (greco, ebraico, arabo, hindi, russo, coreano, bengalese, tamil,
+  ucraino, bulgaro...) l'endonimo non e nemmeno scrivibile con la
+  tastiera di chi cerca. FATTO: `ALIAS_LINGUE` + `lingueTrovate()` in
+  `constants.js` (nomi in italiano e inglese per tutte e 44 le lingue),
+  e le TRE tendine che cercavano ciascuna a modo suo (CarouselLingue,
+  LinguettaLingua, MondoView) ora usano la stessa funzione. I nomi
+  mostrati non cambiano: si aggiunge solo un modo in piu per arrivarci.
+
+  TEST: `__tests__/sovrapposizioni-portal-b516.test.js` (4) e
+  `__tests__/ricerca-lingue-alias-b516.test.js` (6) — [VERIFICATO]
+  verdi. `npx eslint` sui 7 file toccati: 0 errori, 1 warning
+  preesistente (l'`eslint-disable` inutile su `<img>` gia dichiarato in
+  b.515). NON ho fatto `next build` (fuori dai tempi del giro): la prova
+  e eslint pulito + i test dedicati + le misure dal vivo qui sopra.
+  Il comportamento in produzione delle due correzioni resta [ATTESO]
+  finche' il push non e in linea: non ho modo di provare la produzione
+  prima che Luca pubblichi.
+
+  **QUATTRO TEST ERANO GIA ROSSI SU `origin/main` PRIMA DI ME** (li
+  segnalo, non li ho toccati: non sono lavoro di questo giro e
+  ripararli qui avrebbe mescolato due consegne):
+  - `finestra-sul-mondo-b506` «il ritmo e una preferenza con "mai" come
+    predefinito» — b.515 ha cambiato il predefinito in '5' (scelta di
+    Luca) e non ha aggiornato il test di b.506.
+  - `la-lingua-viene-prima` e `niente-stringhe-cablate` (3 test) sulla
+    parita delle chiavi fra i 15 pacchetti lingua — b.515 ha aggiunto
+    chiavi SOLO in it.js/en.js dichiarandolo, e questi test lo vedono.
+  Il resto dei test che toccano i file di questo giro: **605 verdi**
+  (94 + 192 + 119 + 196 su 42 file), [VERIFICATO].
+
+  **DIFETTI TROVATI E NON CORRETTI QUI** (per il giro successivo, con la
+  prova gia pronta):
+  - **Ricerca PAESI, stessa malattia della ricerca lingue**: in
+    `SceltaPaeseView` con interfaccia italiana «germania» -> «Nessun
+    paese trovato», «germany» -> trova Deutschland. `app/lib/paesi.js`
+    ha `nome` (endonimo) e `nomeEn` (inglese) ma NESSUN nome italiano,
+    per 89 paesi. Non l'ho toccato in questo giro per non gonfiare una
+    consegna gia doppia, e perche 89 nomi vanno scritti, non indovinati.
+  - `POST /api/analytics` risponde **401** a ogni pagina (3 volte nel
+    giro): sono i due `navigator.sendBeacon` di `app/lib/monitor.js`
+    che partono senza token. E gia dichiarato dentro
+    `app/api/analytics/route.js` da b.422 come «da guardare, non
+    risolto qui»; oggi confermo che si vede ancora in rete.
+  - `POST /api/user` risponde **401 otto volte di fila** aprendo la tab
+    Notizie. Non ho ancora capito quale chiamante ritenta cosi: non l'ho
+    inseguito per non uscire dal giro, resta il primo punto da guardare.
+  - Minuzia: il messaggio d'errore del codice stanza esce come
+    «Error: Stanza non trovata» — la parola «Error» non e tradotta.
+
+  **DEBITO EREDITATO, NON MIO**: il repository locale ha HEAD fermo a
+  b.508 e nell'albero di lavoro c'e lavoro b.516 di qualcun altro NON
+  committato (`MondoNews.js`, `LettoreArticolo.js`, `PannelloLaterale.js`,
+  `PreferenzeMondo.js`, e una riga sola di `FeedNotizieMondo.js`:
+  `newsOpenTranslate` -> `readWord`). Non l'ho toccato. Il mio commit
+  parte da `origin/main` e per `FeedNotizieMondo.js` ho scritto nel
+  commit un blob costruito a mano (origin/main + solo la mia modifica),
+  cosi quella riga altrui NON entra nel push.
+
+
 - Versione: **b.515** (push #804) — quattro richieste di Luca sulla
   sezione Mondo/Notizie, arrivate a raffica nella stessa sessione:
 

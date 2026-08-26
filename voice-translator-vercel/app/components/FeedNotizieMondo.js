@@ -3,6 +3,7 @@ import { useState, useRef, useEffect, useMemo } from 'react';
 import { FONT, vibrate } from '../lib/constants.js';
 import Icon from './Icon.js';
 import AnteprimaCoperta from './ui/AnteprimaCoperta.js';
+import Sovrapposizione from './ui/Sovrapposizione.js';
 
 // ═══════════════════════════════════════════════════════════════
 // FeedNotizieMondo — IL FEED A TUTTA PAGINA (b.515)
@@ -72,7 +73,11 @@ export default function FeedNotizieMondo({ aperto, onChiudi, C, L, argomenti = [
 
   if (!aperto) return null;
 
+  // b.516 — «a tutta pagina» non lo era: misurato in produzione 440x691
+  // dentro una finestra 657x749, perche' il `fixed` era prigioniero
+  // della colonna della sezione. Vedi Sovrapposizione.js.
   return (
+    <Sovrapposizione>
     <div style={{ position: 'fixed', inset: 0, zIndex: 97, background: C.bg || '#05070f', fontFamily: FONT }}>
       {/* ═══ header fisso: chiudi + il filtro a tre stati ═══ */}
       <div style={{
@@ -206,5 +211,6 @@ export default function FeedNotizieMondo({ aperto, onChiudi, C, L, argomenti = [
         ))}
       </div>
     </div>
+    </Sovrapposizione>
   );
 }

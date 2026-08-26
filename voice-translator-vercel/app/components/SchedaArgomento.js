@@ -26,6 +26,7 @@ import { FONT, vibrate } from '../lib/constants.js';
 import Icon from './Icon.js';
 import { useApp } from '../contexts/AppContext.js';
 import AnteprimaCoperta from './ui/AnteprimaCoperta.js';
+import Sovrapposizione from './ui/Sovrapposizione.js';
 
 function SchedaArgomento({ aperta, tipo, dati, C, onClose, onParlane, autoGenera = false }) {
   const { L, prefs, userToken } = useApp();
@@ -107,7 +108,12 @@ function SchedaArgomento({ aperta, tipo, dati, C, onClose, onParlane, autoGenera
   const bordo = `1px solid ${C.cardBorder}`;
   const fontePrima = dati.fonti?.[0]?.fonte || dati.canale || '';
 
+  // b.516 — il velo e' `fixed`, ma viveva dentro la colonna della sezione
+  // (un antenato `absolute` + `transform`, dentro un contesto di
+  // impilamento `z:5`): l'intestazione di Notizie (`z:6`) gli finiva
+  // SOPRA e si mangiava il tasto Chiudi. Vedi Sovrapposizione.js.
   return (
+    <Sovrapposizione>
     <div role="dialog" aria-modal="true"
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}
       style={{
@@ -260,6 +266,7 @@ function SchedaArgomento({ aperta, tipo, dati, C, onClose, onParlane, autoGenera
         </div>
       </div>
     </div>
+    </Sovrapposizione>
   );
 }
 

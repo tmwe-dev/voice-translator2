@@ -3,6 +3,7 @@ import { memo, useState, useEffect, useCallback, useRef } from 'react';
 import { FONT, vibrate, getLang } from '../lib/constants.js';
 import { useApp } from '../contexts/AppContext.js';
 import AnteprimaCoperta from './ui/AnteprimaCoperta.js';
+import Sovrapposizione from './ui/Sovrapposizione.js';
 import Icon from './Icon.js';
 import { eBloccato, cambiaBlocco, senzaBloccati } from '../lib/bloccati.js';
 
@@ -211,7 +212,13 @@ function MondoDiscussioni({ discussionId, onClose, onOpenPersona }) {
   const [composerAperto, setComposerAperto] = useState(false);
   const ingr = 1 + zoomTesto * 0.15;
 
+  // b.516 — anche questa schermata dichiarava `fixed inset:0` ma usciva
+  // 440x691 dentro una finestra 657x749 (misurato in produzione): il
+  // `fixed` era prigioniero della colonna della sezione. I due veli
+  // annidati piu sotto (z:95 e z:96) sono figli di questo, quindi
+  // escono insieme a lui. Vedi Sovrapposizione.js.
   return (
+    <Sovrapposizione>
     <div style={{ position: 'fixed', inset: 0, zIndex: 90, background: bg, display: 'flex', flexDirection: 'column', fontFamily: FONT }}>
       {/* Header */}
       {/* b.482 — rientro laterale a 20 come il resto dell'applicazione, e
@@ -477,6 +484,7 @@ function MondoDiscussioni({ discussionId, onClose, onOpenPersona }) {
         </div>
       )}
     </div>
+    </Sovrapposizione>
   );
 
   // b.363 — segnala l'intera discussione: stessa regola del commento.

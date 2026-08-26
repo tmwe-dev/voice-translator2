@@ -1,6 +1,6 @@
 'use client';
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { FONT, LANGS, vibrate } from '../lib/constants.js';
+import { FONT, LANGS, vibrate, lingueTrovate } from '../lib/constants.js';
 
 // ═══════════════════════════════════════════════════════════════
 // b.354 — IL CAROSELLO DELLE LINGUE, copiato dal selettore paesi di
@@ -97,10 +97,13 @@ function CarouselLingue({ selezionata, onScegli, onLinguaMenu, escludi, C, L }) 
   // ha chiesto. Adesso si guarda il NOME oppure la SIGLA, separatamente,
   // esattamente come fa il pannello laterale: due elenchi che si comportano
   // allo stesso modo non sono due cose da imparare.
+  // b.516 — si cercava SOLO nel nome mostrato (che e l'endonimo) e nella
+  // sigla: in italiano «giapponese», «cinese», «inglese», «tedesco» non
+  // trovavano niente, e per una ventina di lingue l'endonimo non e
+  // nemmeno scrivibile con la tastiera di chi cerca. Adesso il filtro e
+  // uno solo per tutte le tendine: `lingueTrovate` (constants.js).
   const q = cerca.trim().toLowerCase();
-  const filtrate = q
-    ? lingue.filter((l) => l.name.toLowerCase().includes(q) || l.code.toLowerCase().includes(q))
-    : lingue;
+  const filtrate = q ? lingue.filter((l) => lingueTrovate(l, q)) : lingue;
 
   const freccia = (dir, segno) => (
     <button onClick={() => scorri(dir)} aria-label={dir < 0 ? 'precedente' : 'successiva'}

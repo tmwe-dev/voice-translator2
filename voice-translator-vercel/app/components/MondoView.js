@@ -14,7 +14,7 @@ import Scelta from './ui/Scelta.js';
 // ═══════════════════════════════════════════════
 
 import { memo, useState, useEffect, useCallback, useMemo } from 'react';
-import { FONT, LANGS, vibrate } from '../lib/constants.js';
+import { FONT, LANGS, vibrate, lingueTrovate } from '../lib/constants.js';
 import GloboMondo from './GloboMondo.js'; // b.359 — il pianeta dal file di Luca
 import FinestraSulMondo from './FinestraSulMondo.js'; // b.506 — le breaking sul pianeta
 import getStyles from '../lib/styles.js';
@@ -285,7 +285,7 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
     const stanzePerLingua = {};
     for (const r of rooms) { if (r.lang) stanzePerLingua[r.lang] = (stanzePerLingua[r.lang] || 0) + 1; }
     const paesi = LANGS
-      .filter((l) => l.name.toLowerCase().includes(q) || l.code.toLowerCase().startsWith(q))
+      .filter((l) => lingueTrovate(l, q)) // b.516 — anche i nomi in italiano/inglese
       .sort((a, b) => (stanzePerLingua[b.code] || 0) - (stanzePerLingua[a.code] || 0))
       .slice(0, 6)
       .map((l) => ({ ...l, vive: stanzePerLingua[l.code] || 0 }));

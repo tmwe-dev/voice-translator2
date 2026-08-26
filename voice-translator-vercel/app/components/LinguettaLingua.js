@@ -1,7 +1,7 @@
 'use client';
 import { memo, useState } from 'react';
 import { formaLinguetta, LINGUETTA, postoASinistra } from '../lib/righello.js';
-import { FONT, LANGS, getLang } from '../lib/constants.js';
+import { FONT, LANGS, getLang, lingueTrovate } from '../lib/constants.js';
 import Icon from './Icon.js';
 import { conRipiego } from '../lib/ripiego.js';
 
@@ -24,7 +24,7 @@ function LinguettaLingua({ prefs, savePrefs, L, onScegliVoce, accent = '#26D9B0'
 
   const q = cerca.trim().toLowerCase();
   const lingue = q
-    ? LANGS.filter((l) => l.name.toLowerCase().includes(q) || l.code.toLowerCase().includes(q))
+    ? LANGS.filter((l) => lingueTrovate(l, q)) // b.516 — anche i nomi in italiano/inglese
     : LANGS;
 
   const scegliLingua = (code) => {

@@ -54,7 +54,7 @@ export function metaScelta(prefs) {
     || 'en';
 }
 
-export const APP_VERSION = 'b.515';
+export const APP_VERSION = 'b.516';
 
 // ── Numero di rilascio, visibile in alto a sinistra nella home ──
 // Serve a Luca per sapere a colpo d'occhio se la pagina che ha davanti e
@@ -62,7 +62,7 @@ export const APP_VERSION = 'b.515';
 // ancora arrivato al suo browser (o la pagina viene dalla cache).
 // VA AUMENTATO DI UNO A OGNI PUSH SU main. Corrisponde al numero di
 // commit del ramo: `git rev-list --count HEAD`.
-export const PUSH = 804;
+export const PUSH = 805;
 
 export const APP_URL = process.env.NEXT_PUBLIC_URL || 'https://voice-translator2.vercel.app';
 
@@ -115,6 +115,86 @@ export const LANGS = [
   { code:'sw', name:'Kiswahili', flag:'\u{1F1F0}\u{1F1EA}', speech:'sw-KE' },
   { code:'af', name:'Afrikaans', flag:'\u{1F1FF}\u{1F1E6}', speech:'af-ZA' },
 ];
+
+// ═══════════════════════════════════════════════════════════════
+// COME SI CHIAMA UNA LINGUA QUANDO LA CERCHI (b.516)
+//
+// In LANGS ogni lingua porta il proprio nome NELLA PROPRIA lingua
+// (l'endonimo): e giusto cosi, e come la chiamano quelli che la
+// parlano, ed e quello che si legge nella riga della tendina.
+//
+// Ma la RICERCA guardava solo quel nome e la sigla. Riprodotto dal
+// vivo in produzione (b.515, interfaccia italiana): scrivendo
+// «giapponese», «cinese», «inglese», «tedesco» la tendina restava
+// VUOTA; l'unico modo di trovare il giapponese era scrivere «ja»
+// oppure «日本語» — cioe conoscerlo gia. Per una ventina di lingue
+// (greco, ebraico, arabo, hindi, russo, coreano, bengalese, tamil,
+// ucraino, bulgaro...) l'endonimo non e nemmeno scrivibile con la
+// tastiera di chi cerca.
+//
+// Qui stanno i nomi ALTERNATIVI — italiano e inglese — con cui la
+// gente cerca davvero. Non si toccano i nomi mostrati: si aggiunge
+// solo un modo in piu per arrivarci.
+// ═══════════════════════════════════════════════════════════════
+export const ALIAS_LINGUE = {
+  it: 'italiano italian',
+  en: 'inglese english americano american usa',
+  'en-GB': 'inglese english britannico british regno unito uk',
+  es: 'spagnolo spanish castigliano espanol',
+  'es-MX': 'spagnolo spanish messicano mexican messico',
+  fr: 'francese french',
+  'fr-CA': 'francese french canadese canadian quebec',
+  de: 'tedesco german',
+  pt: 'portoghese portuguese brasiliano brazilian brasile',
+  'pt-PT': 'portoghese portuguese portogallo portugal',
+  zh: 'cinese chinese mandarino mandarin semplificato',
+  'zh-TW': 'cinese chinese taiwanese tradizionale traditional',
+  ja: 'giapponese japanese nihongo',
+  ko: 'coreano korean hangugeo',
+  ar: 'arabo arabic',
+  'ar-EG': 'arabo arabic egiziano egyptian egitto',
+  hi: 'hindi indiano indian',
+  ru: 'russo russian',
+  tr: 'turco turkish',
+  vi: 'vietnamita vietnamese',
+  id: 'indonesiano indonesian indonesia',
+  ms: 'malese malay malaysia',
+  nl: 'olandese dutch nederlandese',
+  pl: 'polacco polish',
+  sv: 'svedese swedish',
+  el: 'greco greek',
+  cs: 'ceco czech',
+  ro: 'rumeno romanian romeno',
+  hu: 'ungherese hungarian',
+  fi: 'finlandese finnish',
+  uk: 'ucraino ukrainian',
+  da: 'danese danish',
+  nb: 'norvegese norwegian',
+  he: 'ebraico hebrew israeliano',
+  fil: 'filippino filipino tagalog',
+  bg: 'bulgaro bulgarian',
+  hr: 'croato croatian',
+  sk: 'slovacco slovak',
+  ca: 'catalano catalan',
+  bn: 'bengalese bengali bangla',
+  ta: 'tamil',
+  sw: 'swahili suaili kiswahili',
+  af: 'afrikaans sudafricano',
+  th: 'thailandese thai tailandese',
+};
+
+// Il filtro unico della ricerca lingue: nome mostrato, sigla, oppure
+// uno dei nomi alternativi qui sopra. Una funzione sola, cosi le tre
+// tendine (Home, linguetta, Mondo) non si comportano in tre modi.
+export function lingueTrovate(lingua, query) {
+  const q = String(query || '').trim().toLowerCase();
+  if (!q) return true;
+  if (!lingua) return false;
+  const nome = String(lingua.name || '').toLowerCase();
+  const sigla = String(lingua.code || '').toLowerCase();
+  const alias = (ALIAS_LINGUE[lingua.code] || '').toLowerCase();
+  return nome.includes(q) || sigla.includes(q) || alias.includes(q);
+}
 
 export const VOICES = ['alloy','echo','fable','onyx','nova','shimmer'];
 
