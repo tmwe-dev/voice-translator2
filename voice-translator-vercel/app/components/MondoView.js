@@ -4,6 +4,7 @@ import { quando, viva, stileEtichetta, PUNTO, paeseDaLingua, linguaDelPaese, ban
 import PannelloLaterale, { LinguettaPannello } from './ui/PannelloLaterale.js';
 import { COLONNA, riservaADestra } from '../lib/righello.js';
 import PreferenzeMondo from './ui/PreferenzeMondo.js';
+import PreferitiTemi from './ui/PreferitiTemi.js';
 import Scelta from './ui/Scelta.js';
 // ═══════════════════════════════════════════════
 // MondoView — Public room discovery
@@ -664,6 +665,10 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
           Stanze, quindi da News e da Mondo la linguetta si apriva su niente. */}
       <PannelloLaterale aperto={strumenti && (tab === 'stanze' || tab === 'mondo')} onChiudi={() => setStrumenti(false)}
         titolo={L('tabRooms')} C={C}>
+      {/* b.517 — i preferiti stanno IN CIMA, prima di ogni filtro: sono
+          la scorciatoia, non un'impostazione. */}
+      <PreferitiTemi temi={schedaPaese?.temiCaldi} prefs={prefs} savePrefs={savePrefs} C={C} L={L}
+        onScegli={(topic) => { setTemaDaMondo(topic); setTab('news'); setStrumenti(false); }} />
       {/* b.504 — M2, col Mondo guardato con Luca: il pannello e SOLO
           preferenze. La RICERCA e andata NELLA PAGINA (M1: si cerca dove
           si guarda, non dietro una porta che nessuno apre per cercare). */}
@@ -876,31 +881,12 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
             giudizio nostro. Compare solo quando c'e qualcosa da dire, e
             sta sopra l'elenco senza spingerlo: quando non c'e, non
             occupa nulla. */}
-        {paeseScelto && schedaPaese?.temiCaldi?.length > 0 && (
-          <div style={{ marginBottom: 12 }}>
-            <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: 1, color: C.textMuted, margin: '4px 0 8px' }}>
-              {L('talkedAboutHere')}
-            </div>
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-              {schedaPaese.temiCaldi.map((t) => (
-                <button key={t.topic}
-                  onClick={() => { vibrate(8); setTemaDaMondo(t.topic); setTab('news'); }}
-                  style={{
-                    // b.482 — alta 44: e una pillola, ma si tocca, e cio
-                    // che si tocca deve stare sotto un dito. Il testo
-                    // dentro non cambia misura.
-                    display: 'flex', alignItems: 'center', gap: 6, minHeight: 44, padding: '7px 12px',
-                    borderRadius: 999, cursor: 'pointer', fontFamily: FONT,
-                    background: C.card, border: `1px solid ${C.cardBorder}`,
-                    color: C.textPrimary, fontSize: 12.5, fontWeight: 600,
-                  }}>
-                  <span>{t.topic}</span>
-                  <span style={{ color: C.textMuted, fontWeight: 600 }}>{t.discussioni}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
+        {/* b.517 — «QUI SE NE PARLA» E TRASLOCATO NEL PANNELLO. Ordine di
+            Luca: «mettili dentro la sidebar in alto come preferiti,
+            inserisci una x per eliminare la preferenza». Erano due
+            pillole grigie che si mangiavano la prima riga dell'elenco
+            senza dire di chi fossero; ora sono badge di vetro in cima al
+            pannello, e si possono togliere. Vedi PreferitiTemi.js. */}
 
         {/* b.363 — ECCO LE CARD FANTASMA CHE LUCA VEDEVA A OGNI APERTURA DI
             MONDO. Erano quattro rettangoli finti alti 80 pixel, con il velo
@@ -985,11 +971,12 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
             {L('openNowWord')}
           </div>
         )}
-        {filteredRooms.length > 0 && (
-          <div style={{ fontSize: 10.5, color: C.textMuted, opacity: 0.85, padding: '0 4px 8px', lineHeight: 1.5 }}>
-            {L('openRoomNotice')}
-          </div>
-        )}
+        {/* b.517 — Luca: «aperte adesso con la descrizione elimina non
+            serve». L'avviso («i messaggi restano visibili a chi entra
+            dopo») era gia stato ridotto a UNA volta sola in b.363; ora
+            esce del tutto dall'elenco. La chiave openRoomNotice resta
+            nei dizionari: la stessa frase serve dove si CREA una stanza,
+            che e il momento in cui una decisione la si prende davvero. */}
 
         {/* b.363 — LA STESSA GRAMMATICA DI NEWS (vedi lib/schedaMondo.js).
             Prima questa scheda aveva cinque righe impilate — nome, cinque

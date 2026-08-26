@@ -34,11 +34,34 @@ import Icon from '../Icon.js';
 
 const ATTESA_PRIMA_DI_ARRENDERSI = 3500;
 
-export default function LettoreArticolo({ url, titolo, fonte, C, L, onIndietro }) {
+export default function LettoreArticolo({ url, titolo, fonte, dati, prefs, userToken, faccia = 'articolo', C, L, onIndietro }) {
   const [caricata, setCaricata] = useState(false);
   const [rifiutata, setRifiutata] = useState(false);
   const orologio = useRef(null);
   const telaio = useRef(null);
+
+  // b.516 — Luca dal vivo: «il riassunto non lo voglio [nella card],
+  // voglio aprire dentro la pagina l'articolo... genera la sintesi la
+  // metti nella pagina dell'articolo e anche il tasto traduci». Stessa
+  // "Sintesi di BarTalk" di sempre (b.153, mai il testo integrale — vedi
+  // in cima al file): prima viveva nel popup SchedaArgomento, ora vive
+  // qui, accanto alla pagina vera. Logica identica a SchedaArgomento.js,
+  // non estratta in un hook comune per non rischiare di toccare quella
+  // gia in produzione per i video.
+  // b.517 — DUE OPZIONI, NON UNA. Luca: «non mi stai facendo leggere
+  // l'articolo dentro la applicazione. il riassunto e una delle due
+  // opzioni». La pagina vera dell'editore e la sintesi di BarTalk sono
+  // due FACCE della stessa lettura, e si sceglie quale guardare: prima
+  // la sintesi stava incollata sopra il riquadro e gli rubava spazio
+  // sempre, anche a chi voleva solo leggere.
+  const [vista, setVista] = useState(faccia === 'sintesi' ? 'sintesi' : 'articolo');
+  useEffect(() => { setVista(faccia === 'sintesi' ? 'sintesi' : 'articolo'); }, [faccia, url]);
+
+  const [sintesiAI, setSintesiAI] = useState('');
+  const [generando, setGenerando] = useState(false);
+  const [serveAccount, setServeAccount] = useState(false);
+  const [errSintesi, setErrSintesi] = useState(false);
+  const lingua = prefs?.uiLang || 'en';
 
   useEffect(() => {
     setCaricata(false); setRifiutata(false);
@@ -46,6 +69,83 @@ export default function LettoreArticolo({ url, titolo, fonte, C, L, onIndietro }
     orologio.current = setTimeout(() => setRifiutata(true), ATTESA_PRIMA_DI_ARRENDERSI);
     return () => clearTimeout(orologio.current);
   }, [url]);
+
+  // ogni articolo nuovo riparte pulito, e chiede subito la cache
+  // condivisa: se qualcuno ha gia pagato la sintesi, arriva gratis.
+  useEffect(() => {
+    setSintesiAI(''); setServeAccount(false); setErrSintesi(false); setGenerando(false);
+    if (!dati?.titolo) return undefined;
+    let vivo = true;
+    (async () => {
+      try {
+        const r = await fetch('/api/topics/riassunto', { signal: AbortSignal.timeout(60000),
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ titolo: dati.titolo, lang: lingua }),
+        });
+        if (r.ok && vivo) {
+          const d = await r.json().catch(() => null);
+          if (d?.daCache && d.sintesi) setSintesiAI(d.sintesi);
+        }
+      } catch { /* la cache non risponde: si potra generare a mano */ }
+    })();
+    return () => { vivo = false; };
+  }, [dati, lingua]);
+
+  const generaSintesi = useCallback(async () => {
+    if (generando || !dati?.titolo) return;
+    setGenerando(true); setServeAccount(false); setErrSintesi(false);
+    vibrate(10);
+    try {
+      const r = await fetch('/api/topics/riassunto', { signal: AbortSignal.timeout(60000),
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          titolo: dati.titolo, sintesi: dati.sintesi,
+          fonti: (dati.fonti || []).map((f) => ({ fonte: f.fonte, titolo: f.titolo })),
+          lang: lingua, userToken,
+        }),
+      });
+      if (r.status === 401) { setServeAccount(true); return; }
+      if (!r.ok) { setErrSintesi(true); return; }
+      const d = await r.json().catch(() => null);
+      if (!d) { setErrSintesi(true); return; }
+      if (d.sintesi) setSintesiAI(d.sintesi);
+    } catch { setErrSintesi(true); }
+    finally { setGenerando(false); }
+  }, [dati, generando, lingua, userToken]);
+
+  // b.517 — «APRI E TRADUCI» non deve far premere un altro tasto: chi
+  // atterra sulla faccia sintesi la trova gia in scrittura. Chi apre
+  // l'articolo e passa alla sintesi dopo, idem. Parte UNA volta sola
+  // per articolo, e solo se la cache condivisa non l'aveva gia.
+  const chiestaRef = useRef(null);
+  useEffect(() => {
+    if (vista !== 'sintesi' || !dati?.titolo || sintesiAI || generando) return;
+    if (chiestaRef.current === dati.titolo) return;
+    chiestaRef.current = dati.titolo;
+    generaSintesi();
+  }, [vista, dati, sintesiAI, generando, generaSintesi]);
+
+  // b.517 — TRASCINA PER TORNARE INDIETRO. Ordine di Luca: «nel mobile
+  // con trascina torna alla pagina precedente». Il riquadro dell'editore
+  // e un iframe: si mangia i tocchi, quindi la presa non puo stare
+  // "sopra la pagina" in generale. Sta su una striscia stretta sul bordo
+  // sinistro — la stessa zona da cui si torna indietro in ogni telefono.
+  const presaRef = useRef(null);
+  const iniziaPresa = (e) => {
+    const t = e.touches?.[0];
+    presaRef.current = t ? { x: t.clientX, y: t.clientY } : null;
+  };
+  const finiscePresa = (e) => {
+    const p = presaRef.current;
+    presaRef.current = null;
+    const t = e.changedTouches?.[0];
+    if (!p || !t) return;
+    const dx = t.clientX - p.x;
+    const dy = Math.abs(t.clientY - p.y);
+    // orizzontale vero: almeno 60 di corsa e meno di meta in verticale,
+    // altrimenti e uno scorrimento della pagina, non un "indietro".
+    if (dx > 60 && dy < dx / 2) { vibrate(8); onIndietro?.(); }
+  };
 
   // b.383 — IL RIQUADRO RESTAVA VUOTO, E NON LO DICEVA.
   //
@@ -130,8 +230,87 @@ export default function LettoreArticolo({ url, titolo, fonte, C, L, onIndietro }
         </a>
       </div>
 
+      {/* b.517 — LE DUE FACCE. La pagina vera dell'editore e la sintesi
+          di BarTalk: si sceglie quale guardare, e si passa dall'una
+          all'altra senza chiudere niente. La sintesi non e piu una
+          striscia incollata sopra il riquadro (rubava spazio a chi
+          voleva solo leggere) ma una vista intera per conto suo. */}
+      {dati?.titolo && (
+        <div role="tablist" aria-label={L('readWord')} style={{
+          display: 'flex', gap: 4, flexShrink: 0, padding: 4, margin: '10px 12px 0',
+          borderRadius: 12, background: 'rgba(255,255,255,0.05)', border: bordo,
+        }}>
+          {[{ id: 'articolo', testo: L('newsOpen') }, { id: 'sintesi', testo: L('schedaSintesi') }].map((f) => {
+            const acceso = vista === f.id;
+            return (
+              <button key={f.id} role="tab" aria-selected={acceso}
+                onClick={() => { vibrate(6); setVista(f.id); }}
+                style={{
+                  flex: 1, minHeight: 36, borderRadius: 9, border: 'none', cursor: 'pointer',
+                  background: acceso ? C.accent : 'transparent',
+                  color: acceso ? '#fff' : C.textSecondary,
+                  fontSize: 12, fontWeight: 600, fontFamily: FONT,
+                  WebkitTapHighlightColor: 'transparent',
+                }}>
+                {f.testo}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {/* LA SINTESI, a tutta pagina quando e lei la faccia scelta */}
+      {vista === 'sintesi' && dati?.titolo && (
+        <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '12px', scrollbarWidth: 'none' }}>
+          <div style={{
+            padding: '14px 16px', borderRadius: 14,
+            background: 'rgba(255,255,255,0.04)', border: bordo,
+          }}>
+            <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: 1, color: C.accent, marginBottom: 8 }}>
+              {L('schedaSintesi')}
+            </div>
+            {sintesiAI && (
+              <p style={{ margin: 0, fontSize: 14, lineHeight: 1.65, color: C.textPrimary }}>{sintesiAI}</p>
+            )}
+            {!sintesiAI && generando && (
+              <p style={{ margin: 0, fontSize: 13, color: C.textMuted }}>{L('schedaScrivo')}</p>
+            )}
+            {!sintesiAI && !generando && !serveAccount && !errSintesi && (
+              <button onClick={generaSintesi}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 6, minHeight: 40, padding: '0 14px',
+                  borderRadius: 11, cursor: 'pointer', border: 'none',
+                  background: `linear-gradient(135deg, ${C.accent}, ${C.purple || C.accent})`,
+                  color: '#fff', fontSize: 12.5, fontWeight: 600, fontFamily: FONT,
+                }}>
+                <Icon name="globe" size={13} color="#fff" />
+                {L('schedaGenera')}
+              </button>
+            )}
+            {serveAccount && <p style={{ margin: 0, fontSize: 12.5, color: C.red || '#e0665c' }}>{L('schedaAccedi')}</p>}
+            {errSintesi && !serveAccount && <p style={{ margin: 0, fontSize: 12.5, color: C.red || '#e0665c' }}>{L('genericError')}</p>}
+          </div>
+          {dati?.sintesi && (
+            <p style={{
+              margin: '12px 4px 0', fontSize: 12.5, lineHeight: 1.6, fontStyle: 'italic',
+              color: C.textMuted, borderLeft: `2px solid ${C.cardBorder}`, paddingLeft: 10,
+            }}>
+              {`\u201C${dati.sintesi}\u201D`}{fonte ? ` \u2014 ${fonte}` : ''}
+            </p>
+          )}
+        </div>
+      )}
+
       {/* LA PAGINA LORO */}
-      <div style={{ flex: 1, minHeight: 0, position: 'relative', background: '#fff' }}>
+      <div style={{
+        flex: 1, minHeight: 0, position: 'relative', background: '#fff',
+        display: vista === 'articolo' ? 'block' : 'none',
+      }}>
+        {/* b.517 — la presa per tornare indietro trascinando: una striscia
+            sul bordo sinistro, sopra il riquadro dell'editore (che
+            altrimenti si mangerebbe il tocco). */}
+        <div onTouchStart={iniziaPresa} onTouchEnd={finiscePresa}
+          style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 22, zIndex: 4, touchAction: 'pan-y' }} />
         {url && (
           <iframe
             ref={telaio}

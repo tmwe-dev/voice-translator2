@@ -219,6 +219,100 @@ qualunque refactoring. Non si propone di rimandarlo.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.517** (push #806) — sei ordini dal vivo di Luca, piu il
+  recupero di un lavoro che un'altra sessione aveva involontariamente
+  sepolto. Le sue parole, nell'ordine in cui sono arrivate:
+
+  1. «aperte adesso con la descrizione elimina non serve»
+  2. «trasporti 1 citta 1 ?? mostra dei bei badge con sfondo in vetro
+     colore brown e blu in alternanza, numero bianco visibile e mettili
+     dentro la sidebar in alto come preferiti, inserisci una x per
+     eliminare la preferenza»
+  3. «i pulsanti apri e traduci, apri, vai al sito devono essere delle
+     icone!!!!!!»
+  4. «parlane o apri discussione non devono essere ambedue presenti,
+     parlane va bene sia che ci siano persone o che apra la discussione
+     (aggiungi un numero dei partecipanti)»
+  5. «non mi stai facendo leggere l'articolo dentro la applicazione. il
+     riassunto e una delle due opzioni»
+  6. «quando apro un articolo non mostrare la x ma monta a sinistra un
+     tasto back. nel mobile con trascina torna alla pagina precedente»
+
+  **0 — PRIMA DI TUTTO: IL LAVORO SEPOLTO.** Il b.516 che avevo
+  consegnato il 26/08 (articolo dentro l'applicazione, scroll del
+  pannello riparato, preferenze che dicono il loro stato) non e mai
+  andato live: un'altra sessione attiva sullo stesso repository ha
+  pushato il SUO b.516 e ha riusato lo stesso nome di ramo
+  (`b516-pronto`), orfanando il mio commit. Luca se n'e accorto dal
+  vivo — «non mi stai facendo leggere l'articolo dentro la
+  applicazione» — perche in produzione girava ancora il popup con la
+  sintesi. Il working tree del Mac aveva ancora tutto: il lavoro e
+  stato rimesso sopra il nuovo origin/main ed e dentro b.517.
+  REGOLA NUOVA, da qui in avanti: il ramo di consegna porta il numero
+  di push (`b806-pronto`), non quello di versione — due sessioni
+  possono arrivare alla stessa versione, non allo stesso push.
+
+  **1 — VIA LA DESCRIZIONE SOTTO «APERTE ADESSO».** L'avviso «i
+  messaggi restano visibili a chi entra dopo» era gia stato ridotto da
+  una-per-scheda a una-per-elenco in b.363; ora esce del tutto. La
+  chiave `openRoomNotice` resta nei dizionari perche la stessa frase
+  serve dove si CREA una stanza — li e una decisione, qui era rumore.
+
+  **2 — I TEMI DIVENTANO PREFERITI, E TRASLOCANO NEL PANNELLO.** Le
+  pillole grigie di «Qui se ne parla» (trasporti 1, citta 1) si
+  mangiavano la prima riga dell'elenco senza dire di chi fossero e
+  senza potersi togliere. Nuovo `PreferitiTemi.js`: badge di vetro
+  (fondo traslucido + sfocatura), tinte alternate bruno e blu come
+  chiesto, il numero su una pastiglia bianca traslucida — cosi resta
+  leggibile su ENTRAMBE le tinte senza ricolorarlo a mano — e una «x»
+  che scrive in `prefs.temiTolti`: la preferenza tolta resta tolta al
+  prossimo giro e su qualunque dispositivo, non e un nascondino di
+  sessione. Stanno in cima al pannello, PRIMA di ogni filtro: sono una
+  scorciatoia, non un'impostazione.
+
+  **3 — QUATTRO PORTE, TUTTE ICONE.** La fila di tasti larghi («Apri e
+  traduci», «Apri», «Vai al sito») e sparita: al suo posto quattro
+  icone da 38 sotto l'immagine — `doc` (leggi dentro l'app), `globe`
+  (leggi con la sintesi tradotta gia aperta), `link` (esci sul sito
+  dell'editore), `chat` (parlane). «Apri» e «Apri e traduci» aprono la
+  STESSA pagina: cambia solo su quale faccia si atterra.
+
+  **4 — PARLANE, UNA PORTA SOLA, COL NUMERO DI CHI C'E GIA.** «Parlane»
+  e «Apri discussione» facevano quasi la stessa cosa e stavano tutti e
+  due sulla card. Ora e uno: se qualcuno sta gia parlando di quel link
+  si entra nella sua discussione (e il numero lo dice PRIMA di
+  toccare), se non c'e nessuno la discussione la si apre. Il numero
+  arriva da `comment_count` delle discussioni GIA scaricate per il feed,
+  indicizzate per link: nessuna chiamata di rete in piu, nessun costo.
+
+  **5 — DUE FACCE, NON UNA STRISCIA.** La sintesi non e piu una banda
+  incollata sopra il riquadro (rubava spazio anche a chi voleva solo
+  leggere): il lettore ha due opzioni dichiarate in alto — la pagina
+  VERA dell'editore (iframe, mai testo copiato: la regola di copyright
+  non cambia di una virgola) e la Sintesi di BarTalk. Chi entra dalla
+  porta `globe` atterra sulla sintesi e la trova gia in scrittura,
+  senza premere un altro tasto; parte una volta sola per articolo.
+
+  **6 — INDIETRO, NON UNA X.** Il lettore aveva gia il tasto back a
+  sinistra: la «x» che Luca vedeva era del vecchio popup, che per gli
+  articoli non si apre piu. Aggiunto il trascinamento: una striscia da
+  22 sul bordo sinistro, SOPRA l'iframe (che altrimenti si mangia il
+  tocco), riconosce lo scorrimento orizzontale — almeno 60 di corsa e
+  meno di meta in verticale, cosi uno scroll della pagina non viene
+  scambiato per un «indietro».
+
+  TEST: 20 test nuovi (`notizie-icone-preferiti-b517.test.js`) +
+  aggiornamento di `lettore-articolo-b516.test.js` — [VERIFICATO]
+  63/63 passano su tutta la batteria b.513→b.517, inclusi i due file di
+  test dell'altra sessione (`sovrapposizioni-portal-b516`,
+  `ricerca-lingue-alias-b516`), che restano verdi: le due linee di
+  lavoro non si sono pestate i piedi. `npx eslint` sui file toccati: 0
+  errori, 1 warning preesistente non mio. NON ho eseguito un `next
+  build` completo (va in timeout nel sandbox, limite gia documentato) e
+  NON ho ancora potuto verificare dal vivo in produzione, perche il
+  codice non e ancora pushato — [ASSUNTO] che eslint + test dedicati
+  bastino come prova fino al collaudo di Luca.
+
 - Versione: **b.516** (push #805) — GIRO DI COLLAUDO AUTOMATICO ORARIO
   (nessuno davanti allo schermo). Ordine di Luca: «devi fare un test di
   TUTTO, almeno 10 interazioni per ogni funzione». Fatto dal vivo su
@@ -329,6 +423,112 @@ qualunque refactoring. Non si propone di rimandarlo.
   commit un blob costruito a mano (origin/main + solo la mia modifica),
   cosi quella riga altrui NON entra nel push.
 
+
+- **[MAI USCITA COME b.516 — confluita in b.517]** Questo lavoro era
+  pronto e committato il 26/08 alle 17:47 UTC sul ramo `b516-pronto`, ma
+  non e mai arrivato in produzione: un'ALTRA sessione, che lavorava sullo
+  stesso repository nelle stesse ore, ha pushato il suo b.516 e ha riusato
+  lo STESSO nome di ramo, lasciando orfano il commit 1c1728b. Il codice
+  non e andato perso (era tutto nel working tree del Mac) ed e stato
+  rimesso sopra il nuovo origin/main dentro b.517. Lezione operativa
+  registrata in fondo a questa voce. Testo originale della consegna:
+
+  Feedback live di Luca sull'interfaccia
+  appena spedita in b.515 (due screenshot allegati), tutto nello stesso
+  messaggio:
+
+  «Però quando schiaccio l'icona titoli in altre lingue? Deve cambiare
+  l'icona come fa e indicare che titoli nella tua lingua. Quando clicco
+  cerca... come cerco le notizie? Deve evidenziare il modo in cui lo fa
+  in quel momento e il modo in cui lo farà poi dopo. Quando aggiorno
+  devi evidenziare sotto appunto come stai facendo l'aggiornamento in
+  un modo o nell'altro. Devi correggere questa cosa. lo scroll non va e
+  parte del container finisce sotto il menu in alto, devi abbassare
+  leggermente il container e dimensionarlo perché rimanga dentro lo
+  schermo. devi invece allargare il container hai lasciato troppo
+  margine laterale. poi. i tasti sono grandi e fuori standard e il
+  riassunto non lo voglio, voglio aprire dentro la pagina l'articolo.
+  usa icone per leggi e parlane e mettili appena sotto immagine o
+  video. genera la sintesi la metti nella pagina dell'articolo e anche
+  il tasto traduci»
+
+  **1 — LE PREFERENZE ORA DICONO IL LORO STATO.** `IconeCiclo` in
+  `PreferenzeMondo.js` (i tre cicli Titoli/Cerca/Aggiorna) era
+  un'icona sola, senza testo: si vedeva CHE si poteva cliccare, non
+  COSA era selezionato in quel momento né cosa sarebbe diventato dopo
+  il click. Ora ogni pulsante mostra, sotto l'icona, l'etichetta
+  testuale dello stato attuale (`L(attuale.etichettaKey)`) — stessa
+  logica che già usava `PassoVerticale` per il Ritmo, estesa ai tre
+  cicli icon-only.
+
+  **2 — SCROLL ROTTO, RISOLTO ALLA RADICE.** Il container scorrevole
+  del pannello aveva `flex: 1` dentro un flex-column: senza
+  `min-height: 0` esplicito, un figlio flex non scorre mai — si
+  allarga per contenere tutto, e `overflow: auto` non scatta (bug
+  classico di flexbox, non un caso isolato di questo pannello).
+  Aggiunto `minHeight: 0`. Contestualmente: il pannello era ancorato
+  con `top:0; bottom:0`, che su mobile con barra degli strumenti
+  dinamica calcola contro il viewport "grande" e finisce parzialmente
+  sotto il menu — sostituito con `height:'100dvh'` (viewport
+  dinamico). Larghezza portata da `min(330px,86vw)` a
+  `min(460px,92vw)` per il margine laterale eccessivo segnalato.
+
+  **3 — NIENTE PIÙ POPUP CON RIASSUNTO: L'ARTICOLO SI LEGGE NELLA
+  PAGINA VERA.** Correzione diretta del design spedito UN turno fa in
+  b.515 (le "tre porte" Apri e traduci/Apri/Vai al sito, che aprivano
+  `SchedaArgomento` con la Sintesi di BarTalk): Luca l'ha respinto dal
+  vivo. Gli articoli ora aprono `LettoreArticolo.js` — il componente
+  che dal b.365 incornicia la pagina VERA dell'editore in un iframe
+  (mai testo copiato, coerente con l'art. 70 l. 633/41), finora usato
+  solo per il flusso "discussioni". La Sintesi AI e il tasto Genera
+  sono stati spostati DENTRO quella pagina (nuovo pannello in
+  `LettoreArticolo.js`, stessa chiamata `/api/topics/riassunto` e
+  stessa gestione errori di `SchedaArgomento.js` — riuso letterale
+  della logica, non una reinvenzione). `SchedaArgomento.js` resta in
+  vita SOLO per i video (la prop `autoGenera` ci resta dentro,
+  innocua, non più richiamata per articoli). In `MondoNews.js`: click
+  su immagine o titolo apre `LettoreArticolo`; le vecchie tre
+  righe di pulsanti larghi sono sparite, sostituite da due icone
+  38×38 (Leggi/Parlane) subito sotto l'immagine, come chiesto.
+  `FeedNotizieMondo.js` aggiornato di conseguenza (bottone "Leggi",
+  non più "Apri e traduci").
+
+  TEST: 13 test automatici nuovi (`lettore-articolo-b516.test.js`) +
+  aggiornamento di `apri-traduci-b515.test.js` (i suoi vecchi
+  assert sulle tre porte non valevano più, sostituiti con assert sul
+  nuovo comportamento) — [VERIFICATO] 33/33 test passano su tutta la
+  batteria b.513→b.516. `npx eslint` sui 5 file toccati: 0 errori, 1
+  warning preesistente non mio (stesso eslint-disable inutilizzato su
+  `<img>` già segnalato in b.515). Non ho rieseguito un `next build`
+  completo per lo stesso limite di tempo del sandbox già dichiarato in
+  b.515 — [ASSUNTO] che eslint pulito + test dedicati bastino come
+  prova, stesso standard della sessione precedente.
+
+  DEBITO RESIDUO invariato rispetto a b.515: HEAD locale del Mac
+  ancora fermo indietro rispetto a origin/main, con
+  `__tests__/preferenze-mondo-b508.test.js` cancellato ma non
+  committato — non toccato in questa sessione, il workflow di commit
+  parte da `origin/main` quindi non entra nel commit b.516.
+
+  NUOVO DEBITO RESIDUO scoperto in fase di commit: nel working tree del
+  Mac ci sono modifiche non mie di questa sessione, chiaramente in
+  corso PROPRIO mentre lavoravo (stessi minuti, 17:32-17:45 UTC del
+  26/08) — segno di un'altra sessione attiva sullo stesso repository:
+  1. `app/lib/constants.js` — nuovo blocco `ALIAS_LINGUE`/
+     `lingueTrovate` (ricerca lingue per nome alternativo it/en, non
+     solo endonimo/sigla): codice non mio, non incluso nel commit
+     b.516 (isolato via blob costruito su `origin/main`, il file reale
+     sul Mac NON e stato toccato).
+  2. `app/components/FeedNotizieMondo.js` — nuovo componente
+     `Sovrapposizione.js` (fix di un bug di layout: il feed a tutta
+     pagina misurava 440x691 dentro una finestra 657x749, non era
+     davvero fullscreen) importato e usato per avvolgere il feed: non
+     mio, non incluso nel commit b.516 con lo stesso isolamento del
+     punto precedente.
+  Nessuna delle due e stata toccata ne persa: restano nel working tree
+  del Mac esattamente come le ha lasciate l'altra sessione. Segnalato
+  a Luca in chat perche verifichi se sono due sessioni sue in
+  parallelo (rischio di commit che si sovrascrivono a vicenda).
 
 - Versione: **b.515** (push #804) — quattro richieste di Luca sulla
   sezione Mondo/Notizie, arrivate a raffica nella stessa sessione:

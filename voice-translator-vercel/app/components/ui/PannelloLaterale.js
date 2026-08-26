@@ -67,8 +67,20 @@ export default function PannelloLaterale({ aperto, onChiudi, titolo, C, children
 
       <aside role="dialog" aria-modal="true" aria-label={titolo}
         style={{
-          position: 'fixed', left: 0, top: 0, bottom: 0, zIndex: 89,
-          width: 'min(330px, 86vw)', display: 'flex', flexDirection: 'column',
+          // b.516 — Luca dal vivo: «lo scroll non va e parte del container
+          // finisce sotto il menu in alto, abbassa e dimensiona perche
+          // resti dentro lo schermo; allarga, hai lasciato troppo margine
+          // laterale». Due bug distinti nella stessa riga:
+          // - `100dvh` invece di `top:0,bottom:0`: col solo top/bottom un
+          //   fixed prende il viewport GRANDE (quello che ignora le barre
+          //   del browser che vanno e vengono su mobile) — la parte alta
+          //   del pannello finiva sotto quelle barre quando erano aperte.
+          //   La "dynamic viewport height" si aggiusta da sola.
+          // - largo il doppio (era fisso a 330px, che su schermi ampi
+          //   lasciava piu della meta della finestra come solo velo).
+          position: 'fixed', left: 0, top: 0, zIndex: 89,
+          height: '100dvh', maxHeight: '100dvh',
+          width: 'min(460px, 92vw)', display: 'flex', flexDirection: 'column',
           // coprente: dietro c'e il pianeta, e attraverso un pannello
           // translucido si leggeva tutto (la lezione della tendina paese).
           background: C.bg || '#080b16',
@@ -93,7 +105,15 @@ export default function PannelloLaterale({ aperto, onChiudi, titolo, C, children
         </header>
 
         <div style={{
-          flex: 1, overflowY: 'auto', scrollbarWidth: 'none',
+          // b.516 — IL BUG VERO DELLO SCROLL: un figlio flex con
+          // `flex:1` ha di default `min-height:auto`, che in un
+          // contenitore a colonna lo forza a restare alto quanto TUTTO
+          // il suo contenuto invece di fermarsi all'altezza del
+          // genitore — `overflow:auto` non scatta mai perche il figlio
+          // non trabocca mai (si allarga lui). `minHeight:0` gli
+          // permette di restringersi davvero: solo cosi l'overflow ha
+          // senso di esistere.
+          flex: 1, minHeight: 0, overflowY: 'auto', scrollbarWidth: 'none',
           padding: '14px 20px calc(20px + env(safe-area-inset-bottom))',
           display: 'flex', flexDirection: 'column', gap: 16,
         }}>

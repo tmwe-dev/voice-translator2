@@ -118,7 +118,15 @@ const PREFERENZE = [
 // (uno per scelta), un solo bersaglio da 44: mostra l'icona della
 // scelta ATTIVA, e un tocco passa all'altra. Per due scelte è lo stesso
 // numero di tocchi di prima (uno), ma metà dello spazio.
-function IconeCiclo({ scelte, valore, onCambia, C, etichettaAria }) {
+// b.516 — Luca dal vivo, sulle tre preferenze che usano questo comando
+// (titoli, come cerco, quando aggiorno): «deve evidenziare il modo in
+// cui lo fa in quel momento». Prima si vedeva SOLO l'icona della scelta
+// attiva: chi non conosce a memoria cosa vuol dire ogni icona non sa
+// leggere lo stato, e non sa nemmeno che quell'icona STA MOSTRANDO lo
+// stato invece di essere un comando generico. Ora sotto l'icona c'e la
+// parola vera — lo stesso trucco gia in uso nella rotellina del ritmo
+// (PassoVerticale, qui sotto), solo applicato anche al ciclo.
+function IconeCiclo({ scelte, valore, onCambia, C, L, etichettaAria }) {
   const accento = C.accent || '#26D9B0';
   const indice = Math.max(0, scelte.findIndex((s) => s.valore === valore));
   const attuale = scelte[indice] || scelte[0];
@@ -127,12 +135,22 @@ function IconeCiclo({ scelte, valore, onCambia, C, etichettaAria }) {
       onClick={() => { vibrate(6); onCambia(scelte[(indice + 1) % scelte.length].valore); }}
       aria-label={etichettaAria} title={etichettaAria}
       style={{
-        width: 44, height: 44, borderRadius: 12, flexShrink: 0, cursor: 'pointer',
-        background: `${accento}14`, border: `1px solid ${accento}44`,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        WebkitTapHighlightColor: 'transparent',
+        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
+        minWidth: 52, flexShrink: 0, cursor: 'pointer', padding: '3px 4px',
+        background: 'none', border: 'none', WebkitTapHighlightColor: 'transparent',
       }}>
-      <Icon name={attuale.icona} size={19} color={accento} />
+      <span style={{
+        width: 38, height: 38, borderRadius: 11, display: 'flex', alignItems: 'center', justifyContent: 'center',
+        background: `${accento}14`, border: `1px solid ${accento}44`,
+      }}>
+        <Icon name={attuale.icona} size={17} color={accento} />
+      </span>
+      <span style={{
+        fontSize: 10.5, fontWeight: 400, color: COLORE_VALORE, fontFamily: FONT,
+        whiteSpace: 'nowrap', maxWidth: 68, overflow: 'hidden', textOverflow: 'ellipsis',
+      }}>
+        {L(attuale.etichettaKey)}
+      </span>
     </button>
   );
 }
@@ -215,7 +233,7 @@ export default function PreferenzeMondo({ C }) {
             {p.tipo === 'passo' ? (
               <PassoVerticale scelte={p.scelte} valore={attuale} onCambia={(v) => cambia(p.chiave, v)} C={C} L={L} />
             ) : (
-              <IconeCiclo scelte={p.scelte} valore={attuale} onCambia={(v) => cambia(p.chiave, v)} C={C}
+              <IconeCiclo scelte={p.scelte} valore={attuale} onCambia={(v) => cambia(p.chiave, v)} C={C} L={L}
                 etichettaAria={L(sceltaAttiva.etichettaKey)} />
             )}
           </div>

@@ -100,10 +100,7 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
   const [errore, setErrore] = useState('');
   const [chipAttiva, setChipAttiva] = useState(null);
   // b.153 — la scheda di lettura/visione e i video di YouTube.
-  const [scheda, setScheda] = useState(null);
-  // b.515 — «apri e traduci» oppure «apri»: stesso popup, la sola
-  // differenza e se la sintesi parte da sola o aspetta il tocco.
-  const [schedaAutoGenera, setSchedaAutoGenera] = useState(false);
+  const [scheda, setScheda] = useState(null); // b.516 — resta in uso SOLO per i video
   // b.515 — il feed a tutta pagina (stile reel): aperto/chiuso qui,
   // il filtro (solo video di default — ordine di Luca) e una preferenza
   // persistita, cosi resta com'era l'ultima volta che l'ha scelto.
@@ -379,6 +376,21 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
     if (paeseFiltro) v = v.filter((d) => d.country === paeseFiltro);
     return ordinaFeed(v, prefs);
   }, [feed, argomentoFiltro, paeseFiltro, prefs]);
+
+  // b.517 — CHI STA GIA PARLANDO DI QUESTO ARTICOLO. Luca: «parlane va
+  // bene sia che ci siano persone o che apra la discussione (aggiungi un
+  // numero dei partecipanti)». Le discussioni aperte sono gia scaricate
+  // per il feed qui sotto: si indicizzano per link, cosi la card di
+  // ricerca sa DA SOLA se dietro c'e gia una stanza viva — senza una
+  // sola chiamata di rete in piu.
+  const discussionePerLink = useMemo(() => {
+    const m = new Map();
+    for (const d of feed || []) {
+      const u = d?.media?.url;
+      if (u && !m.has(u)) m.set(u, { id: d.id, persone: d.comment_count || 0 });
+    }
+    return m;
+  }, [feed]);
 
   const bordo = `1px solid ${C.cardBorder}`;
 
@@ -823,7 +835,7 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
               riquadro esiste soltanto quando c'e una foto da farci
               stare dentro. */}
           {t.immagine && (
-            <div onClick={() => { vibrate(8); setSchedaAutoGenera(false); setScheda({ tipo: 'articolo', dati: t }); }} style={{
+            <div onClick={() => { vibrate(8); setLettura({ url: t.url, titolo: t.titolo, fonte: t.fonti?.[0]?.fonte, dati: t, faccia: 'articolo' }); }} style={{
               position: 'relative', aspectRatio: '16/9', cursor: 'pointer',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               background: `linear-gradient(135deg, ${C.accent}14, ${C.purple}18)`,
@@ -846,14 +858,85 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
             </div>
           )}
 
+          {/* b.517 — QUATTRO PORTE, TUTTE ICONE. Luca: «i pulsanti apri e
+              traduci, apri, vai al sito devono essere delle icone!!!!!!»
+              e «usa icone per leggi e parlane e mettili appena sotto
+              immagine o video».
+                doc   = leggi l'articolo VERO dentro l'applicazione
+                globe = leggilo con la sintesi tradotta gia aperta
+                link  = esci sul sito dell'editore
+                chat  = parlane (una sola porta, vedi sotto)
+              «Apri» e «Apri e traduci» aprono LA STESSA pagina: cambia
+              solo su quale delle due facce si atterra. */}
+          <div style={{ display: 'flex', gap: 8, padding: '10px 20px 0', alignItems: 'center' }}>
+            <button onClick={() => { vibrate(8); setLettura({ url: t.url, titolo: t.titolo, fonte: t.fonti?.[0]?.fonte, dati: t, faccia: 'articolo' }); }}
+              aria-label={L('readWord')} title={L('readWord')}
+              style={{
+                width: 38, height: 38, borderRadius: 11, cursor: 'pointer', flexShrink: 0,
+                background: `${C.accent}14`, border: `1px solid ${C.accent}44`, color: C.accent,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                WebkitTapHighlightColor: 'transparent',
+              }}>
+              <Icon name="doc" size={16} color={C.accent} />
+            </button>
+            <button onClick={() => { vibrate(8); setLettura({ url: t.url, titolo: t.titolo, fonte: t.fonti?.[0]?.fonte, dati: t, faccia: 'sintesi' }); }}
+              aria-label={L('newsOpenTranslate')} title={L('newsOpenTranslate')}
+              style={{
+                width: 38, height: 38, borderRadius: 11, cursor: 'pointer', flexShrink: 0,
+                background: 'transparent', border: bordo, color: C.textSecondary,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                WebkitTapHighlightColor: 'transparent',
+              }}>
+              <Icon name="globe" size={15} color={C.textSecondary} />
+            </button>
+            <a href={t.url} target="_blank" rel="noopener noreferrer" onClick={() => vibrate(6)}
+              aria-label={L('newsOpenSite')} title={L('newsOpenSite')}
+              style={{
+                width: 38, height: 38, borderRadius: 11, flexShrink: 0, textDecoration: 'none',
+                background: 'transparent', border: bordo,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                WebkitTapHighlightColor: 'transparent',
+              }}>
+              <Icon name="link" size={15} color={C.textSecondary} />
+            </a>
+            {/* b.517 — PARLANE, UNA PORTA SOLA. Luca: «parlane o apri
+                discussione non devono essere ambedue presenti». Prima
+                erano due tasti a piena larghezza che facevano quasi la
+                stessa cosa: uno portava fuori, l'altro apriva la
+                discussione. Ora e uno: se qualcuno ne sta gia parlando
+                si entra li (e il numero lo dice PRIMA di toccare), se
+                non c'e nessuno la discussione la si apre. */}
+            {(() => {
+              const viva = discussionePerLink.get(t.url);
+              return (
+                <button onClick={() => { vibrate(10); if (viva) setDiscAperta(viva.id); else apriDiscussione(t); }}
+                  disabled={creando}
+                  aria-label={L('newsTalkAbout')} title={L('newsTalkAbout')}
+                  style={{
+                    minWidth: 38, height: 38, padding: viva?.persone ? '0 11px' : 0,
+                    borderRadius: 11, cursor: 'pointer', flexShrink: 0,
+                    background: viva ? `${C.accent}12` : 'transparent',
+                    border: viva ? `1px solid ${C.accent}30` : bordo,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                    opacity: creando ? 0.6 : 1, fontFamily: FONT,
+                    WebkitTapHighlightColor: 'transparent',
+                  }}>
+                  <Icon name="chat" size={15} color={viva ? C.accent : C.textSecondary} />
+                  {!!viva?.persone && (
+                    <span style={{ fontSize: 12, fontWeight: 700, color: C.accent }}>{viva.persone}</span>
+                  )}
+                </button>
+              );
+            })()}
+          </div>
+
           {/* b.482 — rientro a 20, la misura del template. */}
-          <div style={{ padding: '12px 20px 13px' }}>
-            {/* b.153 — il titolo apre la scheda di lettura: sintesi
-                BarTalk, citazione attribuita, e "Leggi su [fonte]". */}
-            {/* b.482 — il titolo e un tasto (apre la scheda) e su un
-                titolo di una riga sola restava alto una ventina di punti:
-                troppo poco per un dito. */}
-            <h3 onClick={() => { vibrate(8); setSchedaAutoGenera(false); setScheda({ tipo: 'articolo', dati: t }); }} style={{
+          <div style={{ padding: '10px 20px 13px' }}>
+            {/* b.153 — il titolo apre il lettore vero. */}
+            {/* b.482 — il titolo e un tasto e su un titolo di una riga
+                sola restava alto una ventina di punti: troppo poco per
+                un dito. */}
+            <h3 onClick={() => { vibrate(8); setLettura({ url: t.url, titolo: t.titolo, fonte: t.fonti?.[0]?.fonte, dati: t, faccia: 'articolo' }); }} style={{
               margin: 0, fontSize: 15, fontWeight: 600, lineHeight: 1.35,
               color: C.textPrimary, letterSpacing: -0.2, cursor: 'pointer',
               minHeight: 44, display: 'flex', alignItems: 'center',
@@ -877,69 +960,11 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
                 {t.pubblicato ? ` · ${quando(t.pubblicato, L)}` : ''}
               </span>
             </div>
-            {/* b.515 — Luca: «permetti di leggere in una popup l'articolo,
-                traduci direttamente quando apro la pagina, attraverso il
-                tasto (apri e traduci) oppure apri oppure vai al sito».
-                Tre porte diverse sullo stesso contenuto: due aprono la
-                scheda interna (con o senza sintesi automatica), la terza
-                esce verso l'originale — MAI il testo integrale qui
-                dentro, regola gia scritta in cima a SchedaArgomento.js. */}
-            <div style={{ display: 'flex', gap: 8, marginTop: 11 }}>
-              <button onClick={() => { vibrate(10); setSchedaAutoGenera(true); setScheda({ tipo: 'articolo', dati: t }); }}
-                style={{
-                  flex: 1.3, padding: '9px 0', minHeight: 44, borderRadius: 11, cursor: 'pointer',
-                  background: `linear-gradient(135deg, ${C.accent}, ${C.purple})`,
-                  border: 'none', color: '#fff', fontSize: 12.5, fontWeight: 600,
-                  fontFamily: FONT, WebkitTapHighlightColor: 'transparent',
-                }}>
-                {L('newsOpenTranslate')}
-              </button>
-              <button onClick={() => { vibrate(8); setSchedaAutoGenera(false); setScheda({ tipo: 'articolo', dati: t }); }}
-                style={{
-                  flex: 1, padding: '9px 0', minHeight: 44, borderRadius: 11, cursor: 'pointer',
-                  background: 'transparent', border: bordo, color: C.textSecondary,
-                  fontSize: 12.5, fontWeight: 600, fontFamily: FONT,
-                  WebkitTapHighlightColor: 'transparent',
-                }}>
-                {L('newsOpen')}
-              </button>
-              <a href={t.url} target="_blank" rel="noopener noreferrer"
-                onClick={() => vibrate(8)}
-                style={{
-                  flex: 1, padding: '9px 0', minHeight: 44, borderRadius: 11, textAlign: 'center',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  background: 'transparent', border: bordo, color: C.textSecondary,
-                  fontSize: 12.5, fontWeight: 600, textDecoration: 'none',
-                  WebkitTapHighlightColor: 'transparent',
-                }}>
-                {L('newsOpenSite')}
-              </a>
-            </div>
-            <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-              <button onClick={() => { vibrate(12); onParlane?.(t); }}
-                style={{
-                  flex: 1, padding: '9px 0', minHeight: 44, borderRadius: 11, cursor: 'pointer',
-                  background: `${C.accent}12`, border: `1px solid ${C.accent}30`, color: C.accent,
-                  fontSize: 12.5, fontWeight: 600,
-                  fontFamily: FONT, display: 'flex', alignItems: 'center',
-                  justifyContent: 'center', gap: 6,
-                  WebkitTapHighlightColor: 'transparent',
-                }}>
-                <Icon name="send" size={13} color={C.accent} />
-                {L('newsTalkAbout')}
-              </button>
-            </div>
-            {/* b.186 — apri una discussione pubblica PERSISTENTE col link */}
-            <button onClick={() => apriDiscussione(t)} disabled={creando}
-              style={{
-                width: '100%', marginTop: 8, padding: '9px 0', minHeight: 44, borderRadius: 11, cursor: 'pointer',
-                background: `${C.accent}12`, border: `1px solid ${C.accent}30`, color: C.accent,
-                fontSize: 12, fontWeight: 600, fontFamily: FONT,
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                opacity: creando ? 0.6 : 1, WebkitTapHighlightColor: 'transparent',
-              }}>
-              <Icon name="doorCreate" size={13} color={C.accent} /> {L('openDiscussion')}
-            </button>
+            {/* b.517 — «apri discussione» non sta piu qui: e la stessa
+                cosa di «parlane», e Luca ha chiesto una porta sola. La
+                funzione non si perde — apriDiscussione() e ancora quella,
+                la chiama l'icona chat qui sopra quando non c'e ancora
+                nessuno che ne parla. */}
           </div>
         </article>
       ))}
@@ -1030,13 +1055,12 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
         argomenti={argomenti || []} video={video || []} filtro={feedFiltro}
         onFiltro={(id) => savePrefs({ ...prefs, mondoFeedFiltro: id })}
         onParlane={(d) => onParlane?.(d)}
-        onApriArticolo={(d) => { setSchedaAutoGenera(true); setScheda({ tipo: 'articolo', dati: d }); }} />
+        onApriArticolo={(d) => { setLettura({ url: d.url, titolo: d.titolo, fonte: d.fonti?.[0]?.fonte, dati: d }); }} />
 
-      {/* ─── La scheda di lettura/visione ─── */}
+      {/* ─── La scheda di visione (solo VIDEO: gli articoli passano da LettoreArticolo) ─── */}
       <SchedaArgomento
         aperta={!!scheda} tipo={scheda?.tipo} dati={scheda?.dati} C={C}
-        autoGenera={schedaAutoGenera}
-        onClose={() => { setScheda(null); setSchedaAutoGenera(false); }}
+        onClose={() => setScheda(null)}
         onParlane={() => {
           const d = scheda?.dati;
           if (d) onParlane?.(scheda.tipo === 'video'
@@ -1056,6 +1080,8 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
       retro={
         lettura ? (
           <LettoreArticolo url={lettura.url} titolo={lettura.titolo} fonte={lettura.fonte}
+            dati={lettura.dati} prefs={prefs} userToken={userToken}
+            faccia={lettura.faccia || 'articolo'}
             C={C} L={L} onIndietro={() => setLettura(null)} />
         ) : discAperta ? (
           <MondoDiscussioni discussionId={discAperta} onClose={() => setDiscAperta(null)}
