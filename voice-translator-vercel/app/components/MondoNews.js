@@ -490,7 +490,7 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
 
 
       <div style={{ height: 1, background: C.cardBorder, margin: '6px 0 16px' }} />
-      <PreferenzeMondo C={C} bandieraMia={bandieraPaese(paeseDaLingua(prefs?.lang))} />
+      <PreferenzeMondo C={C} />
       </PannelloLaterale>
 
       {/* ─── Il pannello COBRA: il lavoro si vede ─── */}

@@ -294,18 +294,17 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
     return { paesi, stanze, discussioni };
   }, [search, rooms, feedCaldo]);
 
-  // b.363 — LA PREFERENZA "DA DOVE PARTO", che fa una cosa vera: aprendo
-  // Mondo il pianeta puo portarti subito sul tuo paese. Vale una volta
-  // sola, all'ingresso: dopo comandi tu, e non ti si sposta il mondo
-  // sotto le dita mentre stai guardando.
+  // b.508 — ORDINE DI LUCA: «da dove parto» come preferenza a parte
+  // (con la tendina di quaranta paesi) non serve più. Il pianeta apre di
+  // default sul MIO paese, dedotto dalla lingua del telefono — «il mio
+  // paese, cioè la mia lingua» (parole di Luca). Niente GPS: la lingua
+  // già lo dice, senza permessi da chiedere.
+  // SCOSTAMENTO dichiarato da b.397 (che partiva sempre dal mondo intero
+  // finché non sceglievi tu): ora si parte già sul proprio paese. Si
+  // torna al mondo intero toccando un paese già scelto, o dall'elenco
+  // stanze (suPaeseScelto più sotto).
   useEffect(() => {
-    // b.397 — chi non ha mai scelto niente trova il mondo che gira, non
-    // il proprio paese gia inquadrato. Il valore di partenza sta scritto
-    // in una riga sola dentro le preferenze di Mondo: qui si ripete, e i
-    // due devono dire la stessa cosa (una prova lo controlla).
-    const scelto = prefs?.mondoPaese || 'nessuno';
-    if (scelto === 'nessuno') return;
-    const mio = scelto === 'auto' ? paeseDaLingua(prefs?.lang) : scelto;
+    const mio = paeseDaLingua(prefs?.lang);
     if (mio) setPaeseScelto(mio);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -600,17 +599,20 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
             <Icon name="refresh" size={16} color={C.textMuted} />
           </button>
           {paeseScelto ? (
+            // b.508 — ORDINE DI LUCA: «non serve scrivere tutto il paese,
+            // tanto lui lo sa che parte in Australia. Metti una
+            // bandierina semplice semplice punto e basta». Via il nome:
+            // resta la bandiera, e il nome resta per chi legge con lo
+            // schermo (aria-label/title).
             <button onClick={() => { vibrate(8); setStrumenti(true); }}
-              aria-label={nomePaese(paeseScelto)}
+              aria-label={nomePaese(paeseScelto)} title={nomePaese(paeseScelto)}
               style={{
-                display: 'flex', alignItems: 'center', gap: 6, minHeight: 44, padding: '5px 12px',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                width: 44, height: 44, flexShrink: 0,
                 borderRadius: 999, cursor: 'pointer', fontFamily: FONT,
                 background: C.card, border: `1px solid ${C.cardBorder}`,
-                color: C.textPrimary, fontSize: 12.5, fontWeight: 600,
-                maxWidth: 190, whiteSpace: 'nowrap', overflow: 'hidden',
               }}>
-              <span style={{ fontSize: 15 }}>{bandieraPaese(paeseScelto)}</span>
-              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{nomePaese(paeseScelto)}</span>
+              <span style={{ fontSize: 20, lineHeight: 1 }}>{bandieraPaese(paeseScelto)}</span>
             </button>
           ) : (
             <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5, fontWeight: 600, color: C.textMuted, whiteSpace: 'nowrap' }}>
@@ -671,7 +673,7 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
       )}
 
       <div style={{ height: 1, background: C.cardBorder, margin: '6px 0 16px' }} />
-      <PreferenzeMondo C={C} bandieraMia={bandieraPaese(paeseDaLingua(prefs?.lang))} />
+      <PreferenzeMondo C={C} />
       </PannelloLaterale>
 
       {/* ═══ b.361 — I RISULTATI DELLA RICERCA come POPUP centrata sul globo

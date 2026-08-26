@@ -79,27 +79,28 @@ describe('la vetrina dice quante persone ci sono ADESSO', () => {
   });
 });
 
-describe('il mondo gira, finche non gli dici dove andare', () => {
-  it("all'ingresso non si atterra piu sul proprio Paese senza averlo chiesto", () => {
+describe('b.508 — il mondo apre gia sul tuo Paese, dedotto dalla lingua', () => {
+  // ORDINE DI LUCA (b.508): «da dove parto, il drop down enorme, non
+  // serve tutta quella roba [...] il mio paese, cioe la mia lingua».
+  // SCOSTAMENTO dichiarato dal comportamento precedente (b.397, sopra
+  // in questo stesso file nella cronologia): il mondo NON parte piu
+  // sempre libero in attesa di un ordine — apre subito sul Paese dedotto
+  // dalla lingua del telefono, senza chiedere.
+  it("all'ingresso il pianeta atterra sul Paese dedotto dalla lingua, senza preferenza esplicita", () => {
     const v = leggi('app/components/MondoView.js');
-    expect(v).toMatch(/prefs\?\.mondoPaese \|\| 'nessuno'/);
-    expect(v, 'via il vecchio valore di partenza').not.toMatch(/prefs\?\.mondoPaese \|\| 'auto'/);
+    expect(v, 'la deduzione e diretta, non passa piu per una preferenza').toMatch(/const mio = paeseDaLingua\(prefs\?\.lang\);/);
+    expect(v, "il vecchio cancello mondoPaese/nessuno non c'e piu qui").not.toMatch(/prefs\?\.mondoPaese \|\| 'nessuno'/);
   });
 
-  it('e le preferenze dicono la stessa cosa della schermata', () => {
-    // due posti che devono concordare: se uno cambia e l'altro no, la
-    // preferenza mostrata non e quella che l'app applica davvero.
-    const p = leggi('app/components/ui/PreferenzeMondo.js');
-    const blocco = p.slice(p.indexOf("chiave: 'mondoPaese'"));
-    const predefinito = blocco.match(/predefinito: '([a-z]+)'/)[1];
-    expect(predefinito).toBe('nessuno');
-    const v = leggi('app/components/MondoView.js');
-    expect(v).toMatch(new RegExp(`mondoPaese \\\\|\\\\| '${predefinito}'`));
+  it('la preferenza "da dove parto" (mondoPaese) non esiste piu nel pannello', () => {
+    const pref = leggi('app/components/ui/PreferenzeMondo.js');
+    expect(pref, 'nessuna voce mondoPaese fra le preferenze').not.toMatch(/chiave: 'mondoPaese'/);
+    expect(pref, 'e niente piu tendina dei paesi').not.toMatch(/opzioniPaese/);
   });
 
-  it("chi aveva scelto «dove sono» a mano se lo tiene", () => {
+  it('si torna al mondo intero da News (suPaeseScelto), non piu dal pannello preferenze', () => {
     const v = leggi('app/components/MondoView.js');
-    expect(v, "il ramo 'auto' esiste ancora").toMatch(/scelto === 'auto' \? paeseDaLingua/);
+    expect(v, "l'uscita passa dal callback suPaeseScelto verso MondoNews").toMatch(/suPaeseScelto=\{\(codice\) => \{ setPaeseScelto\(codice\)/);
   });
 });
 
@@ -117,8 +118,9 @@ describe('il globo e una porta: si entra, si vede dove sei, si esce', () => {
     // b.504 — l'uscita non e piu un tasto che azzera al volo: la pillola
     // apre il pannello e li mondoPaese ha «nessuno» (il mondo intero).
     expect(v).toMatch(/paeseScelto[\s\S]{0,900}setStrumenti\(true\)/);
-    const pref = leggi('app/components/ui/PreferenzeMondo.js');
-    expect(pref).toMatch(/nessuno/);
+    // b.508 — il pannello dietro la pillola ora e solo preferenze
+    // (titoli/modo/ritmo/aggiorna): l'uscita vera dal Paese e coperta
+    // dal test dedicato piu sopra, e passa da News (suPaeseScelto).
   });
 
   it('il pianeta sa quanto sei sceso, e si vela di conseguenza', () => {

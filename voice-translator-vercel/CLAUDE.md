@@ -219,6 +219,66 @@ qualunque refactoring. Non si propone di rimandarlo.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.508** (push #797) — SECONDO GIRO SUL PANNELLO PREFERENZE
+  di Mondo/Notizie, guardato dal vivo con Luca (screenshot alla mano).
+  Quattro correzioni, tutte in `PreferenzeMondo.js` (condiviso da
+  MondoView e MondoNews: sistemarlo qui sistema ENTRAMBE le sidebar
+  che Luca ha sotto gli occhi):
+  1. GRASSETTI ANCORA VISIBILI — [VERIFICATO] il commento di b.482
+     diceva gia «a dire qual e quella accesa bastano il colore e il
+     bordo», ma il codice era rimasto a fontWeight 600 dappertutto.
+     Ora e 400 su tutto il pannello: lo stato si legge dal colore e
+     dall'icona, non dal peso del testo.
+  2. VIA "DA DOVE PARTO" — la preferenza mondoPaese, con la tendina di
+     quaranta paesi, e tolta di netto dal pannello (ordine di Luca:
+     «non serve tutta quella roba»). Il pianeta apre ora di default sul
+     Paese dedotto dalla LINGUA del telefono («il mio paese, cioe la
+     mia lingua», parole sue) — lo fa MondoView da solo all'ingresso.
+     [ASSUNTO] uso la lingua e non il GPS reale: Luca ha detto
+     «eventualmente» (facoltativo), e navigator.geolocation
+     aggiungerebbe un permesso da chiedere all'utente senza che
+     l'abbia richiesto esplicitamente. DEBITO RESIDUO: se vuole il GPS
+     vero, e un innesto separato (richiede permesso browser).
+     SCOSTAMENTO dichiarato da b.397 (che partiva sempre dal mondo
+     intero finche non sceglievi tu): ora si parte gia sul proprio
+     Paese. Si torna al mondo intero da News (suPaeseScelto), non piu
+     dal pannello preferenze.
+  3. "TRE SELEZIONI IN MEZZA SIDEBAR" — le quattro preferenze rimaste
+     (titoli, modo, ritmo, aggiorna) stanno ora IN UNA RIGA SOLA
+     ciascuna: icona+nome a sinistra, un comando compatto a destra.
+     Titoli/modo/aggiorna → un'icona sola che cicla tra le due scelte
+     a un tocco (IconeCiclo, 44x44). Ritmo (mai/2/5/10) → rotellina
+     verticale con freccia su/giu (PassoVerticale), come chiesto da
+     Luca: «un carosello verticale con piu/meno che occupa niente».
+  4. PILLOLA PAESE IN TESTATA — in MondoView.js, la pillola col Paese
+     scelto (es. "🇦🇺 Australia") mostra ora SOLO la bandiera; il nome
+     resta per chi legge con lo schermo (aria-label/title). Ordine di
+     Luca: «non serve scrivere tutto il paese, [...] metti una
+     bandierina semplice semplice punto e basta».
+  RAPPORTO SOLE/LUNA/PIANETI (chiesto da Luca, «mi sembra di capire
+  che ti sei dimenticato dei pezzi») — [VERIFICATO] leggendo
+  `public/mondo-globo.html` e il suo storico git: NON manca niente di
+  mio. Il call-site unico passa `showStarfield:true, showMoon:true,
+  showSun:false, showPlanets:false`. Sole e i tre pianeti decorativi
+  (Marte, Venere, Saturno) sono SPENTI DI PROPOSITO da Luca stesso
+  cinque giorni fa (commit b4416df, 21/8: "Il pianeta col buco era
+  l'anello di Saturno senza il suo pianeta") — un difetto grafico
+  reale (l'anello di Saturno senza la sfera sembrava un buco; il sole
+  compariva sulla faccia notturna della Terra) fatto rientrare
+  apposta. Restano accese le stelle e la luna (sempre dietro il
+  globo, profondita negativa: non passa mai davanti a niente). Nessuna
+  regressione mia: il componente tiene tutto pronto, solo spento dove
+  Luca l'ha voluto spento.
+  PROVE: `preferenze-mondo-b508.test.js` (nuova, 8 prove) +
+  `mondo-paese-vero.test.js` aggiornato (le 3 prove che testavano il
+  vecchio comportamento b.397 ora testano l'ingresso su lingua e
+  l'assenza della preferenza — sostituzione dichiarata, non
+  indebolimento). [VERIFICATO] 196 prove verdi sui 12 file che toccano
+  MondoView/MondoNews (elenco nel comando eseguito).
+  [ATTESO] verifica visiva in produzione dopo il push di Luca:
+  pannello a una riga per preferenza, pillola solo bandiera, pianeta
+  che apre sul proprio Paese.
+
 - Versione: **b.507** (push #796) — LA RICERCA DEL MONDO, DAVVERO in
   pagina. DIFETTO INTRODOTTO DA b.504 e trovato dalla verifica visiva
   su #795: la fascia di ricerca che b.504 prometteva «in pagina» NON
