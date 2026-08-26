@@ -107,7 +107,7 @@ function normalizzaDiscussione(d) {
 }
 
 function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
-  const { L, setView, theme, prefs } = useApp();
+  const { L, setView, theme, prefs, savePrefs } = useApp();
   const _S = getStyles(theme);
   const col = _S.colors || {};
   const C = {
@@ -167,6 +167,11 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
   // pagina: scegliendolo in Stanze resta scelto passando a News, come
   // deve essere se il globo e una porta e non un setaccio.
   const [paeseScelto, setPaeseScelto] = useState(null);
+  // b.515 — dove punta il pianeta per una breaking news (Finestra sul
+  // Mondo), SEPARATO da paeseScelto: quel filtro tocca le liste di
+  // stanze (langFilter), questo serve solo a far volare il globo — non
+  // deve sporcare i filtri scelti a mano dall'utente.
+  const [paeseFocusNotizia, setPaeseFocusNotizia] = useState(null);
   // b.398 — QUANTO SEI SCESO, da 0 a 1. Serve al pianeta: il documento di
   // Luca dice che il globo «con lo scroll perde importanza» e «dopo il
   // primo blocco contenuti puo scomparire». Finora non lo sapeva nessuno:
@@ -398,7 +403,7 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
         // comunque sotto perche il contenitore interno di GloboMondo la
         // quota zero ce l'ha gia.
         <div style={{ position: 'absolute', inset: 0 }}>
-          <GloboMondo sfondo paese={paeseScelto} rotte={rotteVere} traffico={trafficoPaesi}
+          <GloboMondo sfondo paese={paeseScelto} focusEsterno={paeseFocusNotizia} rotte={rotteVere} traffico={trafficoPaesi}
             titolo={L('worldNowTitle')} etichettaCielo={L('skyOfPlanet')}
             // b.383 — toccare un paese sul pianeta adesso FILTRA le liste.
             // Prima lo zoom ci andava sopra e sotto restava il mondo
@@ -488,7 +493,9 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
           wrapper del globo, cosi i suoi cartelli non finiscono nella
           gabbia dei livelli (la lezione di b.505). */}
       <FinestraSulMondo C={C} L={L} lingua={prefs?.lang || 'it'} prefs={prefs}
-        attiva={tab === 'mondo' && !cercando} paese={paeseScelto} nomePaese={nomePaese} />
+        attiva={tab === 'mondo' && !cercando} paese={paeseScelto} nomePaese={nomePaese}
+        onPuntaGlobo={setPaeseFocusNotizia}
+        autoplayVideo={prefs?.mondoAutoplayVideo !== false} />
 
       {/* b.363 — LA LINGUETTA DEL PANNELLO, sul bordo sinistro: si vede
           sempre, dice da che parte si apre, e non copre il mondo. Dentro
@@ -591,6 +598,24 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
               cui guardare (mondoPaese) c'e gia. E accanto, l'AGGIORNA e
               un'icona in testata: si tocca mentre si guarda l'elenco,
               che e quando viene voglia di aggiornarlo. */}
+          {/* b.515 — ordine di Luca: «lascia che l'utente decida se attivare
+              l'autoplay del video breaking news con un comando IN ALTO,
+              non nella side bar». Sta qui, nella testata, e non dentro
+              PannelloLaterale — visibile solo nella scheda del pianeta,
+              dove le breaking compaiono. */}
+          {tab === 'mondo' && (
+            <button onClick={() => { vibrate(8); savePrefs({ ...prefs, mondoAutoplayVideo: !(prefs?.mondoAutoplayVideo !== false) }); }}
+              aria-label={L('newsAutoplayVideo')} title={L('newsAutoplayVideo')}
+              aria-pressed={prefs?.mondoAutoplayVideo !== false}
+              style={{ width: 44, height: 44, borderRadius: 12, marginRight: 6, flexShrink: 0,
+                cursor: 'pointer',
+                background: prefs?.mondoAutoplayVideo !== false ? `${C.accent}18` : 'none',
+                border: `1px solid ${prefs?.mondoAutoplayVideo !== false ? C.accent + '55' : C.cardBorder}`,
+                color: prefs?.mondoAutoplayVideo !== false ? C.accent : C.textMuted,
+                display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Icon name="play" size={16} color={prefs?.mondoAutoplayVideo !== false ? C.accent : C.textMuted} />
+            </button>
+          )}
           <button onClick={() => { vibrate(8); handleRefresh(); }}
             aria-label={L('retryWord')} title={L('retryWord')}
             style={{ width: 44, height: 44, borderRadius: 12, marginRight: 6, flexShrink: 0,

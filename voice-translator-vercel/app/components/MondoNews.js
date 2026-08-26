@@ -28,6 +28,7 @@ import { FONT, vibrate } from '../lib/constants.js';
 import Icon from './Icon.js';
 import AnteprimaCoperta from './ui/AnteprimaCoperta.js';
 import SchedaArgomento from './SchedaArgomento.js';
+import FeedNotizieMondo from './FeedNotizieMondo.js'; // b.515 — il feed a tutta pagina
 import MondoDiscussioni from './MondoDiscussioni.js';
 import Ribalta from './ui/Ribalta.js';
 import LettoreArticolo from './ui/LettoreArticolo.js';
@@ -99,7 +100,15 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
   const [errore, setErrore] = useState('');
   const [chipAttiva, setChipAttiva] = useState(null);
   // b.153 — la scheda di lettura/visione e i video di YouTube.
-  const [scheda, setScheda] = useState(null); // { tipo: 'articolo'|'video', dati }
+  const [scheda, setScheda] = useState(null);
+  // b.515 — «apri e traduci» oppure «apri»: stesso popup, la sola
+  // differenza e se la sintesi parte da sola o aspetta il tocco.
+  const [schedaAutoGenera, setSchedaAutoGenera] = useState(false);
+  // b.515 — il feed a tutta pagina (stile reel): aperto/chiuso qui,
+  // il filtro (solo video di default — ordine di Luca) e una preferenza
+  // persistita, cosi resta com'era l'ultima volta che l'ha scelto.
+  const [feedAperto, setFeedAperto] = useState(false);
+  const feedFiltro = prefs?.mondoFeedFiltro || 'video'; // { tipo: 'articolo'|'video', dati }
   const [video, setVideo] = useState(null);   // null = mai cercati
   const [videoAttivi, setVideoAttivi] = useState(false);
   // b.185 — seconda modalita: Veloce (default) o Approfondita (piu fonti,
@@ -814,7 +823,7 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
               riquadro esiste soltanto quando c'e una foto da farci
               stare dentro. */}
           {t.immagine && (
-            <div onClick={() => { vibrate(8); setScheda({ tipo: 'articolo', dati: t }); }} style={{
+            <div onClick={() => { vibrate(8); setSchedaAutoGenera(false); setScheda({ tipo: 'articolo', dati: t }); }} style={{
               position: 'relative', aspectRatio: '16/9', cursor: 'pointer',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               background: `linear-gradient(135deg, ${C.accent}14, ${C.purple}18)`,
@@ -844,7 +853,7 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
             {/* b.482 — il titolo e un tasto (apre la scheda) e su un
                 titolo di una riga sola restava alto una ventina di punti:
                 troppo poco per un dito. */}
-            <h3 onClick={() => { vibrate(8); setScheda({ tipo: 'articolo', dati: t }); }} style={{
+            <h3 onClick={() => { vibrate(8); setSchedaAutoGenera(false); setScheda({ tipo: 'articolo', dati: t }); }} style={{
               margin: 0, fontSize: 15, fontWeight: 600, lineHeight: 1.35,
               color: C.textPrimary, letterSpacing: -0.2, cursor: 'pointer',
               minHeight: 44, display: 'flex', alignItems: 'center',
@@ -868,7 +877,32 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
                 {t.pubblicato ? ` · ${quando(t.pubblicato, L)}` : ''}
               </span>
             </div>
+            {/* b.515 — Luca: «permetti di leggere in una popup l'articolo,
+                traduci direttamente quando apro la pagina, attraverso il
+                tasto (apri e traduci) oppure apri oppure vai al sito».
+                Tre porte diverse sullo stesso contenuto: due aprono la
+                scheda interna (con o senza sintesi automatica), la terza
+                esce verso l'originale — MAI il testo integrale qui
+                dentro, regola gia scritta in cima a SchedaArgomento.js. */}
             <div style={{ display: 'flex', gap: 8, marginTop: 11 }}>
+              <button onClick={() => { vibrate(10); setSchedaAutoGenera(true); setScheda({ tipo: 'articolo', dati: t }); }}
+                style={{
+                  flex: 1.3, padding: '9px 0', minHeight: 44, borderRadius: 11, cursor: 'pointer',
+                  background: `linear-gradient(135deg, ${C.accent}, ${C.purple})`,
+                  border: 'none', color: '#fff', fontSize: 12.5, fontWeight: 600,
+                  fontFamily: FONT, WebkitTapHighlightColor: 'transparent',
+                }}>
+                {L('newsOpenTranslate')}
+              </button>
+              <button onClick={() => { vibrate(8); setSchedaAutoGenera(false); setScheda({ tipo: 'articolo', dati: t }); }}
+                style={{
+                  flex: 1, padding: '9px 0', minHeight: 44, borderRadius: 11, cursor: 'pointer',
+                  background: 'transparent', border: bordo, color: C.textSecondary,
+                  fontSize: 12.5, fontWeight: 600, fontFamily: FONT,
+                  WebkitTapHighlightColor: 'transparent',
+                }}>
+                {L('newsOpen')}
+              </button>
               <a href={t.url} target="_blank" rel="noopener noreferrer"
                 onClick={() => vibrate(8)}
                 style={{
@@ -878,18 +912,20 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
                   fontSize: 12.5, fontWeight: 600, textDecoration: 'none',
                   WebkitTapHighlightColor: 'transparent',
                 }}>
-                {L('newsOpen')}
+                {L('newsOpenSite')}
               </a>
+            </div>
+            <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
               <button onClick={() => { vibrate(12); onParlane?.(t); }}
                 style={{
-                  flex: 1.4, padding: '9px 0', minHeight: 44, borderRadius: 11, cursor: 'pointer',
-                  background: `linear-gradient(135deg, ${C.accent}, ${C.purple})`,
-                  border: 'none', color: '#fff', fontSize: 12.5, fontWeight: 600,
+                  flex: 1, padding: '9px 0', minHeight: 44, borderRadius: 11, cursor: 'pointer',
+                  background: `${C.accent}12`, border: `1px solid ${C.accent}30`, color: C.accent,
+                  fontSize: 12.5, fontWeight: 600,
                   fontFamily: FONT, display: 'flex', alignItems: 'center',
                   justifyContent: 'center', gap: 6,
                   WebkitTapHighlightColor: 'transparent',
                 }}>
-                <Icon name="send" size={13} color="#fff" />
+                <Icon name="send" size={13} color={C.accent} />
                 {L('newsTalkAbout')}
               </button>
             </div>
@@ -970,10 +1006,37 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
         </div>
       )}
 
+      {/* b.515 — IL TASTO DEL FEED. Ordine di Luca: «attiva una
+          visualizzazione continua a tutta pagina che mostri le notizie a
+          tutta pagina». Fluttua sopra la lista, si vede solo quando c'e
+          gia qualcosa da scorrere (articoli o video di questa ricerca). */}
+      {(argomenti?.length > 0 || video?.length > 0) && (
+        <button onClick={() => { vibrate(10); setFeedAperto(true); }}
+          aria-label={L('feedApri')}
+          style={{
+            position: 'fixed', right: 20, bottom: 'calc(96px + env(safe-area-inset-bottom))',
+            zIndex: 40, minHeight: 44, padding: '0 16px', borderRadius: 999, cursor: 'pointer',
+            display: 'flex', alignItems: 'center', gap: 7,
+            background: `linear-gradient(135deg, ${C.accent}, ${C.purple})`,
+            border: 'none', color: '#fff', fontSize: 13, fontWeight: 600, fontFamily: FONT,
+            boxShadow: '0 10px 26px rgba(0,0,0,0.4)', WebkitTapHighlightColor: 'transparent',
+          }}>
+          <Icon name="play" size={14} color="#fff" />
+          {L('feedApri')}
+        </button>
+      )}
+
+      <FeedNotizieMondo aperto={feedAperto} onChiudi={() => setFeedAperto(false)} C={C} L={L}
+        argomenti={argomenti || []} video={video || []} filtro={feedFiltro}
+        onFiltro={(id) => savePrefs({ ...prefs, mondoFeedFiltro: id })}
+        onParlane={(d) => onParlane?.(d)}
+        onApriArticolo={(d) => { setSchedaAutoGenera(true); setScheda({ tipo: 'articolo', dati: d }); }} />
+
       {/* ─── La scheda di lettura/visione ─── */}
       <SchedaArgomento
         aperta={!!scheda} tipo={scheda?.tipo} dati={scheda?.dati} C={C}
-        onClose={() => setScheda(null)}
+        autoGenera={schedaAutoGenera}
+        onClose={() => { setScheda(null); setSchedaAutoGenera(false); }}
         onParlane={() => {
           const d = scheda?.dati;
           if (d) onParlane?.(scheda.tipo === 'video'

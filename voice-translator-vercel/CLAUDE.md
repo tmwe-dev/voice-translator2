@@ -219,6 +219,100 @@ qualunque refactoring. Non si propone di rimandarlo.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.515** (push #804) — quattro richieste di Luca sulla
+  sezione Mondo/Notizie, arrivate a raffica nella stessa sessione:
+
+  1. «le notizie dal mondo breaking news devono essere decise da noi in
+     automatico e l'utente deve potere personalizzarle, di default lo
+     fai partire, e mentre arrivano le notizie devi muovere il globo
+     prima di visualizzarle nella area specifica e poi aprire il
+     thumbnail. quando l'utente sta lavorando leggendo o interagendo
+     con un articolo, video etc, non fai muovere il globo.»
+  2. «lascia che l'utente decida se attivare l'autoplay del video
+     breaking news con un comando nella pagina in alto e non nella side
+     bar.»
+  3. «anche nella stanza news social attiva una visualizzazione
+     continua a tutta pagina che mostri le notizie a tutta pagina e se
+     uno entra e scorre attiva l'autoplay per ogni video in sequenza.
+     attiva in alto con un tasto solo articoli, solo video, entrambi, e
+     per default metti solovideo.»
+  4. «permetti di leggere in una popup l'articolo traduci direttamente
+     quando apro la pagina, permetti questo attraverso il tasto (apri e
+     traduci) oppure apri oppure vai al sito.»
+
+  **1 — IL PIANETA SI MUOVE PRIMA DEL CARTELLO.** `FinestraSulMondo.js`
+  aveva gia la coda delle breaking (b.506); mancava il collegamento col
+  globo. Nuovo canale `onPuntaGlobo` (FinestraSulMondo -> MondoView ->
+  GloboMondo, prop `focusEsterno`, SEPARATO da `paeseScelto` per non
+  toccare i filtri delle liste): quando arriva una breaking con un
+  paese noto, prima si punta il pianeta e SOLO DOPO ~1.5s (il tempo
+  gia impiegato dall'animazione `zoomTo` che il globo sa fare da solo,
+  nessuna animazione nuova) compare il cartello col thumbnail. Se
+  l'utente sta leggendo (`aperta`) o non c'e un paese da puntare
+  (interessi a rotazione), il comportamento resta quello di prima. Il
+  paese scelto A MANO dall'utente vince sempre sul focus della
+  breaking. Default `mondoRitmo` cambiato da `'mai'` a `'5'` (5
+  minuti): era una scelta deliberata di design (b.506, "niente ricerche
+  non chieste"), Luca l'ha esplicitamente ribaltata — chi non lo vuole
+  lo spegne dal pannello.
+
+  **2 — AUTOPLAY VIDEO, COMANDO IN TESTATA.** Nuovo pulsante nella
+  testata di "Il mondo ora" (non nel PannelloLaterale), preferenza
+  persistita `mondoAutoplayVideo` (default ON). Il motore delle
+  breaking cerca SOLO articoli (mai video): un video correlato si cerca
+  ORA, e solo quando l'utente apre davvero la lettura di un cartello —
+  mai per ogni notizia in coda, che avrebbe pagato quota YouTube per
+  breaking che nessuno guarda mai.
+
+  **3 — IL FEED A TUTTA PAGINA.** Nuovo componente
+  `FeedNotizieMondo.js`: overlay fullscreen, scroll-snap verticale, un
+  IntersectionObserver decide quale slide e "attiva" — SOLO quella ha
+  un iframe YouTube con autoplay, le altre restano una miniatura
+  statica (mai due video che suonano insieme). Filtro a tre stati
+  (solo video / solo articoli / entrambi) fisso in alto, preferenza
+  persistita `mondoFeedFiltro`, DEFAULT SOLO VIDEO come chiesto. Si
+  apre da un tasto flottante nella tab News di MondoNews.js, riusa i
+  dati della ricerca gia in corso (nessuna chiamata di rete propria).
+
+  **4 — TRE PORTE SULLO STESSO ARTICOLO.** La card di un articolo aveva
+  un solo tasto visibile ("Apri", che pero apriva l'ORIGINALE esterno —
+  nome fuorviante) piu il click implicito su foto/titolo per la scheda
+  interna. Ora sono tre, espliciti: **Apri e traduci** (apre la scheda
+  interna e genera SUBITO la sintesi nella lingua dell'utente, senza
+  aspettare il tocco sul tasto "Genera"), **Apri** (stessa scheda,
+  aspetta il tocco, comportamento di prima), **Vai al sito** (link
+  esterno, era gia li). `SchedaArgomento.js` accetta un nuovo prop
+  `autoGenera`. Nuove chiavi i18n aggiunte SOLO in it.js/en.js (la
+  catena di fallback di `t()` in `i18n.js` ripiega da sola sulle altre
+  30 lingue finche' non vengono tradotte — e cosi che funzionano gia i
+  "mini-pacchetti", non e una scorciatoia nuova).
+
+  **REGOLA DI COPYRIGHT INVARIATA**: nessuna di queste modifiche
+  riproduce il testo integrale di un articolo. "Apri e traduci" genera
+  la stessa "Sintesi di BarTalk" (originale, scritta dall'AI sui soli
+  dati del cluster) gia in uso da b.153 — solo piu veloce da vedere, non
+  diversa nella sostanza. Il player video resta sempre l'embed ufficiale
+  YouTube (nocookie): mai una copia, monetizzazione del creatore
+  intatta.
+
+  TEST: 20 test automatici nuovi/estesi (vitest) su tutti i punti
+  sopra — [VERIFICATO] passano tutti. `npx eslint` sui 6 file toccati:
+  0 errori, 2 warning preesistenti non miei (eslint-disable inutilizzato
+  su `<img>`, gia presente prima di questa sessione). NON ho fatto un
+  `next build` completo (avrebbe superato ampiamente i tempi di questa
+  sessione): la prova e eslint pulito + i test dedicati, non un build
+  end-to-end — [ASSUNTO] che basti, dichiarato qui perche sia
+  verificabile.
+
+  DEBITO RESIDUO dichiarato: il repository locale su questo Mac ha
+  HEAD fermo a b.508 (6 commit indietro rispetto a origin/main, gia a
+  b.514) e un working tree con `__tests__/preferenze-mondo-b508.test.js`
+  cancellato ma non committato — NON l'ho toccato, non e lavoro mio di
+  questa sessione, e resta li per chi ha fatto quella modifica. Il
+  workflow di commit (parte da `origin/main`, non da HEAD locale)
+  aggiunge SOLO i file elencati sopra, quindi questo residuo non entra
+  nel commit b.515.
+
 - Versione: **b.514** (push #803) — Luca, dopo aver verificato b.513:
   «HAI ROTTO TUTTO. LE CHAT NON VANNO E LE ALTRE PAGINA DANNO TUTTE UN
   ERRORE CAZZO. FAI UN TEST COMPLETO DI TUTTE LE FUNZIONALITA, PARTI

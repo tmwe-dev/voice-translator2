@@ -57,7 +57,7 @@ function IconaCielo({ tipo, size = 26, color = '#dfe6f2' }) {
   );
 }
 
-export default function GloboMondo({ sfondo = false, titolo = 'Il mondo ora', etichettaCielo = 'Cielo del pianeta', paese = null, rotte = null, traffico = null, onPaeseScelto = null }) {
+export default function GloboMondo({ sfondo = false, titolo = 'Il mondo ora', etichettaCielo = 'Cielo del pianeta', paese = null, rotte = null, traffico = null, onPaeseScelto = null, focusEsterno = null }) {
   const ref = useRef(null);
   const [stato, setStato] = useState(0);
   const [menuCielo, setMenuCielo] = useState(false); // b.401
@@ -70,11 +70,17 @@ export default function GloboMondo({ sfondo = false, titolo = 'Il mondo ora', et
   // Qui il paese viaggia dentro il file, che lo seleziona: e con la
   // selezione parte lo ZOOM che il pianeta sa gia fare per conto suo —
   // nessuna animazione nuova, quella che c'e gia (ordine di Luca).
+  // b.515 — SECONDO PADRONE, MA IN CODA: il paese scelto A MANO
+  // dall'utente comanda sempre; la breaking news punta il pianeta SOLO
+  // quando l'utente non ha gia scelto lui un paese (altrimenti gli
+  // scipperebbe lo sguardo da sotto il dito). Nessun filtro nuovo sulle
+  // liste — questo canale non tocca paeseScelto/onPaeseScelto, serve
+  // solo a far volare il pianeta.
   useEffect(() => {
     const finestra = ref.current?.contentWindow;
     if (!finestra) return;
     const manda = () => {
-      try { finestra.postMessage({ tipo: 'bartalk:paese', code: paese || null }, ORIGINE); }
+      try { finestra.postMessage({ tipo: 'bartalk:paese', code: paese || focusEsterno || null }, ORIGINE); }
       catch { /* il pianeta non e ancora pronto: si riprova quando lo dice lui */ }
     };
     manda();
@@ -87,7 +93,7 @@ export default function GloboMondo({ sfondo = false, titolo = 'Il mondo ora', et
     };
     window.addEventListener('message', suPronto);
     return () => window.removeEventListener('message', suPronto);
-  }, [paese]);
+  }, [paese, focusEsterno]);
 
   // b.363 — LE ROTTE VERE. Gli aeroplanini facevano la spola su otto
   // tratte inventate, sempre le stesse. Ora ricevono anche quelle dove ci

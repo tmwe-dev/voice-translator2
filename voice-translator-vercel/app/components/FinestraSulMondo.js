@@ -34,21 +34,70 @@ import { bandieraPaese } from '../lib/schedaMondo.js';
 // ═══════════════════════════════════════════════════════════════
 
 const MINUTI = { 2: 2, 5: 5, 10: 10 };
+// b.515 — quanto aspettare il volo del pianeta prima di mostrare il
+// cartello: tempo scelto guardando l'animazione di zoomTo gia dentro
+// mondo-globo.html (lerpFactor 0.03 per frame, converge in ~1.2-1.6s a
+// 60fps) — nessuna animazione nuova, solo il tempo per vederla finire.
+const ATTESA_VOLO_MS = 1500;
 
-export default function FinestraSulMondo({ C, L, lingua, prefs, attiva, paese, nomePaese }) {
-  const ritmo = prefs?.mondoRitmo || 'mai';
+export default function FinestraSulMondo({ C, L, lingua, prefs, attiva, paese, nomePaese, onPuntaGlobo, autoplayVideo = true }) {
+  // b.515 — ordine di Luca: «di default lo fai partire». La regola di
+  // sopra (mai spesa non chiesta) resta vera nello spirito: ora e acceso
+  // di base, e chi non lo vuole lo spegne lui dal pannello — non il
+  // contrario.
+  const ritmo = prefs?.mondoRitmo || '5';
   const [cartello, setCartello] = useState(null);   // la breaking in mostra
   const [aperta, setAperta] = useState(null);       // la scheda a tutto schermo
+  const [videoLettura, setVideoLettura] = useState(null); // b.515 — il video correlato, cercato SOLO quando si apre
   const codaRef = useRef([]);
   const vistiRef = useRef(new Set());
   const giroRef = useRef(0);
   const cercandoRef = useRef(false);
+  // b.515 — cartello/aperta letti dentro cerca() via ref, non da
+  // dipendenza diretta: se stessero nella dependency array di cerca(),
+  // ogni apertura/chiusura di un cartello ricreerebbe cerca() e con lei
+  // (l'effetto del ritmo dipende da cerca) l'intervallo — il timer dei
+  // 5/10 minuti ripartirebbe da capo ogni volta che l'utente tocca un
+  // cartello, invece di scandire il tempo vero.
+  const cartelloRef = useRef(null);
+  const apertaRef = useRef(null);
+  useEffect(() => { cartelloRef.current = cartello; }, [cartello]);
+  useEffect(() => { apertaRef.current = aperta; }, [aperta]);
+  const voloRef = useRef(null);          // il timer dell'attesa prima di mostrare
+  const aspettandoRef = useRef(false);   // tra "ho puntato il pianeta" e "mostro il cartello"
 
-  // il prossimo cartello dalla coda; null se non c'e niente di nuovo
+  // b.515 — IL PROSSIMO DALLA CODA, MA CON UNA TAPPA IN MEZZO. Ordine di
+  // Luca: «mentre arrivano le notizie devi muovere il globo prima di
+  // visualizzarle nella area specifica e poi aprire il thumbnail». Se il
+  // prossimo ha un paese, prima si punta il pianeta (onPuntaGlobo) e
+  // SOLO DOPO l'attesa del volo compare il cartello col thumbnail. Senza
+  // un paese da puntare (interessi a rotazione: nessun luogo) il
+  // cartello compare subito, come prima di questa versione — non c'e
+  // niente da far vedere volare.
+  // Questa funzione la chiama anche chi chiude la lettura (il tasto
+  // indietro della scheda a tutto schermo): e li che il ciclo riprende,
+  // mai da solo mentre l'utente sta ancora leggendo.
   const avanza = useCallback(() => {
+    if (voloRef.current) { clearTimeout(voloRef.current); voloRef.current = null; }
     const prossimo = codaRef.current.shift() || null;
-    setCartello(prossimo);
-  }, []);
+    if (!prossimo) {
+      aspettandoRef.current = false;
+      setCartello(null);
+      onPuntaGlobo?.(null);   // niente piu in coda: il pianeta torna libero
+      return;
+    }
+    if (prossimo.paeseRicerca) {
+      aspettandoRef.current = true;
+      onPuntaGlobo?.(prossimo.paeseRicerca);
+      voloRef.current = setTimeout(() => {
+        aspettandoRef.current = false;
+        voloRef.current = null;
+        setCartello(prossimo);
+      }, ATTESA_VOLO_MS);
+    } else {
+      setCartello(prossimo);
+    }
+  }, [onPuntaGlobo]);
 
   const cerca = useCallback(async () => {
     if (cercandoRef.current) return;
@@ -73,11 +122,15 @@ export default function FinestraSulMondo({ C, L, lingua, prefs, attiva, paese, n
       });
       if (nuovi.length) {
         codaRef.current.push(...nuovi.slice(0, 5).map((t) => ({ ...t, paeseRicerca: interessi.length ? null : paese })));
-        setCartello((c) => c || codaRef.current.shift() || null);
+        // b.515 — parte da sola SOLO se non c'e gia un cartello in
+        // mostra, nessun volo in corso, e l'utente non sta leggendo: la
+        // guardia vera («non muovere il globo mentre l'utente legge»)
+        // sta qui.
+        if (!cartelloRef.current && !aspettandoRef.current && !apertaRef.current) avanza();
       }
     } catch { /* vere o niente: senza notizie nessun cartello, mai un errore in faccia */ }
     cercandoRef.current = false;
-  }, [prefs?.interessi, paese, nomePaese, lingua, ritmo]);
+  }, [prefs?.interessi, paese, nomePaese, lingua, ritmo, avanza]);
 
   // ── IL RITMO: parte quando la finestra e davanti agli occhi ──
   useEffect(() => {
@@ -95,12 +148,38 @@ export default function FinestraSulMondo({ C, L, lingua, prefs, attiva, paese, n
     return () => { fermati(); document.removeEventListener('visibilitychange', suVisibilita); };
   }, [attiva, ritmo, cerca]);
 
+  // b.515 — «lascia che l'utente decida se attivare l'autoplay del video
+  // breaking news». Il motore di cerca() interroga SOLO articoli (mai
+  // video, vedi cercaArgomenti): un video, se c'e, si cerca a parte e
+  // SOLO quando l'utente apre davvero la lettura — mai per ogni notizia
+  // che arriva in coda, che costerebbe quota YouTube per breaking che
+  // nessuno guarda mai.
+  useEffect(() => {
+    setVideoLettura(null);
+    if (!aperta?.titolo) return undefined;
+    let vivo = true;
+    (async () => {
+      try {
+        const r = await fetch(`/api/topics/video?q=${encodeURIComponent(aperta.titolo)}&lang=${encodeURIComponent(lingua)}`,
+          { signal: AbortSignal.timeout(15000) });
+        if (!r.ok || !vivo) return;
+        const d = await r.json().catch(() => null);
+        if (vivo && d?.video?.[0]) setVideoLettura(d.video[0]);
+      } catch { /* niente video: la scheda resta com'era, solo testo e immagine */ }
+    })();
+    return () => { vivo = false; };
+  }, [aperta, lingua]);
+
   // il cartello resta 18 secondi, poi avanza da solo (la «serie»)
   useEffect(() => {
     if (!cartello || aperta) return undefined;
     const t = setTimeout(avanza, 18000);
     return () => clearTimeout(t);
   }, [cartello, aperta, avanza]);
+
+  // b.515 — smontaggio pulito: se la finestra sparisce (cambio tab) col
+  // volo in corso, il timer non deve sopravviverle.
+  useEffect(() => () => { if (voloRef.current) clearTimeout(voloRef.current); }, []);
 
   if (!attiva) return null;
 
@@ -175,7 +254,20 @@ export default function FinestraSulMondo({ C, L, lingua, prefs, attiva, paese, n
             </span>
           </header>
           <div style={{ flex: 1, overflowY: 'auto', padding: '0 20px calc(24px + env(safe-area-inset-bottom))', scrollbarWidth: 'none' }}>
-            {aperta.immagine && (
+            {videoLettura ? (
+              // b.515 — il player ufficiale YouTube (nocookie), stesso
+              // meccanismo gia in uso in SchedaArgomento.js: mai una
+              // copia, sempre la fonte con la sua monetizzazione intatta.
+              // Autoplay SOLO se l'utente lo ha acceso in testata.
+              <div style={{ position: 'relative', aspectRatio: '16/9', borderRadius: 16, overflow: 'hidden', background: '#000', marginBottom: 14 }}>
+                <iframe
+                  src={`https://www.youtube-nocookie.com/embed/${videoLettura.id}${autoplayVideo ? '?autoplay=1' : ''}`}
+                  title={videoLettura.titolo || aperta.titolo}
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                  style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 'none' }} />
+              </div>
+            ) : aperta.immagine && (
               <AnteprimaCoperta src={aperta.immagine} L={L} contenuto={{ url: aperta.url }}
                 stile={{ width: '100%', aspectRatio: '16/9', borderRadius: 16, objectFit: 'cover', marginBottom: 14 }} />
             )}

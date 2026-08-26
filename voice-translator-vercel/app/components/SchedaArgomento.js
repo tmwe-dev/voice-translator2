@@ -27,7 +27,7 @@ import Icon from './Icon.js';
 import { useApp } from '../contexts/AppContext.js';
 import AnteprimaCoperta from './ui/AnteprimaCoperta.js';
 
-function SchedaArgomento({ aperta, tipo, dati, C, onClose, onParlane }) {
+function SchedaArgomento({ aperta, tipo, dati, C, onClose, onParlane, autoGenera = false }) {
   const { L, prefs, userToken } = useApp();
   const [sintesiAI, setSintesiAI] = useState('');
   const [generando, setGenerando] = useState(false);
@@ -60,12 +60,18 @@ function SchedaArgomento({ aperta, tipo, dati, C, onClose, onParlane }) {
           // b.363 — prima la lettura non era protetta: una risposta rotta
           // buttava fuori e la scheda restava muta senza spiegazioni.
           const d = await r.json().catch(() => null);
-          if (d?.daCache && d.sintesi) setSintesiAI(d.sintesi);
+          if (d?.daCache && d.sintesi) { setSintesiAI(d.sintesi); return; }
         }
+        // b.515 — «Apri e traduci» (Luca): non aspetta il tocco
+        // dell'utente sul tasto "Genera sintesi", la chiede lui stesso
+        // appena la scheda si apre — sempre e solo se la cache condivisa
+        // non l'aveva gia pronta un attimo fa (il ramo sopra).
+        if (autoGenera && vivo) genera();
       } catch { /* la cache non risponde: si potra generare a mano */ }
     })();
     return () => { vivo = false; };
-  }, [aperta, tipo, dati, prefs.uiLang]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- genera e' definita sotto con useCallback stabile sui suoi input; includerla qui ricreerebbe il ciclo aperta->genera->sintesiAI->genera
+  }, [aperta, tipo, dati, prefs.uiLang, autoGenera]);
 
   const genera = useCallback(async () => {
     if (generando || !dati) return;
