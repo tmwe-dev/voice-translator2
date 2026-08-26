@@ -219,6 +219,61 @@ qualunque refactoring. Non si propone di rimandarlo.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.512** (push #801) — PRIMO SCAFFOLDING DI CAPACITOR,
+  l'app "davvero installabile" ("capacitor, poi vedremo", Luca, dopo il
+  confronto sulle tre strade — involucro nativo/React Native/nativo
+  puro — scelta l'involucro nativo perche non duplica il codice web).
+
+  NON e' un export statico. BarTalk usa moltissime API route lato
+  server (`/api/mondo/*`, `/api/translate`, autenticazione, credito...):
+  un `next export` (bundle statico dentro l'app) le romperebbe tutte.
+  La configurazione (`capacitor.config.json`) usa invece `server.url`
+  puntato alla produzione live (`https://voice-translator2.vercel.app`):
+  l'app nativa e' un contenitore che apre lo stesso BarTalk di sempre,
+  aggiornato ad ogni nostro push — nessun codice duplicato, nessuna
+  seconda base da mantenere.
+
+  FATTO: `npx cap init` (appId `com.tmwe.bartalk`, nome BarTalk),
+  `npx cap add ios` e `npx cap add android` — creano `ios/` e
+  `android/`, i due progetti nativi che Xcode e Android Studio aprono
+  direttamente. `capacitor-shell/index.html` e' la sola pagina LOCALE
+  nel pacchetto (una schermata "Connessione in corso..." mostrata per
+  un istante prima che l'app carichi la produzione via rete). Pacchetti
+  aggiunti a `package.json`: `@capacitor/core`, `@capacitor/cli`,
+  `@capacitor/ios`, `@capacitor/android`.
+
+  QUESTO PUSH NON CAMBIA NULLA nell'app web che gli utenti usano oggi:
+  nessun file di `app/` toccato, zero comportamento nuovo su
+  voice-translator2.vercel.app. E' lavoro preparatorio che vive accanto
+  al resto del repo.
+
+  [ASSUNTO — vincolo di piattaforma, non nostro] la parte iOS si
+  compila SOLO su un Mac con Xcode installato: e' un limite di Apple.
+  Il Mac di Luca non ha Xcode (verificato: `xcode-select -p` assente).
+  Per la parte Android servirebbe Android Studio o gli strumenti da
+  riga di comando del suo SDK: nessuno dei due presente sulla macchina
+  usata per questo giro.
+
+  DEBITO RESIDUO — cosa manca prima di avere un pacchetto installabile
+  vero:
+  1. Installare Xcode (Mac App Store) per compilare/firmare iOS;
+     installare Android Studio (o solo l'SDK) per Android.
+  2. Icone e splash screen veri (oggi l'icona e' quella segnaposto di
+     Capacitor): servono gli asset grafici di BarTalk in piu misure.
+  3. Un account Apple Developer (99$/anno) per pubblicare su App
+     Store e firmare le build; un account Google Play Console (25$
+     una tantum) per Android.
+  4. Verificare/estendere il manifest CSP e `allowNavigation` di
+     `capacitor.config.json` se servono domini aggiuntivi (Google/Apple
+     login, Stripe) dentro la WebView nativa — non ancora controllato
+     campo per campo.
+  5. Il plugin nativo per la condivisione ricevuta (Share Target) va
+     aggiunto esplicitamente (`@capacitor/share` copre l'INVIO, non la
+     ricezione): e' il prossimo pezzo utile, visto che e' il problema
+     concreto da cui e' partita questa richiesta.
+  [ATTESO] primo avvio nel simulatore/emulatore dopo che Luca avra
+  installato Xcode e/o Android Studio.
+
 - Versione: **b.511** (push #800) — [VERIFICATO dal vivo, #799] b.510
   confermato in produzione durante il collaudo: invito dal menu della
   stanza aperto e verificato di persona (stessa stanza, stesso QR, il
