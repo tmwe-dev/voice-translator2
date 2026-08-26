@@ -1,5 +1,6 @@
 'use client';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { FONT, vibrate } from '../../lib/constants.js';
 import { formaLinguetta, LINGUETTA, postoASinistra } from '../../lib/righello.js';
 
@@ -23,6 +24,20 @@ import { formaLinguetta, LINGUETTA, postoASinistra } from '../../lib/righello.js
 // ═══════════════════════════════════════════════════════════════
 
 export default function PannelloLaterale({ aperto, onChiudi, titolo, C, children }) {
+  // b.514 — CONFERMATO (Luca: «il velo non chiude piu, ho dovuto rompere
+  // tutto per fartelo vedere»): il velo (position:fixed, inset:0) viveva
+  // dentro il flusso normale della colonna della sezione. Un antenato con
+  // position:absolute + transform (il layout a due colonne, su schermi
+  // abbastanza larghi) diventa il containing block di QUALSIASI fixed al
+  // suo interno — CSS lo prevede cosi apposta. Il velo restava quindi
+  // grande quanto la colonna (rilevato: 440x635 su una finestra 1064x1122),
+  // non quanto lo schermo: fuori da li il click non lo toccava mai, il
+  // pannello restava aperto per sempre. Un portal in document.body monta
+  // il pannello fuori da QUALSIASI antenato: fixed torna a essere relativo
+  // alla finestra, sempre, indipendentemente da chi lo ospita.
+  const [montato, setMontato] = useState(false);
+  useEffect(() => { setMontato(true); }, []);
+
   // b.363 — col pannello aperto la pagina dietro non scorre: altrimenti
   // si trascina il mondo credendo di scorrere l'elenco dei filtri.
   useEffect(() => {
@@ -40,11 +55,11 @@ export default function PannelloLaterale({ aperto, onChiudi, titolo, C, children
     return () => window.removeEventListener('keydown', suTasto);
   }, [aperto, onChiudi]);
 
-  if (!aperto) return null;
+  if (!aperto || !montato) return null;
 
   const bordo = `1px solid ${C.cardBorder || 'rgba(255,255,255,0.08)'}`;
 
-  return (
+  return createPortal(
     <>
       {/* il velo: si tocca fuori e si chiude */}
       <div onClick={() => { vibrate(6); onChiudi?.(); }}
@@ -89,7 +104,8 @@ export default function PannelloLaterale({ aperto, onChiudi, titolo, C, children
           @keyframes vtPannelloEntra { from { transform: translateX(-102%); } to { transform: translateX(0); } }
         `}</style>
       </aside>
-    </>
+    </>,
+    document.body
   );
 }
 

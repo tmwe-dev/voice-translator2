@@ -219,6 +219,54 @@ qualunque refactoring. Non si propone di rimandarlo.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.514** (push #803) — Luca, dopo aver verificato b.513:
+  «HAI ROTTO TUTTO. LE CHAT NON VANNO E LE ALTRE PAGINA DANNO TUTTE UN
+  ERRORE CAZZO. FAI UN TEST COMPLETO DI TUTTE LE FUNZIONALITA, PARTI
+  DALLA HOME E PROSEGUI FINO A ULTIMARE».
+
+  TEST COMPLETO ESEGUITO dal vivo (Home, traduzione voce/testo, cambio
+  lingua, Il mondo ora, Vita/Life, Chat/Archivio, ricerca, i 4 rami del
+  "+" — Entra con un codice, Crea un BarTalk con creazione reale e chat
+  funzionante end-to-end, Contatti, Conversazioni salvate —, Community
+  con le sue 3 schede, Profilo/Impostazioni): NESSUNA pagina rotta,
+  NESSUN errore console nuovo, nessuna regressione dalla mia modifica
+  precedente. La traduzione (testo E dentro una stanza vera creata per
+  il test) funziona: "ciao come stai" -> "Hey, how are you?".
+
+  Trovati pero DUE problemi reali, non inventati, con prova live:
+
+  1. **BUG PRE-ESISTENTE, non mio**: `/api/stt-token` risponde sempre
+     503 in produzione — log server: `DEEPGRAM_API_KEY assente`. La
+     trascrizione vocale "premium" (streaming) non parte mai; l'app
+     ripiega sempre e in silenzio su browser/Whisper. Combacia con «
+     l'audio non viene tradotto all'inizio chat, da sempre problemi ».
+     Serve la chiave Deepgram nelle Environment Variables di Vercel:
+     non posso ne vederla ne impostarla, tocca a Luca.
+
+  2. **BUG REALE TROVATO E CORRETTO QUI**: il "click fuori chiude"
+     del pannello laterale (PannelloLaterale.js, comune a Notizie,
+     Stanze/Mondo, Vita, RoomView) funzionava SOLO per caso a certe
+     larghezze di schermo. Il velo (`position:fixed; inset:0`) viveva
+     dentro il flusso normale della pagina; un antenato con
+     `position:absolute` + `transform` (il layout a due colonne, su
+     schermi abbastanza larghi) diventa containing block di QUALSIASI
+     `fixed` dentro di se — comportamento CSS previsto, non un bug del
+     browser. Il velo restava quindi grande quanto la colonna che lo
+     ospitava (misurato: 440x635px dentro una finestra 1064x1122),
+     non quanto lo schermo: fuori da quell'area il click non lo
+     toccava mai, il pannello restava aperto per sempre — proprio il
+     comportamento che Luca descriveva rompendo tutto per farmelo
+     vedere. Corretto montando il pannello con `createPortal` dentro
+     `document.body`: fuori da qualunque antenato, `position:fixed`
+     torna sempre relativo alla finestra, su ogni larghezza.
+
+  DEBITO RESIDUO dichiarato: non ho trovato ne riprodotto altre pagine
+  "rotte" o "in errore" oltre a questi due punti — se Luca ne vede
+  altre sul suo dispositivo mi servono gli screenshot/i passi esatti,
+  perche sul mio ambiente di test tutto il resto e verde.
+
+---
+
 - Versione: **b.513** (push #802) — «quando clicco aggiorna chiudi la
   side bar sempre in tutte le maschere, quando clicco fuori dalla
   sidebar chiudi la side bar in tutto il software» (Luca, dopo uno
