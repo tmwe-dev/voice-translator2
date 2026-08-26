@@ -794,6 +794,41 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
         }} />
       )}
 
+      {/* b.507 — LA FASCIA DI RICERCA IN PAGINA, quella che b.504
+          PROMETTEVA e non aveva scritto: lo script dell'innesto si era
+          fermato a meta e la ricerca era rimasta SENZA NESSUNA PORTA —
+          ne in pagina ne nel pannello (ripulito da M2). Trovato dalla
+          verifica visiva su #795: nessun input in tutta la schermata. */}
+      {tab === 'stanze' && (
+        <div style={{ display: 'flex', justifyContent: 'center', padding: '6px 20px', flexShrink: 0, position: 'relative', zIndex: 6 }}>
+          <div style={{
+            width: '100%', maxWidth: 420, minHeight: 54,
+            display: 'flex', alignItems: 'center', gap: 10,
+            background: C.card, border: `1px solid ${C.cardBorder}`,
+            backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)',
+            borderRadius: 14, padding: '0 20px',
+          }}>
+            <Icon name="globe" size={14} color={C.textMuted} />
+            <input type="text" value={search} onChange={e => setSearch(e.target.value)}
+              placeholder={L('searchRooms')}
+              style={{
+                flex: 1, background: 'none', border: 'none', outline: 'none',
+                color: C.textPrimary, fontSize: 13, fontFamily: FONT,
+              }}
+            />
+            {search && (
+              <button onClick={() => setSearch('')} aria-label={L('resetWord')} style={{
+                background: 'none', border: 'none', color: C.textMuted, cursor: 'pointer',
+                width: 44, height: 44, padding: 0, flexShrink: 0,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+                <Icon name="x" size={16} color={C.textMuted} />
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
       {tab === 'stanze' && !cercando && (
       // b.206 — bottom alzato: le ultime stanze finivano sotto la BottomNav (76px)
       // b.361 — IL GLOBO SI TRASCINA sotto la lista (collaudo di Luca): la

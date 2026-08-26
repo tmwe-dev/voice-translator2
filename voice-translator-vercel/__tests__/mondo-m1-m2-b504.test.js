@@ -18,8 +18,13 @@ describe('M1 — le stanze', () => {
   it('la ricerca sta nella pagina, non nel pannello', () => {
     const pannello = vista.slice(vista.indexOf('<PannelloLaterale'), vista.indexOf('</PannelloLaterale>'));
     expect(pannello).not.toMatch(/setSearch/);
+    // b.507 — la prova precedente si accontentava di un setSearch
+    // qualunque dopo la testata (lo trovava nei risultati) e non si e
+    // accorta che il CAMPO non esisteva: ora si pretende l'input vero,
+    // col suo placeholder, nel corpo della pagina.
     const pagina = vista.slice(vista.indexOf('</header>'));
-    expect(pagina).toMatch(/setSearch/);
+    expect(pagina).toMatch(/placeholder=\{L\('searchRooms'\)\}/);
+    expect(pagina).toMatch(/<input type="text" value=\{search\}/);
   });
 
   it('il Paese e una pillola senza la freccia, e apre il pannello', () => {

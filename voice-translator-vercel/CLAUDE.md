@@ -219,6 +219,21 @@ qualunque refactoring. Non si propone di rimandarlo.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.507** (push #796) — LA RICERCA DEL MONDO, DAVVERO in
+  pagina. DIFETTO INTRODOTTO DA b.504 e trovato dalla verifica visiva
+  su #795: la fascia di ricerca che b.504 prometteva «in pagina» NON
+  era mai stata scritta (lo script dell'innesto si era fermato a un
+  passo successivo senza salvare quella parte), e siccome il pannello
+  era gia stato ripulito, la ricerca era rimasta SENZA NESSUNA PORTA —
+  zero input in tutta la schermata. La prova di b.504 non se n'era
+  accorta: si accontentava di un setSearch qualunque dopo la testata
+  (lo trovava nel popup dei risultati). Ora: fascia in pagina nel tab
+  Stanze (b.482: altezza fissa 54, tasto svuota da 44) e la prova
+  pretende l'INPUT vero col placeholder searchRooms.
+  LEZIONE: quando uno script multi-parte muore a meta, ogni parte gia
+  «annunciata» va ricontrollata una per una — e una prova che cerca un
+  sintomo generico invece dell'elemento esatto e una prova che dorme.
+
 - Versione: **b.506** (push #795) — LA FINESTRA SUL MONDO (progettata
   con Luca stanotte). Componente nuovo `FinestraSulMondo.js` montato
   nella scheda Mondo, fratello del globo (fuori dalla gabbia b.505):
