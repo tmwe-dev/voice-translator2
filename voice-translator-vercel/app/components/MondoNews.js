@@ -408,7 +408,7 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
         <input
           value={query}
           onChange={e => { setQuery(e.target.value); setChipAttiva(null); }}
-          onKeyDown={e => { if (e.key === 'Enter') cerca(query); }}
+          onKeyDown={e => { if (e.key === 'Enter') { cerca(query); suChiudiStrumenti?.(); } }}
           placeholder={L('newsWhatFollow')}
           style={{
             flex: 1, padding: '12px 14px', borderRadius: 14,
@@ -419,9 +419,13 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
             sotto i 44 punti, cioe sotto la misura in cui un dito comincia
             a sbagliare bersaglio. */}
         <button
-          onClick={() => (chipAttiva
-            ? cercaChip(CATEGORIE.find(c => c.id === chipAttiva))
-            : cerca(query, 'notizie', true))}
+          onClick={() => {
+            if (chipAttiva) cercaChip(CATEGORIE.find(c => c.id === chipAttiva));
+            else cerca(query, 'notizie', true);
+            // b.513 — «quando clicco aggiorna chiudi la side bar» (Luca):
+            // il pannello restava aperto sopra il giornale appena aggiornato.
+            suChiudiStrumenti?.();
+          }}
           disabled={cercando || (!query.trim() && !chipAttiva)}
           aria-label={L('newsUpdate')}
           style={{

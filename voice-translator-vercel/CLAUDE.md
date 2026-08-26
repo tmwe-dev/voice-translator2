@@ -219,6 +219,40 @@ qualunque refactoring. Non si propone di rimandarlo.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.513** (push #802) — «quando clicco aggiorna chiudi la
+  side bar sempre in tutte le maschere, quando clicco fuori dalla
+  sidebar chiudi la side bar in tutto il software» (Luca, dopo uno
+  screenshot del pannello Notizie con "Aggiorna" premuto e il pannello
+  ancora aperto sopra il giornale appena rinfrescato).
+
+  CENSITO PRIMA DI TOCCARE CODICE (`grep -rln PannelloLaterale`): il
+  pannello laterale e' UN SOLO componente condiviso
+  (`app/components/ui/PannelloLaterale.js`), usato in quattro maschere
+  — Notizie (MondoNews.js), Stanze/Mondo (MondoView.js), Vita
+  (Life/LifeView.js), Voci in stanza (RoomView.js). Ho cercato un tasto
+  "Aggiorna" (o equivalente: `newsUpdate`) in tutte e quattro: esiste
+  UNA SOLA occorrenza in tutto il repo, proprio quella di Notizie — le
+  altre tre maschere non hanno un tasto che aggiorna/ricerca, solo
+  tendine (si applicano da sole) o un elenco che gia chiude il pannello
+  al tocco (Life, gia corretto da prima).
+
+  FATTO (`app/components/MondoNews.js`): il tasto Aggiorna e il tasto
+  Invio nello stesso campo di ricerca (stessa azione, stessa maschera)
+  ora chiamano anche `suChiudiStrumenti?.()` dopo aver lanciato la
+  ricerca — il pannello si chiude, il giornale aggiornato resta in
+  vista sotto.
+
+  [VERIFICATO nel codice, non serviva toccarlo] «chiudi cliccando
+  fuori» c'era gia, per TUTTE le maschere, dentro PannelloLaterale
+  stesso: il velo dietro il pannello (`position: fixed, inset: 0`)
+  chiama `onChiudi` al click — e' il componente condiviso, quindi vale
+  automaticamente ovunque compare un pannello laterale, non solo in
+  Notizie.
+
+  TEST: `__tests__/aggiorna-chiude-pannello-b513.test.js` (3 test,
+  verdi) — il tasto/Invio chiudono, il velo di PannelloLaterale chiude
+  gia, tutte e quattro le maschere usano il componente condiviso.
+
 - Versione: **b.512** (push #801) — PRIMO SCAFFOLDING DI CAPACITOR,
   l'app "davvero installabile" ("capacitor, poi vedremo", Luca, dopo il
   confronto sulle tre strade — involucro nativo/React Native/nativo
