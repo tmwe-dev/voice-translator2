@@ -267,6 +267,72 @@ perche il working tree lo conteneva ancora.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.540** (push #828) — LA TESTATA TORNA DI ACCIAIO, e si
+  parte dal feed. Sei ordini di Luca in un colpo, piu un difetto trovato
+  dal vivo mentre lavoravo.
+
+  ① «Perche metti il pulsante vista feed?? parti all'apertura con i feed
+  direttamente». Fatto: la presentazione si apre a OGNI ingresso in
+  Notizie (prima una volta per sessione: chi tornava trovava una porta
+  diversa dalla prima), e il tasto galleggiante «Vista feed» e' uscito —
+  un tasto che porta dove sei gia atterrato chiede di rifare una cosa
+  fatta.
+
+  ② «Il tasto stanze non funziona e occupa tutta la riga, non va bene».
+  Via la riga: era un doppione che rubava una riga intera al giornale,
+  perche' la porta vera c'e gia — il tasto «Chat» della barra, che da
+  b.537 apre le stanze.
+
+  ③ «Voglio in alto in mezzo l'icona in acciaio che c'era prima con le
+  frecce per cambiare visuale, cosi elimini anche le altre voci notizie
+  e mondo ora». Fatto: freccia, acciaio (sez-news / sez-mondo, gli
+  stessi della Home), freccia. Le parole restano dove servono davvero —
+  aria-label e title, per chi legge con lo schermo. L'icona chevLeft non
+  esisteva: aggiunta.
+
+  ④ «Evidenzia con una bandiera piu grande nei contenitori l'origine
+  delle informazioni». Da 14 a 22, su pastiglia di vetro: se il giornale
+  pesca sempre dallo stesso posto adesso si vede a colpo d'occhio — ed
+  e' meta del lavoro sulla pluralita.
+
+  ⑤ «Le icone in alto a destra si sovrappongono ancora». VERO, ed era
+  mio, in StanzeView (b.537): in alto a destra c'e gia la BATTERIA, fissa
+  sopra ogni schermata, e le mie due icone le finivano sotto. Ora la
+  testata chiede lo spazio al righello (riservaADestra), lo stesso conto
+  che usa la testata del Mondo: non si sceglie un numero a mano.
+
+  ⑥ «Non hai fatto le modifiche richieste» — le modifiche c'erano, ma
+  vivevano in un commit non ancora pushato. Da qui in avanti, quando
+  chiedo di collaudare, dico ESPLICITAMENTE quale push serve.
+
+  PROVE: testata-acciaio-b540 (10, con la rotazione delle schede provata
+  sui RISULTATI e il righello interrogato davvero) + layout-applicato-b433
+  aggiornata CON spiegazione: difendeva «due linguette», ma cio che
+  b.433 voleva era che la scelta fosse VISIBILE e a un tocco invece che
+  nascosta in una tendina col coperchio — e quello vale ancora, con
+  l'acciaio. 187 verdi sulle suite toccate.
+
+  DA DECIDERE INSIEME — LE FONTI (la domanda vera di Luca: «verifica se
+  serve aiutare a migliorare le fonti oppure se cobra gia da solo fa
+  questo lavoro»). VERIFICATO NEL CODICE, e la risposta e NO:
+    · la ricerca fa UNA query su Bing News RSS, e se torna vuota ripiega
+      su Google News RSS. Due aggregatori, nessuna lista di fonti.
+    · esiste un DIRETTORIO scritto a mano (lib/topics/riordino.js): 5
+      verticali — nautica, finanza, tecnologia, sport, scienza — per un
+      totale di ~35 domini. Ma serve solo a RIORDINARE cio che Bing ha
+      gia dato (bonus autorevolezza 28%): non aggiunge MAI una fonte.
+      Medicina non c'e (sta dentro «scienza» con 5 domini generalisti),
+      politica non c'e, cultura non c'e, cucina non c'e.
+    · la «ricerca approfondita» aggiunge solo Wikipedia.
+  Quindi la pluralita dipende per intero da cosa Bing decide per quella
+  query in quel mercato — e il direttorio premia pure le stesse testate:
+  un circolo chiuso, esattamente come Luca sospettava.
+  La mia proposta (IL FONTIERE) e nel messaggio a Luca: deep search a
+  richiesta dal tasto accanto al Paese, verifica che i domini esistano
+  davvero, cache 30 giorni, ricerca a piu voci con `site:`, icona che si
+  riaccende quando le fonti invecchiano, e alimentazione dietro le
+  quinte mentre si guarda il feed.
+
 - Versione: **b.539** (push #827) — LA RETE CHE MANCAVA (e i tasti che
   mancavano ai video). Luca, con la schermata rossa in faccia:
   «TypeError: (0, l.getStyles) is not a function ... sembra ci siano

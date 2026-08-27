@@ -144,11 +144,13 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
   // DA SOLA la prima volta che si entra in Notizie (una volta per
   // sessione, filtro gia SOLO VIDEO di default). La X riporta al
   // giornale e non ricompare piu fino alla prossima apertura dell'app.
-  useEffect(() => {
-    if (typeof window === 'undefined' || window.__VT_FEED_VISTO) return;
-    window.__VT_FEED_VISTO = true;
-    setFeedAperto(true);
-  }, []);
+  // b.540 — SI PARTE DAL FEED, SEMPRE. Ordine di Luca: «parti
+  // all'apertura con i feed direttamente». Prima si apriva una volta per
+  // sessione (bandierina __VT_FEED_VISTO): chi tornava in Notizie una
+  // seconda volta trovava l'elenco, cioe una porta diversa dalla prima.
+  // Ora la presentazione e' la porta, ogni volta; la freccia indietro
+  // lascia il giornale a chi lo vuole.
+  useEffect(() => { setFeedAperto(true); }, []);
   // b.533 — IL GIORNALE DEL VIAGGIATORE: entrando in Notizie senza aver
   // mai cercato, la prima ricerca parte DA SOLA col default di
   // casaEViaggio (prima casa: la Gazzetta del mattino; il polo «dove
@@ -1024,8 +1026,20 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
                             onClick={(e) => { e.stopPropagation(); vibrate(6); scegliPaese(paeseFiltro === d.country ? null : d.country); }}
                             onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); scegliPaese(paeseFiltro === d.country ? null : d.country); } }}
                             style={{
-                              fontSize: 14, lineHeight: 1, cursor: 'pointer', borderRadius: 5,
-                              padding: '2px 4px', background: 'rgba(6,9,18,0.6)',
+                              // b.540, ordine di Luca: «evidenzia con una
+                              // bandiera piu grande nei contenitori
+                              // l'origine delle informazioni. e' importante
+                              // che garantiamo sin d'ora pluralita di
+                              // informazioni da diverse origini». Da 14 a
+                              // 22: da segno quasi invisibile a prima cosa
+                              // che si vede sulla foto. Se il giornale
+                              // pesca sempre dallo stesso posto, adesso lo
+                              // si nota a colpo d'occhio — ed e' meta del
+                              // lavoro sulla pluralita.
+                              fontSize: 22, lineHeight: 1, cursor: 'pointer', borderRadius: 8,
+                              padding: '4px 7px', background: 'rgba(6,9,18,0.72)',
+                              border: '1px solid rgba(255,255,255,0.16)',
+                              backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)',
                               display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minHeight: 44,
                               outline: paeseFiltro === d.country ? `1px solid ${C.accent}` : 'none',
                             }}>{bandiera}</span>
@@ -1342,21 +1356,12 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
           visualizzazione continua a tutta pagina che mostri le notizie a
           tutta pagina». Fluttua sopra la lista, si vede solo quando c'e
           gia qualcosa da scorrere (articoli o video di questa ricerca). */}
-      {(argomenti?.length > 0 || video?.length > 0) && (
-        <button onClick={() => { vibrate(10); setFeedAperto(true); }}
-          aria-label={L('feedApri')}
-          style={{
-            position: 'fixed', right: 20, bottom: 'calc(96px + env(safe-area-inset-bottom))',
-            zIndex: 40, minHeight: 44, padding: '0 16px', borderRadius: 999, cursor: 'pointer',
-            display: 'flex', alignItems: 'center', gap: 7,
-            background: `linear-gradient(135deg, ${C.accent}, ${C.purple})`,
-            border: 'none', color: '#fff', fontSize: 13, fontWeight: 600, fontFamily: FONT,
-            boxShadow: '0 10px 26px rgba(0,0,0,0.4)', WebkitTapHighlightColor: 'transparent',
-          }}>
-          <Icon name="play" size={14} color="#fff" />
-          {L('feedApri')}
-        </button>
-      )}
+      {/* b.540 — IL PULSANTE «VISTA FEED» E' USCITO. Luca: «perche metti
+          il pulsante vista feed?? parti all'apertura con i feed
+          direttamente». Un tasto che porta dove si e gia atterrati chiede
+          di rifare una cosa fatta: la presentazione si apre da sola
+          all'ingresso, e chi la chiude ha scelto il giornale — non gli si
+          ripropone la stessa porta galleggiante in mezzo alla pagina. */}
 
       {/* INIZIO b.535 — «apri e traduci non va» (Luca, dal feed). Il tasto
           LAVORAVA: setLettura girava il foglio sul lettore. Ma il feed e un

@@ -556,39 +556,55 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
             due, si cambia con un tocco. La tendina serve quando le voci
             sono tante; con due e solo un coperchio.
             L'icona resta sull'opzione, dov'era: accanto alla parola. */}
-        <div role="tablist" aria-label={L('worldNowTitle')} style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
-          {[
-            /* b.537 — LA SCHEDA «STANZE» E' USCITA DA QUI. Dal
-               ragionamento con Luca: le stanze vive avevano casa dentro
-               «Il mondo ora», mentre il tasto «Chat» della barra portava
-               all'archivio. Adesso «Chat» porta alle stanze (StanzeView)
-               e il Mondo fa una cosa sola: il giornale e il pianeta.
-               Chi arriva qui cercando le stanze trova la riga qui sotto
-               che lo accompagna, invece di un tab sparito senza spiegazioni. */
-            { id: 'news', parola: L('tabNews'), icona: 'doc', conto: null },
-            // b.476 — la terza scheda: il pianeta. Prima faceva da sfondo a
-            // tutte e due le altre senza essere di nessuna; adesso e sua.
-            { id: 'mondo', parola: L('worldNowTitle'), icona: 'globe', conto: null },
-          ].map((v) => {
-            const acceso = tab === v.id;
-            return (
-              <button key={v.id} role="tab" aria-selected={acceso}
-                onClick={() => { vibrate(6); setTab(v.id); }}
+        {/* ═══ b.540 — L'ICONA IN ACCIAIO TORNA AL CENTRO, CON LE FRECCE ═══
+            Ordine di Luca: «voglio in alto in mezzo l'icona in acciaio che
+            c'era prima con le frecce per cambiare visuale. cosi elimini
+            anche le altre voci notizie e mondo ora e usi solo icona e
+            frecce».
+            Era stata tolta in b.367 per far dimagrire la testata; ma due
+            parole affiancate costano quanto un'icona e dicono meno: qui la
+            sezione si RICONOSCE (l'acciaio e' lo stesso della Home) e si
+            cambia con un tocco a destra o a sinistra. Le parole restano per
+            chi legge con lo schermo (aria-label), dove servono davvero. */}
+        {(() => {
+          const SCHEDE = [
+            { id: 'news', parola: L('tabNews'), acciaio: '/sezioni/sez-news.webp' },
+            { id: 'mondo', parola: L('worldNowTitle'), acciaio: '/sezioni/sez-mondo.webp' },
+          ];
+          const i = Math.max(0, SCHEDE.findIndex((x) => x.id === tab));
+          const gira = (passo) => {
+            vibrate(8);
+            setTab(SCHEDE[(i + passo + SCHEDE.length) % SCHEDE.length].id);
+          };
+          const freccia = (verso, nome) => (
+            <button onClick={() => gira(verso)} aria-label={nome}
+              style={{
+                width: 38, height: 38, borderRadius: 999, cursor: 'pointer', flexShrink: 0,
+                background: 'transparent', border: 'none', padding: 0,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                WebkitTapHighlightColor: 'transparent',
+              }}>
+              <Icon name={verso < 0 ? 'chevLeft' : 'chevRight'} size={20} color={C.textSecondary || C.textMuted} />
+            </button>
+          );
+          return (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 2, flexShrink: 0 }}>
+              {freccia(-1, SCHEDE[(i - 1 + SCHEDE.length) % SCHEDE.length].parola)}
+              <button onClick={() => gira(1)} aria-label={SCHEDE[i].parola} title={SCHEDE[i].parola}
                 style={{
-                  display: 'flex', alignItems: 'center', gap: 7, height: 44, padding: '0 14px',
-                  border: 'none', background: 'transparent', cursor: 'pointer', fontFamily: FONT,
-                  fontSize: 14.5, fontWeight: 600, color: acceso ? C.accent : C.textMuted,
-                  borderBottom: `2px solid ${acceso ? C.accent : 'transparent'}`,
+                  width: 54, height: 54, borderRadius: 16, cursor: 'pointer', flexShrink: 0, padding: 0,
+                  background: 'transparent', border: 'none',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  WebkitTapHighlightColor: 'transparent',
                 }}>
-                <Icon name={v.icona} size={16} color={acceso ? C.accent : C.textMuted} />
-                {v.parola}
-                {v.conto ? (
-                  <span style={{ fontSize: 12, fontWeight: 600, color: C.textMuted }}>{v.conto}</span>
-                ) : null}
+                {/* eslint-disable-next-line @next/next/no-img-element -- icona in acciaio, gia ottimizzata */}
+                <img src={SCHEDE[i].acciaio} alt="" width={48} height={48}
+                  style={{ width: 48, height: 48, objectFit: 'contain', display: 'block' }} />
               </button>
-            );
-          })}
-        </div>
+              {freccia(1, SCHEDE[(i + 1) % SCHEDE.length].parola)}
+            </div>
+          );
+        })()}
         {/* b.398 — DOVE SEI, E COME USCIRNE. Dal documento di Luca: quando
             il globo non si vede piu «rimane un header sticky» col Paese e
             un «Cambia» che riporta al pianeta. Finora, scelto un Paese,
@@ -675,23 +691,12 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
         </div>
       </header>
 
-      {/* b.537 — IL PONTE: chi entrava nel Mondo per le stanze non deve
-          trovare un tab sparito. Una riga sola, che dice dove sono
-          andate e ci porta con un tocco. */}
-      {!cercando && (
-        <button onClick={() => { vibrate(8); setView('stanze'); }}
-          style={{
-            display: 'flex', alignItems: 'center', gap: 8, margin: '0 20px 10px',
-            padding: '9px 12px', borderRadius: 12, cursor: 'pointer', fontFamily: FONT,
-            background: 'rgba(255,255,255,0.045)', border: `1px solid ${C.cardBorder}`,
-            color: 'rgba(255,255,255,0.78)', fontSize: 12.5, fontWeight: 600,
-            WebkitTapHighlightColor: 'transparent',
-          }}>
-          <Icon name="chat" size={14} color={C.accent} />
-          <span style={{ flex: 1, textAlign: 'left' }}>{L('tabRooms')}</span>
-          <Icon name="chevRight" size={13} color={C.textMuted} />
-        </button>
-      )}
+      {/* b.540 — LA RIGA «STANZE» E' USCITA. Luca: «il tasto stanze non
+          funziona e occupa tutta la riga, non va bene». Aveva ragione due
+          volte: una riga a piena larghezza per una porta secondaria e' un
+          furto di spazio al giornale, e la porta c'e gia — il tasto «Chat»
+          della barra in basso, che da b.537 apre proprio le stanze. Un
+          doppione che rubava una riga: via. */}
 
       {/* ═══ b.355 — LA RICERCA, una sola, per tutto il Mondo ═══
           b.361 — CENTRATA e non a tutta larghezza (regola di Luca).

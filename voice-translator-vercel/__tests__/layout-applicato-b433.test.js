@@ -8,25 +8,41 @@ const leggi = (p) => readFileSync(join(process.cwd(), p), 'utf8');
 // trappola numero 6: i commenti si tolgono PRIMA di guardare il codice.
 const senzaCommenti = (s) => s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
 
-describe('Mondo — due linguette al posto della tendina', () => {
-  it('si vedono tutte e due, e si cambia con un tocco', () => {
+describe('Mondo — l\'icona in acciaio con le frecce (era: due linguette)', () => {
+  // b.540 — AGGIORNATA con spiegazione, non cancellata. b.433 aveva
+  // messo due linguette al posto di una tendina, e la prova difendeva
+  // proprio quelle: role="tablist", altezza 44, icona accanto alla
+  // parola. Poi l'ordine di Luca: «voglio in alto in mezzo l'icona in
+  // acciaio che c'era prima con le frecce per cambiare visuale, cosi
+  // elimini anche le altre voci notizie e mondo ora».
+  // Cio che b.433 difendeva NON era «due linguette»: era che la scelta
+  // fosse VISIBILE e a UN TOCCO, invece di nascosta dentro una tendina
+  // col coperchio. Quello vale ancora, e la prova lo segue: si vede in
+  // che sezione sei (l'acciaio), si cambia con un tocco (le frecce), e
+  // il bersaglio resta grande abbastanza per un dito.
+  it('si vede dove sei e si cambia con un tocco, senza coperchi', () => {
     const v = senzaCommenti(leggi('app/components/MondoView.js'));
-    expect(v, 'sono linguette dichiarate come tali').toMatch(/role="tablist"/);
-    expect(v, 'e ognuna dice se e accesa').toMatch(/role="tab" aria-selected=\{acceso\}/);
     expect(v, 'la tendina Stanze/Notizie non c\'e piu').not.toMatch(/valore=\{tab\}/);
+    expect(v, 'la sezione si RICONOSCE dall\'acciaio').toMatch(/SCHEDE\[i\]\.acciaio/);
+    expect(v, 'e si cambia con le frecce, un tocco per verso').toMatch(/freccia\(-1,/);
+    expect(v).toMatch(/freccia\(1,/);
+    expect(v, 'la freccia gira davvero la scheda').toMatch(/onClick=\{\(\) => gira\(verso\)\}/);
   });
 
-  it('la linguetta e alta 44, come ogni altro tasto', () => {
+  it('i bersagli restano da dito', () => {
     const v = senzaCommenti(leggi('app/components/MondoView.js'));
-    const blocco = v.slice(v.indexOf('role="tablist"'), v.indexOf('role="tablist"') + 1400);
-    expect(blocco).toMatch(/height: 44/);
+    const blocco = v.slice(v.indexOf('const SCHEDE = ['), v.indexOf('const SCHEDE = [') + 2200);
+    expect(blocco, 'l\'icona centrale').toMatch(/width: 54, height: 54/);
+    expect(blocco, 'le frecce').toMatch(/width: 38, height: 38/);
   });
 
-  it("l'icona accanto alla parola non e sparita", () => {
-    // b.400: Luca l'aveva gia persa una volta in questo punto.
+  it("e la parola resta per chi legge con lo schermo", () => {
+    // b.400: Luca aveva gia perso l'icona una volta in questo punto;
+    // b.540: adesso e la PAROLA a non doversi perdere, perche a schermo
+    // resta solo il disegno.
     const v = senzaCommenti(leggi('app/components/MondoView.js'));
-    const blocco = v.slice(v.indexOf('role="tablist"'), v.indexOf('role="tablist"') + 1400);
-    expect(blocco).toMatch(/<Icon name=\{v\.icona\}/);
+    expect(v).toMatch(/aria-label=\{SCHEDE\[i\]\.parola\}/);
+    expect(v).toMatch(/title=\{SCHEDE\[i\]\.parola\}/);
   });
 });
 

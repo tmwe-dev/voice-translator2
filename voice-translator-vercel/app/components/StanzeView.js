@@ -32,6 +32,7 @@ import getStyles from '../lib/styles.js'; // b.539 — e' un export DEFAULT: l'i
 import Icon from './Icon.js';
 import { mieStanze, dimenticaStanza } from '../lib/mieStanze.js';
 import { quando, viva, stileEtichetta, PUNTO } from '../lib/schedaMondo.js';
+import { riservaADestra } from '../lib/righello.js'; // b.540 — la batteria sta in alto a destra: le si lascia il posto
 
 // La lingua di chi guarda, applicata all'argomento vivo: se il messaggio
 // porta gia la traduzione fatta in stanza, si legge quella; altrimenti
@@ -124,8 +125,18 @@ export default function StanzeView({ onJoinRoom, onCreateRoom }) {
     <div style={{ display: 'flex', flexDirection: 'column', height: '100dvh', background: C.bg }}>
       {/* ═══ testata: il nome della sezione, e le due porte per entrare ═══ */}
       <div style={{ flexShrink: 0, padding: '14px 16px 0' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-          <div style={{ flex: 1, fontSize: 20, fontWeight: 600, color: C.textPrimary, fontFamily: FONT }}>
+        {/* b.540, collaudo di Luca: «le icone in alto a destra si
+            sovrappongono ancora». Vero, ed era mio: in alto a destra ci
+            sta gia la BATTERIA (fissa, sopra ogni schermata), e le due
+            icone che avevo messo qui le finivano sotto. Il righello ha
+            gia il conto giusto — riservaADestra — ed e' lo stesso che usa
+            la testata del Mondo: non si sceglie un numero a mano, si
+            chiede quanto spazio serve. */}
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12,
+          paddingRight: riservaADestra(1),
+        }}>
+          <div style={{ flex: 1, minWidth: 0, fontSize: 20, fontWeight: 600, color: C.textPrimary, fontFamily: FONT }}>
             {L('navChat')}
           </div>
           {/* l'archivio non sparisce: cambia posto. Era LUI il padrone del
