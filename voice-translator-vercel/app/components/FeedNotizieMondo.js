@@ -28,6 +28,13 @@ const FILTRI = [
   { id: 'entrambi', labelKey: 'feedEntrambi' },
 ];
 
+// b.538 — L'ALTEZZA DELLA BARRA DEI COMANDI DI YOUTUBE. Il player
+// disegna i suoi comandi (play, tempo, cc, ingranaggio, schermo intero)
+// in una fascia in fondo all'inquadratura: circa 48 punti sul telefono,
+// una sessantina sullo schermo grande. Si tiene la misura piu generosa:
+// meglio due dita d'aria in piu che un tasto coperto.
+const BARRA_YT = 60;
+
 export default function FeedNotizieMondo({ aperto, onChiudi, C, L, argomenti = [], video = [], filtro, onFiltro, onParlane, onApriArticolo, onStrumenti }) {
   const contenitoreRef = useRef(null);
   const sentinelleRef = useRef(new Map());
@@ -55,16 +62,62 @@ export default function FeedNotizieMondo({ aperto, onChiudi, C, L, argomenti = [
   useEffect(() => {
     if (!aperto || !contenitoreRef.current) return undefined;
     const oss = new IntersectionObserver((entries) => {
+      // ═══ b.538 — IL RIBALTAMENTO DELLO SCHERMO ═══
+      // Collaudo di Luca: «quando ho ribaltato lo schermo, va in errore e
+      // si chiude l'applicazione».
+      // La causa e' qui, ed e' una di quelle che si vedono solo quando
+      // l'altezza cambia sotto i piedi. Ruotando il telefono, le slide —
+      // alte 100dvh l'una — vengono rimisurate tutte insieme: per un
+      // istante PIU DI UNA supera la soglia di 0.6, e questo giro
+      // chiamava setIndiceAttivo per OGNI voce dell'elenco, in fila.
+      // Ogni chiamata ridisegna, il ridisegno rimisura, la rimisura
+      // richiama: React conta gli aggiornamenti a catena e oltre un
+      // certo numero si arrende («Maximum update depth exceeded»), che
+      // e' proprio l'errore che fa comparire la schermata rossa.
+      // Due chiusure, tutte e due necessarie:
+      //   1. si sceglie UNA sola slide per giro — quella che si vede di
+      //      piu — invece di obbedire a tutte;
+      //   2. se e' gia lei l'attiva non si tocca niente: nessun
+      //      ridisegno, nessuna catena.
+      let miglioreIdx = -1;
+      let miglioreArea = 0;
       entries.forEach((e) => {
-        if (e.isIntersecting && e.intersectionRatio >= 0.6) {
-          const idx = Number(e.target.dataset.indice);
-          if (Number.isFinite(idx)) setIndiceAttivo(idx);
-        }
+        if (!e.isIntersecting || e.intersectionRatio < 0.6) return;
+        if (e.intersectionRatio <= miglioreArea) return;
+        const idx = Number(e.target.dataset.indice);
+        if (!Number.isFinite(idx)) return;
+        miglioreArea = e.intersectionRatio;
+        miglioreIdx = idx;
       });
+      if (miglioreIdx >= 0) setIndiceAttivo((prima) => (prima === miglioreIdx ? prima : miglioreIdx));
     }, { root: contenitoreRef.current, threshold: [0.6] });
     sentinelleRef.current.forEach((el) => oss.observe(el));
     return () => oss.disconnect();
   }, [aperto, elementi.length]);
+
+  // b.538 — E DOPO IL RIBALTAMENTO SI RESTA DOVE SI ERA. Cambiando
+  // orientamento tutte le slide cambiano altezza e lo scorrimento
+  // finisce a meta strada fra due: si rimette la slide attiva al suo
+  // posto, senza animazione (un'animazione mentre lo schermo gira si
+  // vede come uno strappo). Luca: «con il telefono devo poter ribaltare
+  // tranquillamente l'immagine e vederla tutto schermo».
+  useEffect(() => {
+    if (!aperto) return undefined;
+    const rimetti = () => {
+      // si aspetta che il browser abbia finito di rimisurare: farlo
+      // subito rimetterebbe a posto con le misure vecchie.
+      setTimeout(() => {
+        const el = sentinelleRef.current.get(elementi[indiceAttivo]?.chiave);
+        try { el?.scrollIntoView({ block: 'start', behavior: 'auto' }); } catch { /* niente da rimettere */ }
+      }, 260);
+    };
+    window.addEventListener('orientationchange', rimetti);
+    window.addEventListener('resize', rimetti);
+    return () => {
+      window.removeEventListener('orientationchange', rimetti);
+      window.removeEventListener('resize', rimetti);
+    };
+  }, [aperto, indiceAttivo, elementi]);
 
   // riparte dall'inizio ogni volta che si apre o si cambia filtro: una
   // lista diversa merita di ripartire dalla prima, non da un indice che
@@ -167,7 +220,7 @@ export default function FeedNotizieMondo({ aperto, onChiudi, C, L, argomenti = [
                     <iframe key={`on-${el.dati.id}`}
                       src={`https://www.youtube-nocookie.com/embed/${el.dati.id}?autoplay=1&playsinline=1`}
                       title={el.dati.titolo}
-                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; fullscreen; gyroscope; picture-in-picture"
                       allowFullScreen
                       style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 'none' }} />
                   ) : (
@@ -182,7 +235,18 @@ export default function FeedNotizieMondo({ aperto, onChiudi, C, L, argomenti = [
                     (pointerEvents none) — il titolo si vede, il menu di
                     YouTube si tocca. */}
                 <div style={{
-                  position: 'relative', zIndex: 1, padding: '16px 20px calc(28px + env(safe-area-inset-bottom))',
+                  // b.538, Luca per la seconda volta: «i comandi di YouTube
+                  // rimangono nascosti dall'ombreggiatura in basso. Devi
+                  // fare in modo di alzarla». In b.535 il velo aveva smesso
+                  // di RUBARE i tocchi (pointerEvents none), ma continuava a
+                  // COPRIRLI con la pittura: la barra del player sta negli
+                  // ultimi ~56 punti dell'inquadratura, e li c'era il fondo
+                  // scuro pieno. Ora il blocco si alza di tutta l'altezza
+                  // della barra (BARRA_YT) e il gradiente si spegne prima:
+                  // il titolo si legge, i comandi restano in chiaro.
+                  position: 'relative', zIndex: 1,
+                  padding: '16px 20px 10px',
+                  marginBottom: `calc(${BARRA_YT}px + env(safe-area-inset-bottom))`,
                   background: 'linear-gradient(180deg, transparent, rgba(5,7,15,0.92) 55%)',
                   pointerEvents: 'none',
                 }}>

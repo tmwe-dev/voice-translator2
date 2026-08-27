@@ -160,7 +160,7 @@ function SchedaArgomento({ aperta, tipo, dati, C, onClose, onParlane, autoGenera
               <iframe
                 src={`https://www.youtube-nocookie.com/embed/${dati.id}`}
                 title={dati.titolo}
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; fullscreen; gyroscope; picture-in-picture"
                 allowFullScreen
                 style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 'none' }} />
             </div>

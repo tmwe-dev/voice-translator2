@@ -267,6 +267,55 @@ perche il working tree lo conteneva ancora.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.538** (push #826) — IL VELO SI ALZA, E LO SCHERMO SI PUO
+  RIBALTARE. Due collaudi di Luca sullo stesso schermo, il primo per la
+  SECONDA volta (e aveva ragione a ripeterlo).
+
+  ① «I comandi di youtube rimangono nascosti dall'ombreggiatura in
+  basso. Devi fare in modo di alzarla o di eliminarla. Direi che e
+  meglio alzarla.» In b.535 avevo tolto al velo la capacita di RUBARE i
+  tocchi (pointerEvents: none) e avevo creduto di aver chiuso il caso:
+  ma il velo continuava a COPRIRLI con la pittura — la barra del player
+  vive negli ultimi punti dell'inquadratura, e li c'era il fondo scuro
+  pieno. Toccare si poteva, VEDERE cosa si toccava no. Ora il blocco del
+  titolo si alza di tutta l'altezza della barra (BARRA_YT = 60, la
+  misura piu generosa fra telefono e schermo grande) piu l'area sicura:
+  il titolo si legge, i comandi restano in chiaro.
+
+  ② «Quando ho ribaltato lo schermo, va in errore e si chiude
+  l'applicazione.» CAUSA TROVATA, ed e una di quelle che si vedono solo
+  quando l'altezza cambia sotto i piedi. Le slide del feed sono alte
+  100dvh l'una; ruotando vengono rimisurate tutte insieme e per un
+  istante PIU DI UNA supera la soglia di 0.6. L'osservatore obbediva a
+  OGNI voce del lotto: setIndiceAttivo a raffica -> ridisegno ->
+  rimisura -> altro setIndiceAttivo, finche React si arrende
+  («Maximum update depth exceeded») e compare la schermata rossa.
+  Due chiusure, tutte e due necessarie:
+    1. per ogni giro si sceglie UNA slide sola — quella che si vede di
+       piu — invece di obbedire a tutte;
+    2. se e gia lei l'attiva non si tocca niente: nessun ridisegno,
+       nessuna catena.
+  In piu, dopo il ribaltamento la slide attiva torna al suo posto
+  (orientationchange + resize, 260ms per lasciar finire la rimisura,
+  senza animazione: un'animazione mentre lo schermo gira si vede come
+  uno strappo). E il permesso «fullscreen» e stato aggiunto all'elenco
+  allow dei tre lettori video (FeedNotizieMondo, FinestraSulMondo,
+  SchedaArgomento): allowFullScreen da solo non basta su alcuni
+  browser, ed e' esattamente la cosa che Luca chiedeva — «devo poter
+  vedere l'immagine a tutto schermo».
+
+  PROVE: schermo-ribaltato-b538 (6, con la regola di scelta della slide
+  provata sui RISULTATI su un lotto di voci come quelle che arrivano
+  tutte insieme quando lo schermo gira: tre sopra soglia -> vince la piu
+  visibile; nessuna sopra soglia -> non si cambia; fuori vista non
+  conta; indice illeggibile non esplode). 130 verdi sulle suite che
+  toccano i tre lettori. eslint pulito.
+
+  LEZIONE, la stessa di sempre in un'altra forma: «non ruba piu i
+  tocchi» non voleva dire «non copre piu». Un difetto visivo e un
+  difetto, anche quando la funzione sotto e sana — e Luca ha dovuto
+  dirlo due volte.
+
 - Versione: **b.537** (push #825) — LE STANZE HANNO UNA CASA. Luca:
   «onestamente a me non piace come va adesso. riguardiamo insieme la
   logica una per una. stanze per prima». Non un elenco di ritocchi: ho

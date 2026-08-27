@@ -315,7 +315,7 @@ export default function FinestraSulMondo({ C, L, lingua, prefs, attiva, paese, n
                 <iframe
                   src={`https://www.youtube-nocookie.com/embed/${videoLettura.id}${autoplayVideo ? '?autoplay=1' : ''}`}
                   title={videoLettura.titolo || aperta.titolo}
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; fullscreen; gyroscope; picture-in-picture"
                   allowFullScreen
                   style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 'none' }} />
               </div>
