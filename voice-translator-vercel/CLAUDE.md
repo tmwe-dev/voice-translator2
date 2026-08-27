@@ -267,6 +267,30 @@ perche il working tree lo conteneva ancora.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.534** (push #822) — GROK FUORI, QWEN DENTRO. Ordine di
+  Luca: «lascia attivi solo tre agenti anthropic, chatgpt e gemini,
+  grok disattivalo e attiva qwen alibaba come aggiunto».
+
+  La quarta mente dei Compagni ora e Qwen (Alibaba) — e non serviva
+  nessuna infrastruttura nuova: DashScope era GIA in casa
+  (asiaConstants/llmAsia, il motore del percorso di traduzione per le
+  lingue asiatiche), endpoint OpenAI-compatibile, stessa chiave
+  DASHSCOPE_API_KEY. llmCaller ha il ramo `qwen`; apiAuth risolve la
+  chiave di piattaforma; la tendina dei modelli offre «Qwen · Alibaba»
+  (qwen-plus-latest) e NON offre piu Grok. Omar e Newton, che stavano
+  su Grok, parlano Qwen. Il ramo grok in llmCaller resta vivo per chi
+  l'avesse gia salvato su un Compagno suo: disattivato dalla vetrina,
+  non amputato.
+
+  PER LUCA, UNA CHIAVE SOLA: se DASHSCOPE_API_KEY e gia su Vercel per
+  la traduzione asiatica, Qwen parla da subito; altrimenti si prende su
+  Alibaba Cloud Model Studio (dashscope-intl). Senza chiave, Omar e
+  Newton ripiegano su OpenAI/Anthropic dichiarandolo — come sempre.
+
+  TEST: 6 nuovi + 1 aggiornato (b.528: Newton non e piu su grok, con la
+  spiegazione scritta) — 86/86 sulla batteria Compagni. eslint: 0
+  errori.
+
 - Versione: **b.533** (push #821) — «PERCHE NON HAI COMPLETATO QUANTO
   DISCUSSO?????» — aveva ragione: «in coda» era una scusa. Chiusi TUTTI
   i pezzi rimasti del trapianto RadioChat, piu i due mai partiti:

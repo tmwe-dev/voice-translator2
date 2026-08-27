@@ -126,7 +126,7 @@ I tuoi punti di forza sono la logica formale, le strutture, i pattern, l'analisi
     emoji: '🟠', colore: '#f59e0b', avatar: '/compagni/newton.png',
     avatarParla: '/compagni/newton-parla.gif',
     voce: { id: 'onwK4e9ZLuTAKqWW03F9', nome: 'Daniel' },
-    provider: 'grok', modello: 'grok-2-latest', liberta: 'creative', predefinito: true,
+    provider: 'qwen', modello: 'qwen-plus-latest', liberta: 'creative', predefinito: true,
     regolaDibattito: 'Quando dissenti, porta un controesempio pratico: testa le teorie con scenari reali, e vinca chi regge la prova.',
     personalita:
 `Sei Newton, esperto pratico e sperimentatore. Energico, concreto, orientato all'azione: vai dritto al punto con esempi reali, rispondi con casi d'uso vissuti, e proponi sempre un'azione pratica o un passo successivo.
@@ -175,7 +175,7 @@ Segnali quando un'affermazione non è supportata dai dati e proponi come la si p
   {
     id: 'ricercatore', nome: 'Omar', ruolo: 'Ricercatore e fonti',
     emoji: '🔎', colore: '#22c55e', avatar: '/avatars/3.webp', voce: VOCI.Omar,
-    provider: 'grok', modello: 'grok-2-latest', liberta: 'balanced', predefinito: true,
+    provider: 'qwen', modello: 'qwen-plus-latest', liberta: 'balanced', predefinito: true,
     regolaDibattito: 'Quando dissenti, porti il caso reale che contraddice la tesi: un fatto, un precedente, un posto dove e andata diversamente. Un controesempio concreto vale piu di un\'obiezione teorica.',
     personalita:
 `Sei Omar, ricercatore. Ragioni per fonti: quando te ne vengono fornite (dalle fonti reali della Tavola rotonda o da un corso) le confronti e le citi, segnalando dove non concordano.
@@ -253,9 +253,12 @@ export const MODELLI = [
   { provider: 'anthropic', modello: 'claude-sonnet', label: 'Claude Sonnet · profondo' },
   { provider: 'anthropic', modello: 'claude-haiku', label: 'Claude · caldo' },
   { provider: 'gemini',    modello: 'gemini-flash', label: 'Gemini · rapido' },
-  // b.227 — 4° provider per la tavola rotonda: Grok (xAI). Serve la chiave xAI
-  // (piattaforma o propria); senza chiave semplicemente non risponde.
-  { provider: 'grok',      modello: 'grok-2-latest', label: 'Grok · xAI' },
+  // b.534 — ordine di Luca: «lascia attivi solo tre agenti anthropic,
+  // chatgpt e gemini, grok disattivalo e attiva qwen alibaba come
+  // aggiunto». Grok esce dalla tendina (il ramo in llmCaller resta per
+  // chi l'aveva gia salvato); la quarta mente e Qwen, che in casa c'era
+  // gia (DashScope, il motore del percorso di traduzione asiatico).
+  { provider: 'qwen',      modello: 'qwen-plus-latest', label: 'Qwen · Alibaba' },
 ];
 export const LIBERTA_ETICHETTE = {
   strict: 'Fedele', balanced: 'Equilibrato', creative: 'Creativo', autonomous: 'Autonomo',

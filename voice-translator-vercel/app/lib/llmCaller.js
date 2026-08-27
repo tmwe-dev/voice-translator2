@@ -1,6 +1,7 @@
 import { createLogger } from './logger.js';
 import OpenAI from 'openai';
 import Anthropic from '@anthropic-ai/sdk';
+import { DASHSCOPE_BASE_URL } from './asiaConstants.js';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { apiCircuitBreaker } from './circuitBreaker.js';
 
@@ -93,8 +94,25 @@ async function _callProvider({ provider, model, apiKey, messages, systemPrompt, 
       completion_tokens: gUsage?.candidatesTokenCount || 0,
       total_tokens: gUsage?.totalTokenCount || 0
     };
+  } else if (provider === 'qwen') {
+    // b.534 — Qwen (Alibaba), ordine di Luca: «grok disattivalo e attiva
+    // qwen alibaba». L'infrastruttura c'era GIA (llmAsia/asiaConstants,
+    // usata dal percorso di traduzione per le lingue CJK): stesso
+    // endpoint DashScope OpenAI-compatibile, ora anche come mente dei
+    // Compagni.
+    const ali = new OpenAI({ apiKey, baseURL: DASHSCOPE_BASE_URL });
+    const completion = await ali.chat.completions.create({
+      model,
+      messages,
+      temperature,
+      max_tokens: maxTokens
+    });
+    translated = completion?.choices?.[0]?.message?.content?.trim() || '';
+    usage = completion.usage;
   } else if (provider === 'grok' || provider === 'xai') {
     // b.227 — Grok (xAI). API OpenAI-compatibile: stesso SDK, altro baseURL.
+    // b.534 — DISATTIVATO dalla tendina dei Compagni (ordine di Luca):
+    // il ramo resta per chi l'avesse gia salvato su un Compagno suo.
     const xai = new OpenAI({ apiKey, baseURL: 'https://api.x.ai/v1' });
     const completion = await xai.chat.completions.create({
       model,

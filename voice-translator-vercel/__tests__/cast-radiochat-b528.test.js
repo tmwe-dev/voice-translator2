@@ -22,7 +22,9 @@ describe('b.528 — il cast di RadioChat e connesso', () => {
     expect(getCompagnoPredefinito('albert').provider).toBe('openai');
     expect(getCompagnoPredefinito('albert').modello).toBe('gpt-4o');
     expect(getCompagnoPredefinito('pitagora').provider).toBe('gemini');
-    expect(getCompagnoPredefinito('newton').provider).toBe('grok');
+    // b.534 — ordine di Luca: Grok disattivato, la quarta mente e Qwen
+    // (Alibaba/DashScope, gia in casa per la traduzione asiatica).
+    expect(getCompagnoPredefinito('newton').provider).toBe('qwen');
     expect(getCompagnoPredefinito('archimede').provider).toBe('anthropic');
   });
   it('ognuno con la SUA voce originale di RadioChat', () => {
