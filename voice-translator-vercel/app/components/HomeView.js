@@ -360,8 +360,15 @@ const HomeView = memo(function HomeView({ selectedMode, setSelectedMode,
             <span style={mic.cerchio}>
               <Icon name="mic" size={mic.icona} color={mic.coloreIcona} />
             </span>
-            <span style={{ fontFamily: FONT, fontSize: 17, fontWeight: 600, color: C.textPrimary }}>
-              {L('speakNowTitle')}
+            {/* b.532 — Luca: «metti le due bandiere al posto di parla
+                ora, solo nella home page. parla ora non serve». La coppia
+                di lingue E' la promessa del tasto: piu chiara di
+                qualunque parola, e uguale in tutte e 38 le lingue. La
+                scritta resta per chi legge con lo schermo (aria-label). */}
+            <span aria-hidden="true" style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 26, lineHeight: 1 }}>
+              <span>{getLang(prefs.lang)?.flag || String(prefs.lang).toUpperCase()}</span>
+              <span style={{ fontSize: 15, color: C.textMuted }}>{'\u2192'}</span>
+              <span>{getLang(metaScelta(prefs))?.flag || String(metaScelta(prefs)).toUpperCase()}</span>
             </span>
           </button>
         )}

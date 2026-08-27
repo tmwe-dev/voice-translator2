@@ -267,6 +267,16 @@ perche il working tree lo conteneva ancora.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.532** (push #820) — LE DUE BANDIERE AL POSTO DI «PARLA
+  ORA», solo in Home (ordine di Luca: «parla ora non serve»). Sotto il
+  microfono ora c'e la coppia di lingue viva (bandiera -> bandiera,
+  quella vera delle preferenze): e la promessa del tasto, piu chiara di
+  qualunque parola e identica in tutte e 38 le lingue. La scritta resta
+  nell'aria-label per chi legge con lo schermo; la chiave i18n resta
+  viva dove serve ancora (PrimaProva).
+
+  TEST: 3 nuovi — verdi con la batteria. eslint: 0 errori.
+
 - Versione: **b.531** (push #819) — COLLAUDO DAL TELEFONO di Luca, in
   chiamata vera: «non vedo la mia miniatura, la gestione del menu non
   va bene assolutamente, le traduzioni in real time sono scorrette e
