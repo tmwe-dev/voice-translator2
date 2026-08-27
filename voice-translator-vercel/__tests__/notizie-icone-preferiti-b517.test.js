@@ -58,7 +58,9 @@ describe('b.517 — articolo: quattro porte, tutte icone', () => {
   it('leggi / traduci / vai al sito / parlane sono icone', () => {
     expect(f).toMatch(/<Icon name="doc"/);
     expect(f).toMatch(/<Icon name="globe"/);
-    expect(f).toMatch(/<Icon name="link"/);
+    // b.529 — il sito ora e il MONDO (Luca: «l'icona mondo ti porta sul
+    // browser»); la bacchetta ha preso il posto della traduzione.
+    expect(f).toMatch(/<Icon name="wand"/);
     expect(f).toMatch(/<Icon name="chat"/);
   });
   it('nessun tasto a piena larghezza con quelle etichette', () => {
@@ -98,7 +100,9 @@ describe('b.517 — il lettore: due facce e ritorno col trascinamento', () => {
   });
   it('la pagina vera resta un iframe dell editore (niente testo copiato)', () => {
     expect(f).toMatch(/<iframe/);
-    expect(f).toMatch(/src=\{url\}/);
+    // b.529 — l'iframe serve la pagina ORIGINALE o quella TRADOTTA da
+    // Google (mai testo copiato da noi): l'url nudo resta il caso 'orig'.
+    expect(f).toMatch(/linguaLettura === 'orig' \? url :/);
   });
   it('atterrando sulla sintesi la genera da sola, una volta sola', () => {
     expect(f).toMatch(/chiestaRef/);

@@ -174,6 +174,10 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
   // stanze (langFilter), questo serve solo a far volare il globo — non
   // deve sporcare i filtri scelti a mano dall'utente.
   const [paeseFocusNotizia, setPaeseFocusNotizia] = useState(null);
+  // b.529 — la bozza del pannello (vedi MondoNews): il Paese si sceglie
+  // e si APPLICA, non scatta a ogni tocco della tendina.
+  const [bozzaPaesePanello, setBozzaPaesePanello] = useState(null);
+  useEffect(() => { if (strumenti) setBozzaPaesePanello(paeseScelto); }, [strumenti]); // eslint-disable-line react-hooks/exhaustive-deps -- fotografia all'apertura
   // b.398 — QUANTO SEI SCESO, da 0 a 1. Serve al pianeta: il documento di
   // Luca dice che il globo «con lo scroll perde importanza» e «dopo il
   // primo blocco contenuti puo scomparire». Finora non lo sapeva nessuno:
@@ -714,7 +718,7 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
           stanze ci sono dietro, come le altre tendine. */}
       <Scelta C={C}
         etichetta={L('countryLabel')}
-        valore={paeseScelto || 'tutto'}
+        valore={bozzaPaesePanello || 'tutto'}
         opzioni={[
           { valore: 'tutto', etichetta: L('wholeWorld'), conto: rooms.length },
           ...PAESI
@@ -727,11 +731,7 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
             }))
             .sort((a, b) => a.etichetta.localeCompare(b.etichetta)),
         ]}
-        onCambia={(v) => {
-          const codice = v === 'tutto' ? null : v;
-          setPaeseScelto(codice);
-          setLangFilter(codice ? (linguaDelPaese(codice) || 'all') : 'all');
-        }} />
+        onCambia={(v) => setBozzaPaesePanello(v === 'tutto' ? null : v)} />
 
       {availableModes.length > 2 && (
         <Scelta C={C}
@@ -746,6 +746,23 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
       )}
 
       <div style={{ height: 1, background: C.cardBorder, margin: '6px 0 16px' }} />
+      <button onClick={() => {
+          vibrate(10);
+          if (bozzaPaesePanello !== paeseScelto) {
+            setPaeseScelto(bozzaPaesePanello);
+            setLangFilter(bozzaPaesePanello ? (linguaDelPaese(bozzaPaesePanello) || 'all') : 'all');
+          }
+          setStrumenti(false);
+        }}
+        style={{
+          width: '100%', minHeight: 46, borderRadius: 12, cursor: 'pointer', margin: '2px 0 14px',
+          background: `linear-gradient(135deg, ${C.accent}, ${C.purple})`, border: 'none',
+          color: '#fff', fontSize: 13.5, fontWeight: 600, fontFamily: FONT,
+          WebkitTapHighlightColor: 'transparent',
+        }}>
+        {L('applyWord')}
+      </button>
+
       <PreferenzeMondo C={C} />
       </PannelloLaterale>
 

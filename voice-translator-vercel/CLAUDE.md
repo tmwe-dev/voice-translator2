@@ -267,6 +267,58 @@ perche il working tree lo conteneva ancora.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.529** (push #817) — IL GIRO GRANDE SUL GIORNALE, nove
+  ordini di Luca in un messaggio solo, tutti eseguiti:
+
+  1. «Non hai eliminato i margini... la colonna balla»: il giornale va
+     da bordo a bordo (contenitore senza rientro laterale, card con
+     soli bordi sopra/sotto, foto intere), overflowX chiuso.
+  2. «Un tasto di conferma dentro le sidebar»: Paese e «Cerca la
+     fuori» scrivono una BOZZA; il tasto APPLICA (nei pannelli di
+     Notizie E Stanze/Mondo) esegue una volta sola e chiude, cosi si
+     vede l'effetto. Niente piu query a ogni tocco.
+  3. «Ultime ricerche in alto con il logo»: le ricerche riuscite si
+     ricordano (max 6, senza doppioni) come badge di vetro
+     rettangolari: miniatura del PRIMO risultato a sinistra (un "logo"
+     garantito per qualunque ricerca non esiste; la faccia vera della
+     notizia si), nome abbreviato alle prime due parole piene
+     («politica estera della corea» -> Politica Corea). Tocco = rifa
+     la ricerca; x = dimentica.
+  4. «I badge arrotondati devono essere rettangolari, piu bassi, in
+     ordine alfabetico, meglio dentro una dropdown»: PreferitiTemi
+     rifatti cosi (26 di altezza, raggio 7, localeCompare, richiusi
+     dietro una riga col conteggio).
+  5. «Allarghi l'immagine invece di tenere l'originale»: nella
+     discussione l'immagine passa da ritaglio fisso 180 (cover) a
+     INTERA e in proporzione (contain, tetto 340).
+  6. «La popup eliminala, campo e pulsanti in basso, inutile ripetere
+     il nome»: il composer b.511 e morto; campo testo + Invia stanno
+     nel piede della discussione, il soprannome resta quello del
+     profilo.
+  7. «Icona mondo ti porta sul browser, bacchetta per riassunto o
+     traduzione»: nuova icona `wand`; nella card e nel lettore la
+     bacchetta apre sintesi/traduzione, il mondo esce dall'app.
+  8. «Bandiera e freccia per la lingua, default profilo... non mi dai
+     il testo dell'articolo intero tradotto»: nel lettore una tendina
+     bandiera+freccia sceglie la lingua di lettura (default: quella
+     del profilo). Sulla pagina vera, la scelta serve l'articolo
+     INTERO TRADOTTO dentro l'app: e la pagina dell'editore passata
+     dal traduttore di Google — sempre la LORO pagina, noi non
+     copiamo ne testo ne traduzione (la regola di copyright non si
+     tocca). «Originale» (icona mondo) torna alla pagina nuda.
+     [ASSUNTO] alcuni editori bloccano anche questa cornice: vale il
+     ripiego b.383 gia esistente.
+  9. «Non vedo la visualizzazione default video»: l'ordine b.515
+     diceva «se uno ENTRA e scorre attiva l'autoplay» — ora la vista
+     continua a tutta pagina si apre DA SOLA alla prima entrata in
+     Notizie (una volta per sessione, filtro SOLO VIDEO di default);
+     la X riporta al giornale.
+
+  TEST: 18 nuovi (`giornale-a-tutta-pagina-b529.test.js`) + 4 assert
+  vecchi aggiornati alle assunzioni nuove con la spiegazione scritta
+  (b.517/b.523/b.524: bozza+Applica e icone nuove) — [VERIFICATO]
+  174/174 su 19 file di batteria. eslint: 0 errori.
+
 - Versione: **b.528** (push #816) — IL CAST DI RADIOCHAT E CONNESSO, e
   la mente di ogni Compagno si vede e si cambia. Tre domande di Luca:
   «sono connessi albert etc? le icone e le gif animate le hai

@@ -52,7 +52,8 @@ describe('b.523 — la scelta del Paese esiste davvero nel pannello', () => {
 
   it('c e una tendina Paese, non solo il commento che la prometteva', () => {
     expect(f).toMatch(/etichetta=\{L\('countryLabel'\)\}/);
-    expect(f).toMatch(/valore=\{paeseScelto \|\| 'tutto'\}/);
+    // b.529 — la tendina mostra la BOZZA (si applica col tasto Applica)
+    expect(f).toMatch(/valore=\{bozzaPaesePanello \|\| 'tutto'\}/);
   });
 
   it('la prima voce riporta al mondo intero', () => {
@@ -65,8 +66,8 @@ describe('b.523 — la scelta del Paese esiste davvero nel pannello', () => {
     expect(f).toMatch(/\.sort\(\(a, b\) => a\.etichetta\.localeCompare\(b\.etichetta\)\)/);
   });
 
-  it('scegliere un paese aggiorna anche il filtro lingua, come faceva il globo', () => {
-    expect(f).toMatch(/setPaeseScelto\(codice\);/);
-    expect(f).toMatch(/setLangFilter\(codice \? \(linguaDelPaese\(codice\) \|\| 'all'\) : 'all'\)/);
+  it('applicare il paese aggiorna anche il filtro lingua, come faceva il globo (b.529: via Applica)', () => {
+    expect(f).toMatch(/setPaeseScelto\(bozzaPaesePanello\);/);
+    expect(f).toMatch(/setLangFilter\(bozzaPaesePanello \? \(linguaDelPaese\(bozzaPaesePanello\) \|\| 'all'\) : 'all'\)/);
   });
 });

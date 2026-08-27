@@ -42,6 +42,9 @@ const paths = {
   swap: 'M7 16V4m0 0L3 8m4-4l4 4M17 8v12m0 0l4-4m-4 4l-4-4',
   wave: 'M2 12c2-4 4-4 6 0s4 4 6 0 4-4 6 0 4 4 6 0',
   doorOpen: 'M5 2h11a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zM9 12h.01M22 12l-4-4m4 4l-4 4m4-4H14',
+  // b.529 — la bacchetta magica: riassunto/traduzione (Luca: «per
+  // leggere riassunto o tutto tradotto metti bacchetta magica»).
+  wand: 'M15 4V2M15 16v-2M8 9h2M20 9h2M17.8 11.8L19 13M17.8 6.2L19 5M12.2 6.2L11 5M3 21l9-9',
   doorCreate: 'M5 2h11a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zM9 12h.01M21 9v6M18 12h6',
   music: 'M9 18v-5m4 5V7m4 11v-3M5 21h14a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2z',
   // b.194 — la Home non presenta piu una "stanza video" ma una chat di

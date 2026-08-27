@@ -107,6 +107,17 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
   // il filtro (solo video di default — ordine di Luca) e una preferenza
   // persistita, cosi resta com'era l'ultima volta che l'ha scelto.
   const [feedAperto, setFeedAperto] = useState(false);
+  // b.529 — Luca: «non vedo la visualizzazione default video di cui
+  // abbiamo parlato». L'ordine originale (b.515) diceva «se uno ENTRA e
+  // scorre attiva l'autoplay»: la vista continua a tutta pagina si apre
+  // DA SOLA la prima volta che si entra in Notizie (una volta per
+  // sessione, filtro gia SOLO VIDEO di default). La X riporta al
+  // giornale e non ricompare piu fino alla prossima apertura dell'app.
+  useEffect(() => {
+    if (typeof window === 'undefined' || window.__VT_FEED_VISTO) return;
+    window.__VT_FEED_VISTO = true;
+    setFeedAperto(true);
+  }, []);
   const feedFiltro = prefs?.mondoFeedFiltro || 'video'; // { tipo: 'articolo'|'video', dati }
   const [video, setVideo] = useState(null);   // null = mai cercati
   const [videoAttivi, setVideoAttivi] = useState(false);
@@ -134,11 +145,18 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
   const [argomentoFiltro, setArgomentoFiltro] = useState(null);
   // b.363 — il paese scelto con un tocco sulla bandiera di una scheda
   const [paeseFiltro, setPaeseFiltro] = useState(null);
+  // b.529 — LA BOZZA DEL PANNELLO (Luca: «devi mettere un tasto di
+  // conferma dentro le side bar perche non dobbiamo ripetere query per
+  // ogni operazione»). Paese e «Cerca la fuori» non scattano piu al
+  // tocco: si sceglie con calma e si APPLICA una volta sola.
+  const [bozzaPaese, setBozzaPaese] = useState(null);
+  const [bozzaCategoria, setBozzaCategoria] = useState('');
   // b.386 — il paese toccato sul pianeta filtra anche le notizie. Prima
   // arrivava solo alle stanze: si zoomava sull'Italia e le news restavano
   // del mondo intero, il che faceva sembrare che il gesto non funzionasse
   // a meta.
   useEffect(() => { if (paeseDalGlobo !== undefined) setPaeseFiltro(paeseDalGlobo); }, [paeseDalGlobo]);
+  useEffect(() => { if (strumenti) { setBozzaPaese(paeseFiltro); setBozzaCategoria(chipAttiva || ''); } }, [strumenti]); // eslint-disable-line react-hooks/exhaustive-deps -- la bozza si fotografa all'apertura
   // b.398 — si sceglie in un posto solo, e lo sanno tutti: la copia qui
   // dentro serve a disegnare subito, e la stessa scelta risale a Mondo,
   // che la manda al pianeta e alle Stanze.
@@ -289,6 +307,23 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
         setArgomenti(fine.argomenti || []);
         setStanze(fine.stanze || []);
         setDaCache(!!fine.daCache);
+        // b.529 — ULTIME RICERCHE (Luca: «quando faccio una ricerca devi
+        // inserire in alto nella sidebar ultime ricerche e devi
+        // recuperare il logo e inserirlo a sinistra del nome abbreviato»).
+        // L'etichetta sono le prime due parole piene della domanda
+        // («milan ac...» -> Milan Ac, «politica estera della corea» ->
+        // Politica Corea); l'immagine e la miniatura del primo risultato
+        // VERO — un logo garantito per qualunque ricerca non esiste, la
+        // faccia della notizia si.
+        try {
+          const VUOTE = new Set(['di','della','del','dello','delle','dei','degli','la','il','lo','le','gli','un','una','uno','che','per','con','sul','sulla','the','of','a','an','and']);
+          const parole = pulita.split(/[\s,]+/).filter(w => w.length > 1 && !VUOTE.has(w.toLowerCase()));
+          const etichetta = parole.slice(0, 2).map(w => w[0].toUpperCase() + w.slice(1)).join(' ') || pulita.slice(0, 18);
+          const img = (fine.argomenti || []).find(t => t.immagine)?.immagine || null;
+          const vecchie = Array.isArray(prefs?.ricercheRecenti) ? prefs.ricercheRecenti : [];
+          const nuove = [{ q: pulita, etichetta, img }, ...vecchie.filter(r => r.q !== pulita)].slice(0, 6);
+          savePrefs?.({ ...prefs, ricercheRecenti: nuove });
+        } catch { /* la memoria delle ricerche non deve mai rompere la ricerca */ }
       }
     } catch (e) {
       // b.363 — prima questo guasto non lasciava traccia da nessuna parte: nel
@@ -299,7 +334,7 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
     } finally {
       setCercando(false);
     }
-  }, [lingua, cercando, descriviStadio, cercaVideoPer, profonda, numFonti]);
+  }, [lingua, cercando, descriviStadio, cercaVideoPer, profonda, numFonti, prefs, savePrefs]);
 
   const cercaChip = useCallback((c) => {
     setChipAttiva(c.id);
@@ -413,7 +448,12 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
           template. Era l'ultimo posto di Mondo dove le vecchie misure
           resistevano: passando da una schermata all'altra il contenuto
           saltava di quattro punti. */}
-      <div style={{ padding: '0 20px 106px', fontFamily: FONT, ...COLONNA }}>
+      {/* b.529 — Luca: «non hai eliminato i margini o bordi laterali
+          cosi non si vede per intero e la colonna balla dentro lo
+          schermo». Il giornale va da bordo a bordo (le foto respirano
+          per intero); il testo dentro le card tiene il suo rientro.
+          overflowX chiuso: niente piu colonna che dondola. */}
+      <div style={{ padding: '0 0 106px', overflowX: 'hidden', fontFamily: FONT, ...COLONNA }}>
 
       {/* b.523 — LA RICERCA STA NELLA PAGINA, NON DIETRO UNA PORTA.
           Luca, per la seconda volta: «il campo cerca va in alto e fuori
@@ -425,7 +465,7 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
           giornale, sempre visibile. Nel pannello restano le
           preferenze, che sono un'altra cosa: si sistemano una volta e
           non si toccano piu. */}
-      <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 10, padding: '0 16px' }}>
         <input
           value={query}
           onChange={e => { setQuery(e.target.value); setChipAttiva(null); }}
@@ -485,6 +525,48 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
           (argomentiVeri, gia contati per il filtro qui sotto): toccarne
           uno filtra, la x lo toglie con la stessa memoria persistente
           di Stanze/Mondo (prefs.temiTolti). */}
+      {/* b.529 — LE ULTIME RICERCHE, in alto: badge di vetro
+          rettangolari, miniatura a sinistra e nome abbreviato. Un tocco
+          rifa quella ricerca (azione esplicita: parte subito), la x la
+          dimentica. */}
+      {Array.isArray(prefs?.ricercheRecenti) && prefs.ricercheRecenti.length > 0 && (
+        <div style={{ marginBottom: 12 }}>
+          <div style={{ fontSize: 10.5, fontWeight: 600, letterSpacing: 1, color: C.textMuted, margin: '0 0 8px' }}>
+            {L('recentSearches')}
+          </div>
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+            {prefs.ricercheRecenti.map((r, i) => (
+              <span key={r.q} style={{
+                display: 'inline-flex', alignItems: 'center', gap: 6,
+                padding: '2px 2px 2px 4px', borderRadius: 7,
+                background: i % 2 ? 'rgba(44,94,170,0.34)' : 'rgba(140,88,48,0.34)',
+                border: `1px solid ${i % 2 ? 'rgba(112,162,236,0.5)' : 'rgba(206,146,92,0.5)'}`,
+                backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)',
+                boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.22)', fontFamily: FONT,
+              }}>
+                <button onClick={() => { vibrate(8); setQuery(r.q); setChipAttiva(null); cerca(r.q); suChiudiStrumenti?.(); }}
+                  title={r.q}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 6, minHeight: 26, padding: 0,
+                    background: 'none', border: 'none', cursor: 'pointer', fontFamily: FONT,
+                    color: '#fff', fontSize: 11.5, fontWeight: 600, maxWidth: 180, WebkitTapHighlightColor: 'transparent' }}>
+                  {r.img
+                    // eslint-disable-next-line @next/next/no-img-element -- miniatura esterna della ricerca
+                    ? <img src={r.img} alt="" width={20} height={20} style={{ borderRadius: 5, objectFit: 'cover', display: 'block' }} />
+                    : <Icon name="search" size={12} color="#fff" />}
+                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.etichetta}</span>
+                </button>
+                <button onClick={() => { vibrate(6); savePrefs?.({ ...prefs, ricercheRecenti: prefs.ricercheRecenti.filter(x => x.q !== r.q) }); }}
+                  aria-label={L('removeWord')} title={L('removeWord')}
+                  style={{ width: 22, height: 22, borderRadius: 6, flexShrink: 0, cursor: 'pointer',
+                    background: 'rgba(0,0,0,0.22)', border: 'none',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', WebkitTapHighlightColor: 'transparent' }}>
+                  <Icon name="x" size={10} color="#fff" />
+                </button>
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
       <PreferitiTemi temi={argomentiVeri.map(([arg, n]) => ({ topic: arg, discussioni: n }))}
         prefs={prefs} savePrefs={savePrefs} C={C} L={L}
         onScegli={(topic) => { setArgomentoFiltro(topic); suChiudiStrumenti?.(); }} />
@@ -495,7 +577,7 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
           il globo: un filtro solo, non due che litigano). */}
       <Scelta C={C}
         etichetta={L('countryLabel')}
-        valore={paeseFiltro || 'tutto'}
+        valore={bozzaPaese || 'tutto'}
         opzioni={[
           { valore: 'tutto', etichetta: L('wholeWorld'), conto: feed?.length || 0 },
           ...PAESI
@@ -506,7 +588,7 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
             }))
             .sort((a, b) => a.etichetta.localeCompare(b.etichetta)),
         ]}
-        onCambia={(v) => scegliPaese(v === 'tutto' ? null : v)} />
+        onCambia={(v) => setBozzaPaese(v === 'tutto' ? null : v)} />
 
       {/* b.363 — I DUE MODI SONO DIVENTATI UNA PREFERENZA (qui sopra):
           era una scelta da rifare a ogni apertura, e invece e una cosa
@@ -550,19 +632,35 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
 
       <Scelta C={C}
         etichetta={L('searchCategoryWord')}
-        valore={chipAttiva || ''}
+        valore={bozzaCategoria || ''}
         opzioni={[
           { valore: '', etichetta: L('allTopicsWord') },
           ...CATEGORIE.map((c) => ({ valore: c.id, etichetta: L(c.labelKey) })),
         ]}
-        onCambia={(v) => {
-          if (!v) { setChipAttiva(null); return; }
-          const c = CATEGORIE.find((x) => x.id === v);
-          if (c) cercaChip(c);
-        }} />
+        onCambia={(v) => setBozzaCategoria(v)} />
 
 
       <div style={{ height: 1, background: C.cardBorder, margin: '6px 0 16px' }} />
+      {/* b.529 — UNA conferma sola: si applica cio che e cambiato, e il
+          pannello si chiude cosi si VEDE l'effetto. */}
+      <button onClick={() => {
+          vibrate(10);
+          if (bozzaPaese !== paeseFiltro) scegliPaese(bozzaPaese);
+          if ((bozzaCategoria || '') !== (chipAttiva || '')) {
+            if (!bozzaCategoria) setChipAttiva(null);
+            else { const c = CATEGORIE.find((x) => x.id === bozzaCategoria); if (c) cercaChip(c); }
+          }
+          suChiudiStrumenti?.();
+        }}
+        style={{
+          width: '100%', minHeight: 46, borderRadius: 12, cursor: 'pointer', margin: '2px 0 14px',
+          background: `linear-gradient(135deg, ${C.accent}, ${C.purple})`, border: 'none',
+          color: '#fff', fontSize: 13.5, fontWeight: 600, fontFamily: FONT,
+          WebkitTapHighlightColor: 'transparent',
+        }}>
+        {L('applyWord')}
+      </button>
+
       <PreferenzeMondo C={C} />
       </PannelloLaterale>
 
@@ -657,7 +755,7 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
       {/* ─── b.187 · Feed delle discussioni pubbliche persistenti ─── */}
       {feedMostrato.length > 0 && (
         <div style={{ marginBottom: 16 }}>
-          <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: 1.2, color: C.textMuted, textTransform: 'uppercase', marginBottom: 8 }}>
+          <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: 1.2, color: C.textMuted, textTransform: 'uppercase', marginBottom: 8, padding: '0 16px' }}>
             {L('worldNowTitle')}
           </div>
           {feedMostrato.slice(0, 12).map(d => (
@@ -716,8 +814,8 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
               // l'occhio incontra — come su qualunque giornale.
               return (
                 <article key={d.id} style={{
-                  marginBottom: 12, borderRadius: 16, overflow: 'hidden',
-                  background: 'rgba(11,15,28,0.94)', border: bordo, fontFamily: FONT,
+                  marginBottom: 12, borderRadius: 0, overflow: 'hidden',
+                  background: 'rgba(11,15,28,0.94)', borderTop: bordo, borderBottom: bordo, fontFamily: FONT,
                 }}>
                   <button onClick={() => {
                       vibrate(8);
@@ -897,8 +995,8 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
 
       {argomenti !== null && argomenti.map(t => (
         <article key={t.id} style={{
-          marginBottom: 14, borderRadius: 18, overflow: 'hidden',
-          background: C.card, border: bordo,
+          marginBottom: 14, borderRadius: 0, overflow: 'hidden',
+          background: C.card, borderTop: bordo, borderBottom: bordo,
         }}>
           {/* La miniatura: 16:9, col fondale pronto SOTTO la foto.
               b.149 — se l'immagine muore in volo, onError toglie solo
@@ -952,6 +1050,8 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
               }}>
               <Icon name="doc" size={16} color={C.accent} />
             </button>
+            {/* b.529 — Luca: «cambia l'icona: mondo ti porta sul browser,
+                per riassunto o tutto tradotto metti bacchetta magica». */}
             <button onClick={() => { vibrate(8); setLettura({ url: t.url, titolo: t.titolo, fonte: t.fonti?.[0]?.fonte, dati: t, faccia: 'sintesi' }); }}
               aria-label={L('newsOpenTranslate')} title={L('newsOpenTranslate')}
               style={{
@@ -960,7 +1060,7 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 WebkitTapHighlightColor: 'transparent',
               }}>
-              <Icon name="globe" size={15} color={C.textSecondary} />
+              <Icon name="wand" size={15} color={C.textSecondary} />
             </button>
             <a href={t.url} target="_blank" rel="noopener noreferrer" onClick={() => vibrate(6)}
               aria-label={L('newsOpenSite')} title={L('newsOpenSite')}
@@ -970,7 +1070,7 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 WebkitTapHighlightColor: 'transparent',
               }}>
-              <Icon name="link" size={15} color={C.textSecondary} />
+              <Icon name="globe" size={15} color={C.textSecondary} />
             </a>
             {/* b.517 — PARLANE, UNA PORTA SOLA. Luca: «parlane o apri
                 discussione non devono essere ambedue presenti». Prima

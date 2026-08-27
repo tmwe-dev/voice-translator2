@@ -1,6 +1,6 @@
 'use client';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { FONT, vibrate } from '../../lib/constants.js';
+import { FONT, vibrate, LANGS, getLang } from '../../lib/constants.js';
 import Icon from '../Icon.js';
 
 // ═══════════════════════════════════════════════════════════════
@@ -61,7 +61,15 @@ export default function LettoreArticolo({ url, titolo, fonte, dati, prefs, userT
   const [generando, setGenerando] = useState(false);
   const [serveAccount, setServeAccount] = useState(false);
   const [errSintesi, setErrSintesi] = useState(false);
-  const lingua = prefs?.uiLang || 'en';
+  // b.529 — LA LINGUA DELLA LETTURA LA SCEGLI TU (Luca: «inserisci al
+  // posto del tasto traduci una bandiera e di fianco una freccia per
+  // scegliere la lingua... che di default dovrebbe essere quella del
+  // profilo»). Governa DUE cose: la lingua della sintesi, e — sulla
+  // pagina vera — la versione TRADOTTA della pagina dell'editore
+  // (servita da Google Translate: il contenuto resta il LORO, noi non
+  // copiamo una riga; scegliendo «Originale» si torna alla pagina nuda).
+  const [linguaLettura, setLinguaLettura] = useState(prefs?.lang || prefs?.uiLang || 'en');
+  const lingua = linguaLettura;
 
   useEffect(() => {
     setCaricata(false); setRifiutata(false);
@@ -80,7 +88,7 @@ export default function LettoreArticolo({ url, titolo, fonte, dati, prefs, userT
       try {
         const r = await fetch('/api/topics/riassunto', { signal: AbortSignal.timeout(60000),
           method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ titolo: dati.titolo, lang: lingua }),
+          body: JSON.stringify({ titolo: dati.titolo, lang: lingua === 'orig' ? (prefs?.lang || 'en') : lingua }),
         });
         if (r.ok && vivo) {
           const d = await r.json().catch(() => null);
@@ -89,7 +97,7 @@ export default function LettoreArticolo({ url, titolo, fonte, dati, prefs, userT
       } catch { /* la cache non risponde: si potra generare a mano */ }
     })();
     return () => { vivo = false; };
-  }, [dati, lingua]);
+  }, [dati, lingua, prefs?.lang]);
 
   const generaSintesi = useCallback(async () => {
     if (generando || !dati?.titolo) return;
@@ -101,7 +109,7 @@ export default function LettoreArticolo({ url, titolo, fonte, dati, prefs, userT
         body: JSON.stringify({
           titolo: dati.titolo, sintesi: dati.sintesi,
           fonti: (dati.fonti || []).map((f) => ({ fonte: f.fonte, titolo: f.titolo })),
-          lang: lingua, userToken,
+          lang: lingua === 'orig' ? (prefs?.lang || 'en') : lingua, userToken,
         }),
       });
       if (r.status === 401) { setServeAccount(true); return; }
@@ -111,7 +119,7 @@ export default function LettoreArticolo({ url, titolo, fonte, dati, prefs, userT
       if (d.sintesi) setSintesiAI(d.sintesi);
     } catch { setErrSintesi(true); }
     finally { setGenerando(false); }
-  }, [dati, generando, lingua, userToken]);
+  }, [dati, generando, lingua, userToken, prefs?.lang]);
 
   // b.517 — «APRI E TRADUCI» non deve far premere un altro tasto: chi
   // atterra sulla faccia sintesi la trova gia in scrittura. Chi apre
@@ -120,10 +128,11 @@ export default function LettoreArticolo({ url, titolo, fonte, dati, prefs, userT
   const chiestaRef = useRef(null);
   useEffect(() => {
     if (vista !== 'sintesi' || !dati?.titolo || sintesiAI || generando) return;
-    if (chiestaRef.current === dati.titolo) return;
-    chiestaRef.current = dati.titolo;
+    const chiave = `${dati.titolo}|${lingua}`;
+    if (chiestaRef.current === chiave) return;
+    chiestaRef.current = chiave;
     generaSintesi();
-  }, [vista, dati, sintesiAI, generando, generaSintesi]);
+  }, [vista, dati, sintesiAI, generando, generaSintesi, lingua]);
 
   // b.517 — TRASCINA PER TORNARE INDIETRO. Ordine di Luca: «nel mobile
   // con trascina torna alla pagina precedente». Il riquadro dell'editore
@@ -226,7 +235,7 @@ export default function LettoreArticolo({ url, titolo, fonte, dati, prefs, userT
             background: 'rgba(255,255,255,0.05)', border: bordo,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
-          <Icon name="link" size={15} color={C.accent} />
+          <Icon name="globe" size={15} color={C.accent} />
         </a>
       </div>
 
@@ -236,8 +245,28 @@ export default function LettoreArticolo({ url, titolo, fonte, dati, prefs, userT
           striscia incollata sopra il riquadro (rubava spazio a chi
           voleva solo leggere) ma una vista intera per conto suo. */}
       {dati?.titolo && (
+        <div style={{ display: 'flex', gap: 8, alignItems: 'stretch', margin: '10px 12px 0', flexShrink: 0 }}>
+        {/* bandiera + freccia: la lingua in cui leggere (default: profilo) */}
+        <div style={{ position: 'relative', flexShrink: 0 }}>
+          <select value={linguaLettura} onChange={(e) => { vibrate(6); setLinguaLettura(e.target.value); }}
+            aria-label={L('uiLanguage')}
+            style={{
+              appearance: 'none', WebkitAppearance: 'none', height: '100%', minHeight: 44,
+              padding: '0 26px 0 10px', borderRadius: 12, border: bordo, cursor: 'pointer',
+              background: 'rgba(255,255,255,0.05)', color: 'transparent', fontSize: 15, fontFamily: FONT,
+            }}>
+            <option value="orig" style={{ color: '#111' }}>{'\u{1F310}'}</option>
+            {LANGS.map((l) => <option key={l.code} value={l.code} style={{ color: '#111' }}>{l.flag} {l.name}</option>)}
+          </select>
+          <span aria-hidden="true" style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}>
+            <Icon name="chevDown" size={12} color={C.textMuted} />
+          </span>
+          <span aria-hidden="true" style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', fontSize: 16 }}>
+            {linguaLettura === 'orig' ? '\u{1F310}' : getLang(linguaLettura).flag}
+          </span>
+        </div>
         <div role="tablist" aria-label={L('readWord')} style={{
-          display: 'flex', gap: 4, flexShrink: 0, padding: 4, margin: '10px 12px 0',
+          display: 'flex', gap: 4, flex: 1, padding: 4,
           borderRadius: 12, background: 'rgba(255,255,255,0.05)', border: bordo,
         }}>
           {[{ id: 'articolo', testo: L('newsOpen') }, { id: 'sintesi', testo: L('schedaSintesi') }].map((f) => {
@@ -256,6 +285,7 @@ export default function LettoreArticolo({ url, titolo, fonte, dati, prefs, userT
               </button>
             );
           })}
+        </div>
         </div>
       )}
 
@@ -283,7 +313,7 @@ export default function LettoreArticolo({ url, titolo, fonte, dati, prefs, userT
                   background: `linear-gradient(135deg, ${C.accent}, ${C.purple || C.accent})`,
                   color: '#fff', fontSize: 12.5, fontWeight: 600, fontFamily: FONT,
                 }}>
-                <Icon name="globe" size={13} color="#fff" />
+                <Icon name="wand" size={13} color="#fff" />
                 {L('schedaGenera')}
               </button>
             )}
@@ -301,6 +331,12 @@ export default function LettoreArticolo({ url, titolo, fonte, dati, prefs, userT
         </div>
       )}
 
+      {/* b.529 — l'articolo INTERO, tradotto, dentro l'applicazione: la
+          pagina dell'editore passata dal traduttore di Google. E' sempre
+          la LORO pagina (loro server, loro pubblicita): noi non ne
+          copiamo ne testo ne traduzione. [ASSUNTO] alcuni editori
+          bloccano anche questa cornice: vale il ripiego gia esistente
+          (b.383, «apri fuori»). */}
       {/* LA PAGINA LORO */}
       <div style={{
         flex: 1, minHeight: 0, position: 'relative', background: '#fff',
@@ -314,7 +350,8 @@ export default function LettoreArticolo({ url, titolo, fonte, dati, prefs, userT
         {url && (
           <iframe
             ref={telaio}
-            src={url} title={titolo || dominio}
+            src={linguaLettura === 'orig' ? url : `https://translate.google.com/translate?sl=auto&tl=${encodeURIComponent(String(linguaLettura).split('-')[0])}&u=${encodeURIComponent(url)}`}
+            title={titolo || dominio}
             onLoad={controllaSeVuota}
             referrerPolicy="no-referrer-when-downgrade"
             sandbox="allow-scripts allow-same-origin allow-popups allow-forms"

@@ -41,7 +41,9 @@ describe('b.524 — lo scheletro del pannello e lo stesso su tutte le schede', (
   });
 
   it('nelle Notizie il Paese passa da scegliPaese: un filtro solo, condiviso col globo', () => {
-    expect(news).toMatch(/onCambia=\{\(v\) => scegliPaese\(v === 'tutto' \? null : v\)\}/);
+    // b.529 — il tocco scrive la bozza; scegliPaese parte dal tasto Applica
+    expect(news).toMatch(/onCambia=\{\(v\) => setBozzaPaese\(v === 'tutto' \? null : v\)\}/);
+    expect(news).toMatch(/scegliPaese\(bozzaPaese\)/);
   });
 
   it('il pannello aperto dal globo non si intitola piu «Stanze»', () => {
