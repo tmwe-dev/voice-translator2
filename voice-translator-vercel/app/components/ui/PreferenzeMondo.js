@@ -126,7 +126,59 @@ const PREFERENZE = [
 // stato invece di essere un comando generico. Ora sotto l'icona c'e la
 // parola vera — lo stesso trucco gia in uso nella rotellina del ritmo
 // (PassoVerticale, qui sotto), solo applicato anche al ciclo.
-function IconeCiclo({ scelte, valore, onCambia, C, L, etichettaAria }) {
+// ═══════════════════════════════════════════════════════════════
+// b.522 — LA COLONNA DEI COMANDI HA UNA LARGHEZZA FISSA.
+//
+// Ordine di Luca, guardando il pannello: «la disposizione delle icone
+// non deve essere influenzata dal testo mai. guarda ad esempio
+// approfondita».
+//
+// Aveva ragione e si vedeva: ogni comando era largo `minWidth: 52`,
+// cioe AL MINIMO 52 ma piu largo se la sua parola lo era. «Tradotti»
+// sta in 45 punti e lasciava il comando a 52; «Approfondita» ne
+// occupa 68 e allargava il comando a 68. Il comando sta a destra
+// della riga, quindi allargandosi si sposta a SINISTRA — e con lui la
+// sua icona. Quattro righe, quattro icone su quattro colonne diverse,
+// per il solo fatto che le parole hanno lunghezze diverse. Peggio
+// ancora la rotellina del ritmo, che con «Solo quando tocco» (17
+// lettere su una riga sola) sfondava di parecchio.
+//
+// La regola, da qui in avanti: un comando in colonna ha una larghezza
+// FISSA (`width`, non `minWidth`), l'icona sta centrata dentro quella
+// larghezza, e l'etichetta va a capo invece di allargare la scatola.
+// Cosi le icone stanno incolonnate qualunque parola ci sia sotto, in
+// qualunque delle trentotto lingue — che e il motivo vero per cui la
+// larghezza non puo dipendere dal testo: quello che sta in una riga
+// in italiano non ci sta in tedesco.
+// ═══════════════════════════════════════════════════════════════
+// b.523 — Luca: «metti la descrizione della icona a sinistra sotto il
+// titolo in un badge brown». E la soluzione migliore del problema di
+// sopra, non un ripiego: spostando la parola SOTTO IL TITOLO, a
+// sinistra, la colonna di destra torna a contenere la sola icona —
+// larghezza fissa per costruzione, non per accorgimento. Il testo puo
+// essere lungo quanto vuole, in qualunque lingua: cresce a sinistra,
+// dove c'e lo spazio elastico della riga, e non tocca piu niente.
+// Il bruno e lo stesso vetro dei preferiti (PreferitiTemi.js): dice
+// «questo e lo stato attuale», non «questo e un comando».
+function BadgeStato({ testo }) {
+  if (!testo) return null;
+  return (
+    <span style={{
+      display: 'inline-block', maxWidth: '100%', padding: '3px 10px', borderRadius: 999,
+      background: 'rgba(140,88,48,0.34)', border: '1px solid rgba(206,146,92,0.5)',
+      backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)',
+      boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.22)',
+      color: '#fff', fontSize: 11, fontWeight: 600, fontFamily: FONT,
+      lineHeight: 1.35, overflowWrap: 'anywhere',
+    }}>
+      {testo}
+    </span>
+  );
+}
+
+const LARGHEZZA_COMANDO = 46;   // fissa: ci sta solo l'icona, nient'altro
+
+function IconeCiclo({ scelte, valore, onCambia, C, etichettaAria }) {
   const accento = C.accent || '#26D9B0';
   const indice = Math.max(0, scelte.findIndex((s) => s.valore === valore));
   const attuale = scelte[indice] || scelte[0];
@@ -135,8 +187,8 @@ function IconeCiclo({ scelte, valore, onCambia, C, L, etichettaAria }) {
       onClick={() => { vibrate(6); onCambia(scelte[(indice + 1) % scelte.length].valore); }}
       aria-label={etichettaAria} title={etichettaAria}
       style={{
-        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
-        minWidth: 52, flexShrink: 0, cursor: 'pointer', padding: '3px 4px',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        width: LARGHEZZA_COMANDO, flexShrink: 0, cursor: 'pointer', padding: 0,
         background: 'none', border: 'none', WebkitTapHighlightColor: 'transparent',
       }}>
       <span style={{
@@ -144,12 +196,6 @@ function IconeCiclo({ scelte, valore, onCambia, C, L, etichettaAria }) {
         background: `${accento}14`, border: `1px solid ${accento}44`,
       }}>
         <Icon name={attuale.icona} size={17} color={accento} />
-      </span>
-      <span style={{
-        fontSize: 10.5, fontWeight: 400, color: COLORE_VALORE, fontFamily: FONT,
-        whiteSpace: 'nowrap', maxWidth: 68, overflow: 'hidden', textOverflow: 'ellipsis',
-      }}>
-        {L(attuale.etichettaKey)}
       </span>
     </button>
   );
@@ -159,18 +205,16 @@ function IconeCiclo({ scelte, valore, onCambia, C, L, etichettaAria }) {
 // verticale con più/meno che occupa niente di spazio»): freccia su,
 // valore, freccia giù, incolonnati. Sostituisce la fila di quattro
 // tasti (mai/2/5/10) che da sola occupava una riga intera del pannello.
-function PassoVerticale({ scelte, valore, onCambia, C, L }) {
+function PassoVerticale({ scelte, valore, onCambia, C }) {
   const accento = C.accent || '#26D9B0';
   const indice = Math.max(0, scelte.findIndex((s) => s.valore === valore));
-  const attuale = scelte[indice] || scelte[0];
   const vai = (dir) => {
     vibrate(6);
     const i2 = (indice + dir + scelte.length) % scelte.length;
     onCambia(scelte[i2].valore);
   };
-  const testo = attuale.numero != null ? `${attuale.numero} ${L('minShort')}` : L(attuale.etichettaKey);
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flexShrink: 0, minWidth: 52 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flexShrink: 0, width: LARGHEZZA_COMANDO }}>
       <button onClick={() => vai(1)} aria-label="+"
         style={{
           width: 36, height: 22, display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -178,12 +222,6 @@ function PassoVerticale({ scelte, valore, onCambia, C, L }) {
         }}>
         <Icon name="chevUp" size={14} color={accento} />
       </button>
-      <span style={{
-        fontSize: 12, fontWeight: 400, color: COLORE_VALORE, fontFamily: FONT,
-        minWidth: 52, textAlign: 'center', whiteSpace: 'nowrap',
-      }}>
-        {testo}
-      </span>
       <button onClick={() => vai(-1)} aria-label="-"
         style={{
           width: 36, height: 22, display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -225,15 +263,23 @@ export default function PreferenzeMondo({ C }) {
           // b.508 — UNA RIGA SOLA per preferenza: icona, nome, comando.
           // Prima erano due righe (titolo sopra, tasti sotto): qui il
           // comando sta sulla stessa riga del nome, a destra.
+          // b.523 — il nome sopra, lo STATO ATTUALE sotto in un badge
+          // bruno, tutti e due a sinistra nello spazio elastico della
+          // riga; a destra solo il comando, largo sempre uguale.
           <div key={p.chiave} style={{ display: 'flex', alignItems: 'center', gap: 11, marginBottom: 16 }}>
             <Icon name={p.icona} size={20} color={accento} />
-            <span style={{ flex: 1, minWidth: 0, fontSize: 14, fontWeight: 400, color: COLORE_TITOLO, fontFamily: FONT }}>
-              {L(p.titoloKey)}
+            <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 5 }}>
+              <span style={{ fontSize: 14, fontWeight: 400, color: COLORE_TITOLO, fontFamily: FONT }}>
+                {L(p.titoloKey)}
+              </span>
+              <BadgeStato testo={sceltaAttiva.numero != null
+                ? `${sceltaAttiva.numero} ${L('minShort')}`
+                : L(sceltaAttiva.etichettaKey)} />
             </span>
             {p.tipo === 'passo' ? (
-              <PassoVerticale scelte={p.scelte} valore={attuale} onCambia={(v) => cambia(p.chiave, v)} C={C} L={L} />
+              <PassoVerticale scelte={p.scelte} valore={attuale} onCambia={(v) => cambia(p.chiave, v)} C={C} />
             ) : (
-              <IconeCiclo scelte={p.scelte} valore={attuale} onCambia={(v) => cambia(p.chiave, v)} C={C} L={L}
+              <IconeCiclo scelte={p.scelte} valore={attuale} onCambia={(v) => cambia(p.chiave, v)} C={C}
                 etichettaAria={L(sceltaAttiva.etichettaKey)} />
             )}
           </div>

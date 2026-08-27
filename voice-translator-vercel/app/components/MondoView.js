@@ -6,6 +6,7 @@ import { COLONNA, riservaADestra } from '../lib/righello.js';
 import PreferenzeMondo from './ui/PreferenzeMondo.js';
 import PreferitiTemi from './ui/PreferitiTemi.js';
 import Scelta from './ui/Scelta.js';
+import { PAESI } from '../lib/paesi.js';
 // ═══════════════════════════════════════════════
 // MondoView — Public room discovery
 //
@@ -695,6 +696,41 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
           toglie; quello che serve e la ZONA — da dove guardo il mondo — e
           sta qui sotto, in mondoPaese (b.363/b.397, che gia raccontava i
           guai della lingua travestita da Paese). */}
+      {/* b.523 — LA SCELTA DEL PAESE, che qui non c'era.
+          Luca, guardando il pannello: «non vedo la scelta paese».
+          BUG PRE-ESISTENTE dichiarato: il commento di b.504 qui sopra
+          promette che «quello che serve e la ZONA — da dove guardo il
+          mondo — sta qui sotto, in mondoPaese». Sotto non c'era niente:
+          quando in b.504 e stato tolto il filtro LINGUA, il filtro
+          PAESE che doveva prenderne il posto non e mai stato scritto.
+          Da allora l'unico modo di scegliere un Paese era centrarlo col
+          dito sul pianeta che gira — cioe a fortuna, e su un telefono
+          quasi impossibile per un Paese piccolo.
+          I Paesi sono in ordine alfabetico nella lingua di chi guarda
+          (nomePaese usa Intl.DisplayNames, b.398), con davanti «Mondo
+          intero» per tornare a vedere tutto. Ogni voce porta quante
+          stanze ci sono dietro, come le altre tendine. */}
+      <Scelta C={C}
+        etichetta={L('countryLabel')}
+        valore={paeseScelto || 'tutto'}
+        opzioni={[
+          { valore: 'tutto', etichetta: L('wholeWorld'), conto: rooms.length },
+          ...PAESI
+            .map((pa) => ({
+              valore: pa.codice,
+              etichetta: `${pa.bandiera} ${nomePaese(pa.codice)}`,
+              conto: rooms.filter((r) => (r.paese
+                ? r.paese === pa.codice
+                : (linguaDelPaese(pa.codice) ? r.lang === linguaDelPaese(pa.codice) : false))).length,
+            }))
+            .sort((a, b) => a.etichetta.localeCompare(b.etichetta)),
+        ]}
+        onCambia={(v) => {
+          const codice = v === 'tutto' ? null : v;
+          setPaeseScelto(codice);
+          setLangFilter(codice ? (linguaDelPaese(codice) || 'all') : 'all');
+        }} />
+
       {availableModes.length > 2 && (
         <Scelta C={C}
           etichetta={L('roomTypeWord')}

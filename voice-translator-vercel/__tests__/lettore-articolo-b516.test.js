@@ -25,12 +25,17 @@ describe('b.516 — PannelloLaterale: scroll fix + layout', () => {
 
 describe('b.516 — PreferenzeMondo: stato visibile sui pulsanti ciclo', () => {
   const f = leggi('app/components/ui/PreferenzeMondo.js');
-  it('IconeCiclo riceve L e mostra un etichetta testuale dello stato attuale', () => {
-    expect(f).toMatch(/IconeCiclo\(\{ scelte, valore, onCambia, C, L, etichettaAria/);
-    expect(f).toMatch(/L\(attuale\.etichettaKey\)/);
+  // b.523 — lo stato NON sta piu dentro il comando (allargava la
+  // scatola e spostava l'icona: «la disposizione delle icone non deve
+  // essere influenzata dal testo mai»). Sta in un badge bruno sotto il
+  // titolo, a sinistra. Il requisito di b.516 — «deve evidenziare il
+  // modo in cui lo fa in quel momento» — resta soddisfatto, altrove.
+  it('lo stato attuale si legge ancora, ora nel badge a sinistra', () => {
+    expect(f).toMatch(/<BadgeStato testo=\{sceltaAttiva\./);
+    expect(f).toMatch(/L\(sceltaAttiva\.etichettaKey\)/);
   });
-  it('il call site passa L a IconeCiclo', () => {
-    expect(f).toMatch(/<IconeCiclo scelte=\{p\.scelte\} valore=\{attuale\} onCambia=\{[^}]*\} C=\{C\} L=\{L\}/);
+  it('il comando e rimasto senza testo, cosi non puo allargarsi', () => {
+    expect(f).toMatch(/function IconeCiclo\(\{ scelte, valore, onCambia, C, etichettaAria \}\)/);
   });
 });
 

@@ -55,7 +55,8 @@ describe('b.517 — FinestraSulMondo usa davvero il paese della notizia', () => 
     expect(f).not.toMatch(/paeseRicerca: interessi\.length \? null : paese \}\)\)\)/);
   });
   it('il paese arriva dalla notizia, col vecchio come ripiego', () => {
-    expect(f).toMatch(/paeseRicerca: paeseDellaNotizia\(t, CODICI_NOTI\) \|\| \(interessi\.length \? null : paese\)/);
+    // b.523 — il ripiego non e piu il paese scelto ma quello del giro (casa / dove sono)
+    expect(f).toMatch(/paeseRicerca: paeseDellaNotizia\(t, CODICI_NOTI\) \|\| \(interessi\.length \? null : paeseDelGiro\)/);
   });
   it('vola solo verso paesi che il globo conosce', () => {
     expect(f).toMatch(/const CODICI_NOTI = new Set\(PAESI\.map/);

@@ -267,6 +267,74 @@ perche il working tree lo conteneva ancora.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.523** (push #811) — cinque ordini di Luca sul pannello
+  del Mondo e sul senso stesso della sezione.
+
+  **1 — «LA DISPOSIZIONE DELLE ICONE NON DEVE ESSERE INFLUENZATA DAL
+  TESTO MAI. GUARDA AD ESEMPIO APPROFONDITA».** Ogni comando era largo
+  `minWidth: 52`: AL MINIMO 52, ma piu largo se la sua parola lo era.
+  «Tradotti» sta in 45 punti, «Approfondita» ne occupa 68 — e il
+  comando, che sta a destra della riga, allargandosi si sposta a
+  SINISTRA portandosi dietro l'icona. Quattro righe, quattro icone su
+  quattro colonne diverse, solo perche le parole hanno lunghezze
+  diverse. Regola scritta nel file: un comando in colonna ha larghezza
+  FISSA (`width`, mai `minWidth`). Vale doppio con trentotto lingue.
+
+  **2 — «METTI LA DESCRIZIONE DELLA ICONA A SINISTRA SOTTO IL TITOLO IN
+  UN BADGE BROWN».** E la soluzione migliore del punto 1, non un
+  ripiego: con la parola sotto il titolo, a sinistra, la colonna di
+  destra torna a contenere la SOLA icona — allineata per costruzione.
+  Il testo cresce nello spazio elastico della riga e non tocca niente.
+  Il bruno e lo stesso vetro dei preferiti (b.517).
+
+  **3 — «NON VEDO LA SCELTA PAESE».** BUG PRE-ESISTENTE dichiarato: il
+  commento di b.504 prometteva che «la ZONA — da dove guardo il mondo —
+  sta qui sotto, in mondoPaese». Sotto non c'era niente: tolto il
+  filtro LINGUA, il filtro PAESE che doveva prenderne il posto non e
+  mai stato scritto. Da allora l'unico modo di scegliere un Paese era
+  centrarlo col dito sul globo che gira. Un commento che descrive una
+  funzione inesistente e peggio di nessun commento: chiude la domanda
+  invece di aprirla. Ora c'e la tendina vera.
+
+  **4 — «IL CAMPO CERCA VA IN ALTO E FUORI DALLA SIDEBAR TE L'HO GIA
+  DETTO».** E vero che gliel'aveva gia detto: in b.504 la ricerca era
+  uscita dal pannello per Stanze e per il Mondo («si cerca dove si
+  guarda, non dietro una porta che nessuno apre per cercare»), ma la
+  scheda NOTIZIE era rimasta indietro. Ora il campo sta in cima al
+  giornale. Effetto collaterale dichiarato: decade la regola di b.513
+  («quando clicco aggiorna chiudi la side bar»), che esisteva solo
+  perche il campo viveva dentro il pannello — il suo test e stato
+  riscritto al contrario, non cancellato.
+
+  **5 — IL MONDO SEGUE IL VIAGGIATORE.** «Le preferenze non sono
+  obbligatorie, il default deve legare alla posizione geografica e la
+  lingua. Il mondo deve seguire il "viaggiatore" e deve tenerlo
+  informato anche su cosa accade nel suo paese. Immaginati un italiano
+  in ferie che vuole leggere la gazzetta dello sport al mattino ma si
+  trova in cina.»
+  Nuovo `lib/casaEViaggio.js`, due poli invece di uno:
+  CASA — da dove viene: il Paese sul profilo, o in mancanza la sua
+  lingua (un italiano legge in italiano).
+  QUI — dove si trova adesso: dal FUSO ORARIO del dispositivo.
+  Il fuso e non il GPS, per una ragione precisa: non chiede permessi,
+  non apre finestre, non costa batteria, non e un dato sensibile, e non
+  sbaglia mai il Paese di un viaggiatore perche il telefono lo aggiorna
+  da solo appena atterra. Il GPS darebbe la citta invece del Paese, in
+  cambio di un permesso che molti negano e che qui non serve.
+  Senza NESSUNA preferenza impostata le breaking non cercano piu un
+  generico «breaking news»: alternano i due poli, prima casa (la
+  Gazzetta del mattino) e poi dove si trova. Chi non e in viaggio ha un
+  polo solo e non se ne accorge; chi ha scelto i suoi argomenti comanda
+  lui, esattamente come prima. Il pianeta vola sul Paese del giro.
+
+  TEST: 24 test nuovi (`icone-incolonnate-b523.test.js`,
+  `casa-e-viaggio-b523.test.js` — quest'ultimo prova il caso di Luca
+  alla lettera: prefs italiane + fuso Asia/Shanghai devono dare due
+  ricerche, Italia prima e Cina poi) + due test vecchi riscritti alle
+  assunzioni nuove invece che cancellati (b.513 e b.517) —
+  [VERIFICATO] 103/103 su tutta la batteria b.513→b.523. eslint: 0
+  errori. NON verificato dal vivo: il codice non e ancora pushato.
+
 - Versione: **b.520** (push #809) — Luca: «controlla di nuovo la chat di
   oggi e verifica cosa non hai sistemato (globo hai dimenticato le
   modifiche ad esempio), fai l'elenco e implementa le componenti

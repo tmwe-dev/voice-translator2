@@ -6,6 +6,7 @@ import AnteprimaCoperta from './ui/AnteprimaCoperta.js';
 import { cercaTopics } from '../lib/topics/cliente.js';
 import { paeseDellaNotizia } from '../lib/paeseDaFonte.js';
 import { PAESI } from '../lib/paesi.js';
+import { ricerchePredefinite } from '../lib/casaEViaggio.js';
 import { bandieraPaese } from '../lib/schedaMondo.js';
 
 // ═══════════════════════════════════════════════════════════════
@@ -113,9 +114,28 @@ export default function FinestraSulMondo({ C, L, lingua, prefs, attiva, paese, n
     cercandoRef.current = true;
     try {
       const interessi = Array.isArray(prefs?.interessi) ? prefs.interessi.filter(Boolean) : [];
-      const q = interessi.length
-        ? interessi[giroRef.current++ % interessi.length]
-        : (paese && nomePaese ? `${nomePaese(paese)} breaking news` : 'breaking news');
+      // b.523 — IL MONDO SEGUE IL VIAGGIATORE. Luca: «le preferenze non
+      // sono obbligatorie, il default deve legare alla posizione
+      // geografica e la lingua... immaginati un italiano in ferie che
+      // vuole leggere la gazzetta dello sport al mattino ma si trova in
+      // cina». Senza nessuna preferenza impostata non si cerca piu un
+      // generico «breaking news»: si alternano i suoi DUE poli — il
+      // Paese di casa (dalla lingua o dal profilo) e il Paese in cui si
+      // trova adesso (dal fuso orario del dispositivo). Chi non e in
+      // viaggio ne ha uno solo e non se ne accorge. Chi ha scelto i
+      // suoi argomenti comanda lui, come prima. Vedi lib/casaEViaggio.js.
+      let q;
+      let paeseDelGiro = paese;
+      if (interessi.length) {
+        q = interessi[giroRef.current++ % interessi.length];
+      } else if (paese) {
+        q = nomePaese ? `${nomePaese(paese)} breaking news` : 'breaking news';
+      } else {
+        const giri = ricerchePredefinite(prefs, nomePaese);
+        const scelto = giri[giroRef.current++ % giri.length];
+        q = scelto.query;
+        paeseDelGiro = scelto.codice;
+      }
       const fine = await cercaTopics({
         q, lingua, cat: 'notizie',
         // «ultimo minuto» (ritmo a 2) salta la cache; gli altri ritmi la
@@ -146,7 +166,7 @@ export default function FinestraSulMondo({ C, L, lingua, prefs, attiva, paese, n
         // sbagliato.
         codaRef.current.push(...nuovi.slice(0, 5).map((t) => ({
           ...t,
-          paeseRicerca: paeseDellaNotizia(t, CODICI_NOTI) || (interessi.length ? null : paese),
+          paeseRicerca: paeseDellaNotizia(t, CODICI_NOTI) || (interessi.length ? null : paeseDelGiro),
         })));
         // b.515 — parte da sola SOLO se non c'e gia un cartello in
         // mostra, nessun volo in corso, e l'utente non sta leggendo: la
@@ -162,7 +182,7 @@ export default function FinestraSulMondo({ C, L, lingua, prefs, attiva, paese, n
       }
     } catch { /* vere o niente: senza notizie nessun cartello, mai un errore in faccia */ }
     cercandoRef.current = false;
-  }, [prefs?.interessi, paese, nomePaese, lingua, ritmo, avanza]);
+  }, [prefs, paese, nomePaese, lingua, ritmo, avanza]);
 
   // ── IL RITMO: parte quando la finestra e davanti agli occhi ──
   useEffect(() => {

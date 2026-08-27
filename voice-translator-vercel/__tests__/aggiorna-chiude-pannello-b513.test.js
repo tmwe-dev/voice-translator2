@@ -14,12 +14,19 @@ import { join } from 'node:path';
 const leggi = (p) => readFileSync(join(process.cwd(), p), 'utf8');
 
 describe('b.513 — Aggiorna chiude il pannello, il velo chiude gia ovunque', () => {
-  it('il tasto Aggiorna (o Invio nel campo di ricerca) chiude il pannello dopo aver cercato', () => {
-    const p = leggi('app/components/MondoNews.js');
-    expect(p, 'Invio nel campo cerca chiude il pannello').toMatch(
-      /onKeyDown=\{e => \{ if \(e\.key === 'Enter'\) \{ cerca\(query\); suChiudiStrumenti\?\.\(\); \} \}\}/
-    );
-    expect(p, 'il tasto Aggiorna chiude il pannello dopo la ricerca').toMatch(/suChiudiStrumenti\?\.\(\);/);
+  // b.523 — REGOLA DECADUTA, e va detto perche' invece di cancellarla in
+  // silenzio: b.513 chiedeva «quando clicco aggiorna chiudi la side bar»
+  // perche' il campo di ricerca VIVEVA nel pannello, e dopo aver cercato
+  // il pannello restava aperto sopra il giornale appena aggiornato. In
+  // b.523 Luca ha chiesto che «la ricerca principale va messa fuori»: il
+  // campo e nella pagina, non c'e piu nessuna sidebar da chiudere. Il
+  // controllo diventa quindi il suo opposto.
+  it('il campo di ricerca non sta piu nel pannello, quindi non c e niente da chiudere', () => {
+    const f = leggi('app/components/MondoNews.js');
+    const campo = f.indexOf("L('newsWhatFollow')");
+    const pannello = f.indexOf('<PannelloLaterale');
+    expect(campo).toBeGreaterThan(-1);
+    expect(campo).toBeLessThan(pannello);
   });
 
   it('PannelloLaterale — il componente condiviso da tutte le maschere — chiude gia cliccando fuori (il velo)', () => {

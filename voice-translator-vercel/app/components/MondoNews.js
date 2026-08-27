@@ -413,23 +413,21 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
           saltava di quattro punti. */}
       <div style={{ padding: '0 20px 106px', fontFamily: FONT, ...COLONNA }}>
 
-      {/* b.363 — GLI STRUMENTI STANNO DIETRO IL GIORNALE. Sopra il pianeta
-          restavano accesi tre blocchi — il campo "cosa vuoi seguire", i due
-          modi, la fila delle categorie — che coprivano meta mondo anche
-          quando nessuno li stava usando. Ora si aprono toccando l'icona
-          del giornale in alto a sinistra, e si richiudono. */}
-      <PannelloLaterale aperto={strumenti} onChiudi={suChiudiStrumenti} titolo={L('tabNews')} C={C}>
-      {/* b.363 — LE PREFERENZE PER PRIME (ordine di Luca). Sono le
-          decisioni che valgono sempre: si sistemano una volta e poi non
-          si toccano piu. Metterle in cima vuol dire che chi apre il
-          pannello la prima volta le vede, invece di scoprirle in fondo
-          dopo tre file di bottoni. */}
-      {/* ─── Cerca + Aggiorna ─── */}
+      {/* b.523 — LA RICERCA STA NELLA PAGINA, NON DIETRO UNA PORTA.
+          Luca, per la seconda volta: «il campo cerca va in alto e fuori
+          dalla sidebar te l'ho gia detto che la ricerca principale va
+          messa fuori». In b.504 era gia stato fatto per Stanze e per il
+          Mondo («si cerca dove si guarda, non dietro una porta che
+          nessuno apre per cercare»); la scheda Notizie era rimasta
+          indietro, con il campo chiuso nel pannello. Ora sta in cima al
+          giornale, sempre visibile. Nel pannello restano le
+          preferenze, che sono un'altra cosa: si sistemano una volta e
+          non si toccano piu. */}
       <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
         <input
           value={query}
           onChange={e => { setQuery(e.target.value); setChipAttiva(null); }}
-          onKeyDown={e => { if (e.key === 'Enter') { cerca(query); suChiudiStrumenti?.(); } }}
+          onKeyDown={e => { if (e.key === 'Enter') { cerca(query); } }}
           placeholder={L('newsWhatFollow')}
           style={{
             flex: 1, padding: '12px 14px', borderRadius: 14,
@@ -443,9 +441,12 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
           onClick={() => {
             if (chipAttiva) cercaChip(CATEGORIE.find(c => c.id === chipAttiva));
             else cerca(query, 'notizie', true);
-            // b.513 — «quando clicco aggiorna chiudi la side bar» (Luca):
-            // il pannello restava aperto sopra il giornale appena aggiornato.
-            suChiudiStrumenti?.();
+            // b.523 — non si chiude piu niente: il campo e uscito dal
+            // pannello e sta nella pagina, quindi non c'e nessuna
+            // sidebar sopra il giornale da togliere di mezzo. (La
+            // regola di b.513 — «quando clicco aggiorna chiudi la side
+            // bar» — nasceva proprio dal fatto che il campo stava
+            // dentro il pannello: tolto il campo, e decaduta da sola.)
           }}
           disabled={cercando || (!query.trim() && !chipAttiva)}
           aria-label={L('newsUpdate')}
@@ -460,6 +461,19 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
         </button>
       </div>
 
+
+
+      {/* b.363 — GLI STRUMENTI STANNO DIETRO IL GIORNALE. Sopra il pianeta
+          restavano accesi tre blocchi — il campo "cosa vuoi seguire", i due
+          modi, la fila delle categorie — che coprivano meta mondo anche
+          quando nessuno li stava usando. Ora si aprono toccando l'icona
+          del giornale in alto a sinistra, e si richiudono. */}
+      <PannelloLaterale aperto={strumenti} onChiudi={suChiudiStrumenti} titolo={L('tabNews')} C={C}>
+      {/* b.363 — LE PREFERENZE PER PRIME (ordine di Luca). Sono le
+          decisioni che valgono sempre: si sistemano una volta e poi non
+          si toccano piu. Metterle in cima vuol dire che chi apre il
+          pannello la prima volta le vede, invece di scoprirle in fondo
+          dopo tre file di bottoni. */}
       {/* b.363 — I DUE MODI SONO DIVENTATI UNA PREFERENZA (qui sopra):
           era una scelta da rifare a ogni apertura, e invece e una cosa
           che si decide una volta. Qui resta solo quante fonti leggere
@@ -635,6 +649,31 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
               // video li dentro sarebbe solo un giro in piu prima di
               // finire comunque fuori.
               const leggibile = !!d.media?.url && tipo !== 'video';
+              // ═══ INIZIO b.519 — DALLE NOTIZIE, LA SINTESI NON ESISTEVA ═══
+              // TROVATO DAL VIVO su #806, scheda Notizie: si preme «Leggi»
+              // su un articolo di nature.com, l'editore rifiuta di farsi
+              // incorniciare e il lettore mostra — bene — «Questo sito non
+              // si lascia aprire dentro un'altra applicazione». Ma li
+              // finisce la strada: nel lettore NON c'e nessun comando
+              // «Sintesi», nessun «Genera», niente. Vicolo cieco proprio
+              // nel caso in cui la sintesi sarebbe l'unica via d'uscita.
+              //
+              // Il motivo: le due facce di b.517 si disegnano solo se
+              // `dati?.titolo` esiste (LettoreArticolo.js, riga 238), e i
+              // due punti che aprono il lettore DALLE NOTIZIE — questo e
+              // il tasto «Leggi» piu sotto — passavano solo url/titolo/
+              // fonte, senza `dati`. Gli ARGOMENTI lo passavano gia, ed e
+              // per questo che li la sintesi si vedeva e qui no: mezza
+              // funzione consegnata.
+              //
+              // `/api/topics/riassunto` chiede obbligatoriamente il solo
+              // `titolo` (`sintesi` e `fonti` sono facoltativi), quindi
+              // basta questo perche la seconda faccia funzioni davvero.
+              const perLettore = leggibile ? {
+                url: d.media.url, titolo: d.title, fonte,
+                dati: { titolo: d.title, fonti: fonte ? [{ fonte, titolo: d.title }] : [] },
+              } : null;
+              // ═══ FINE b.519 ═══
               // b.365 — L'IMMAGINE COMANDA (ordine di Luca). Misurate le
               // foto che Cobra porta a casa: 1400x933 e 1218x762. Erano
               // vere fotografie, e le stavamo spegnendo dentro un
@@ -653,7 +692,7 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
                       if (d.topic && savePrefs) savePrefs(segnaApertura(prefs, d.topic));
                       // b.365 — leggere l'articolo RIBALTA l'elenco; se non
                       // c'e un articolo da leggere si apre la discussione.
-                      if (leggibile) setLettura({ url: d.media.url, titolo: d.title, fonte });
+                      if (perLettore) setLettura(perLettore);
                       else setDiscAperta(d.id);
                     }}
                     style={{
@@ -803,7 +842,7 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
                     <span style={{ flex: 1 }} />
 
                     {leggibile && (
-                      <button onClick={() => { vibrate(6); setLettura({ url: d.media.url, titolo: d.title, fonte }); }}
+                      <button onClick={() => { vibrate(6); setLettura(perLettore); }}
                         style={{
                           display: 'flex', alignItems: 'center', gap: 6, padding: '7px 13px', minHeight: 44,
                           borderRadius: 10, cursor: 'pointer', fontFamily: FONT, fontSize: 12, fontWeight: 600,
