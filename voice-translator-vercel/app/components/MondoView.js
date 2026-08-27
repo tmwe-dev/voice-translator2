@@ -669,8 +669,10 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
       {/* b.476 — il pannello vale per la scheda in cui si sta: Stanze ha i
           suoi filtri, e le altre due il loro. Prima era legato alla sola
           Stanze, quindi da News e da Mondo la linguetta si apriva su niente. */}
+      {/* b.524 — il titolo dice la scheda VERA: aperto dal globo diceva
+          comunque «Stanze», come se si fosse sbagliato pannello. */}
       <PannelloLaterale aperto={strumenti && (tab === 'stanze' || tab === 'mondo')} onChiudi={() => setStrumenti(false)}
-        titolo={L('tabRooms')} C={C}>
+        titolo={tab === 'mondo' ? L('worldNowTitle') : L('tabRooms')} C={C}>
       {/* b.517 — i preferiti stanno IN CIMA, prima di ogni filtro: sono
           la scorciatoia, non un'impostazione. */}
       <PreferitiTemi temi={schedaPaese?.temiCaldi} prefs={prefs} savePrefs={savePrefs} C={C} L={L}

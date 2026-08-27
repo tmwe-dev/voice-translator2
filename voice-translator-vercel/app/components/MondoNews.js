@@ -24,6 +24,8 @@ import Scelta from './ui/Scelta.js';
 import { bandieraPaese, nomePaese, quando, tipoContenuto, fonteDi, viva, stileEtichetta, PUNTO, paeseDaLingua } from '../lib/schedaMondo.js';
 import PannelloLaterale from './ui/PannelloLaterale.js';
 import PreferenzeMondo from './ui/PreferenzeMondo.js';
+import PreferitiTemi from './ui/PreferitiTemi.js';
+import { PAESI } from '../lib/paesi.js';
 import { FONT, vibrate } from '../lib/constants.js';
 import Icon from './Icon.js';
 import AnteprimaCoperta from './ui/AnteprimaCoperta.js';
@@ -469,11 +471,43 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
           quando nessuno li stava usando. Ora si aprono toccando l'icona
           del giornale in alto a sinistra, e si richiudono. */}
       <PannelloLaterale aperto={strumenti} onChiudi={suChiudiStrumenti} titolo={L('tabNews')} C={C}>
-      {/* b.363 — LE PREFERENZE PER PRIME (ordine di Luca). Sono le
-          decisioni che valgono sempre: si sistemano una volta e poi non
-          si toccano piu. Metterle in cima vuol dire che chi apre il
-          pannello la prima volta le vede, invece di scoprirle in fondo
-          dopo tre file di bottoni. */}
+      {/* b.524 — LO SCHELETRO DEL PANNELLO E UNO SOLO, su tutte e tre le
+          schede. Luca: «le side bar delle tre pagine stanze, notizie e
+          mondo hanno la stessa selezione campi?????» — no, non
+          l'avevano: Preferiti e Paese esistevano solo nel pannello di
+          Stanze/Mondo, e le Notizie ne avevano uno tutto diverso.
+          Ordine comune, da qui in avanti:
+            1. PREFERITI (i temi, badge di vetro)
+            2. PAESE (da dove guardo il mondo)
+            3. i filtri PROPRI della scheda
+            4. PREFERENZE (le quattro, identiche ovunque)
+          Qui i preferiti sono i temi VERI del giornale in mano
+          (argomentiVeri, gia contati per il filtro qui sotto): toccarne
+          uno filtra, la x lo toglie con la stessa memoria persistente
+          di Stanze/Mondo (prefs.temiTolti). */}
+      <PreferitiTemi temi={argomentiVeri.map(([arg, n]) => ({ topic: arg, discussioni: n }))}
+        prefs={prefs} savePrefs={savePrefs} C={C} L={L}
+        onScegli={(topic) => { setArgomentoFiltro(topic); suChiudiStrumenti?.(); }} />
+
+      {/* b.524 — IL PAESE, che qui mancava: filtrava solo dal globo o
+          dalla bandierina di una scheda. Stessa tendina di Stanze/Mondo,
+          stesso giro (scegliPaese risale a MondoView, che aggiorna anche
+          il globo: un filtro solo, non due che litigano). */}
+      <Scelta C={C}
+        etichetta={L('countryLabel')}
+        valore={paeseFiltro || 'tutto'}
+        opzioni={[
+          { valore: 'tutto', etichetta: L('wholeWorld'), conto: feed?.length || 0 },
+          ...PAESI
+            .map((pa) => ({
+              valore: pa.codice,
+              etichetta: `${pa.bandiera} ${nomePaese(pa.codice)}`,
+              conto: (feed || []).filter((d) => d.country === pa.codice).length,
+            }))
+            .sort((a, b) => a.etichetta.localeCompare(b.etichetta)),
+        ]}
+        onCambia={(v) => scegliPaese(v === 'tutto' ? null : v)} />
+
       {/* b.363 — I DUE MODI SONO DIVENTATI UNA PREFERENZA (qui sopra):
           era una scelta da rifare a ogni apertura, e invece e una cosa
           che si decide una volta. Qui resta solo quante fonti leggere

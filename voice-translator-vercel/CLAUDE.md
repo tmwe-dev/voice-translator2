@@ -267,6 +267,39 @@ perche il working tree lo conteneva ancora.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.524** (push #812) — Luca: «le side bar delle tre pagine
+  stanze, notizie e mondo hanno la stessa selezione campi?????».
+
+  Non l'avevano, ed era una domanda retorica meritata. Erano DUE
+  pannelli diversi che si somigliavano solo di faccia: quello di
+  Stanze/Mondo (unico per le due schede) aveva Preferiti, Paese, Tipo
+  stanza e Preferenze; quello delle Notizie aveva Argomenti, Cerca la
+  fuori, il contafonti e le Preferenze — niente Preferiti, niente
+  Paese. Chi imparava il pannello su una scheda ne trovava un altro
+  sulla scheda accanto.
+
+  Ora lo SCHELETRO E UNO SOLO, dichiarato nel codice e nei test:
+    1. PREFERITI — badge di vetro (nelle Notizie sono i temi VERI del
+       giornale in mano, gia contati; toccarne uno filtra, la x li
+       toglie con la stessa memoria persistente `temiTolti`).
+    2. PAESE — stessa tendina ovunque, «Mondo intero» in testa. Nelle
+       Notizie passa da `scegliPaese`, che risale a MondoView e
+       aggiorna anche il globo: UN filtro condiviso, non due che
+       litigano.
+    3. I filtri PROPRI della scheda (Tipo stanza di qua; Argomenti,
+       Cerca la fuori e contafonti di la).
+    4. PREFERENZE — le quattro, identiche ovunque.
+
+  DIFETTO IN PIU trovato e corretto: il pannello di Stanze/Mondo si
+  intitolava sempre «Stanze», anche aperto dal globo — come aver
+  sbagliato porta. Ora il titolo dice la scheda vera.
+
+  TEST: 6 nuovi (`pannello-unico-b524.test.js`, che verifica lo
+  scheletro e L'ORDINE su tutti e due i file: se qualcuno rimonta i
+  pezzi in ordine diverso il test lo dice) — [VERIFICATO] 109/109
+  sulla batteria b.513→b.524. eslint: 0 errori. NON verificato dal
+  vivo: non ancora pushato.
+
 - Versione: **b.523** (push #811) — cinque ordini di Luca sul pannello
   del Mondo e sul senso stesso della sezione.
 
