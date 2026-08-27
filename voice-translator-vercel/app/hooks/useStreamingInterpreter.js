@@ -4,7 +4,7 @@ import { getLang } from '../lib/constants.js';
 import { createNoiseGate } from '../lib/noiseGate.js';
 import { deepgramAmmesso, USO } from '../lib/sttPolicy.js';
 import { createLogger } from '../lib/logger.js';
-import { getVolumeTTS } from '../lib/audioPrefs.js';
+import { getVoceChiamata, getVolumeTTS } from '../lib/audioPrefs.js';
 import { prendiVoce, rendiVoce } from '../lib/microfonoMaster.js';
 const dbg = createLogger('streaming');
 
@@ -184,12 +184,18 @@ export default function useStreamingInterpreter({
   const audioCorrenteRef = useRef(null);
 
   const chiediVoce = useCallback(async (testo) => {
+    // b.530 — la voce SCELTA (pannello Volumi della chiamata) si legge
+    // a ogni frase: cambiarla a meta chiamata vale dalla frase dopo.
+    // Una voce con nome esiste solo sulla premium: se ne hai scelta
+    // una, la premium prova per prima.
+    const voceScelta = getVoceChiamata();
     const base = {
       text: testo, langCode: partnerLang, roomId,
+      voiceId: voceScelta || undefined,
       roomSessionToken: roomId ? (roomSessionTokenRef?.current || undefined) : undefined,
       userToken: userToken || undefined,
     };
-    const motori = preferisciElevenRef.current
+    const motori = (voceScelta || preferisciElevenRef.current)
       ? ['/api/tts-elevenlabs', '/api/tts-edge']
       : ['/api/tts-edge', '/api/tts-elevenlabs'];
     for (const rotta of motori) {

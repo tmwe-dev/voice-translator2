@@ -6,7 +6,8 @@ import { IconMic, IconKeyboard, IconVolume, IconVolumeOff, IconVolumeLow, IconCa
 import { PALETTE } from '../lib/palette.js';
 import { traccia } from '../lib/monitorSviluppo.js';
 import { toast } from '../lib/avvisi.js';
-import { getVolumeTTS, setVolumeTTS, getAttenuazione, setAttenuazione, PRESET_ATTENUAZIONE } from '../lib/audioPrefs.js';
+import { getVolumeTTS, setVolumeTTS, getAttenuazione, setAttenuazione, getVoceChiamata, setVoceChiamata, PRESET_ATTENUAZIONE } from '../lib/audioPrefs.js';
+import { VOCI_ELENCO } from '../lib/compagni/catalogo.js';
 import { useApp } from '../contexts/AppContext.js';
 import { getLang } from '../lib/constants.js';
 
@@ -155,6 +156,8 @@ const VideoCallOverlay = memo(function VideoCallOverlay({
   }, [lastTranslationSubtitle, interpreter?.lastSubtitle, interpreterActive, mostraTesto]);
   const [volTTS, setVolTTS] = useState(() => getVolumeTTS());
   const [livelloAtt, setLivelloAtt] = useState(() => getAttenuazione());
+  // b.530 — la voce che traduce, scelta in chiamata (vale dalla frase dopo).
+  const [voceTraduzione, setVoceTraduzione] = useState(() => getVoceChiamata());
   // b.176 — Versione B: due interruttori grandi. "Avanzate" nasconde i
   // controlli fini (modi SENTI + volume partner). Il ref ricorda il
   // volume voce prima di spegnerla, per ripristinarlo alla riaccensione.
@@ -508,6 +511,30 @@ const VideoCallOverlay = memo(function VideoCallOverlay({
               <input type="range" min="0" max="1" step="0.05" value={partnerVolume ?? 1}
                 onChange={(e) => setPartnerVolume && setPartnerVolume(parseFloat(e.target.value))}
                 aria-label={L('partnerVolume')} style={{ width: '100%', accentColor: S?.colors?.accent2 || '#38e1ff', height: 4 }} />
+            </div>
+            {/* b.530 — Luca: «permettimi nella video call di cambiare la
+                voce di traduzione». Le voci con nome sono quelle premium
+                (multilingua: la stessa voce parla ogni lingua di arrivo);
+                Automatica lascia scegliere al sistema una voce
+                madrelingua. La scelta vale DALLA FRASE DOPO: si legge a
+                ogni sintesi, non alla partenza. */}
+            <div style={{ marginBottom: 12 }}>
+              <div style={{ fontSize: 12, fontWeight: 600, color: 'rgba(238,242,255,0.75)', marginBottom: 5 }}>
+                {L('ttsVoicePick')}
+              </div>
+              <select value={voceTraduzione}
+                onChange={(e) => { const v = e.target.value; setVoceTraduzione(v); setVoceChiamata(v); }}
+                aria-label={L('ttsVoicePick')}
+                style={{
+                  width: '100%', minHeight: 44, padding: '0 10px', borderRadius: 10, cursor: 'pointer',
+                  background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(160,190,255,0.18)',
+                  color: '#eef2ff', fontSize: 13, fontFamily: 'inherit',
+                }}>
+                <option value="" style={{ color: '#111' }}>{L('autoVoiceWord')}</option>
+                {VOCI_ELENCO.map((v) => (
+                  <option key={v.id} value={v.id} style={{ color: '#111' }}>{v.nome}</option>
+                ))}
+              </select>
             </div>
             <div style={{ marginBottom: 12 }}>
               <div style={{ fontSize: 12, fontWeight: 600, color: 'rgba(238,242,255,0.75)', marginBottom: 5 }}>

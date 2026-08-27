@@ -267,6 +267,31 @@ perche il working tree lo conteneva ancora.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.530** (push #818) — LA VOCE CHE TRADUCE SI SCEGLIE IN
+  CHIAMATA. Luca: «permettimi nella video call di cambiare la voce di
+  traduzione».
+
+  Nel pannello Volumi della videochiamata c'e la tendina «Quale voce
+  traduce»: Automatica (il sistema sceglie una voce madrelingua per la
+  lingua di arrivo, com'era) oppure una delle voci premium con nome
+  (Adam, Sarah, Antoni, Rachel, Josh, Thomas, Charlotte, Nicole — le
+  stesse multilingua dei Compagni: una voce sola che parla qualunque
+  lingua di arrivo).
+
+  Il punto tecnico che rende il cambio IMMEDIATO: la scelta
+  (audioPrefs.getVoceChiamata) si legge A OGNI FRASE, in tutti e due i
+  percorsi dell'interprete (streaming e blocchi legacy), non alla
+  partenza della chiamata — cambiarla a meta conversazione vale dalla
+  frase successiva. Con una voce con nome scelta, il motore premium
+  prova per primo (una voce con nome esiste solo li); l'ordine dei
+  ripieghi b.352 resta intatto. Il server accettava gia `voiceId`
+  esplicito da sempre: nessuno glielo mandava.
+
+  TEST: 6 nuovi, incluse le funzioni VERE della preferenza
+  (set/get/azzera su localStorage, non stringhe) — 106/106 sulla
+  batteria chiamata+giornale+compagni. eslint: 0 errori.
+  Da collaudare dal vivo nella prossima chiamata a due (come b.527).
+
 - Versione: **b.529** (push #817) — IL GIRO GRANDE SUL GIORNALE, nove
   ordini di Luca in un messaggio solo, tutti eseguiti:
 

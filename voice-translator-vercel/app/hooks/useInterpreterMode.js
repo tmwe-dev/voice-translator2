@@ -4,7 +4,7 @@ import { createNoiseGate } from '../lib/noiseGate.js';
 import { apiCircuitBreaker } from '../lib/circuitBreaker.js';
 import useStreamingInterpreter from './useStreamingInterpreter.js';
 import { createLogger } from '../lib/logger.js';
-import { getVolumeTTS } from '../lib/audioPrefs.js';
+import { getVoceChiamata, getVolumeTTS } from '../lib/audioPrefs.js';
 import { prendiVoce, rendiVoce } from '../lib/microfonoMaster.js';
 const dbg = createLogger('interpreter');
 
@@ -294,7 +294,9 @@ export default function useInterpreterMode({
       // Adesso i due motori ci sono anche qui, nell'ordine che chiede
       // chi ha aperto la stanza, e se cadono tutti e due lo si DICE
       // invece di restare in silenzio.
-      const motori = preferisciEleven
+      // b.530 — vedi lo streaming: la voce scelta comanda anche qui.
+      const voceScelta = getVoceChiamata();
+      const motori = (voceScelta || preferisciEleven)
         ? [{ rotta: '/api/tts-elevenlabs', campo: 'lang' }, { rotta: '/api/tts-edge', campo: 'langCode' }]
         : [{ rotta: '/api/tts-edge', campo: 'langCode' }, { rotta: '/api/tts-elevenlabs', campo: 'lang' }];
 
@@ -308,6 +310,7 @@ export default function useInterpreterMode({
               body: JSON.stringify({
                 text: translated,
                 [m.campo]: partnerLang,
+                voiceId: voceScelta || undefined,
                 // b.167 — vedi la POST verso /api/translate poco sopra: stesso
                 // motivo, stesso schema.
                 roomId,

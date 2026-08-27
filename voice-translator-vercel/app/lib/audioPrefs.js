@@ -34,3 +34,16 @@ export const PRESET_ATTENUAZIONE = [
   { id: 'medio', chiave: 'attenuatedWord', valore: 0.2 },
   { id: 'poco', chiave: 'bothWord', valore: 0.55 },
 ];
+
+// ── b.530 — LA VOCE CHE TRADUCE IN CHIAMATA (ordine di Luca:
+// «permettimi nella video call di cambiare la voce di traduzione»).
+// '' = automatica (il sistema sceglie una voce madrelingua per la
+// lingua di arrivo); un id ElevenLabs = quella voce, per tutte le
+// frasi successive — si legge a OGNI frase, quindi il cambio vale in
+// tempo reale, a meta chiamata.
+export function getVoceChiamata() {
+  try { return String(memGet('vt-voce-chiamata') || ''); } catch { return ''; }
+}
+export function setVoceChiamata(voiceId) {
+  try { memSet('vt-voce-chiamata', String(voiceId || '')); } catch { /* memoria piena: resta l'automatica */ }
+}
