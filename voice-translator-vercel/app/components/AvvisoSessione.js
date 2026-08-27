@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { FONT } from '../lib/constants.js';
 import { ascoltaSessione } from '../lib/sessioneCaduta.js';
 import { t, preloadLang, linguaInterfacciaFuoriContesto } from '../lib/i18n.js';
+import { memDel } from '../lib/memoria.js';
 
 // ═══════════════════════════════════════════════════════════════
 // L'AVVISO CHE LA SESSIONE E' CADUTA.
@@ -49,7 +50,16 @@ export default function AvvisoSessione() {
       <span style={{ fontSize: 13, fontWeight: 600, color: '#e08a5e' }}>
         {t(lingua, 'sessionExpired')}
       </span>
-      <button onClick={() => { try { window.location.reload(); } catch { /* niente da fare */ } }}
+      {/* b.536 — «RIENTRA» FACEVA SOLO UNA RICARICA, e la ricarica non
+          rientra da nessuna parte: il gettone morto stava nel telefono, la
+          pagina lo ripescava tale e quale, e dopo due secondi il cartello
+          tornava. Terza meta' del «costantemente» di Luca. Adesso il tasto
+          fa la cosa che promette: butta via il gettone morto e riapre
+          l'applicazione dalla porta d'ingresso, dove si entra davvero. */}
+      <button onClick={() => {
+        try { memDel('vt-token'); } catch { /* senza memoria si riparte lo stesso */ }
+        try { window.location.reload(); } catch { /* niente da fare */ }
+      }}
         style={{
           padding: '7px 14px', borderRadius: 999, border: 'none', cursor: 'pointer',
           background: '#e08a5e', color: '#1a0d06', fontSize: 12.5, fontWeight: 600,

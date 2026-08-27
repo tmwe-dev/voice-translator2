@@ -267,6 +267,57 @@ perche il working tree lo conteneva ancora.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.536** (push #824) — PERCHE' LA SESSIONE CADEVA, e la
+  frase che si sceglie. Domanda di Luca: «perche vita ti butta fuori
+  sessione costantemente?». Non era un capriccio: erano TRE difetti
+  veri, uno sopra l'altro, e adesso sono chiusi tutti e tre.
+
+  1. LA SESSIONE NON SI RINNOVAVA MAI. Il gettone nasce con scadenza
+     fissa a sette giorni (users.js createSession, `EX 604800`) e da li
+     nessuno la toccava piu: non era una finestra scorrevole. Potevi
+     usare BarTalk ogni giorno e al settimo giorno dal login la sessione
+     moriva lo stesso — in mezzo a un podcast. Da qui il
+     «costantemente»: tornava puntuale, sempre mentre lavoravi.
+     Ora getSession rimette l'orologio a sette giorni a ogni uso: chi
+     frequenta l'app non scade piu, chi sparisce una settimana rientra.
+     Il rinnovo e' in un try: se Redis non risponde non fa danni.
+  2. L'INTERRUTTORE ERA A SENSO UNICO. `sessioneRipresa()` esisteva dal
+     b.387 e non la chiamava NESSUNO (zero chiamanti in tutto il
+     programma): bastava UN 401, anche passeggero, e il cartello
+     restava piantato in cima allo schermo finche non ricaricavi —
+     mentre l'app tornava a funzionare benissimo. Ora ogni richiesta
+     RIUSCITA dei Compagni la chiama: la prova che la sessione e' viva
+     e' che qualcosa ha funzionato.
+  3. «RIENTRA» NON RIENTRAVA. Faceva `window.location.reload()`: il
+     gettone morto stava nel telefono, la pagina lo ripescava tale e
+     quale e dopo due secondi il cartello tornava. Ora butta via il
+     gettone e riapre dalla porta d'ingresso.
+
+  E l'ordine sulla lettura: «permetti di selezionare le frasi. su
+  selezione evidenzia la frase e in fondo aggiungi una icona play che
+  ripete il testo con la voce». In «Parla ora» ogni frase del registro
+  si tocca: si accende con un velo di accento e una barra sul fianco
+  (aria-pressed per chi legge con lo schermo), e il tasto della voce —
+  che c'era gia e leggeva sempre l'ultima — ora ripete QUELLA, con la
+  voce giusta: le frasi dell'ospite si rileggono nella mia lingua, le
+  mie nella sua. Senza scelta, tutto come prima.
+
+  BUG PRE-ESISTENTE dichiarato: compagni-vocazione-b238 era ROSSA da
+  b.528 — cercava le parole «vocazione» e «responsabilita» nelle
+  personalita, e il cast RadioChat (Albert, Pitagora, Newton) dice le
+  stesse cose con altre parole. Riscritta sulla STRUTTURA (comincia con
+  «Sei X», nome proprio, piu istruzioni alla seconda persona, piu di
+  una frase): non dipende piu dal lessico e non tornera rossa alla
+  prossima riscrittura migliore. Nel riscriverla stavo rifacendo lo
+  stesso errore con un elenco di sinonimi piu lungo — annotato.
+
+  PROVE: sessione-viva-b536 (6, con l'interruttore provato sui
+  RISULTATI: acceso, spento, elenco degli avvisi ricevuti) + le mirate
+  322 verdi sulle zone toccate; eslint pulito.
+
+  [ATTESO] la conferma vera arriva col tempo: se fra sette giorni il
+  cartello non compare mentre usi l'app, la finestra scorrevole regge.
+
 - Versione: **b.535** (push #823) — IL GRANDE GIRO DEL GIORNALE. Dieci
   ordini di Luca arrivati in fila nella stessa mattina, tutti chiusi:
 

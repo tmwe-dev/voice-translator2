@@ -159,10 +159,32 @@ describe('i punti d\'innesto veri', () => {
     expect(leggi('app/components/Life/AmicoChat.js')).toMatch(/modoVoce: d\.modoVoce/);
   });
 
-  it('tutti gli otto Compagni hanno una vocazione, non solo una descrizione', () => {
+  it('ogni Compagno ha una vocazione: chi e, come si comporta, e non e una etichetta', () => {
+    // b.536 — ROSSO PRE-ESISTENTE, dichiarato: rosso da b.528, quando il
+    // cast di RadioChat (Albert, Pitagora, Newton) e' entrato con le
+    // personalita' NELLA FORMA DI RADIOCHAT — ruolo, stile, punti di
+    // forza, regola di dibattito — che dicono le stesse cose senza usare
+    // le parole «vocazione» e «responsabilita».
+    // La prova cercava DUE PAROLE invece della SOSTANZA (trappola n.6 del
+    // CLAUDE.md: difendeva una riga, non cio che quella riga faceva), e
+    // riscrivendola ho rischiato di rifare lo stesso errore con un elenco
+    // di sinonimi piu lungo. Quindi si prova la STRUTTURA di una
+    // vocazione, che non dipende dalle parole scelte: dice a chi parla
+    // CHI e', e gli dice come comportarsi in piu di una frase — cioe
+    // istruzioni alla seconda persona, non un'etichetta di due righe.
     for (const c of COMPAGNI_PREDEFINITI) {
-      expect(c.personalita, `${c.id} senza vocazione`).toMatch(/vocazione|Interpreta il tuo ruolo/i);
-      expect(c.personalita, `${c.id} senza responsabilità`).toMatch(/responsabil/i);
+      const p = (c.personalita || '').trim();
+      const proprio = c.nome.split(' ').filter((x) => !/^(avv\.|dott\.ssa|dott\.|prof\.ssa|prof\.)$/i.test(x)).pop();
+      expect(p.length, `${c.id}: troppo corta per dire chi e e come si comporta`).toBeGreaterThan(120);
+      expect(p, `${c.id}: non comincia dicendo CHI e`).toMatch(/^Sei /);
+      expect(p, `${c.id}: il nome proprio non compare`).toMatch(new RegExp(proprio, 'i'));
+      // istruzioni di comportamento: verbi alla seconda persona singolare
+      // (parli, spieghi, ragioni, verifichi, citi, ascolti, non approssimi...)
+      const secondaPersona = p.match(/\b\w{3,}(?:i|hi)\b(?=[ ,.;:])/g) || [];
+      expect(secondaPersona.length, `${c.id}: nessuna istruzione di comportamento`).toBeGreaterThan(2);
+      // e non e' una riga sola: una vocazione dice piu di una cosa
+      expect(p.split(/[.!?]\s/).filter((f) => f.trim().length > 15).length,
+        `${c.id}: una frase sola, e un'etichetta non una vocazione`).toBeGreaterThan(1);
     }
   });
 

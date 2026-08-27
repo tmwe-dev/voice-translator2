@@ -9,7 +9,7 @@
 
 import { segmentiPerVoce } from './corsi/lingua.js';
 import { fermatoDavvero, suona } from '../voce.js';
-import { segnalaSessioneCaduta } from '../sessioneCaduta.js';
+import { segnalaSessioneCaduta, sessioneRipresa } from '../sessioneCaduta.js';
 import { cercaTopics } from '../topics/cliente.js';
 
 async function postJSON(url, corpo, segnale = null) {
@@ -39,6 +39,15 @@ async function postJSON(url, corpo, segnale = null) {
     if (r.status === 401) segnalaSessioneCaduta();
     throw err;
   }
+  // b.536 — L'INTERRUTTORE ERA A SENSO UNICO, ed e' l'altra meta' del
+  // «costantemente» di Luca: `sessioneRipresa()` esisteva dal b.387 ma non
+  // la chiamava NESSUNO (zero chiamanti in tutto il programma). Bastava un
+  // solo 401 — anche uno passeggero, anche di un'altra strada — e il
+  // cartello «La tua sessione e' scaduta» restava piantato in cima allo
+  // schermo per sempre, mentre l'app tornava a funzionare benissimo.
+  // Adesso la prova e' semplice e vera: se una richiesta RIESCE, la
+  // sessione e' viva, e il cartello se ne va da solo.
+  sessioneRipresa();
   return dati;
 }
 

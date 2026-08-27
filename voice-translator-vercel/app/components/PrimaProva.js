@@ -106,6 +106,12 @@ export default function PrimaProva({ onChiudi }) {
   // ogni frase tradotta resta nel registro, la nuova si accoda sotto.
   const [storia, setStoria] = useState([]);
   const [stato, setStato] = useState('quieto'); // quieto | traduco | parlo | errore | muto (b.417: la traduzione c'e, la voce no)
+  // b.536, ordine di Luca: «permetti di selezionare le frasi. su selezione
+  // evidenzia la frase e in fondo aggiungi una icona play che ripete il
+  // testo con la voce». Null = nessuna scelta: il play legge l'ultima, come
+  // ha sempre fatto. Toccando una frase la si sceglie; toccandola di nuovo
+  // si torna all'ultima.
+  const [sceltaIdx, setSceltaIdx] = useState(null);
   const [capovolto, setCapovolto] = useState(false); // FACCIA A FACCIA
   const [detto, setDetto] = useState(false);         // microfono acceso
   // b.445 — IL TURNO DELL'OSPITE. Chi hai davanti tiene premuto, parla nella
@@ -782,8 +788,16 @@ export default function PrimaProva({ onChiudi }) {
           e la regola 03 del prontuario. Adesso il vuoto resta vuoto, e a
           dire cosa fare c'e il tasto dell'ospite qui sopra. */}
 
-      {storia.map((riga, i) => (
-        <div key={i} style={{
+      {storia.map((riga, i) => {
+        const scelta = sceltaIdx === i;
+        return (
+        <div key={i}
+          role="button"
+          tabIndex={0}
+          aria-pressed={scelta}
+          onClick={() => { vibrate(6); setSceltaIdx(scelta ? null : i); }}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSceltaIdx(scelta ? null : i); } }}
+          style={{
           // b.356 — «piu grande il testo»: l'ultima frase e un testone,
           // le precedenti restano leggibili ma si fanno da parte.
           // b.422 — la misura ora la decide chi guarda, e resta decisa.
@@ -798,10 +812,21 @@ export default function PrimaProva({ onChiudi }) {
             : (i === storia.length - 1 ? C.textPrimary : C.textMuted),
           textAlign: capovolto ? 'center' : 'left',
           fontFamily: FONT, overflowWrap: 'anywhere',
+          // b.536 — la frase scelta si vede: un velo di accento e una
+          // barra sul fianco. Niente riquadro pieno, che spezzerebbe la
+          // colonna di lettura; e il colore di chi ha parlato resta.
+          cursor: 'pointer', WebkitTapHighlightColor: 'transparent',
+          borderRadius: 10,
+          padding: scelta ? '6px 10px' : '0',
+          margin: scelta ? '-6px -10px' : 0,
+          background: scelta ? `${C.accent || '#5b8cff'}1f` : 'transparent',
+          boxShadow: scelta ? `inset 3px 0 0 ${C.accent || '#5b8cff'}` : 'none',
+          transition: 'background 0.15s',
         }}>
           {riga.resa}
         </div>
-      ))}
+        );
+      })}
       {stato === 'traduco' && (
         <div style={{ fontSize: capovolto ? 28 : 18, color: C.textMuted, fontFamily: FONT,
           textAlign: capovolto ? 'center' : 'left' }}>…</div>
@@ -846,14 +871,28 @@ export default function PrimaProva({ onChiudi }) {
         <Icon name="mic" size={vesteMicrofono({ misura: 168, C: S?.colors }).icona}
           color={vesteMicrofono({ misura: 168, acceso: detto, C: S?.colors }).coloreIcona} />
       </button>
-      <button onClick={() => parla(ultimaResa)} disabled={!ultimaResa}
-        aria-label={L('listenWord')} title={L('listenWord')}
-        style={{ width: 54, height: 54, borderRadius: 999, flexShrink: 0, padding: 0,
-          border: bordo, background: 'rgba(255,255,255,0.06)',
-          opacity: ultimaResa ? 1 : 0.35, cursor: ultimaResa ? 'pointer' : 'default',
-          display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <Icon name="speaker" size={22} color={ultimaResa ? (C.accent || '#5b8cff') : C.textMuted} />
-      </button>
+      {/* b.536, ordine di Luca: «in fondo aggiungi una icona play che
+          ripete il testo con la voce». Il tasto c'era gia e leggeva sempre
+          l'ultima frase; ora, se ne hai SCELTA una, ripete QUELLA — e con
+          la voce giusta: le frasi dell'ospite si rileggono nella mia
+          lingua, le mie nella sua. Scelta accesa: il tasto si accende
+          anche lui, cosi si vede che sono la stessa cosa. */}
+      {(() => {
+        const rigaScelta = sceltaIdx != null ? storia[sceltaIdx] : null;
+        const daLeggere = rigaScelta ? rigaScelta.resa : ultimaResa;
+        const linguaLettura = rigaScelta ? (rigaScelta.inverso ? miaLingua : meta) : undefined;
+        return (
+          <button onClick={() => parla(daLeggere, linguaLettura)} disabled={!daLeggere}
+            aria-label={L('listenWord')} title={L('listenWord')}
+            style={{ width: 54, height: 54, borderRadius: 999, flexShrink: 0, padding: 0,
+              border: rigaScelta ? `1px solid ${C.accent || '#5b8cff'}` : bordo,
+              background: rigaScelta ? `${C.accent || '#5b8cff'}1f` : 'rgba(255,255,255,0.06)',
+              opacity: daLeggere ? 1 : 0.35, cursor: daLeggere ? 'pointer' : 'default',
+              display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Icon name="speaker" size={22} color={daLeggere ? (C.accent || '#5b8cff') : C.textMuted} />
+          </button>
+        );
+      })()}
     </div>
   );
 

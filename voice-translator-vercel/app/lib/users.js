@@ -218,6 +218,21 @@ export async function getSession(token) {
   // invece di lasciare che ogni rotta si inventi un ripiego: un
   // ripiego per rotta e anche un buco per rotta, perche il nome
   // arriverebbe dal client e chiunque potrebbe dichiararsi un altro.
+  // ═══ b.536 — LA SESSIONE SI RINNOVA MENTRE LA USI ═══
+  // Collaudo di Luca: «perche vita ti butta fuori sessione costantemente?».
+  // CAUSA VERA, non un capriccio del server: il gettone nasce con una
+  // scadenza FISSA di sette giorni (createSession, 'EX', 604800) e da quel
+  // momento nessuno la tocca piu. Non e una finestra scorrevole: puoi usare
+  // BarTalk tutti i giorni, ma al settimo giorno dal login la sessione muore
+  // lo stesso, in mezzo a un podcast. Da qui il «costantemente»: torna
+  // puntuale ogni settimana, e sempre mentre stai facendo qualcosa.
+  // Ora ogni USO rimette l'orologio a sette giorni: chi frequenta l'app non
+  // scade mai, chi sparisce per una settimana rientra — che e' la regola
+  // che qualunque persona si aspetta. Il rinnovo non blocca la risposta:
+  // se Redis non risponde, si prosegue con la sessione valida che abbiamo.
+  try { await redis('EXPIRE', `session:${token}`, 604800); }
+  catch { /* senza rinnovo la sessione resta valida fino alla scadenza vecchia */ }
+
   if (session.email && !session.name) {
     try {
       const user = await getUser(session.email);
