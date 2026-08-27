@@ -267,6 +267,43 @@ perche il working tree lo conteneva ancora.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.531** (push #819) — COLLAUDO DAL TELEFONO di Luca, in
+  chiamata vera: «non vedo la mia miniatura, la gestione del menu non
+  va bene assolutamente, le traduzioni in real time sono scorrette e
+  non funzionano».
+
+  **1 — LA MIA MINIATURA C'E' SEMPRE.** Il PiP spariva DEL TUTTO a
+  camera spenta (renderizzato solo con `videoEnabled`): non sapevi ne
+  come ti vedevano ne dove toccare per riaccenderti. Ora il riquadro
+  resta sempre — a camera spenta mostra l'avatar del profilo e la
+  telecamera barrata, e UN TOCCO riaccende. zIndex sopra la testata
+  (b.527): mai coperta. In tutti e due i modi (pieno schermo e
+  compatto).
+
+  **2 — LE FRASI NON SI SPEZZANO PIU SUL RESPIRO.** A schermo usciva
+  «Ciao, la mia email.» — un moncone chiuso e LETTO come frase finita.
+  Le cause, nei numeri: endpointing Deepgram a 300ms e chiusura frase a
+  800ms tagliano DENTRO le pause naturali del parlato. Tre cure:
+  - soglie umane: pausa di fine frase 800→1400ms, endpointing 300→500;
+  - IL CUSCINETTO DEI MONCONI: un finale corto (<4 parole) senza
+    punteggiatura di chiusura non parte come frase — aspetta il seguito
+    fino a 2,5s e ci si incolla davanti; se il seguito non arriva, va
+    da solo (meglio tardi che perso). Tutte e due le uscite (pausa e
+    UtteranceEnd) passano di qui;
+  - la riga «live» si PULISCE quando la frase parte: era il cartello
+    «IT Esatto.» che restava appeso in alto.
+
+  **3 — SUI MENU:** la schermata del collaudo e la produzione di IERI
+  (pre-b.527): la testata unica a standard, i comandi che non
+  spariscono e il pannello Volumi sono gia nei commit in coda
+  (b.527/b.530) non ancora pushati. Questo giro non aggiunge altro sui
+  menu: prima si guarda b.527 dal vivo.
+
+  TEST: 8 nuovi — 97/97 sulla batteria chiamata+compagni+stanze.
+  eslint: 0 errori. [ASSUNTO] le soglie nuove (1400/500/2.5s) sono da
+  tarare CON LE ORECCHIE nella prossima chiamata: sono un compromesso
+  fra scatto e frasi intere, e il numero giusto lo decide il collaudo.
+
 - Versione: **b.530** (push #818) — LA VOCE CHE TRADUCE SI SCEGLIE IN
   CHIAMATA. Luca: «permettimi nella video call di cambiare la voce di
   traduzione».

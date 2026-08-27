@@ -259,19 +259,33 @@ const VideoCallOverlay = memo(function VideoCallOverlay({
             </div>
           )}
 
-          {/* Local video PiP */}
-          {webrtc.localStream && webrtc.videoEnabled && (
-            <div style={{
+          {/* Local video PiP — b.531: c'e SEMPRE (Luca: «non vedo la mia
+              miniatura»). Prima spariva del tutto a camera spenta: non
+              sapevi ne come ti vedevano ne DOVE toccare per riaccenderti.
+              Ora a camera spenta resta il riquadro col tuo avatar e la
+              telecamera barrata: un tocco la riaccende. zIndex sopra la
+              testata: la miniatura non finisce mai sotto niente. */}
+          <button onClick={() => { if (!webrtc.videoEnabled) webrtc.toggleVideo(); }}
+            aria-label={webrtc.videoEnabled ? L('cameraWord') : L('cameraOffTap')}
+            style={{
               /* b.491 — tavola 18: il PiP e VERTICALE come un telefono. */
-              position: 'absolute', top: 'max(64px, calc(env(safe-area-inset-top) + 48px))', right: 16,
-              width: 84, height: 112,
+              position: 'absolute', top: 'max(74px, calc(env(safe-area-inset-top) + 58px))', right: 16,
+              width: 84, height: 112, zIndex: 8, padding: 0,
               borderRadius: 14, overflow: 'hidden', border: '2px solid rgba(255,255,255,0.25)',
-              boxShadow: '0 4px 24px rgba(0,0,0,0.5)',
+              boxShadow: '0 4px 24px rgba(0,0,0,0.5)', background: '#0f172a',
+              cursor: webrtc.videoEnabled ? 'default' : 'pointer',
             }}>
+            {webrtc.localStream && webrtc.videoEnabled ? (
               <video ref={localVideoRef} autoPlay playsInline muted
                 style={{ width: '100%', height: '100%', objectFit: 'cover', transform: 'scaleX(-1)' }} />
-            </div>
-          )}
+            ) : (
+              <span style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column',
+                alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                <AvatarImg src={prefs?.avatar || null} size={40} />
+                <IconCameraOff size={16} />
+              </span>
+            )}
+          </button>
 
           {/* ═══ b.527 — LA TESTATA UNICA. Luca dal vivo: «non hai
               impostato nulla come da template... i comandi sono separati
@@ -727,18 +741,25 @@ const VideoCallOverlay = memo(function VideoCallOverlay({
           </div>
         )}
 
-        {/* Local PiP */}
-        {webrtc.localStream && webrtc.videoEnabled && (
-          <div style={{
-            position: 'absolute', bottom: 8, right: 8, width: 90, height: 68,
+        {/* Local PiP — b.531: sempre presente, come nel pieno schermo. */}
+        <button onClick={() => { if (!webrtc.videoEnabled) webrtc.toggleVideo(); }}
+          aria-label={webrtc.videoEnabled ? L('cameraWord') : L('cameraOffTap')}
+          style={{
+            position: 'absolute', bottom: 8, right: 8, width: 90, height: 68, zIndex: 3, padding: 0,
             borderRadius: 10, overflow: 'hidden',
             border: '2px solid rgba(96,165,250,0.5)',
-            boxShadow: '0 2px 12px rgba(0,0,0,0.4)',
+            boxShadow: '0 2px 12px rgba(0,0,0,0.4)', background: '#0f172a',
+            cursor: webrtc.videoEnabled ? 'default' : 'pointer',
           }}>
+          {webrtc.localStream && webrtc.videoEnabled ? (
             <video ref={localVideoInlineRef} autoPlay playsInline muted
               style={{ width: '100%', height: '100%', objectFit: 'cover', transform: 'scaleX(-1)' }} />
-          </div>
-        )}
+          ) : (
+            <span style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <IconCameraOff size={16} />
+            </span>
+          )}
+        </button>
 
         {/* Status badge */}
         <div style={{

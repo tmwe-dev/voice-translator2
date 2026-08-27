@@ -22,7 +22,12 @@ const dbg = createLogger('streaming');
 // - Frammenti parziali tradotti con alta confidenza grazie al contesto
 // ═══════════════════════════════════════════════════════════════
 
-const SENTENCE_PAUSE_MS = 800;       // Pausa che indica fine frase → trigger TTS
+// b.531 — Luca dal vivo: «le traduzioni in real time sono scorrette e
+// non funzionano». A schermo usciva «Ciao, la mia email.» — una frase
+// TRONCATA sul respiro e chiusa come se fosse finita. La causa erano
+// le soglie: endpointing a 300ms e chiusura a 800ms tagliano dentro le
+// pause naturali del parlato. Si respira, e la frase e gia partita.
+const SENTENCE_PAUSE_MS = 1400;      // Pausa che indica fine frase → trigger TTS
 const MIN_WORDS_FOR_TRANSLATE = 2;   // Minimo parole per avviare traduzione chunk
 const MAX_SUBTITLE_AGE_MS = 10000;   // Auto-clear subtitle dopo 10s
 const TRANSLATE_DEBOUNCE_MS = 300;   // Debounce tra traduzioni incrementali
@@ -346,6 +351,37 @@ export default function useStreamingInterpreter({
     fraseInLavorazioneRef.current = null;
   }, [translateChunk, sendSubtitleToPartner, myLang, partnerLang, processTTSQueue]);
 
+  // ═══ b.531 — IL CUSCINETTO DEI MONCONI ═══
+  // Anche con le soglie giuste, un moncone puo scappare: «Ciao, la mia
+  // email» senza punto ne verbo. Un moncone corto e senza punteggiatura
+  // finale NON va letto ad alta voce come frase compiuta: si tiene da
+  // parte fino a 2,5s, e se arriva il seguito ci si incolla davanti.
+  // Se il seguito non arriva, si manda cosi com'e (meglio tardi che
+  // perso). E quando una frase parte davvero, la riga «live» si
+  // pulisce: era il cartello «IT Esatto.» che restava appeso.
+  const monconeRef = useRef('');
+  const monconeTimerRef = useRef(null);
+  const completaFrase = useCallback((frase) => {
+    const testo = String(frase || '').trim();
+    if (!testo) return;
+    clearTimeout(monconeTimerRef.current);
+    const intera = monconeRef.current ? `${monconeRef.current} ${testo}` : testo;
+    monconeRef.current = '';
+    const parole = intera.split(/\s+/).length;
+    const chiusa = /[.!?\u2026\u3002\uFF01\uFF1F]$/.test(intera);
+    if (!chiusa && parole < 4) {
+      monconeRef.current = intera;
+      monconeTimerRef.current = setTimeout(() => {
+        const rimasto = monconeRef.current;
+        monconeRef.current = '';
+        if (rimasto) { setMyLiveText(''); handleSentenceComplete(rimasto); }
+      }, 2500);
+      return;
+    }
+    setMyLiveText('');
+    handleSentenceComplete(intera);
+  }, [handleSentenceComplete]);
+
   // ═══ HANDLE TRANSCRIPT FROM DEEPGRAM ═══
   const handleTranscript = useCallback((transcript, isFinal) => {
     if (!activeRef.current || !transcript) return;
@@ -387,7 +423,7 @@ export default function useStreamingInterpreter({
         const frase = currentSentenceRef.current;
         if (!frase.trim()) return;
         currentSentenceRef.current = '';
-        handleSentenceComplete(frase);
+        completaFrase(frase);
       }, SENTENCE_PAUSE_MS);
 
     } else {
@@ -407,8 +443,8 @@ export default function useStreamingInterpreter({
     const frase = currentSentenceRef.current;
     if (!frase.trim()) return;
     currentSentenceRef.current = '';
-    handleSentenceComplete(frase);
-  }, [handleSentenceComplete]);
+    completaFrase(frase);
+  }, [completaFrase]);
 
   // ═══ ABORT COMPLETO (b.247) ═══
   // Era il difetto peggiore della modalita interprete: `start()` poteva
@@ -534,7 +570,7 @@ export default function useStreamingInterpreter({
         smart_format: 'true',
         interim_results: 'true',
         utterance_end_ms: String(SENTENCE_PAUSE_MS),
-        endpointing: '300',  // Più aggressivo per real-time
+        endpointing: '500',  // b.531 — 300 tagliava dentro i respiri
         encoding: 'linear16',
         sample_rate: '16000',
         channels: '1',
