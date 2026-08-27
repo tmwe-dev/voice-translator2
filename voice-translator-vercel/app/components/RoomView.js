@@ -875,6 +875,8 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
         </Suspense>
       ) : (
       <MessageList
+        /* b.537 — la stanza vuota diventa un annuncio: vedi MessageList */
+        solo={otherMembers.length === 0}
         passoTesto={Number(prefs?.testoGrande) || 0}
         messages={messages} streamingMsg={streamingMsg}
         myName={myName} myLang={myLang} prefs={prefs}

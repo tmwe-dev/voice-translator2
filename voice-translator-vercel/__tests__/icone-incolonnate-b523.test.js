@@ -32,9 +32,19 @@ describe('b.523 — lo stato attuale e un badge bruno sotto il titolo, a sinistr
   const f = leggi('app/components/ui/PreferenzeMondo.js');
 
   it('esiste il badge ed e dello stesso vetro bruno dei preferiti', () => {
+    // b.537 — la prova fissava la trasparenza al centesimo (0.34). In
+    // b.535 il velo di sfocatura e' stato tolto da questo badge (regola
+    // di Luca: niente blur su un elemento RIPETUTO dal .map) e senza il
+    // blur dietro il fondo va alzato un po' per restare lo stesso vetro
+    // a vedersi: 0.42. Il COLORE non e' cambiato — 140,88,48 e' il bruno
+    // dei preferiti, 206,146,92 il suo bordo. Si prova la tinta, che e'
+    // cio che Luca ha chiesto, non il centesimo di trasparenza.
     expect(f).toMatch(/function BadgeStato/);
-    expect(f).toMatch(/rgba\(140,88,48,0\.34\)/);
+    expect(f).toMatch(/rgba\(140,88,48,0?\.\d+\)/);
     expect(f).toMatch(/rgba\(206,146,92,0\.5\)/);
+    // e il velo non deve tornare su una riga ripetuta
+    const badge = f.slice(f.indexOf('function BadgeStato'), f.indexOf('function BadgeStato') + 700);
+    expect(badge).not.toMatch(/backdropFilter/);
   });
 
   it('sta nella colonna elastica di sinistra, sotto il nome', () => {

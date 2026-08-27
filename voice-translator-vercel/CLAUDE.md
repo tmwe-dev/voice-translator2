@@ -267,6 +267,73 @@ perche il working tree lo conteneva ancora.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.537** (push #825) — LE STANZE HANNO UNA CASA. Luca:
+  «onestamente a me non piace come va adesso. riguardiamo insieme la
+  logica una per una. stanze per prima». Non un elenco di ritocchi: ho
+  letto i PERCORSI veri nel codice, gli ho messo davanti cinque difetti
+  di logica, e tre decisioni le ha prese lui (ventaglio a tre opzioni,
+  ha scelto le tre piu coraggiose). Questo e' cio che ne e' uscito.
+
+  ① LA CASA. Il tasto «Chat» della barra portava a `history` — cioe
+  alle conversazioni FINITE — mentre quelle VIVE stavano al secondo
+  tocco dentro «Il mondo ora». Il tasto che ogni persona tocca per
+  andare alle conversazioni portava a quelle morte. Ora «Chat» apre
+  StanzeView: le tue in cima, le aperte sotto, ricerca FUORI in alto
+  (regola di Luca), l'archivio e «entra col codice» come due porte
+  laterali. Il tab Stanze esce dal Mondo (che torna a fare una cosa
+  sola: il giornale e il pianeta) e al suo posto resta una riga-ponte,
+  perche chi arriva li cercando le stanze non trovi un tab sparito
+  senza spiegazioni. Il foglio «crea stanza» NON e' stato rimontato:
+  da b.326 vive nell'imbuto comune — rimetterlo sarebbe il doppione
+  che quel b.326 aveva tolto.
+
+  ② LA CARD DICE DI COSA SI PARLA. Prima diceva lingua, modalita, eta,
+  host, numero: sette informazioni per una decisione sola, e nessuna
+  era il motivo per cui un essere umano entra in una stanza. Ora in
+  grande c'e l'ULTIMO MESSAGGIO, nella lingua di chi guarda quando la
+  traduzione esiste gia (i messaggi la portano con se dal b.363): zero
+  chiamate a un modello, zero spesa — si mostra cio che c'e. Il resto
+  (nome, bandiera, host, quanti dentro, da quanto, su approvazione,
+  litigio libero) scende sotto, piccolo, di servizio. Se la stanza non
+  ha ancora parole, lo dice: «Nessuno ha ancora parlato: apri tu».
+  Lato server, una LINDEX per stanza in parallelo; se fallisce, le
+  stanze escono col solo nome — mai un errore in faccia per un di piu.
+
+  ③ «LE TUE STANZE», la continuita che non c'era. Uscivi e la
+  conversazione spariva dalla tua vista. Ora lib/mieStanze.js ricorda
+  dove sei stato (memoria del telefono, un giorno di vita, niente sul
+  server), l'ingresso E il rientro la segnano, e l'elenco la mette in
+  cima con lo stato VERO: se nel frattempo si e chiusa lo dice, invece
+  di far bussare a una porta che non c'e piu.
+
+  ④ LA STANZA VUOTA NON E' PIU UN VICOLO CIECO. Entravi, non c'era
+  nessuno, non succedeva niente — e il costo era tutto tuo: cosi si
+  impara a non entrare piu. Ora chi e' solo legge «Sei il primo qui» e
+  la cosa vera che nessuno diceva: il messaggio RESTA per chi entra
+  dopo. Era gia cosi dal b.363, semplicemente non si vedeva.
+
+  PROVE: stanze-una-casa-b537 (14: argomentoNellaMiaLingua e mieStanze
+  provate sui RISULTATI — radici di lingua, doppioni, maiuscole,
+  scadenza a un giorno, memoria illeggibile — piu il cablaggio delle
+  quattro decisioni). 1048 verdi sulle 90 suite che toccano le zone
+  modificate. Parita lingue tenuta: 9 chiavi nuove tradotte in tutti e
+  38 i pacchetti, intestazioni riallineate.
+
+  Aggiornata con spiegazione: icone-incolonnate-b523 fissava la
+  trasparenza del badge al centesimo (0.34) e b.535 l'ha portata a 0.42
+  togliendo il velo di sfocatura da un elemento ripetuto; ora prova la
+  TINTA (che e' cio che Luca aveva chiesto) e vieta il ritorno del blur.
+
+  RESTA DA DECIDERE INSIEME (i due difetti che ho elencato e che non
+  sono ancora stati affrontati): il `+` della barra mescola cinque cose
+  di tre famiglie diverse; e «avvisami quando arriva qualcuno» nella
+  stanza vuota (le parole ci sono gia nei 38 pacchetti — warnMeWord,
+  warnMeOn — l'aggancio alle notifiche push no).
+
+  [ATTESO] da collaudare dal vivo: il tasto Chat che apre le stanze,
+  l'argomento vivo nelle card (serve una stanza con messaggi veri), la
+  riga «Le tue» dopo essere entrato e uscito.
+
 - Versione: **b.536** (push #824) — PERCHE' LA SESSIONE CADEVA, e la
   frase che si sceglie. Domanda di Luca: «perche vita ti butta fuori
   sessione costantemente?». Non era un capriccio: erano TRE difetti

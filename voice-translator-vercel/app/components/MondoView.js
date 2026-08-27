@@ -558,7 +558,13 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
             L'icona resta sull'opzione, dov'era: accanto alla parola. */}
         <div role="tablist" aria-label={L('worldNowTitle')} style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
           {[
-            { id: 'stanze', parola: L('tabRooms'), icona: 'chat', conto: rooms?.length || null },
+            /* b.537 — LA SCHEDA «STANZE» E' USCITA DA QUI. Dal
+               ragionamento con Luca: le stanze vive avevano casa dentro
+               «Il mondo ora», mentre il tasto «Chat» della barra portava
+               all'archivio. Adesso «Chat» porta alle stanze (StanzeView)
+               e il Mondo fa una cosa sola: il giornale e il pianeta.
+               Chi arriva qui cercando le stanze trova la riga qui sotto
+               che lo accompagna, invece di un tab sparito senza spiegazioni. */
             { id: 'news', parola: L('tabNews'), icona: 'doc', conto: null },
             // b.476 — la terza scheda: il pianeta. Prima faceva da sfondo a
             // tutte e due le altre senza essere di nessuna; adesso e sua.
@@ -668,6 +674,24 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
           )}
         </div>
       </header>
+
+      {/* b.537 — IL PONTE: chi entrava nel Mondo per le stanze non deve
+          trovare un tab sparito. Una riga sola, che dice dove sono
+          andate e ci porta con un tocco. */}
+      {!cercando && (
+        <button onClick={() => { vibrate(8); setView('stanze'); }}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 8, margin: '0 20px 10px',
+            padding: '9px 12px', borderRadius: 12, cursor: 'pointer', fontFamily: FONT,
+            background: 'rgba(255,255,255,0.045)', border: `1px solid ${C.cardBorder}`,
+            color: 'rgba(255,255,255,0.78)', fontSize: 12.5, fontWeight: 600,
+            WebkitTapHighlightColor: 'transparent',
+          }}>
+          <Icon name="chat" size={14} color={C.accent} />
+          <span style={{ flex: 1, textAlign: 'left' }}>{L('tabRooms')}</span>
+          <Icon name="chevRight" size={13} color={C.textMuted} />
+        </button>
+      )}
 
       {/* ═══ b.355 — LA RICERCA, una sola, per tutto il Mondo ═══
           b.361 — CENTRATA e non a tutta larghezza (regola di Luca).

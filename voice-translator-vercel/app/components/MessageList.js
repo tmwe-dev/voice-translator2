@@ -84,6 +84,7 @@ const MessageList = memo(function MessageList({
   playMessage, playingMsgId,
   partnerSpeaking, partnerTyping, partnerLiveText,
   msgsEndRef, S, L,
+  solo = false, // b.537 — sei l'unico dentro: la stanza vuota lo dice
   onMessageRead, // callback(msgId) when a partner's message becomes visible
   onReaction, // callback(msgId, emoji) for sending reactions via P2P
   onMessageDoubleClick, // callback(msg) for Taxi Mode activation on double-tap
@@ -187,8 +188,27 @@ const MessageList = memo(function MessageList({
 
   return (
     <div style={S.chatArea} role="log" aria-live="polite" aria-label={L('chatMessagesAria')}>
+      {/* ═══ b.537 — LA STANZA VUOTA NON E' PIU UN VICOLO CIECO ═══
+          Dal ragionamento con Luca sulla logica di Stanze: «entri, non
+          c'e nessuno, e non succede niente: il costo di entrare in una
+          stanza vuota e tutto tuo, e questo insegna a non entrare piu».
+          Decisione sua: la stanza vuota diventa un ANNUNCIO. Si dice
+          chiaro che sei il primo, e si dice la cosa vera che nessuno
+          diceva — che il messaggio RESTA per chi entra dopo (i messaggi
+          sono persistenti dal b.363: era gia cosi, e non si vedeva).
+          Cosi scrivere da soli smette di sembrare inutile. */}
       {messages.length === 0 && (
         <div style={{textAlign:'center', color:S.colors.textMuted, marginTop:60, fontSize:13, lineHeight:1.6}}>
+          {solo && (
+            <div style={{ marginBottom: 14 }}>
+              <div style={{ fontSize: 15, fontWeight: 600, color: S.colors.textPrimary, marginBottom: 4 }}>
+                {L('firstHereTitle')}
+              </div>
+              <div style={{ fontSize: 12.5, color: S.colors.textSecondary || S.colors.textMuted, maxWidth: 300, margin: '0 auto' }}>
+                {L('firstHereDesc')}
+              </div>
+            </div>
+          )}
           {L('speakNow')}{'\n'}
           {roomMode === 'freetalk' ? L('freeTalkDesc')
             : roomMode === 'simultaneous' ? L('simultaneousDesc')

@@ -48,6 +48,7 @@ import NetworkStatus from './components/NetworkStatus.js';
 import TutorialOverlay from './components/TutorialOverlay.js';
 import { initMonitoring, reportError } from './lib/monitor.js';
 import { memDel, memGet, memSet, sesDel } from './lib/memoria.js';
+import { segnaVisita } from './lib/mieStanze.js'; // b.537 — le tue stanze restano tue
 
 // ═══ LAZY-LOADED: secondary views (loaded on demand → faster initial bundle) ═══
 const AccountView = lazy(() => import('./components/AccountView.js'));
@@ -59,6 +60,8 @@ const PannelloModerazione = lazy(() => import('./components/PannelloModerazione.
 // b.102 — modulo separato: la videochiamata a due resta intatta.
 const StanzaVideoGruppo = lazy(() => import('./components/StanzaVideoGruppo.js'));
 const RoomView = lazy(() => import('./components/RoomView.js'));
+// b.537 — la casa delle Stanze: il tasto «Chat» della barra porta qui.
+const StanzeView = lazy(() => import('./components/StanzeView.js'));
 const HistoryView = lazy(() => import('./components/HistoryView.js'));
 const SummaryView = lazy(() => import('./components/SummaryView.js'));
 const VoiceTestView = lazy(() => import('./components/VoiceTestView.js'));
@@ -687,7 +690,21 @@ function HomeInner() {
       fetch('/api/user', {
         signal: AbortSignal.timeout(15000),
         method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ action: 'update', name: newPrefs.name, lang: newPrefs.lang, avatar: newPrefs.avatar }),
+        // b.518 — QUESTA CHIAMATA NON E MAI ARRIVATA A DESTINAZIONE.
+        // Riprodotta dal vivo in produzione (#805): con il solo
+        // `Authorization: Bearer <token>` la rotta risponde 401
+        // «Not authenticated»; con lo STESSO gettone nel corpo
+        // risponde 200 con l'utente. Il motivo sta in
+        // `app/api/user/route.js`: il ramo POST legge il gettone SOLO
+        // dal corpo (`const { action, token, ... } = await req.json()`),
+        // l'intestazione la guarda solo il ramo GET. Da b.98 in poi
+        // nome, lingua e avatar non hanno quindi MAI raggiunto il
+        // server, e il `.catch` qui sotto non se ne accorgeva perche
+        // un 401 non e un'eccezione: falliva in silenzio, a ogni
+        // salvataggio. L'intestazione resta (non fa danno, e la
+        // manda gia il resto dell'app): si aggiunge il gettone dove
+        // la rotta lo cerca davvero.
+        body: JSON.stringify({ action: 'update', token, name: newPrefs.name, lang: newPrefs.lang, avatar: newPrefs.avatar }),
       }).catch(() => { /* il nome locale resta valido: si riallinea al prossimo salvataggio */ });
     }
   }, []);
@@ -983,6 +1000,9 @@ function HomeInner() {
         activeRooms = activeRooms.filter(r => r.roomId !== rid);
         memSet('vt-active-rooms', JSON.stringify(activeRooms));
       } catch (e) { console.warn('[Page] Update active rooms on rejoin failed:', e?.message); }
+      // b.537 — anche il rientro conta come visita: la stanza risale.
+      try { segnaVisita({ roomId: rid, nome: room?.nome || room?.name || '', host: room?.host || '', lingua: room?.hostLang || room?.lang || '' }); }
+      catch { /* memoria vietata: si rientra lo stesso */ }
       vistaOrigineRef.current = view;
       setView('room');
       setStatus('');
@@ -1196,6 +1216,12 @@ function HomeInner() {
       // b.269 — dentro davvero: l'invito ha finito il suo lavoro e si
       // toglie, cosi un ricaricamento non prova a rientrare da solo.
       try { sesDel('vt-invito-in-corso'); } catch { /* niente memoria di sessione */ }
+      // b.537 — LA CONTINUITA: da qui in poi questa stanza e' «tua» e
+      // torna in cima all'elenco, cosi uscendo non sparisce piu nel nulla
+      // (lib/mieStanze.js + StanzeView).
+      try {
+        segnaVisita({ roomId: codice, nome: room?.nome || room?.name || '', host: room?.host || '', lingua: room?.hostLang || room?.lang || '' });
+      } catch { /* la memoria del telefono puo essere vietata: si entra lo stesso */ }
       vistaOrigineRef.current = view;
       setView('room');
       setStatus('');
@@ -1721,6 +1747,26 @@ function HomeInner() {
         onApriStanza={({ nome, descrizione }) => { setTopicPreset({ nome, descrizione }); setShowCreateRoom(true); setView('mondo'); }}
       />
     </Suspense>
+  );
+
+  // ═══ b.537 — LE STANZE HANNO UNA CASA ═══
+  // Dal ragionamento con Luca: il tasto «Chat» della barra portava alla
+  // CRONOLOGIA (le conversazioni finite), mentre quelle VIVE stavano al
+  // secondo tocco dentro «Il mondo ora». Il tasto che sembrava portare
+  // alle conversazioni portava a quelle morte. Adesso porta qui: le tue
+  // in cima, le aperte sotto, e l'archivio a una porta laterale.
+  if (view === 'stanze') return wrap(
+    <>
+      <Suspense fallback={<LazyFallback />}>
+      <StanzeView
+        onJoinRoom={(rid) => { setJoinCode(rid); handleJoinRoom(rid); }}
+        onCreateRoom={() => { setTopicPreset(null); setShowCreateRoom(true); }} />
+      </Suspense>
+      {bottomNav}
+      {/* il foglio di creazione NON si monta qui: da b.326 vive
+          nell'imbuto comune, montato una volta per tutte le viste.
+          Rimetterlo qui sarebbe il doppione che quel b.326 ha tolto. */}
+    </>
   );
 
   if (view === 'mondo') return wrap(

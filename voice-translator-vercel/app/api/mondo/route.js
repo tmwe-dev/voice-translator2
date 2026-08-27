@@ -87,9 +87,45 @@ async function handleGet(req) {
         log.warn('conteggio vivo non riuscito, restano i numeri della nascita', { errore: e?.message || 'ignoto' });
       }
     }
-    // Una stanza in vetrina la cui stanza vera non esiste piu e finita
-    // prima dell'ora: non si mostra come se fosse ancora aperta.
+    // ═══ b.537 — DI COSA SI PARLA ADESSO ═══
+    // Ragionamento con Luca sulla logica di Stanze: «la card ti dice
+    // tutto tranne la cosa che conta». Vero: diceva lingua, modalita,
+    // eta, host, numero — sette informazioni per una decisione sola, e
+    // NESSUNA era il motivo per cui un essere umano entra in una stanza,
+    // che e sapere di che si sta parlando.
+    // La risposta era gia in casa: i messaggi vivono in `msgs:{codice}`
+    // e portano con se le traduzioni. Si prende l'ULTIMO di ogni stanza
+    // in un colpo solo (una LINDEX per stanza, in parallelo), e si manda
+    // fuori il testo: chi guarda lo legge nella sua lingua se la
+    // traduzione c'e gia, altrimenti nell'originale — senza chiedere
+    // niente a nessun modello e senza spendere un centesimo.
+    // Se la lettura non riesce, la stanza esce senza argomento: si vede
+    // il nome, come prima. Mai un errore in faccia per un di piu.
     const daMostrare = active.filter(r => !r.chiusa);
+    try {
+      const ultimi = await Promise.all(daMostrare.map((r) =>
+        redis('LINDEX', `msgs:${String(r.roomId || '').toUpperCase()}`, -1)
+          .catch(() => null)));
+      for (let i = 0; i < daMostrare.length; i++) {
+        if (!ultimi[i]) continue;
+        try {
+          const m = JSON.parse(ultimi[i]);
+          const testo = String(m.original || '').trim();
+          if (!testo) continue;
+          daMostrare[i].ultimo = {
+            testo: testo.slice(0, 160),
+            // le traduzioni gia fatte viaggiano com'erano: il client
+            // sceglie la sua lingua senza chiedere niente al server.
+            traduzioni: m.translations && typeof m.translations === 'object' ? m.translations : null,
+            lingua: m.sourceLang || m.lang || '',
+            chi: String(m.sender || '').slice(0, 40),
+            quando: m.timestamp || 0,
+          };
+        } catch { /* un messaggio illeggibile non toglie la stanza dall'elenco */ }
+      }
+    } catch (e) {
+      log.warn('argomento vivo non letto: le stanze escono col solo nome', { errore: e?.message || 'ignoto' });
+    }
 
     return NextResponse.json({ rooms: daMostrare });
   } catch (e) {

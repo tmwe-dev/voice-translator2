@@ -93,7 +93,12 @@ const BottomNav = ({ currentView, onNewConversation }) => {
     // arriva dalla Home, non da Community. E 'taxi-chat' non era in
     // nessun elenco: li non si accendeva niente.
     { id: 'home', label: L('navHome'), views: ['home', 'quickinvite', 'speaker', 'taxi-chat'] },
-    { id: 'conversations', label: L('navChat'), views: ['history', 'summary', 'detail'] },
+    // b.537 — «Chat» PORTAVA ALL'ARCHIVIO. Il tasto che ogni persona
+    // tocca per andare alle conversazioni portava a 'history', cioe alle
+    // conversazioni FINITE; quelle VIVE stavano al secondo tocco dentro
+    // «Il mondo ora». Dal ragionamento con Luca: adesso porta alle
+    // stanze vive, e l'archivio e' una porta dentro quella schermata.
+    { id: 'conversations', label: L('navChat'), views: ['stanze', 'history', 'summary', 'detail'] },
     // b.425 — ERA SCRITTA A MANO, e restava in inglese in tutte e
     // trentotto le lingue: nel collaudo, con l'interfaccia in turco,
     // le altre tre voci dicevano «Ana sayfa», «Sohbetler», «Profil» e
