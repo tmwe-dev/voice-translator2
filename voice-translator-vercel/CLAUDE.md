@@ -267,6 +267,76 @@ perche il working tree lo conteneva ancora.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.545** (push #831) — IL MOTORE, IL FONTIERE, E QUATTRO
+  AGENTI IN PARALLELO. Luca: «cazzo incredibile... tutto questo ancora da
+  fare. lancia 10 agenti in parallelo e completa». Questo push porta il
+  lavoro di quattro agenti piu il mio, tutto su file disgiunti perche non
+  si pestassero i piedi.
+
+  ① IL FONTIERE (b.543, ordine: «vicino al selettore paese aggiungi un
+  tasto... deep search per creare liste sempre aggiornate»). Nasce
+  lib/topics/fonti.js (liste per Paese o settore, vita 30 giorni, fusione
+  col direttorio scritto a mano) e /api/topics/fonti, che fa la cosa che
+  conta: dopo aver CHIESTO le testate a un modello, BUSSA a ognuna (HEAD
+  poi GET) e scarta chi non risponde — un modello puo inventarsi un sito,
+  un sito che non risponde no. Il tasto sta nella card «Da dove guardo» e
+  si ACCENDE da solo quando la lista manca o ha passato i trenta giorni.
+  E soprattutto: la ricerca ora e' A PIU VOCI — alla domanda generale si
+  affiancano quattro domande mirate `q site:testata`, cosi i risultati
+  vengono da posti diversi PER COSTRUZIONE. Prima erano due aggregatori.
+
+  ② IL CUORE (b.544, «non si puo dare un mi piace a nessuno»). Il
+  conteggio e' di tutti (Redis, per indirizzo, senza registrare chi),
+  la memoria di cosa ho messo io e' nel telefono: il tasto si accende
+  subito, senza aspettare la rete. In cima a tutte e due le colonnine.
+
+  ③ QUATTRO AGENTI, quattro pezzi nuovi, tutti con prove sui risultati:
+    · REAZIONI (13 prove): lib/reazioni.js + /api/mondo/reazioni +
+      ui/VentaglioReazioni (sei facce, si apre tenendo premuto);
+    · COMMENTI (15 prove): lib/commentiContenuto.js + /api/mondo/commenti
+      + ui/FiloCommenti — e la regola che Luca aveva chiesto: dal SECONDO
+      commento la conversazione diventa una stanza vera ed entra
+      nell'elenco chat;
+    · CAMPANELLA (23 prove): lib/campanella.js + /api/mondo/avvisi +
+      ui/Campanella, col pallino e il «9+» come nei social;
+    · PUNTEGGIO CONDIVISO (35 prove): lib/punteggioFeed.js +
+      /api/mondo/segnali — visione, cuori, commenti, aperture e SALTI
+      (segnale negativo), con la freschezza che moltiplica invece di
+      sommarsi: una notizia di ieri con tre cuori non scavalca quella di
+      adesso, ma una discussione vera risale.
+  110 prove verdi in tutto, eslint pulito.
+
+  ④ IL FEED CHE AVEVO ROTTO (b.545). «Quando parte la visualizzazione
+  mostra la pagina in fondo e attiva il video della prima in alto — hai
+  rotto tutto». Causa mia di b.544: il feed si apre PRIMA che i contenuti
+  arrivino, e quando le slide compaiono tutte insieme il browser tiene la
+  posizione — che a quel punto e il fondo. L'indice restava 0, quindi il
+  player cantava fuori dal riquadro. Ora, ogni volta che l'elenco passa
+  da vuoto a pieno, si torna sulla prima slide (indice E scorrimento:
+  l'indice da solo non bastava).
+
+  ⑤ E L'ULTIMA RATIO (b.544): «devi produrre i contenuti e se proprio non
+  ne hai mostri sotto l'ultimo contenuto un campo semplice senza
+  descrizione... considera che le persone sono pigre e devi mettergli in
+  bocca i contenuti». Il campo per seminare compare SOLO in coda a
+  contenuti che gia ci sono, ed e nudo; il feed vuoto non chiede niente a
+  nessuno — cresce da solo (sotto le quattro slide, non solo scorrendo).
+
+  INCIDENTE DICHIARATO: un agente ha sovrascritto per sbaglio
+  app/lib/avvisi.js (che esisteva gia, e' la coda dei messaggini toast di
+  b.111). Se n'e accorto, l'ha RIPRISTINATO dal committato (git diff
+  vuoto, prove 29/29 verdi) e ha messo la sua logica in
+  lib/campanella.js. Lezione per la prossima volta: prima di creare un
+  file, `ls` — anche quando il nome sembra libero.
+
+  DEBITO DICHIARATO: le 13 chiavi nuove (reazioni, commenti, avvisi)
+  sono in tutti e 38 i pacchetti, ma nelle 36 lingue diverse da it/en
+  partono dal testo INGLESE, non tradotto. Vanno tradotte.
+  E soprattutto: i quattro pezzi nuovi sono COSTRUITI E PROVATI ma non
+  ancora AGGANCIATI alle schermate (il ventaglio, il filo dei commenti,
+  la campanella e il punteggio non compaiono ancora nel feed). E' il
+  prossimo passo, ed e dichiarato perche non sembri fatto.
+
 - Versione: **b.542** (push #830) — TRE DIFETTI NELLA STESSA SCHERMATA,
   e tutti e tre miei, di ieri.
 

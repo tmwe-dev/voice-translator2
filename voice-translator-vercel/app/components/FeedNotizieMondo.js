@@ -1,7 +1,8 @@
 'use client';
-import { useState, useRef, useEffect, useMemo } from 'react';
+import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { FONT, vibrate } from '../lib/constants.js';
 import Icon from './Icon.js';
+import { chiaveContenuto, hoMessoCuore, giraCuore, quantiCuori } from '../lib/gradimento.js'; // b.544 — il mi piace
 import AnteprimaCoperta from './ui/AnteprimaCoperta.js';
 import Sovrapposizione from './ui/Sovrapposizione.js';
 
@@ -54,17 +55,30 @@ function Azioni({ voci }) {
       zIndex: 3, display: 'flex', flexDirection: 'column', gap: 12,
     }}>
       {voci.filter(Boolean).map((v) => (
-        <button key={v.chiave} onClick={v.onTocca}
-          aria-label={v.parola} title={v.parola}
-          style={{
-            width: 46, height: 46, borderRadius: 999, cursor: 'pointer', padding: 0,
-            background: 'rgba(10,14,26,0.72)', border: '1px solid rgba(255,255,255,0.18)',
-            backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            WebkitTapHighlightColor: 'transparent',
-          }}>
-          <Icon name={v.icona} size={19} color="#fff" />
-        </button>
+        <div key={v.chiave} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
+          <button
+            onClick={(e) => { e.stopPropagation(); v.onTocca(); }}
+            aria-label={v.parola} title={v.parola} aria-pressed={v.acceso || undefined}
+            style={{
+              width: 46, height: 46, borderRadius: 999, cursor: 'pointer', padding: 0,
+              // b.544 — acceso quando l'hai messo tu: si vede a colpo d'occhio
+              // che il tocco e' arrivato, senza aspettare la rete.
+              background: v.acceso ? 'rgba(255,84,112,0.22)' : 'rgba(10,14,26,0.72)',
+              border: `1px solid ${v.acceso ? 'rgba(255,84,112,0.65)' : 'rgba(255,255,255,0.18)'}`,
+              backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              WebkitTapHighlightColor: 'transparent',
+            }}>
+            <Icon name={v.icona} size={19} color={v.acceso ? '#ff5470' : '#fff'} />
+          </button>
+          {v.conto ? (
+            <span style={{
+              fontSize: 11, fontWeight: 600, fontFamily: FONT,
+              color: v.acceso ? '#ff5470' : 'rgba(255,255,255,0.82)',
+              textShadow: '0 1px 3px rgba(0,0,0,0.6)',
+            }}>{v.conto}</span>
+          ) : null}
+        </div>
       ))}
     </div>
   );
@@ -75,6 +89,68 @@ export default function FeedNotizieMondo({ aperto, onChiudi, C, L, argomenti = [
   const sentinelleRef = useRef(new Map());
   const [indiceAttivo, setIndiceAttivo] = useState(0);
   const [seme, setSeme] = useState('');   // b.541 — il campo dell'ultima slide
+  // ═══ b.544 — I CUORI ═══
+  // «Non si puo dare un mi piace a nessuno» (Luca). `miei` e cio che ho
+  // messo io (dal telefono, immediato), `conteggi` e quello di tutti
+  // (dal server, quando arriva).
+  const [miei, setMiei] = useState(() => new Set());
+  const [conteggi, setConteggi] = useState({});
+
+  // si chiedono i conteggi delle slide che si stanno guardando, non di
+  // tutte: una manciata di indirizzi per volta.
+  useEffect(() => {
+    if (!aperto || !elementi.length) return undefined;
+    const chiavi = elementi.slice(Math.max(0, indiceAttivo - 2), indiceAttivo + 6)
+      .map((el) => chiaveContenuto(el?.dati?.url || (el?.dati?.id ? `youtube.com/watch?v=${el.dati.id}` : '')))
+      .filter(Boolean);
+    if (!chiavi.length) return undefined;
+    let vivo = true;
+    (async () => {
+      try {
+        const r = await fetch(`/api/mondo/gradimento?chiavi=${encodeURIComponent(chiavi.join(','))}`, { signal: AbortSignal.timeout(8000) });
+        if (!r.ok) return;
+        const d = await r.json().catch(() => null);
+        if (vivo && d?.conteggi) setConteggi((prima) => ({ ...prima, ...d.conteggi }));
+      } catch { /* senza conteggi il cuore si mette lo stesso */ }
+    })();
+    return () => { vivo = false; };
+  }, [aperto, elementi, indiceAttivo]);
+
+  // b.544 — il tocco: prima si accende (chi tocca deve vedere subito),
+  // poi si dice al server. Se il server non risponde, il cuore resta
+  // acceso qui: e comunque vero che a me e piaciuto.
+  const cuore = useCallback((url) => {
+    const esito = giraCuore(url);
+    if (!esito.chiave) return;
+    vibrate(12);
+    setMiei((prima) => {
+      const dopo = new Set(prima);
+      if (esito.acceso) dopo.add(esito.chiave); else dopo.delete(esito.chiave);
+      return dopo;
+    });
+    setConteggi((prima) => ({ ...prima, [esito.chiave]: Math.max(0, (Number(prima[esito.chiave]) || 0) + esito.passo) }));
+    fetch('/api/mondo/gradimento', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chiave: esito.chiave, passo: esito.passo }),
+    }).catch(() => { /* il cuore resta mio anche se la rete non c'e */ });
+  }, []);
+
+  // all'apertura si ricorda cosa avevo gia amato
+  useEffect(() => { if (aperto) setMiei(new Set()); }, [aperto]);
+
+  // b.544 — «immediatamente fai andare in alto il campo e presenti il
+  // nuovo contenuto»: si semina e si torna SUBITO in cima, dove il
+  // contenuto nuovo sta arrivando. Chi ha appena chiesto una cosa non
+  // deve risalire a mano venti schermate.
+  const semina = useCallback(() => {
+    const q = seme.trim();
+    if (!q) return;
+    vibrate(10);
+    onCerca?.(q);
+    setSeme('');
+    setIndiceAttivo(0);
+    try { contenitoreRef.current?.scrollTo({ top: 0, behavior: 'auto' }); } catch { /* niente da riportare in cima */ }
+  }, [seme, onCerca]);
 
   const elementi = useMemo(() => {
     const art = (argomenti || []).map((t) => ({ tipo: 'articolo', dati: t, chiave: `a-${t.id || t.url || t.titolo}` }));
@@ -163,13 +239,48 @@ export default function FeedNotizieMondo({ aperto, onChiudi, C, L, argomenti = [
   // riga per seminare a mano.
   useEffect(() => {
     if (!aperto || !onCresci || crescendo) return;
-    if (elementi.length && indiceAttivo >= elementi.length - 3) onCresci();
+    // b.544 — si cresce anche quando il feed e CORTO o VUOTO, non solo
+    // quando ci si avvicina scorrendo: «le persone sono pigre e devi
+    // mettergli in bocca i contenuti». Chi apre e trova poco non deve
+    // chiedere niente — la roba arriva.
+    if (elementi.length < 4 || indiceAttivo >= elementi.length - 3) onCresci();
   }, [aperto, indiceAttivo, elementi.length, onCresci, crescendo]);
+
+  // ═══ b.545 — SI PARTE DALLA PRIMA, SEMPRE ═══
+  // Collaudo di Luca: «quando parte la visualizzazione mostra la pagina
+  // in fondo e attiva il video della prima in alto — hai rotto tutto».
+  // Causa, ed e' mia di b.544: il feed si apre PRIMA che i contenuti
+  // arrivino (schermata vuota, un'altezza sola), e quando poi le slide
+  // compaiono tutte insieme il browser tiene la posizione che aveva —
+  // che a quel punto e' il fondo. L'indice restava 0, quindi il player
+  // partiva sulla prima mentre gli occhi erano sull'ultima: video che
+  // canta fuori dal riquadro.
+  // Rimedio: ogni volta che l'elenco passa da vuoto a pieno (o cambia
+  // lunghezza in modo brusco perche' e' arrivato un giro nuovo mentre
+  // eravamo in cima) si riporta lo scorrimento sulla prima slide, senza
+  // animazione. Chi sta gia scorrendo piu in basso non viene toccato.
+  const quantiPrima = useRef(0);
+  useEffect(() => {
+    if (!aperto) { quantiPrima.current = 0; return; }
+    const prima = quantiPrima.current;
+    quantiPrima.current = elementi.length;
+    // da vuoto a pieno: e' l'apertura vera, si parte dalla prima
+    if (prima === 0 && elementi.length > 0) {
+      setIndiceAttivo(0);
+      try { contenitoreRef.current?.scrollTo({ top: 0, behavior: 'auto' }); } catch { /* niente da riportare */ }
+    }
+  }, [aperto, elementi.length]);
 
   // riparte dall'inizio ogni volta che si apre o si cambia filtro: una
   // lista diversa merita di ripartire dalla prima, non da un indice che
   // ora punta a un elemento diverso.
-  useEffect(() => { if (aperto) setIndiceAttivo(0); }, [aperto, filtro]);
+  useEffect(() => {
+    if (!aperto) return;
+    setIndiceAttivo(0);
+    // b.545 — l'indice da solo non basta: senza riportare anche lo
+    // SCORRIMENTO, si guarda una slide e ne suona un'altra.
+    try { contenitoreRef.current?.scrollTo({ top: 0, behavior: 'auto' }); } catch { /* niente da riportare */ }
+  }, [aperto, filtro]);
 
   if (!aperto) return null;
 
@@ -239,12 +350,23 @@ export default function FeedNotizieMondo({ aperto, onChiudi, C, L, argomenti = [
         position: 'absolute', inset: 0, overflowY: 'auto', scrollSnapType: 'y mandatory',
         WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain', scrollbarWidth: 'none',
       }}>
+        {/* b.544 — IL FEED VUOTO NON CHIEDE NIENTE A NESSUNO: prepara.
+            «devi produrre i contenuti» (Luca). Prima qui c'era un invito
+            a cercare — cioe un compito. Adesso, se non c'e ancora niente,
+            il giardino sta gia lavorando e lo si dice; il campo per
+            seminare a mano resta in fondo, per chi lo vuole. */}
         {elementi.length === 0 && (
           <div style={{
-            height: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center',
-            padding: 24, textAlign: 'center', color: 'rgba(255,255,255,0.6)', fontSize: 14,
+            height: '100dvh', display: 'flex', flexDirection: 'column',
+            alignItems: 'center', justifyContent: 'center',
+            padding: 24, textAlign: 'center', gap: 10,
           }}>
-            {L('feedVuoto')}
+            <div style={{ fontSize: 15, fontWeight: 600, color: '#fff', fontFamily: FONT }}>
+              {L('growingWord')}
+            </div>
+            <div style={{ fontSize: 12.5, color: 'rgba(255,255,255,0.6)', fontFamily: FONT }}>
+              {L('feedVuoto')}
+            </div>
           </div>
         )}
         {elementi.map((el, i) => (
@@ -278,6 +400,16 @@ export default function FeedNotizieMondo({ aperto, onChiudi, C, L, argomenti = [
                 </div>
                 {/* b.539 — i tasti che mancavano ai video. */}
                 <Azioni voci={[
+                  /* b.544 — IL CUORE, in cima: e la cosa piu facile da fare
+                     e quella che alimenta il resto (i contenuti amati
+                     salgono nel feed di tutti). */
+                  (() => {
+                    const u = `youtube.com/watch?v=${el.dati.id}`;
+                    const k = chiaveContenuto(u);
+                    const acceso = miei.has(k) || (hoMessoCuore(u) && !miei.size);
+                    return { chiave: 'cuore', icona: 'heart', parola: L('likeWord'), acceso,
+                      conto: quantiCuori(conteggi, u, null) || null, onTocca: () => cuore(u) };
+                  })(),
                   { chiave: 'parlane', icona: 'chat', parola: L('newsTalkAbout'), onTocca: () => { vibrate(10); onParlane?.({ titolo: el.dati.titolo, sintesi: el.dati.canale ? `YouTube \u00b7 ${el.dati.canale}` : '' }); } },
                   { chiave: 'fuori', icona: 'link', parola: L('newsOpenSite'), onTocca: () => { vibrate(6); try { window.open(`https://www.youtube.com/watch?v=${el.dati.id}`, '_blank', 'noopener,noreferrer'); } catch { /* il browser ha rifiutato la finestra */ } } },
                 ]} />
@@ -345,6 +477,13 @@ export default function FeedNotizieMondo({ aperto, onChiudi, C, L, argomenti = [
                 {/* b.539 — le stesse porte dei video, nello stesso posto:
                     il feed non cambia grammatica a meta scorrimento. */}
                 <Azioni voci={[
+                  (() => {
+                    const u = el.dati.url || '';
+                    const k = chiaveContenuto(u);
+                    const acceso = miei.has(k) || (hoMessoCuore(u) && !miei.size);
+                    return { chiave: 'cuore', icona: 'heart', parola: L('likeWord'), acceso,
+                      conto: quantiCuori(conteggi, u, null) || null, onTocca: () => cuore(u) };
+                  })(),
                   { chiave: 'leggi', icona: 'doc', parola: L('newsOpenTranslate'), onTocca: () => { vibrate(8); onApriArticolo?.(el.dati); } },
                   { chiave: 'parlane', icona: 'chat', parola: L('newsTalkAbout'), onTocca: () => { vibrate(10); onParlane?.(el.dati); } },
                   el.dati.url ? { chiave: 'fuori', icona: 'link', parola: L('newsOpenSite'), onTocca: () => { vibrate(6); try { window.open(el.dati.url, '_blank', 'noopener,noreferrer'); } catch { /* finestra rifiutata */ } } } : null,
@@ -375,59 +514,48 @@ export default function FeedNotizieMondo({ aperto, onChiudi, C, L, argomenti = [
           </div>
         ))}
 
-        {/* ═══ b.541 — L'ULTIMA SLIDE: SEMINA ANCORA ═══
-            Ordine di Luca: «perche in fondo alla lista non metti un tasto
-            continua cerca ancora con un campo di ricerca?». Eccolo — ed e'
-            una slide come le altre, non un tasto appiccicato: si arriva
-            qui scorrendo, e si riparte da qui.
-            Sopra al campo si dice cosa sta gia facendo il giardino: se
-            sta crescendo da solo, chi guarda lo vede e aspetta invece di
-            credere che sia finito. */}
-        {(onCerca || onCresci) && (
+        {/* ═══ b.544 — L'ULTIMA RATIO, e si vede solo se serve ═══
+            Ordine di Luca, con lo schermo davanti: «questo deve essere la
+            ultima razio, nel senso che tu devi produrre i contenuti e se
+            proprio non ne hai mostri sotto l'ultimo contenuto un campo
+            semplice senza descrizione, e un tasto per avviare una
+            ricerca, e immediatamente fai andare in alto il campo e
+            presenti il nuovo contenuto» — piu la regola che vale per
+            tutto: «considera che le persone sono pigre e devi mettergli
+            in bocca i contenuti».
+            In b.541 avevo fatto l'errore opposto: con il feed vuoto
+            questa slide diventava la PRIMA cosa che si vedeva, con
+            titolo e spiegazione, cioe un compito da svolgere al posto
+            del giornale. Adesso: compare SOLO in coda a contenuti che
+            gia ci sono (`elementi.length > 0`), e' nuda — campo e tasto,
+            nessuna descrizione — e appena si semina si torna in cima,
+            dove il contenuto nuovo sta gia arrivando. */}
+        {elementi.length > 0 && onCerca && (
           <div style={{
             height: '100dvh', scrollSnapAlign: 'start', scrollSnapStop: 'always',
             display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-            gap: 14, padding: '24px 24px calc(40px + env(safe-area-inset-bottom))', textAlign: 'center',
+            gap: 12, padding: '24px 24px calc(40px + env(safe-area-inset-bottom))',
           }}>
-            <div style={{ fontSize: 17, fontWeight: 600, color: '#fff', fontFamily: FONT }}>
-              {crescendo ? L('growingWord') : L('seedMoreTitle')}
-            </div>
-            <div style={{ fontSize: 12.5, color: 'rgba(255,255,255,0.66)', fontFamily: FONT, maxWidth: 300, lineHeight: 1.55 }}>
-              {L('seedMoreDesc')}
-            </div>
-            <div style={{ display: 'flex', gap: 8, width: '100%', maxWidth: 420, marginTop: 4 }}>
+            <div style={{ display: 'flex', gap: 8, width: '100%', maxWidth: 420 }}>
               <input value={seme} onChange={(e) => setSeme(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter' && seme.trim()) { onCerca?.(seme.trim()); setSeme(''); } }}
+                onKeyDown={(e) => { if (e.key === 'Enter' && seme.trim()) semina(); }}
                 placeholder={L('newsWhatFollow')} aria-label={L('newsWhatFollow')}
                 style={{
-                  flex: 1, minHeight: 46, padding: '0 14px', borderRadius: 14,
+                  flex: 1, minHeight: 48, padding: '0 14px', borderRadius: 14,
                   background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.18)',
-                  outline: 'none', color: '#fff', fontSize: 14, fontFamily: FONT,
+                  outline: 'none', color: '#fff', fontSize: 15, fontFamily: FONT,
                 }} />
-              <button onClick={() => { if (seme.trim()) { vibrate(10); onCerca?.(seme.trim()); setSeme(''); } }}
-                disabled={!seme.trim()}
+              <button onClick={semina} disabled={!seme.trim()}
                 aria-label={L('newsUpdate')}
                 style={{
-                  minWidth: 52, minHeight: 46, borderRadius: 14, border: 'none',
+                  minWidth: 54, minHeight: 48, borderRadius: 14, border: 'none',
                   cursor: seme.trim() ? 'pointer' : 'default', opacity: seme.trim() ? 1 : 0.5,
                   background: `linear-gradient(135deg, ${C.accent}, ${C.purple})`,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                 }}>
-                <Icon name="search" size={17} color="#fff" />
+                <Icon name="search" size={18} color="#fff" />
               </button>
             </div>
-            {/* e chi non ha niente da chiedere lascia crescere il giardino */}
-            {onCresci && (
-              <button onClick={() => { vibrate(8); onCresci(); }} disabled={crescendo}
-                style={{
-                  marginTop: 6, minHeight: 44, padding: '0 20px', borderRadius: 999,
-                  cursor: crescendo ? 'default' : 'pointer', opacity: crescendo ? 0.6 : 1,
-                  background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.2)',
-                  color: '#fff', fontSize: 13, fontWeight: 600, fontFamily: FONT,
-                }}>
-                {crescendo ? L('growingWord') : L('growMoreWord')}
-              </button>
-            )}
           </div>
         )}
       </div>

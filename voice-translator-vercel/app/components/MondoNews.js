@@ -19,8 +19,9 @@ import { memo, useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { segnaApertura } from '../lib/interessi.js';
 import { COLONNA } from '../lib/righello.js';
 import { ordinaFeed } from '../lib/ordineFeed.js';
-import { cercaTopics, chiediRami } from '../lib/topics/cliente.js';   // b.409 — il lettore a righe, uno per tutti; b.541 — i rami del giardino
+import { cercaTopics, chiediRami, chiediFonti } from '../lib/topics/cliente.js';   // b.409 — il lettore a righe, uno per tutti; b.541 — i rami del giardino
 import { semiDi, prossimaQuery, esaurito, sanaRami } from '../lib/giardino.js'; // b.541 — le ricerche sono semi
+import { listaVecchia, giorniDiVita } from '../lib/topics/fonti.js'; // b.543 — il Fontiere
 import Scelta from './ui/Scelta.js';
 import { ricerchePredefinite } from '../lib/casaEViaggio.js';
 import { preferitiAggiunti, ePreferita, aggiungiPreferita, togliPreferita } from '../lib/preferitiRicerche.js'; // b.535
@@ -242,6 +243,13 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
   const usateRef = useRef([]);
   const vistiRef = useRef(new Set());   // url gia mostrati: il feed non ripete
   const [crescendo, setCrescendo] = useState(false);
+  // ═══ b.543 — IL FONTIERE ═══
+  // Luca: «vicino al selettore paese o lingua della sidebar aggiungi un
+  // tasto... anche i settori devono riaccendere la icona (spenta dopo il
+  // primo aggiornamento)». `listaFonti` e cio che sappiamo adesso;
+  // l'icona e ACCESA quando la lista manca o ha passato i trenta giorni.
+  const [listaFonti, setListaFonti] = useState(null);
+  const [fontiInCorso, setFontiInCorso] = useState(false);
   const [bozzaPaese, setBozzaPaese] = useState(null);
   const [bozzaCategoria, setBozzaCategoria] = useState('');
   // b.386 — il paese toccato sul pianeta filtra anche le notizie. Prima
@@ -379,6 +387,32 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
   // finire mai — e cio che mancava perche' i semi di Luca (Tom Cruise,
   // Chelsea) non si vedevano: il giornale teneva UNA ricerca alla volta,
   // l'ultima, e le altre sparivano.
+  // b.543 — si guarda (gratis) che lista c'e per questo Paese: serve a
+  // sapere se l'icona va accesa, e da quanto tempo.
+  useEffect(() => {
+    let vivo = true;
+    (async () => {
+      const d = await chiediFonti({ paese: paeseFiltro || '', leggi: true });
+      if (vivo) setListaFonti(d);
+    })();
+    return () => { vivo = false; };
+  }, [paeseFiltro]);
+
+  const migliora = useCallback(async ({ settore = '' } = {}) => {
+    if (fontiInCorso) return;
+    setFontiInCorso(true);
+    try {
+      const d = await chiediFonti({
+        paese: settore ? '' : (paeseFiltro || ''),
+        settore,
+        nomePaese: paeseFiltro ? nomePaese(paeseFiltro) : '',
+        lingua, userToken, rifai: true,
+      });
+      if (!settore) setListaFonti(d);
+      return d;
+    } finally { setFontiInCorso(false); }
+  }, [fontiInCorso, paeseFiltro, lingua, userToken]);
+
   const cerca = useCallback(async (q, cat = 'notizie', fresca = false, silenziosa = false, accoda = false) => {
     const pulita = (q || '').trim();
     if (!pulita || cercando) return;
@@ -395,7 +429,10 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
       // prodotto un risultato. Ora e uno solo, in lib/topics/cliente.js.
       // Il comportamento e lo stesso di prima, riga per riga.
       const fine = await cercaTopics(
-        { q: pulita, lingua, cat, fresca, profonda, fonti: profonda ? numFonti : 0, segnale: ac.signal },
+        // b.543 — se per questo Paese esiste una lista di testate, la
+        // ricerca si sdoppia in voci mirate (vedi topics/servizio.js).
+        { q: pulita, lingua, cat, fresca, profonda, fonti: profonda ? numFonti : 0, segnale: ac.signal,
+          paeseFonti: paeseFiltro || '', settoreFonti: bozzaCategoria || '' },
         (r) => {
           const testo = descriviStadio(r);
           if (testo) setProcesso(p => [...p.slice(-5), { testo, id: p.length }]);
@@ -807,6 +844,44 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
               .sort((a, b) => a.etichetta.localeCompare(b.etichetta)),
           ]}
           onCambia={(v) => setBozzaPaese(v === 'tutto' ? null : v)} />
+
+        {/* ═══ b.543 — IL FONTIERE: «MIGLIORA LE FONTI» ═══
+            Ordine di Luca: «vicino al selettore paese o lingua della
+            sidebar aggiungi un tasto, con questo attiveremo una
+            procedura di miglioramento delle fonti con un deep search per
+            creare liste sempre aggiornate... anche i settori devono
+            riaccendere la icona (spenta dopo il primo aggiornamento)».
+            L'icona e ACCESA quando la lista manca o ha passato i trenta
+            giorni, SPENTA quando e fresca: cosi dice da sola quando c'e
+            lavoro da fare, senza che nessuno se lo debba ricordare. */}
+        {(() => {
+          const vecchia = listaVecchia(listaFonti, Date.now());
+          const giorni = giorniDiVita(listaFonti, Date.now());
+          const quante = listaFonti?.fonti?.length || 0;
+          return (
+            <button onClick={() => { vibrate(10); migliora(); }} disabled={fontiInCorso}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 9, width: '100%',
+                marginTop: 10, minHeight: 46, padding: '0 12px', borderRadius: 12,
+                cursor: fontiInCorso ? 'default' : 'pointer', fontFamily: FONT, textAlign: 'left',
+                background: vecchia ? `${C.accent}16` : 'rgba(255,255,255,0.04)',
+                border: `1px solid ${vecchia ? `${C.accent}55` : C.cardBorder}`,
+                opacity: fontiInCorso ? 0.7 : 1, WebkitTapHighlightColor: 'transparent',
+              }}>
+              <Icon name="zap" size={16} color={vecchia ? C.accent : 'rgba(255,255,255,0.5)'} />
+              <span style={{ flex: 1, minWidth: 0 }}>
+                <span style={{ display: 'block', fontSize: 12.5, fontWeight: 600, color: vecchia ? C.accent : 'rgba(255,255,255,0.78)' }}>
+                  {fontiInCorso ? L('sourcesWorking') : L('sourcesImprove')}
+                </span>
+                <span style={{ display: 'block', fontSize: 11, color: 'rgba(255,255,255,0.62)', marginTop: 1 }}>
+                  {fontiInCorso ? L('sourcesWorkingDesc')
+                    : quante ? `${quante} ${L('sourcesCount')}${giorni != null ? ` \u00b7 ${giorni}${L('daysShort')}` : ''}`
+                      : L('sourcesNone')}
+                </span>
+              </span>
+            </button>
+          );
+        })()}
       </CardSezione>
 
       {/* b.363 — due tendine per due scelte SINGOLE: la prima filtra cio
@@ -1449,6 +1524,12 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
           all'ingresso, e chi la chiude ha scelto il giornale — non gli si
           ripropone la stessa porta galleggiante in mezzo alla pagina. */}
 
+      {/* b.542 — «IL TASTO PARLANE NON VA» (Luca). Non era rotto: si
+          apriva DIETRO. Il feed e' un velo fisso a zIndex 97, e il foglio
+          «apri una discussione» nasceva sotto di lui — invisibile,
+          esattamente come «apri e traduci» in b.535, dove avevo chiuso il
+          velo per l'articolo e non per la discussione: mezzo lavoro. Ora
+          tutte e due le strade che escono dal feed chiudono il velo. */}
       {/* INIZIO b.535 — «apri e traduci non va» (Luca, dal feed). Il tasto
           LAVORAVA: setLettura girava il foglio sul lettore. Ma il feed e un
           velo fixed a zIndex 97 che restava aperto SOPRA, e l'articolo si
@@ -1458,13 +1539,6 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
       <FeedNotizieMondo aperto={feedAperto} onChiudi={() => setFeedAperto(false)} C={C} L={L}
         argomenti={argomenti || []} video={video || []} filtro={feedFiltro}
         onFiltro={(id) => savePrefs({ ...prefs, mondoFeedFiltro: id })}
-        {/* b.542 — «IL TASTO PARLANE NON VA» (Luca). Non era rotto: si
-            apriva DIETRO. Il feed e' un velo fisso a zIndex 97, e il
-            foglio «apri una discussione» nasceva sotto di lui —
-            invisibile, esattamente come «apri e traduci» in b.535. Li
-            avevo chiuso il velo per l'articolo e non per la
-            discussione: mezzo lavoro. Adesso il velo si chiude anche
-            qui, e il foglio si vede. */}
         onParlane={(d) => { setFeedAperto(false); onParlane?.(d); }}
         onStrumenti={suApriStrumenti}
         onCresci={cresci}

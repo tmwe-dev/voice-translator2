@@ -41,6 +41,11 @@ async function handleGet(req) {
   const profonda = url.searchParams.get('deep') === '1';
   const fontiRaw = parseInt(url.searchParams.get('fonti') || '6', 10);
   const fonti = Number.isFinite(fontiRaw) ? Math.max(3, Math.min(fontiRaw, 10)) : 6;
+  // b.543 — da quale lista di testate pescare le voci mirate (il
+  // Fontiere). Sono suggerimenti: se la lista non esiste, la ricerca
+  // resta quella di sempre.
+  const paeseFonti = (url.searchParams.get('paeseFonti') || '').slice(0, 8);
+  const settoreFonti = (url.searchParams.get('settoreFonti') || '').slice(0, 40);
 
   if (!q.trim()) {
     return new Response(JSON.stringify({ stadio: 'errore', motivo: 'query vuota' }) + '\n', {
@@ -57,7 +62,7 @@ async function handleGet(req) {
       };
       try {
         const esito = await cercaArgomenti(q, lang, {
-          categoria: cat, fresca, profonda, fonti,
+          categoria: cat, fresca, profonda, fonti, paeseFonti, settoreFonti,
           racconta: (stadio, dati) => riga({ stadio, ...dati }),
         });
         riga({ stadio: 'fine', ...esito });

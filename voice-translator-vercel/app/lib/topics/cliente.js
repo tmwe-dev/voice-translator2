@@ -76,6 +76,33 @@ export async function leggiARighe(risposta, suStadio) {
  * Non lancia mai: un giardino che non cresce non deve fermare il
  * giornale — si torna un elenco vuoto e chi guarda continua coi semi.
  */
+/**
+ * b.543 — IL FONTIERE. `leggi` guarda la lista che c'e gia (gratis, per
+ * sapere se l'icona va accesa); senza `leggi` fa il deep search vero.
+ * Non lancia mai: senza fonti si cerca come si e sempre cercato.
+ */
+export async function chiediFonti({ paese = '', settore = '', nomePaese = '', lingua = 'it', userToken = null, rifai = false, leggi = false }) {
+  try {
+    if (leggi) {
+      const p = new URLSearchParams();
+      if (paese) p.set('paese', paese);
+      if (settore) p.set('settore', settore);
+      const r = await fetch(`/api/topics/fonti?${p.toString()}`, { signal: AbortSignal.timeout(10000) });
+      if (!r.ok) return { fonti: [], quando: 0 };
+      return (await r.json().catch(() => null)) || { fonti: [], quando: 0 };
+    }
+    const r = await fetch('/api/topics/fonti', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ paese, settore, nomePaese, lingua, userToken, rifai }),
+      // il deep search bussa a una ventina di siti: gli si da tempo
+      signal: AbortSignal.timeout(60000),
+    });
+    if (!r.ok) return { fonti: [] };
+    return (await r.json().catch(() => null)) || { fonti: [] };
+  } catch { return { fonti: [] }; }
+}
+
 export async function chiediRami({ seme, lingua = 'it', paese = '', livello = 1, userToken = null }) {
   try {
     const r = await fetch('/api/topics/rami', {
@@ -93,6 +120,8 @@ export async function chiediRami({ seme, lingua = 'it', paese = '', livello = 1,
 export async function cercaTopics({
   q, lingua = 'it', cat = 'notizie',
   fresca = false, profonda = false, fonti = 0, segnale = null,
+  // b.543 — da quale lista di testate pescare le voci mirate (il Fontiere)
+  paeseFonti = '', settoreFonti = '',
 } = {}, suStadio) {
   const pulita = String(q || '').trim();
   if (!pulita) return null;
@@ -100,6 +129,8 @@ export async function cercaTopics({
   if (fresca) parametri.set('fresh', '1');
   if (profonda) parametri.set('deep', '1');
   if (profonda || fonti) parametri.set('fonti', String(fonti || 6));
+  if (paeseFonti) parametri.set('paeseFonti', paeseFonti);
+  if (settoreFonti) parametri.set('settoreFonti', settoreFonti);
   const risposta = await fetch(`/api/topics/search?${parametri.toString()}`, segnale ? { signal: segnale } : undefined);
   if (!risposta.ok || !risposta.body) throw new Error(`HTTP ${risposta.status}`);
   return leggiARighe(risposta, suStadio);

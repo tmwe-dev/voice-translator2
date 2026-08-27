@@ -22,6 +22,7 @@ import { immagineSicura } from './ricerca.js';
 import { cercaNotizie, risolviLinkGoogle } from './ricerca.js';
 import { cercaWikipedia } from './wikipedia.js';
 import { meritaEnciclopedia } from './enciclopediaUtile.js'; // b.541 — l'enciclopedia solo dove c'entra
+import { vociDiRicerca, chiaveLista } from './fonti.js'; // b.543 — la ricerca a piu voci
 import { arricchisci } from './estrai.js';
 import { raggruppaInArgomenti } from './raggruppa.js';
 import { riordina } from './riordino.js';
@@ -76,6 +77,9 @@ export async function cercaArgomenti(query, lingua = 'en', {
   // accanto alle notizie), i FATTI in testa. `fonti` = quanto
   // approfondire (piu voci enciclopediche). La veloce resta identica.
   profonda = false, fonti = 6,
+  // b.543 — il Paese/settore da cui prendere la lista di testate: se c'e
+  // una lista viva, la ricerca smette di essere una domanda sola.
+  paeseFonti = '', settoreFonti = '',
 } = {}) {
   const q = normalizzaQuery(query);
   if (!q) return { argomenti: [], stanze: [], daCache: false, quando: Date.now() };
@@ -112,8 +116,47 @@ export async function cercaArgomenti(query, lingua = 'en', {
   // davvero un soggetto dietro (enciclopediaUtile.js).
   const wikiSensata = profonda && meritaEnciclopedia(q);
   const wikiMax = wikiSensata ? Math.max(2, Math.min(Math.round(fonti / 2), 6)) : 0;
+  // ═══ b.543 — LA RICERCA A PIU VOCI ═══
+  // Ordine di Luca sulla pluralita: «probabilmente tu cerchi quasi sempre
+  // nelle stesse fonti e in realta devi ampliare in modo intelligente le
+  // ricerche». Vero: fino a ieri si faceva UNA domanda a Bing e si
+  // prendeva cio che dava. Adesso, se esiste una lista di testate per
+  // questo Paese o questo settore (il Fontiere, /api/topics/fonti), alla
+  // domanda generale si affiancano quattro domande MIRATE — `q
+  // site:testata` — cosi i risultati vengono da posti diversi per
+  // costruzione, non per fortuna. Se la lista non c'e, tutto come prima.
+  let voci = [];
+  try {
+    const kf = chiaveLista({ paese: paeseFonti, settore: settoreFonti });
+    if (kf) {
+      const salvata = await redis('GET', `fonti:${kf}`);
+      if (salvata) {
+        const lista = JSON.parse(salvata);
+        voci = vociDiRicerca(q, lista?.fonti || [], { quante: 4 });
+      }
+    }
+  } catch { /* senza lista si cerca come si e sempre cercato */ }
+  if (voci.length) racconta('fonti-mirate', { quante: voci.length });
+
   const [articoli, wiki] = await Promise.all([
-    cercaNotizie(q, lingua, { massimo: 20 }),
+    (async () => {
+      const generale = await cercaNotizie(q, lingua, { massimo: 20 });
+      if (!voci.length) return generale;
+      // le voci mirate portano poco a testa (3): il punto non e la
+      // quantita, e che ci sia dentro anche altro oltre a cio che
+      // l'aggregatore avrebbe scelto da solo.
+      const mirate = await Promise.all(voci.map((v) => cercaNotizie(v, lingua, { massimo: 3 }).catch(() => [])));
+      const visti = new Set(generale.map((a) => a?.url).filter(Boolean));
+      const extra = [];
+      for (const gruppo of mirate) {
+        for (const a of gruppo) {
+          if (!a?.url || visti.has(a.url)) continue;
+          visti.add(a.url);
+          extra.push(a);
+        }
+      }
+      return [...generale, ...extra];
+    })(),
     wikiSensata ? cercaWikipedia(q, lingua, { massimo: wikiMax }).catch(() => []) : Promise.resolve([]),
   ]);
   racconta('fonti', { quante: articoli.length + wiki.length });

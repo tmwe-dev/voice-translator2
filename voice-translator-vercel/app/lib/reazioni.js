@@ -1,168 +1,145 @@
-import { redis } from './redis.js';
-
 // ═══════════════════════════════════════════════════════════════
-// REAZIONI E RILEVANZA
+// LE REAZIONI — sei faccine dove prima c'era un cuore solo.
 //
-// Tre gesti soli — pollice su, pollice giu, cuore — piu la risposta
-// diretta, che non e una reazione ma un messaggio come gli altri.
+// b.545, ordine di Luca: «😊 Reazione (tienilo premuto: si apre il
+// ventaglio di emoticon come Instagram)». Il mi piace di b.544
+// (lib/gradimento.js) sapeva dire una cosa sola: mi piace. Ma una
+// notizia puo far ridere, far arrabbiare o lasciare a bocca aperta, e
+// chi legge vuole rispondere con la faccia giusta, non con l'unica che
+// gli abbiamo dato.
 //
-// PERCHE FUNZIONA ANCHE NELLE CHAT CIFRATE. Una reazione e un contatore
-// appeso a un identificativo: il server conta, e non sa cosa c'era
-// scritto nel messaggio. Quindi le reazioni si possono usare ovunque,
-// anche dove il contenuto e cifrato punto a punto.
+// Lo schema e' lo stesso del cuore, e non per pigrizia: il conteggio e'
+// DI TUTTI (vive su Redis, per indirizzo di contenuto), la memoria di
+// quale faccina ho messo IO e' mia (vive nel telefono). Cosi il tasto si
+// accende subito, senza aspettare la rete, e il numero accanto e' quello
+// vero di tutti.
 //
-// LA CONSERVAZIONE DEI MESSAGGI, INVECE, NO. Per far vedere a chi entra
-// cosa si e detto prima, i messaggi devono stare sul server in chiaro.
-// Vale SOLO per le stanze Community, e va detto a chi entra.
+// L'unica differenza col cuore sta qui: li c'era acceso o spento, qui
+// c'e una scelta fra sei. Per questo `giraReazione` non torna un passo
+// +1/-1 ma la coppia prima/dopo — il server deve sapere COSA scalare e
+// COSA aggiungere, perche cambiare faccina e' un togliere e un mettere
+// nello stesso gesto.
+//
+// `chiaveContenuto` arriva da gradimento.js, importata e non ricopiata:
+// se un giorno cambia il modo di ripulire gli indirizzi, cuori e faccine
+// devono cambiare INSIEME, altrimenti lo stesso articolo finisce contato
+// su due chiavi diverse.
 // ═══════════════════════════════════════════════════════════════
+import { memGet, memSet } from './memoria.js';
+import { chiaveContenuto } from './gradimento.js';
 
-const ORA = 3600;
-const TTL = ORA * 2;        // le reazioni non sopravvivono alla stanza
-const MAX_STORICO = 200;    // oltre, si butta il piu vecchio
+export { chiaveContenuto };
 
-export const TIPI = ['su', 'giu', 'cuore'];
+const CHIAVE = 'vt-mie-reazioni';
+const QUANTI_RICORDO = 400;
 
-const chiave = {
-  conte: (r, m) => `reaz:${r}:${m}`,
-  mio: (r, m, chi) => `reaz:${r}:${m}:di:${chi}`,
-  storico: (r) => `msg:${r}`,
-  risposte: (r, m) => `risp:${r}:${m}`,
-};
+/** Le sei facce. Sei e non venti: il ventaglio deve stare in una riga
+ *  sola sul telefono, e a scegliere fra venti non si sceglie piu. */
+export const REAZIONI = [
+  { id: 'cuore', emoji: '❤️', chiaveTesto: 'reazione.cuore' },
+  { id: 'forte', emoji: '🔥', chiaveTesto: 'reazione.forte' },
+  { id: 'ridere', emoji: '😂', chiaveTesto: 'reazione.ridere' },
+  { id: 'stupore', emoji: '😮', chiaveTesto: 'reazione.stupore' },
+  { id: 'triste', emoji: '😢', chiaveTesto: 'reazione.triste' },
+  { id: 'arrabbiato', emoji: '😡', chiaveTesto: 'reazione.arrabbiato' },
+];
 
-const pulisci = (s) => (s || '').trim().toLowerCase().slice(0, 40);
+const IDS = REAZIONI.map((r) => r.id);
 
-// ── Reagire ──
-//
-// Su e giu si escludono: sono lo stesso gesto in due direzioni, e chi
-// cambia idea non deve restare contato due volte. Il cuore vive per
-// conto suo: si puo amare un messaggio e insieme non essere d'accordo.
+/** Un id che non e' fra i sei non esiste: arriva da un telefono con la
+ *  memoria vecchia o da una chiamata storta, e va buttato in silenzio. */
+export function reazioneValida(id) {
+  return typeof id === 'string' && IDS.includes(id);
+}
 
-export async function reagisci(roomId, msgId, tipo, chi) {
-  if (!roomId || !msgId || !TIPI.includes(tipo)) return null;
-  const io = pulisci(chi);
-  if (!io) return null;
+/** L'emoji da disegnare per un id, se l'id ha senso. */
+export function emojiDi(id) {
+  return REAZIONI.find((r) => r.id === id)?.emoji || null;
+}
 
-  const k = chiave.conte(roomId, msgId);
-  const kMio = chiave.mio(roomId, msgId, io);
+// Nel telefono tengo coppie [chiave, id] in ordine di freschezza: le
+// ultime quattrocento. Un elenco e non un oggetto perche cosi so quali
+// sono le piu recenti e posso tagliare la coda senza pensarci.
+function leggiMie() {
+  try {
+    const v = JSON.parse(memGet(CHIAVE, '[]'));
+    if (!Array.isArray(v)) return [];
+    return v.filter((c) => Array.isArray(c) && typeof c[0] === 'string' && c[0] && reazioneValida(c[1]));
+  } catch { return []; }
+}
 
-  const grezzo = await redis('GET', kMio);
-  let mie; try { mie = grezzo ? JSON.parse(grezzo) : {}; } catch { mie = {}; }
+/** Tutte le mie faccine, per chiave di contenuto. */
+export function mieReazioni() {
+  const mappa = {};
+  for (const [k, id] of leggiMie()) if (!(k in mappa)) mappa[k] = id;
+  return mappa;
+}
 
-  const delta = { su: 0, giu: 0, cuore: 0 };
+/** Che faccia ho messo io qui? `null` se non ho messo niente. */
+export function miaReazione(url) {
+  const k = chiaveContenuto(url);
+  if (!k) return null;
+  const trovata = leggiMie().find((c) => c[0] === k);
+  return trovata ? trovata[1] : null;
+}
 
-  if (mie[tipo]) {
-    // Secondo tocco sullo stesso gesto: si toglie. E come cancellare un voto.
-    delta[tipo] = -1;
-    delete mie[tipo];
-  } else {
-    delta[tipo] = 1;
-    mie[tipo] = 1;
-    // Su e giu non convivono.
-    const opposto = tipo === 'su' ? 'giu' : tipo === 'giu' ? 'su' : null;
-    if (opposto && mie[opposto]) { delta[opposto] = -1; delete mie[opposto]; }
+/**
+ * Metti, cambia o togli — un gesto solo. Se ripeti la faccia che avevi
+ * gia, la togli: e' il modo naturale di disdire senza cercare un secondo
+ * tasto «annulla» che nessuno troverebbe.
+ *
+ * Torna { chiave, prima, dopo } con gli id (o null): al server serve
+ * proprio questa coppia per sapere quale conteggio scalare e quale
+ * alzare. Se l'indirizzo non e' valido, o la faccia non e' fra le sei,
+ * non succede niente e prima resta uguale a dopo — cosi chi riceve la
+ * risposta capisce da solo che non c'e nulla da scrivere.
+ */
+export function giraReazione(url, idReazione) {
+  const k = chiaveContenuto(url);
+  if (!k) return { chiave: '', prima: null, dopo: null };
+  const mie = leggiMie();
+  const prima = mie.find((c) => c[0] === k)?.[1] ?? null;
+  if (!reazioneValida(idReazione)) return { chiave: k, prima, dopo: prima };
+  const dopo = prima === idReazione ? null : idReazione;
+  const senzaQuesta = mie.filter((c) => c[0] !== k);
+  const nuove = dopo ? [[k, dopo], ...senzaQuesta].slice(0, QUANTI_RICORDO) : senzaQuesta;
+  try { memSet(CHIAVE, JSON.stringify(nuove)); } catch { /* senza memoria la faccina vale per questa volta sola */ }
+  return { chiave: k, prima, dopo };
+}
+
+/**
+ * I numeri di tutti per un contenuto: quanti per ciascuna faccia e
+ * quanti in tutto. Regge conteggi assenti, mezzi rotti o pieni di id che
+ * non conosciamo — dal server puo arrivare di tutto, e un feed non si
+ * spegne per una riga sballata.
+ */
+export function contaReazioni(conteggi, url) {
+  const k = chiaveContenuto(url);
+  const grezzi = (k && conteggi && typeof conteggi === 'object') ? conteggi[k] : null;
+  const perId = {};
+  let totale = 0;
+  if (grezzi && typeof grezzi === 'object') {
+    for (const id of IDS) {
+      const n = Math.max(0, Math.trunc(Number(grezzi[id]) || 0));
+      if (n > 0) { perId[id] = n; totale += n; }
+    }
   }
+  return { perId, totale };
+}
 
-  for (const t of TIPI) {
-    if (delta[t]) await redis('HINCRBY', k, t, delta[t]);
+/**
+ * La faccia piu votata: sul tasto chiuso ne mostriamo UNA, non sei —
+ * il ventaglio si apre solo se lo chiedi, altrimenti la colonnina del
+ * feed diventa una tastiera. A parita di voti vince chi viene prima
+ * nell'elenco, cosi l'ordine non balla ad ogni ricarica.
+ */
+export function reazionePiuUsata(conteggi, url) {
+  const { perId } = contaReazioni(conteggi, url);
+  let vincitrice = null;
+  let massimo = 0;
+  for (const id of IDS) {
+    const n = perId[id] || 0;
+    if (n > massimo) { massimo = n; vincitrice = id; }
   }
-  await redis('EXPIRE', k, TTL);
-
-  if (Object.keys(mie).length) await redis('SET', kMio, JSON.stringify(mie), 'EX', TTL);
-  else await redis('DEL', kMio);
-
-  return { conte: await leggiConte(roomId, msgId), mie };
-}
-
-export async function leggiConte(roomId, msgId) {
-  const h = await redis('HGETALL', chiave.conte(roomId, msgId));
-  const conte = { su: 0, giu: 0, cuore: 0 };
-  if (Array.isArray(h)) {
-    for (let i = 0; i < h.length; i += 2) conte[h[i]] = Number(h[i + 1]) || 0;
-  } else if (h && typeof h === 'object') {
-    for (const t of TIPI) conte[t] = Number(h[t]) || 0;
-  }
-  for (const t of TIPI) conte[t] = Math.max(0, conte[t]);
-  return conte;
-}
-
-export async function leggiMie(roomId, msgId, chi) {
-  const grezzo = await redis('GET', chiave.mio(roomId, msgId, pulisci(chi)));
-  try { return grezzo ? JSON.parse(grezzo) : {}; } catch { return {}; }
-}
-
-export async function contaRisposte(roomId, msgId) {
-  return Number(await redis('GET', chiave.risposte(roomId, msgId))) || 0;
-}
-
-// ── Rilevanza ──
-//
-// Chi entra deve capire il clima in tre secondi. Non basta "il piu
-// piaciuto": un messaggio con dieci pollici su e dieci giu racconta molto
-// di piu di uno con venti su e zero giu. Quindi il disaccordo NON
-// penalizza: alza.
-//
-//   gradimento  = su + cuore che pesa una volta e mezza
-//   discussione = quanto le due parti si sono incontrate (il minimo fra
-//                 su e giu, che e alto solo se entrambe sono alte)
-//                 piu le risposte, che sono l'impegno piu costoso
-//
-// Un messaggio ignorato da tutti resta in fondo, come deve.
-
-export function rilevanza({ su = 0, giu = 0, cuore = 0, risposte = 0 } = {}) {
-  const gradimento = su + cuore * 1.5;
-  const discussione = Math.min(su, giu) * 2 + risposte * 3;
-  return gradimento + discussione;
-}
-
-// ── Storico dei messaggi (SOLO stanze Community) ──
-
-export async function salvaMessaggio(roomId, messaggio) {
-  if (!roomId || !messaggio?.id) return false;
-  const magro = {
-    id: String(messaggio.id).slice(0, 64),
-    nome: String(messaggio.nome || '').slice(0, 40),
-    testo: String(messaggio.testo || '').slice(0, 1000),
-    lang: String(messaggio.lang || '').slice(0, 10),
-    rispostaA: messaggio.rispostaA ? String(messaggio.rispostaA).slice(0, 64) : null,
-    ts: Date.now(),
-  };
-  await redis('LPUSH', chiave.storico(roomId), JSON.stringify(magro));
-  await redis('LTRIM', chiave.storico(roomId), 0, MAX_STORICO - 1);
-  await redis('EXPIRE', chiave.storico(roomId), TTL);
-
-  if (magro.rispostaA) {
-    await redis('INCR', chiave.risposte(roomId, magro.rispostaA));
-    await redis('EXPIRE', chiave.risposte(roomId, magro.rispostaA), TTL);
-  }
-  return true;
-}
-
-async function tuttiIMessaggi(roomId) {
-  const grezzi = await redis('LRANGE', chiave.storico(roomId), 0, MAX_STORICO - 1);
-  return (grezzi || []).map(s => { try { return JSON.parse(s); } catch { return null; } }).filter(Boolean);
-}
-
-// Quello che vede chi entra adesso: gli ultimi venti per il filo del
-// discorso, e i tre che hanno smosso di piu per il clima.
-export async function storico(roomId, { recenti = 20, inCima = 3 } = {}) {
-  const tutti = await tuttiIMessaggi(roomId);
-  if (!tutti.length) return { recenti: [], rilevanti: [] };
-
-  const conConte = await Promise.all(tutti.map(async m => {
-    const [conte, risposte] = await Promise.all([
-      leggiConte(roomId, m.id),
-      contaRisposte(roomId, m.id),
-    ]);
-    return { ...m, conte, risposte, punteggio: rilevanza({ ...conte, risposte }) };
-  }));
-
-  // LPUSH mette in testa il piu recente: per leggere in ordine si gira.
-  const ultimi = conConte.slice(0, recenti).reverse();
-
-  const rilevanti = conConte
-    .filter(m => m.punteggio > 0)
-    .sort((a, b) => b.punteggio - a.punteggio)
-    .slice(0, inCima);
-
-  return { recenti: ultimi, rilevanti };
+  return vincitrice;
 }
