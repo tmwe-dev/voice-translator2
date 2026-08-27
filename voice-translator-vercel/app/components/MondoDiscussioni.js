@@ -144,7 +144,7 @@ function MondoDiscussioni({ discussionId, onClose, onOpenPersona }) {
       });
       if (r.status === 401) { setErrore(L('accessToCreate')); }
       else if (!r.ok) { setErrore(L('loadingError')); }
-      else { setTesto(''); setComposerAperto(false); await carica(); requestAnimationFrame(() => scrollRef.current?.scrollTo(0, scrollRef.current.scrollHeight)); }
+      else { setTesto(''); await carica(); requestAnimationFrame(() => scrollRef.current?.scrollTo(0, scrollRef.current.scrollHeight)); }
     } catch (e) {
       // b.363 — prima questo guasto non lasciava traccia da nessuna parte: nel
       // registro non compariva nulla, e il motivo vero (rete caduta, attesa
@@ -209,7 +209,13 @@ function MondoDiscussioni({ discussionId, onClose, onOpenPersona }) {
   // dietro un'icona sola; i tasti veloci per commento (cuore, traduci,
   // segnala, blocca) restano DOVE ERANO, fuori da qualsiasi popup — non
   // sono stati toccati.
-  const [composerAperto, setComposerAperto] = useState(false);
+  // b.546 — LO STATO DELLA POPUP E' USCITO. Era il residuo di b.511: la
+  // popup dei commenti e' stata tolta in b.529 su ordine di Luca («la
+  // popup che apri devi eliminarla e inserire in basso direttamente
+  // campo testo e pulsanti»), ma lo stato che la apriva era rimasto —
+  // dichiarato e mai piu letto da nessuno. Non e' pulizia
+  // opportunistica: e' la coda di un ordine eseguito a meta, trovata
+  // dalla prova b.511 che continuava a cercarlo.
   const ingr = 1 + zoomTesto * 0.15;
 
   // b.516 — anche questa schermata dichiarava `fixed inset:0` ma usciva

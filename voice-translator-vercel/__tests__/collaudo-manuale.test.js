@@ -82,7 +82,11 @@ describe('collaudo manuale — difetti che non devono tornare', () => {
     //     un'icona nostra cambierebbe cosa hai mandato, non come si vede.
     //   AdminWallet — il pacchetto regalo sta dentro il TESTO di un
     //     messaggio che si manda su WhatsApp, non su uno schermo nostro.
-    const CONTENUTO_NON_INTERFACCIA = ['AdminWallet.js', 'BarraReazioni.js'];
+    //   VentaglioReazioni — b.546: stessa ragione di BarraReazioni. Le
+    //     reazioni SONO le emoji: la faccia che scegli viaggia col
+    //     contenuto e la vedono gli altri. Sostituirla con un'icona
+    //     nostra cambierebbe cosa hai mandato, non come si vede.
+    const CONTENUTO_NON_INTERFACCIA = ['AdminWallet.js', 'BarraReazioni.js', 'VentaglioReazioni.js'];
     const colpevoli = [];
     const guarda = (dir) => {
       for (const voce of fs.readdirSync(dir, { withFileTypes: true })) {

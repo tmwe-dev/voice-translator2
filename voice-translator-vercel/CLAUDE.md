@@ -267,6 +267,64 @@ perche il working tree lo conteneva ancora.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.546** (push #832) — LA SCHERMATA ROSSA, E LA PROVA CHE
+  NON L'AVEVA PRESA. Luca: «ReferenceError: Cannot access 'T' before
+  initialization... non va piu un cazzo, hai rotto molte cose».
+
+  ① LA CAUSA, ed era mia. In b.544, agganciando i cuori a
+  FeedNotizieMondo, ho scritto l'effetto SOPRA `const elementi =
+  useMemo(...)` tenendomi pero `elementi` nell'elenco delle dipendenze.
+  L'elenco delle dipendenze e' un ARGOMENTO di useEffect: viene valutato
+  durante il disegno, quindi leggeva `elementi` nella sua zona morta.
+  Il feed non si disegnava proprio — quel 'T' e' il nome accorciato di
+  quella costante. Corretto spostando la dichiarazione sopra a chi la
+  nomina.
+
+  ② E CON LEI, ALTRE QUATTRO CAUSE del passaggio rotto («passando al
+  prossimo video non lo riproduce»), tutte trovate montando il
+  componente davvero:
+    · l'IntersectionObserver non nasceva mai — la schermata vive dentro
+      Sovrapposizione, che al primo giro torna null: al primo commit il
+      riquadro non c'era, e le dipendenze non cambiavano piu. Ora il
+      contenitore e' anche uno stato;
+    · soglia 0.6 irraggiungibile su slide 100dvh in una finestra piu
+      bassa (barra del browser): ora [0.25, 0.6];
+    · si decideva sul solo lotto del giro: ora c'e la memoria delle aree;
+    · il `resize` della barra del browser che si ritira tirava indietro
+      alla slide precedente: ora si agisce solo se cambia la LARGHEZZA.
+
+  ③ LA PROVA CHE MANCAVA — ed e' il punto vero. Nessuna delle nostre
+  prove ha preso questo difetto perche' LEGGEVANO IL TESTO dei file
+  invece di farli partire: il feed era morto e le prove erano verdi.
+  Nasce audit-montaggio-b546: monta DAVVERO le quattro schermate
+  (MondoNews, FeedNotizieMondo, StanzeView, MondoView) e i quattro pezzi
+  del motore. Se una schermata ha una zona morta, esplode qui invece che
+  in faccia a Luca. E' il seguito di b.539 (nessun-import-fantasma):
+  stessa famiglia di difetti, stessa cura.
+
+  ④ AGGANCIATO IL MOTORE (era costruito e fermo): la campanella nella
+  testata del giornale, il punteggio condiviso che riordina i risultati
+  quando tornano i segnali, il filo dei commenti con «onCommenta» — e
+  dalla card della lista un tasto commenti che porta allo stesso posto.
+  Il segnale `apertura` parte dal LETTORE, non dai singoli tasti: le
+  porte che portano li sono sei, il lettore uno solo.
+
+  ⑤ BANDIERA E FONTE NEL FEED, una miniatura sola, e il badge di vetro
+  in alto a sinistra su articoli (bandiera + testata) e video (canale).
+  Se il Paese non si sa, niente bandiera — mai una bandiera sbagliata.
+
+  DUE ROSSE PRE-ESISTENTI, dichiarate e chiuse:
+    · collaudo-manuale vietava le emoji nell'interfaccia e VentaglioReazioni
+      ne e fatto: le reazioni SONO emoji (stessa eccezione gia concessa a
+      BarraReazioni), aggiunto all'elenco con la spiegazione;
+    · composer-popup-b511 difendeva la popup dei commenti che LUCA aveva
+      fatto togliere in b.529. Riscritta su cio che b.511 voleva davvero
+      (si commenta, e il modulo non ruba la pagina). Con lei e uscito lo
+      stato `composerAperto`, rimasto dichiarato e mai piu letto: coda di
+      un ordine eseguito a meta.
+
+  PROVE: 782 verdi sulle 90 suite girate a blocchi, eslint 0 errori.
+
 - Versione: **b.545** (push #831) — IL MOTORE, IL FONTIERE, E QUATTRO
   AGENTI IN PARALLELO. Luca: «cazzo incredibile... tutto questo ancora da
   fare. lancia 10 agenti in parallelo e completa». Questo push porta il

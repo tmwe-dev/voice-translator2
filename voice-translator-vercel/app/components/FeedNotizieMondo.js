@@ -3,6 +3,8 @@ import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { FONT, vibrate } from '../lib/constants.js';
 import Icon from './Icon.js';
 import { chiaveContenuto, hoMessoCuore, giraCuore, quantiCuori } from '../lib/gradimento.js'; // b.544 — il mi piace
+import { bandieraPaese, nomePaese } from '../lib/schedaMondo.js'; // b.546 — la bandiera e il nome del paese
+import { paeseDellaNotizia } from '../lib/paeseDaFonte.js';       // b.546 — da dove arriva davvero la notizia
 import AnteprimaCoperta from './ui/AnteprimaCoperta.js';
 import Sovrapposizione from './ui/Sovrapposizione.js';
 
@@ -36,6 +38,20 @@ const FILTRI = [
 // meglio due dita d'aria in piu che un tasto coperto.
 const BARRA_YT = 60;
 
+// b.546 — QUANTO BASTA VEDERSI PER ESSERE «LA SLIDE CHE SI STA
+// GUARDANDO». Fino a ieri la soglia era una sola, 0.6, e li stava meta
+// del difetto raccontato da Luca («hai rotto il passaggio, passando al
+// prossimo video non lo riproduce»): una slide alta 100dvh dentro una
+// finestra piu bassa — sul telefono la barra del browser si mangia
+// qualche decina di punti — non arriva MAI a mostrare il 60% della
+// propria area, quindi nessuna slide superava la soglia, l'osservatore
+// non avvisava di niente e l'indice restava fermo dov'era. Il player,
+// che vive solo sulla slide attiva, non si spostava mai.
+// Adesso la soglia e bassa e non decide da sola: dice solo «di questa
+// vale la pena parlare», e poi fra tutte quelle viste si prende
+// comunque la PIU visibile (vedi l'osservatore).
+const SOGLIA_VISTA = 0.25;
+
 // ═══════════════════════════════════════════════════════════════
 // b.539 — LA COLONNINA DELLE AZIONI. Luca, guardando un video nel feed:
 // «perche questo contenuto non ha tasti?».
@@ -47,6 +63,12 @@ const BARRA_YT = 60;
 // (e chi guarda lo cerca li), e soprattutto e' lontano dalla barra dei
 // comandi del player, che in fondo allo schermo deve restare libera —
 // la lezione di b.538, pagata due volte.
+//
+// b.546 — ED E' L'UNICO POSTO DOVE STANNO LE PORTE. Collaudo di Luca:
+// «parlane non deve occupare tutto quello spazio». Ricontrollate tutte
+// le slide: nessun bottone a piena larghezza, da nessuna parte. Una
+// porta e un cerchio da 46 punti in questa colonnina, mai una fascia
+// che si mangia mezzo schermo.
 // ═══════════════════════════════════════════════════════════════
 function Azioni({ voci }) {
   return (
@@ -84,8 +106,91 @@ function Azioni({ voci }) {
   );
 }
 
+// ═══════════════════════════════════════════════════════════════
+// b.546 — DA DOVE ARRIVA QUESTA COSA, SCRITTO SOPRA LA FOTO
+//
+// Collaudo di Luca: «non vedo bandiere negli articoli ne le fonti,
+// mostra la bandiera e l'origine e che si veda bene».
+// Aveva ragione, e non era un dettaglio: nel feed a tutta pagina la
+// provenienza non c'era proprio. Nella lista delle notizie la bandiera
+// c'e da b.363 — e il «DA DOVE» del metodo delle schede
+// (schedaMondo.js) — e passando al feed si perdeva per strada. Una
+// notizia senza origine e una voce di corridoio: chi guarda deve
+// sapere in mezzo secondo CHI la racconta e DA DOVE, senza toccare
+// niente.
+//
+// Vetro scuro sfocato in alto a sinistra, sopra la fotografia: e il
+// primo posto dove cade l'occhio e non litiga con nessuno — l'header
+// sta piu su, la colonnina delle porte sta a destra, i comandi di
+// YouTube stanno in fondo (la lezione di b.538).
+//
+// LA BANDIERA SOLO SE E' VERA: `paeseDellaNotizia` torna `null` quando
+// il dominio non dice il paese, e allora resta la sola fonte. Meglio
+// nessuna bandiera che una bandiera sbagliata — la stessa regola del
+// globo che non vola in Groenlandia per una notizia di Napoli.
+//
+// E' pittura, non un tasto (`pointerEvents: 'none'`): non deve rubare
+// il tocco ne al player ne all'anteprima ancora da scoprire.
+// ═══════════════════════════════════════════════════════════════
+function BadgeOrigine({ bandiera, luogo, origine }) {
+  if (!bandiera && !origine) return null;
+  return (
+    <div style={{
+      // sotto l'header (che e alto 44 + 28 di respiro), non sopra:
+      // due cose di vetro sovrapposte non si leggono piu ne l'una ne
+      // l'altra.
+      position: 'absolute', top: 74, left: 14, zIndex: 2,
+      maxWidth: 'calc(100% - 92px)',
+      display: 'flex', alignItems: 'center', gap: 8,
+      padding: '7px 13px 7px 11px', borderRadius: 999,
+      background: 'rgba(8,11,22,0.66)', border: '1px solid rgba(255,255,255,0.24)',
+      backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
+      boxShadow: '0 6px 20px rgba(0,0,0,0.42)',
+      pointerEvents: 'none',
+    }}>
+      {bandiera ? (
+        // grande davvero: sotto i 20 punti una bandiera diventa un
+        // francobollo colorato e non si riconosce piu. Era esattamente
+        // il punto di Luca, «che si veda bene».
+        <span role="img" aria-label={luogo || undefined}
+          style={{ fontSize: 20, lineHeight: 1, flexShrink: 0 }}>{bandiera}</span>
+      ) : null}
+      {origine ? (
+        <span style={{
+          // niente grassetto: ordine permanente di Luca, «non voglio
+          // grassetto da nessuna parte e neanche dentro i pulsanti».
+          // Si legge lo stesso perche sta su vetro scuro e ha la sua
+          // ombra, non perche pesa.
+          fontSize: 13.5, fontWeight: 500, fontFamily: FONT, color: '#fff',
+          letterSpacing: 0.2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+          textShadow: '0 1px 3px rgba(0,0,0,0.55)',
+        }}>{origine}</span>
+      ) : null}
+    </div>
+  );
+}
+
 export default function FeedNotizieMondo({ aperto, onChiudi, C, L, argomenti = [], video = [], filtro, onFiltro, onParlane, onApriArticolo, onStrumenti, onCresci, crescendo = false, onCerca }) {
   const contenitoreRef = useRef(null);
+  // ═══════════════════════════════════════════════════════════════
+  // b.546 — L'OSSERVATORE CHE NON NASCEVA MAI. Quinta causa del
+  // «passaggio rotto», e la piu silenziosa di tutte.
+  // Da b.516 questa schermata vive dentro Sovrapposizione, che al primo
+  // giro restituisce `null` (in SSR `document` non esiste: si monta al
+  // secondo). Quindi al primo giro il riquadro che scorre NON esiste
+  // ancora e `contenitoreRef.current` e vuoto — e l'effetto che accende
+  // l'IntersectionObserver, trovandolo vuoto, se ne andava senza fare
+  // niente. Al secondo giro il riquadro c'era, ma l'effetto non veniva
+  // richiamato perche' nessuna delle sue dipendenze era cambiata:
+  // l'osservatore non nasceva PIU, e senza osservatore nessuno diceva
+  // mai «adesso stai guardando la slide dopo». Il feed aperto con i
+  // contenuti gia in mano — cioe il caso normale — non cambiava mai
+  // slide attiva: il player restava sul primo video per sempre.
+  // Rimedio: il riquadro non e piu solo un riferimento, e anche uno
+  // STATO. Quando compare, chi lo aspetta si sveglia.
+  // ═══════════════════════════════════════════════════════════════
+  const [contenitore, setContenitore] = useState(null);
+  const prendiContenitore = useCallback((nodo) => { contenitoreRef.current = nodo; setContenitore(nodo); }, []);
   const sentinelleRef = useRef(new Map());
   const [indiceAttivo, setIndiceAttivo] = useState(0);
   const [seme, setSeme] = useState('');   // b.541 — il campo dell'ultima slide
@@ -95,6 +200,49 @@ export default function FeedNotizieMondo({ aperto, onChiudi, C, L, argomenti = [
   // (dal server, quando arriva).
   const [miei, setMiei] = useState(() => new Set());
   const [conteggi, setConteggi] = useState({});
+
+  // ═══════════════════════════════════════════════════════════════
+  // b.546 — LA CAUSA VERA DEL «PASSAGGIO ROTTO», e viene prima di
+  // tutte le altre: L'ELENCO SI COSTRUIVA TROPPO TARDI.
+  //
+  // Collaudo di Luca: «hai rotto il passaggio, passando al prossimo
+  // video non lo riproduce». Il video dopo non partiva perche' il feed
+  // NON ARRIVAVA PIU A DISEGNARSI, per niente: in b.544, aggiungendo
+  // il giro che chiede i conteggi dei cuori, quell'effetto e' stato
+  // scritto SOPRA la riga `const elementi = useMemo(...)` tenendosi
+  // pero `elementi` nel proprio elenco di dipendenze.
+  // L'elenco delle dipendenze si costruisce DURANTE il disegno — e un
+  // argomento passato a useEffect, non qualcosa che accade dopo —
+  // quindi leggeva `elementi` prima che `elementi` esistesse. Su una
+  // `const` non ancora inizializzata JavaScript non risponde
+  // `undefined`: si ferma («Cannot access 'elementi' before
+  // initialization»). Il componente moriva ad ogni disegno, e nessuna
+  // delle prove se n'era accorta perche leggono il sorgente con
+  // un'espressione regolare invece di montarlo davvero.
+  //
+  // Rimedio, che e una regola e non una toppa: le cose si dichiarano
+  // SOPRA a chiunque le guardi, sempre. Qui l'elenco viene per primo.
+  // ═══════════════════════════════════════════════════════════════
+  const elementi = useMemo(() => {
+    const art = (argomenti || []).map((t) => ({ tipo: 'articolo', dati: t, chiave: `a-${t.id || t.url || t.titolo}` }));
+    const vid = (video || []).filter((v) => v?.id).map((v) => ({ tipo: 'video', dati: v, chiave: `v-${v.id}` }));
+    if (filtro === 'video') return vid;
+    if (filtro === 'articoli') return art;
+    // «entrambi»: intercalati, cosi non si scorrono prima tutti gli
+    // articoli in blocco e poi tutti i video in blocco.
+    const out = [];
+    const n = Math.max(art.length, vid.length);
+    for (let i = 0; i < n; i++) { if (art[i]) out.push(art[i]); if (vid[i]) out.push(vid[i]); }
+    return out;
+  }, [argomenti, video, filtro]);
+
+  // b.546 — l'indice e l'elenco tenuti anche «a mano». Servono a chi
+  // ascolta gli eventi della finestra: un ascoltatore registrato una
+  // volta sola si porterebbe dietro per sempre i valori del giorno in
+  // cui e nato, e prenderebbe decisioni sul passato.
+  const indiceRef = useRef(0);
+  const elementiRef = useRef(elementi);
+  useEffect(() => { indiceRef.current = indiceAttivo; elementiRef.current = elementi; });
 
   // si chiedono i conteggi delle slide che si stanno guardando, non di
   // tutte: una manciata di indirizzi per volta.
@@ -152,27 +300,25 @@ export default function FeedNotizieMondo({ aperto, onChiudi, C, L, argomenti = [
     try { contenitoreRef.current?.scrollTo({ top: 0, behavior: 'auto' }); } catch { /* niente da riportare in cima */ }
   }, [seme, onCerca]);
 
-  const elementi = useMemo(() => {
-    const art = (argomenti || []).map((t) => ({ tipo: 'articolo', dati: t, chiave: `a-${t.id || t.url || t.titolo}` }));
-    const vid = (video || []).filter((v) => v?.id).map((v) => ({ tipo: 'video', dati: v, chiave: `v-${v.id}` }));
-    if (filtro === 'video') return vid;
-    if (filtro === 'articoli') return art;
-    // «entrambi»: intercalati, cosi non si scorrono prima tutti gli
-    // articoli in blocco e poi tutti i video in blocco.
-    const out = [];
-    const n = Math.max(art.length, vid.length);
-    for (let i = 0; i < n; i++) { if (art[i]) out.push(art[i]); if (vid[i]) out.push(vid[i]); }
-    return out;
-  }, [argomenti, video, filtro]);
+  // b.546 — QUANTO SI VEDE OGNI SLIDE, l'ultima volta che se n'e saputo
+  // qualcosa. Serve perche l'osservatore avvisa SOLO delle slide che
+  // hanno appena attraversato una soglia: nel giro in cui la slide
+  // vecchia scende sotto, quella nuova puo non essere ancora
+  // nell'elenco delle voci. Decidere sul solo lotto di quel millesimo
+  // voleva dire, a volte, non decidere affatto — ed e l'altra meta del
+  // passaggio che non passava. Con la memoria si sceglie sempre
+  // guardando TUTTE le slide, non solo quelle che si sono appena mosse.
+  const visibiliRef = useRef(new Map());
 
   // b.515 — CHI E' IN VISTA PRENDE L'AUTOPLAY. Un solo IntersectionObserver
-  // su tutte le slide: quella con piu area visibile (soglia 0.6) diventa
+  // su tutte le slide: quella con piu area visibile diventa
   // l'attiva. Le altre spengono il loro player da sole, perche il loro
   // iframe smette di esistere quando non sono piu l'attiva (vedi sotto,
   // i !== indiceAttivo mostra solo la miniatura) — «autoplay in
   // sequenza», mai due video che suonano insieme.
   useEffect(() => {
-    if (!aperto || !contenitoreRef.current) return undefined;
+    if (!aperto || !contenitore) return undefined;
+    visibiliRef.current = new Map();   // elenco nuovo, memoria nuova
     const oss = new IntersectionObserver((entries) => {
       // ═══ b.538 — IL RIBALTAMENTO DELLO SCHERMO ═══
       // Collaudo di Luca: «quando ho ribaltato lo schermo, va in errore e
@@ -180,7 +326,7 @@ export default function FeedNotizieMondo({ aperto, onChiudi, C, L, argomenti = [
       // La causa e' qui, ed e' una di quelle che si vedono solo quando
       // l'altezza cambia sotto i piedi. Ruotando il telefono, le slide —
       // alte 100dvh l'una — vengono rimisurate tutte insieme: per un
-      // istante PIU DI UNA supera la soglia di 0.6, e questo giro
+      // istante PIU DI UNA supera la soglia, e questo giro
       // chiamava setIndiceAttivo per OGNI voce dell'elenco, in fila.
       // Ogni chiamata ridisegna, il ridisegno rimisura, la rimisura
       // richiama: React conta gli aggiornamenti a catena e oltre un
@@ -191,21 +337,40 @@ export default function FeedNotizieMondo({ aperto, onChiudi, C, L, argomenti = [
       //      piu — invece di obbedire a tutte;
       //   2. se e' gia lei l'attiva non si tocca niente: nessun
       //      ridisegno, nessuna catena.
-      let miglioreIdx = -1;
-      let miglioreArea = 0;
+      //
+      // ═══ b.546 — LA STESSA REGOLA, MA GUARDANDO TUTTE LE SLIDE ═══
+      // Prima si SEGNA quello che si e appena saputo, poi si SCEGLIE
+      // sull'elenco intero. La scelta resta UNA per giro (b.538 e
+      // salva, e la catena di ridisegni non torna) ma non dipende piu
+      // dal caso di quali slide hanno attraversato una soglia proprio
+      // in quel millesimo di secondo.
       entries.forEach((e) => {
-        if (!e.isIntersecting || e.intersectionRatio < 0.6) return;
-        if (e.intersectionRatio <= miglioreArea) return;
         const idx = Number(e.target.dataset.indice);
         if (!Number.isFinite(idx)) return;
-        miglioreArea = e.intersectionRatio;
+        visibiliRef.current.set(idx, e.isIntersecting ? e.intersectionRatio : 0);
+      });
+      let miglioreIdx = -1;
+      let miglioreArea = SOGLIA_VISTA;
+      visibiliRef.current.forEach((area, idx) => {
+        if (area <= miglioreArea) return;
+        miglioreArea = area;
         miglioreIdx = idx;
       });
       if (miglioreIdx >= 0) setIndiceAttivo((prima) => (prima === miglioreIdx ? prima : miglioreIdx));
-    }, { root: contenitoreRef.current, threshold: [0.6] });
+      // b.546 — DUE soglie, non una: quella bassa perche una slide piu
+      // alta della finestra non arriva mai al 60% e senza di lei non
+      // scatterebbe MAI nessun avviso; quella alta perche appena una
+      // slide si prende quasi tutto lo schermo lo si sappia subito,
+      // senza aspettare il fermo del dito.
+    }, { root: contenitore, threshold: [SOGLIA_VISTA, 0.6] });
     sentinelleRef.current.forEach((el) => oss.observe(el));
     return () => oss.disconnect();
-  }, [aperto, elementi.length]);
+    // b.546 — si guarda l'ELENCO, non la sua lunghezza. Una ricerca
+    // nuova che riporta lo stesso numero di risultati cambia tutte le
+    // slide ma non la misura: con la lunghezza sola l'osservatore
+    // restava attaccato ai riquadri di prima, che nel frattempo non
+    // esistono piu, e non avvisava mai piu di niente.
+  }, [aperto, contenitore, elementi]);
 
   // b.538 — E DOPO IL RIBALTAMENTO SI RESTA DOVE SI ERA. Cambiando
   // orientamento tutte le slide cambiano altezza e lo scorrimento
@@ -213,13 +378,30 @@ export default function FeedNotizieMondo({ aperto, onChiudi, C, L, argomenti = [
   // posto, senza animazione (un'animazione mentre lo schermo gira si
   // vede come uno strappo). Luca: «con il telefono devo poter ribaltare
   // tranquillamente l'immagine e vederla tutto schermo».
+  //
+  // ═══ b.546 — MA SOLO SE LO SCHERMO E' GIRATO DAVVERO ═══
+  // Terza meta del «passaggio rotto», e la piu insidiosa perche sul
+  // computo fisso non si vede mai. Sul telefono la barra del browser si
+  // ritira e ricompare MENTRE si scorre: ogni volta la finestra cambia
+  // altezza e parte un `resize`. Questo rimedio, nato per la rotazione,
+  // scattava li: 260 millesimi dopo l'inizio dello scorrimento
+  // riportava di forza la vista sulla slide ancora segnata come attiva
+  // — cioe quella da cui si stava scappando. Il dito spingeva avanti,
+  // il codice tirava indietro, e il video successivo non partiva mai.
+  // Come si distinguono i due casi: la rotazione cambia la LARGHEZZA
+  // della finestra, la barra del browser cambia solo l'altezza. Si
+  // guarda la larghezza, e in tutti gli altri casi si sta fermi.
   useEffect(() => {
     if (!aperto) return undefined;
+    let larghezzaPrima = window.innerWidth;
     const rimetti = () => {
+      const larghezzaOra = window.innerWidth;
+      if (larghezzaOra === larghezzaPrima) return;   // e solo la barra del browser: non si tocca niente
+      larghezzaPrima = larghezzaOra;
       // si aspetta che il browser abbia finito di rimisurare: farlo
       // subito rimetterebbe a posto con le misure vecchie.
       setTimeout(() => {
-        const el = sentinelleRef.current.get(elementi[indiceAttivo]?.chiave);
+        const el = sentinelleRef.current.get(elementiRef.current[indiceRef.current]?.chiave);
         try { el?.scrollIntoView({ block: 'start', behavior: 'auto' }); } catch { /* niente da rimettere */ }
       }, 260);
     };
@@ -229,7 +411,10 @@ export default function FeedNotizieMondo({ aperto, onChiudi, C, L, argomenti = [
       window.removeEventListener('orientationchange', rimetti);
       window.removeEventListener('resize', rimetti);
     };
-  }, [aperto, indiceAttivo, elementi]);
+    // b.546 — l'ascolto si registra UNA volta per apertura: indice ed
+    // elenco li legge dai riferimenti, cosi non serve piu smontare e
+    // rimontare l'ascoltatore ad ogni slide.
+  }, [aperto]);
 
   // ═══ b.541 — IL FEED NON FINISCE ═══
   // Luca: «perche in fondo alla lista non metti un tasto continua cerca
@@ -255,20 +440,31 @@ export default function FeedNotizieMondo({ aperto, onChiudi, C, L, argomenti = [
   // che a quel punto e' il fondo. L'indice restava 0, quindi il player
   // partiva sulla prima mentre gli occhi erano sull'ultima: video che
   // canta fuori dal riquadro.
-  // Rimedio: ogni volta che l'elenco passa da vuoto a pieno (o cambia
-  // lunghezza in modo brusco perche' e' arrivato un giro nuovo mentre
-  // eravamo in cima) si riporta lo scorrimento sulla prima slide, senza
-  // animazione. Chi sta gia scorrendo piu in basso non viene toccato.
+  // Rimedio: quando l'elenco passa da vuoto a pieno si riporta lo
+  // scorrimento sulla prima slide, senza animazione.
+  //
+  // ═══ b.546 — E CHI STA GIA GUARDANDO NON SI TOCCA ═══
+  // Quarta meta del «passaggio rotto». Se i contenuti vengono
+  // RIMPIAZZATI — un giro nuovo che prima svuota e poi riempie — mentre
+  // l'utente e dieci schermate piu in basso, questo stesso rimedio lo
+  // strappava in cima e gli rimetteva in canna il primo video: dal suo
+  // lato sembrava esattamente «il passaggio non funziona».
+  // Come si riconosce il caso vero di b.545 dal falso: in b.545 le due
+  // cose NON tornavano — la vista era in fondo ma l'indice diceva zero,
+  // ed e proprio quella incoerenza che va raddrizzata. Se invece indice
+  // e scorrimento dicono tutti e due «sono piu in basso», allora chi
+  // guarda ci e arrivato con il dito, e ha ragione lui.
   const quantiPrima = useRef(0);
   useEffect(() => {
     if (!aperto) { quantiPrima.current = 0; return; }
     const prima = quantiPrima.current;
     quantiPrima.current = elementi.length;
     // da vuoto a pieno: e' l'apertura vera, si parte dalla prima
-    if (prima === 0 && elementi.length > 0) {
-      setIndiceAttivo(0);
-      try { contenitoreRef.current?.scrollTo({ top: 0, behavior: 'auto' }); } catch { /* niente da riportare */ }
-    }
+    if (prima !== 0 || elementi.length === 0) return;
+    const scorso = contenitoreRef.current?.scrollTop || 0;
+    if (indiceRef.current > 0 && scorso > 8) return;   // c'e gia qualcuno che guarda piu in basso: si lascia stare
+    setIndiceAttivo(0);
+    try { contenitoreRef.current?.scrollTo({ top: 0, behavior: 'auto' }); } catch { /* niente da riportare */ }
   }, [aperto, elementi.length]);
 
   // riparte dall'inizio ogni volta che si apre o si cambia filtro: una
@@ -280,7 +476,10 @@ export default function FeedNotizieMondo({ aperto, onChiudi, C, L, argomenti = [
     // b.545 — l'indice da solo non basta: senza riportare anche lo
     // SCORRIMENTO, si guarda una slide e ne suona un'altra.
     try { contenitoreRef.current?.scrollTo({ top: 0, behavior: 'auto' }); } catch { /* niente da riportare */ }
-  }, [aperto, filtro]);
+    // b.546 — anche qui si aspetta che il riquadro esista: al primo
+    // giro Sovrapposizione non l'ha ancora messo al mondo, e uno
+    // scrollTo su niente e uno scrollTo perso.
+  }, [aperto, filtro, contenitore]);
 
   if (!aperto) return null;
 
@@ -346,7 +545,7 @@ export default function FeedNotizieMondo({ aperto, onChiudi, C, L, argomenti = [
       )}
 
       {/* ═══ il feed: una slide per schermata, scroll-snap verticale ═══ */}
-      <div ref={contenitoreRef} style={{
+      <div ref={prendiContenitore} style={{
         position: 'absolute', inset: 0, overflowY: 'auto', scrollSnapType: 'y mandatory',
         WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain', scrollbarWidth: 'none',
       }}>
@@ -369,7 +568,16 @@ export default function FeedNotizieMondo({ aperto, onChiudi, C, L, argomenti = [
             </div>
           </div>
         )}
-        {elementi.map((el, i) => (
+        {elementi.map((el, i) => {
+          // b.546 — l'origine si calcola QUI, una volta sola per slide,
+          // e non in mezzo al disegno: cosi si legge, e chi arriva
+          // domani vede subito da dove esce la bandiera.
+          const fonteArticolo = el.dati.fonti?.[0]?.fonte || el.dati.fonti?.[0]?.dominio || '';
+          // se il dominio non dice il paese, `paeseDellaNotizia` torna
+          // null e sopra la foto resta la sola fonte: mai una bandiera
+          // indovinata.
+          const paese = el.tipo === 'articolo' ? paeseDellaNotizia(el.dati) : null;
+          return (
           <div key={el.chiave}
             ref={(node) => { if (node) sentinelleRef.current.set(el.chiave, node); else sentinelleRef.current.delete(el.chiave); }}
             data-indice={i}
@@ -398,6 +606,12 @@ export default function FeedNotizieMondo({ aperto, onChiudi, C, L, argomenti = [
                       style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.85 }} />
                   )}
                 </div>
+                {/* b.546 — anche il video dice di chi e': il nome del
+                    canale, sopra l'inquadratura. Nessuna bandiera: un
+                    canale YouTube non ha un paese che si possa leggere
+                    dal suo indirizzo, e una bandiera indovinata sarebbe
+                    peggio di nessuna bandiera. */}
+                <BadgeOrigine origine={el.dati.canale} />
                 {/* b.539 — i tasti che mancavano ai video. */}
                 <Azioni voci={[
                   /* b.544 — IL CUORE, in cima: e la cosa piu facile da fare
@@ -454,8 +668,22 @@ export default function FeedNotizieMondo({ aperto, onChiudi, C, L, argomenti = [
                     tema in sfumatura e l'iniziale della fonte in
                     filigrana, come gia fanno le card della lista. Una
                     slide senza foto puo essere spoglia; non puo essere
-                    vuota. */}
-                <div style={{ position: 'absolute', inset: 0, background: `linear-gradient(160deg, ${C.accent}22, ${C.purple || C.accent}18 45%, rgba(5,7,15,0.96))` }}>
+                    vuota.
+
+                    ═══ b.546 — UNA MINIATURA SOLA, MAI DUE ═══
+                    Collaudo di Luca: «mostra sempre una sola miniatura
+                    e mai due affiancate». Controllato AnteprimaCoperta
+                    riga per riga: disegna UN elemento solo — la
+                    fotografia, oppure (se il contenuto e da coprire) il
+                    velo sfocato al suo posto — mai i due insieme e mai
+                    affiancati; da li la seconda miniatura non arrivava.
+                    Perche' non possa arrivarci nemmeno domani, lo
+                    sfondo ha adesso UN posto solo: questo strato, che
+                    ritaglia cio che esce (`overflow: hidden`) e tiene
+                    dentro una cosa sola — la fotografia se c'e,
+                    l'iniziale in filigrana se non c'e. Un `se/altrimenti`,
+                    non due rami che possono accendersi insieme. */}
+                <div style={{ position: 'absolute', inset: 0, background: `linear-gradient(160deg, ${C.accent}22, ${C.purple || C.accent}18 45%, rgba(5,7,15,0.96))`, overflow: 'hidden' }}>
                   {el.dati.immagine ? (
                     <>
                       <AnteprimaCoperta src={el.dati.immagine} L={L}
@@ -467,13 +695,23 @@ export default function FeedNotizieMondo({ aperto, onChiudi, C, L, argomenti = [
                     <div aria-hidden="true" style={{
                       position: 'absolute', inset: 0, display: 'flex',
                       alignItems: 'center', justifyContent: 'center',
-                      fontSize: 132, fontWeight: 700, fontFamily: FONT,
+                      // b.546 — 500 anche qui: Luca non vuole grassetto
+                      // da nessuna parte, nemmeno in una filigrana.
+                      fontSize: 132, fontWeight: 500, fontFamily: FONT,
                       color: 'rgba(255,255,255,0.07)', letterSpacing: 2, userSelect: 'none',
                     }}>
                       {String(el.dati.fonti?.[0]?.fonte || el.dati.titolo || '·').slice(0, 1).toUpperCase()}
                     </div>
                   )}
                 </div>
+                {/* b.546 — la bandiera e la fonte, sopra la foto:
+                    «non vedo bandiere negli articoli ne le fonti,
+                    mostra la bandiera e l'origine e che si veda
+                    bene» (Luca). */}
+                <BadgeOrigine
+                  bandiera={paese ? bandieraPaese(paese) : ''}
+                  luogo={paese ? nomePaese(paese) : ''}
+                  origine={fonteArticolo} />
                 {/* b.539 — le stesse porte dei video, nello stesso posto:
                     il feed non cambia grammatica a meta scorrimento. */}
                 <Azioni voci={[
@@ -507,12 +745,17 @@ export default function FeedNotizieMondo({ aperto, onChiudi, C, L, argomenti = [
                       aveva DUE «Apri e traduci» e DUE «Parlane» che
                       facevano la stessa identica cosa. Le porte stanno
                       nella colonnina, dove stanno anche per i video: una
-                      grammatica sola. */}
+                      grammatica sola.
+                      b.546 — ricontrollato su richiesta di Luca
+                      («parlane non deve occupare tutto quello
+                      spazio»): qui sotto NON c'e nessun bottone a piena
+                      larghezza, e non deve tornarcene mai uno. */}
                 </div>
               </>
             )}
           </div>
-        ))}
+          );
+        })}
 
         {/* ═══ b.544 — L'ULTIMA RATIO, e si vede solo se serve ═══
             Ordine di Luca, con lo schermo davanti: «questo deve essere la

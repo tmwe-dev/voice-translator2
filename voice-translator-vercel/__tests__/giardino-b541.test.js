@@ -142,9 +142,21 @@ describe('b.541 — il feed non finisce piu, e parte dai tuoi semi', () => {
   });
 
   it('e in fondo c\'e la slide per seminare a mano', () => {
-    expect(feed).toMatch(/L\('seedMoreTitle'\)/);
-    expect(feed).toMatch(/onCerca\?\.\(seme\.trim\(\)\)/);
-    expect(feed).toMatch(/L\('growMoreWord'\)/);
+    // AGGIORNATA IN b.546. Questa prova era rimasta indietro di due
+    // versioni ed era rossa gia prima di toccare il feed: in b.541 la
+    // slide finale aveva un titolo (`seedMoreTitle`) e un tasto con la
+    // sua parola (`growMoreWord`), ma in b.544 Luca li ha fatti
+    // togliere — «mostri sotto l'ultimo contenuto un campo semplice
+    // SENZA DESCRIZIONE, e un tasto per avviare una ricerca» — perche'
+    // con il feed vuoto quella slide diventava la prima cosa che si
+    // vedeva, cioe un compito al posto del giornale. Adesso e nuda:
+    // campo e lente, niente parole. Quello che va difeso e che la
+    // slide ci sia ancora e che semini davvero.
+    expect(feed).toMatch(/\{elementi\.length > 0 && onCerca && \(/);
+    expect(feed).toMatch(/const semina = useCallback\(/);
+    expect(feed).toMatch(/onCerca\?\.\(q\)/);
+    const slide = feed.slice(feed.indexOf('{elementi.length > 0 && onCerca && ('));
+    expect(slide, 'nuda: nessuna descrizione da leggere').not.toMatch(/seedMoreTitle|seedMoreDesc|growMoreWord/);
   });
 
   it('le parole nuove ci sono in tutti e 38 i pacchetti', async () => {

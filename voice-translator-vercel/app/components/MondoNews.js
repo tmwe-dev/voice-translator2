@@ -19,6 +19,11 @@ import { memo, useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { segnaApertura } from '../lib/interessi.js';
 import { COLONNA } from '../lib/righello.js';
 import { ordinaFeed } from '../lib/ordineFeed.js';
+// b.545 — il motore costruito e provato ieri, finalmente attaccato al
+// giornale: il punteggio condiviso (chi apre, commenta, guarda), la
+// campanella degli avvisi e il filo dei commenti sotto ogni articolo.
+import { ordinaPerPunteggio, mescolaConInteresse } from '../lib/punteggioFeed.js';
+import { chiaveContenuto, mieiCuori } from '../lib/gradimento.js';
 import { cercaTopics, chiediRami, chiediFonti } from '../lib/topics/cliente.js';   // b.409 — il lettore a righe, uno per tutti; b.541 — i rami del giardino
 import { semiDi, prossimaQuery, esaurito, sanaRami } from '../lib/giardino.js'; // b.541 — le ricerche sono semi
 import { listaVecchia, giorniDiVita } from '../lib/topics/fonti.js'; // b.543 — il Fontiere
@@ -39,6 +44,8 @@ import FeedNotizieMondo from './FeedNotizieMondo.js'; // b.515 — il feed a tut
 import MondoDiscussioni from './MondoDiscussioni.js';
 import Ribalta from './ui/Ribalta.js';
 import LettoreArticolo from './ui/LettoreArticolo.js';
+import Campanella from './ui/Campanella.js';        // b.545 — gli avvisi, in alto
+import FiloCommenti from './ui/FiloCommenti.js';    // b.545 — il filo sotto il contenuto
 import MondoPersona from './MondoPersona.js';
 import { useApp } from '../contexts/AppContext.js';
 // b.255 — vedi lib/pannelloPieno.js: un pannello che copre lo schermo lo
@@ -413,6 +420,91 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
     } finally { setFontiInCorso(false); }
   }, [fontiInCorso, paeseFiltro, lingua, userToken]);
 
+  // ═══ b.545 — IL PUNTEGGIO CONDIVISO, ATTACCATO AL GIORNALE ═══
+  // Ordine di Luca: «possiamo misurare il tempo che passano gli utenti a
+  // vedere un video di un argomento, se commentano, oppure cliccano mi
+  // piace per determinare piu velocemente cosa proporre nelle sezioni
+  // mondo quando i materiali selezionati terminano».
+  //
+  // Il conto vive tutto in lib/punteggioFeed.js e la memoria in
+  // /api/mondo/segnali: qui c'e' soltanto il filo che li lega alle
+  // Notizie. Erano stati costruiti e provati, ma non li chiamava nessuno.
+
+  // I MIEI SEMI nella forma che `mescolaConInteresse` sa leggere: le
+  // ricerche salvate con la stella, le ultime che ho fatto, e gli
+  // argomenti che apro di piu. Tutte cose che ho fatto IO — mai dedotte
+  // da eta, sesso o paese (la regola di lib/interessi.js).
+  const interessiMiei = useMemo(() => ({
+    interessi: semiDi(prefs, []).map((x) => x.query),
+    argomentiVisti: prefs?.argomentiVisti || {},
+  }), [prefs]);
+
+  // La copia dell'elenco che si sta guardando. Serve a riordinare DOPO
+  // che i conteggi sono tornati dalla rete, sapendo da quale lista si
+  // era partiti: dentro `cerca` questo ref vale ancora `prima`, cioe il
+  // giornale com'era un attimo prima di accodare il giro nuovo.
+  const argomentiRef = useRef(null);
+  useEffect(() => { argomentiRef.current = argomenti; }, [argomenti]);
+
+  // UN SEGNALE, E VIA. Non si aspetta la risposta e non si mostra niente:
+  // un segnale perduto rende il feed un po meno informato, e basta — non
+  // e un guasto da mettere in faccia a chi sta leggendo (e' la stessa
+  // scelta gia scritta dentro la rotta, che risponde `salvato: false`).
+  const mandaSegnale = useCallback((chiave, tipo, valore = 1) => {
+    const k = String(chiave || '').trim();
+    if (!k) return;
+    fetch('/api/mondo/segnali', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      // stesso tetto d'attesa del resto del Mondo (b.363): senza, con la
+      // rete muta la chiamata resta appesa per sempre.
+      signal: AbortSignal.timeout(10000),
+      body: JSON.stringify({ chiave: k, tipo, valore }),
+    }).catch((e) => {
+      if (e?.name !== 'AbortError') console.warn('[b.545] POST /api/mondo/segnali:', e?.message || e);
+    });
+  }, []);
+
+  // RIORDINA COL PUNTEGGIO DI TUTTI, poi mescola col mio interesse.
+  //
+  // I risultati si mostrano SUBITO e si riordinano quando i conteggi
+  // arrivano: far aspettare il giornale per una chiamata in piu sarebbe
+  // pagare il motore con l'attesa di chi legge. Se i conteggi non
+  // arrivano non succede niente — resta l'ordine di prima.
+  //
+  // La rotta ne serve trenta per volta (MAX_CHIAVI): oltre, le schede
+  // senza conteggio prendono il punteggio del contenuto nuovo, cioe un
+  // valore neutro. Scendono in mezzo, non spariscono — qui vale la
+  // regola di sempre: SI ORDINA, NON SI FILTRA.
+  const riordinaConSegnali = useCallback(async (lista) => {
+    const contenuti = Array.isArray(lista) ? lista : [];
+    if (contenuti.length < 2) return;
+    const chiavi = [...new Set(contenuti.map((t) => chiaveContenuto(t?.url)).filter(Boolean))].slice(0, 30);
+    if (!chiavi.length) return;
+    let conteggi = null;
+    try {
+      const r = await fetch(`/api/mondo/segnali?chiavi=${encodeURIComponent(chiavi.join(','))}`, {
+        signal: AbortSignal.timeout(10000),
+      });
+      const d = r.ok ? await r.json().catch(() => null) : null;
+      conteggi = d?.conteggi || null;
+    } catch (e) {
+      if (e?.name !== 'AbortError') console.warn('[b.545] GET /api/mondo/segnali:', e?.message || e);
+    }
+    if (!conteggi) return;
+    // `mescolaConInteresse` garantisce che il migliore di ogni mio seme
+    // resti nella prima meta: il punteggio di tutti non puo far sparire
+    // le cose che ho chiesto io.
+    const ordinati = mescolaConInteresse(ordinaPerPunteggio(contenuti, conteggi, Date.now()), interessiMiei);
+    // e si riordina SOLO se nel frattempo il giornale non e cambiato: una
+    // ricerca nuova partita mentre i conteggi viaggiavano non deve
+    // ritrovarsi in pagina l'elenco di quella vecchia.
+    setArgomenti((prima) => (
+      Array.isArray(prima) && prima.length === contenuti.length && prima.every((x, i) => x === contenuti[i])
+        ? ordinati
+        : prima
+    ));
+  }, [interessiMiei]);
+
   const cerca = useCallback(async (q, cat = 'notizie', fresca = false, silenziosa = false, accoda = false) => {
     const pulita = (q || '').trim();
     if (!pulita || cercando) return;
@@ -451,6 +543,10 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
         });
         usateRef.current = [...usateRef.current, pulita];
         setArgomenti((prima) => (accoda ? [...(prima || []), ...nuovi] : arrivati));
+        // b.545 — appena l'elenco e in pagina si chiedono i segnali di
+        // tutti e si riordina. `argomentiRef` qui vale ancora quello di
+        // un attimo fa, cioe esattamente il `prima` della riga sopra.
+        riordinaConSegnali(accoda ? [...(argomentiRef.current || []), ...nuovi] : arrivati);
         if (!accoda) setStanze(fine.stanze || []);
         setDaCache(!!fine.daCache);
         // b.541 — il ramo che non porta niente di nuovo e' esaurito: si
@@ -487,7 +583,7 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
     } finally {
       setCercando(false);
     }
-  }, [lingua, cercando, descriviStadio, cercaVideoPer, profonda, numFonti, prefs, savePrefs]);
+  }, [lingua, cercando, descriviStadio, cercaVideoPer, profonda, numFonti, prefs, savePrefs, riordinaConSegnali]);
 
   // ═══ b.541 — FAI CRESCERE IL GIARDINO ═══
   // Il gesto che tiene vivo il feed. Ordine di Luca: «la pianta nasce da
@@ -625,6 +721,101 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
     return m;
   }, [feed]);
 
+  // ═══ b.545 — LA CAMPANELLA E IL FILO DEI COMMENTI ═══
+  // Ordine di Luca: «dobbiamo avvisare l'utente in alto nelle pagine di
+  // commenti come instagram o facebook, nella sua stanza potra quindi
+  // aprire il commento/lista direttamente dal pulsante» e «anche il
+  // commento apre una "stanza" di commenti che possono susseguirsi».
+
+  // I CONTENUTI CHE SEGUO. Si segue cio su cui si e lasciato un segno: il
+  // cuore (lib/gradimento.js lo ricorda nel telefono, non sul server) e
+  // le schede nate dalle MIE ricerche — quelle con la stella e le
+  // recenti. Una campanella che avvisa di tutto non avvisa di niente:
+  // chi non ha mai toccato un articolo non vuole sapere chi lo commenta.
+  const chiaviSeguite = useMemo(() => {
+    const cuori = mieiCuori();
+    const miei = semiDi(prefs, []).map((x) => String(x.query || '').trim().toLowerCase()).filter(Boolean);
+    // i cuori per primi: la campanella ne tiene sessanta, e un contenuto
+    // che ho scelto a mano vale piu di uno che passava di li per argomento.
+    const fuori = [...cuori];
+    const gia = new Set(fuori);
+    for (const t of argomenti || []) {
+      const k = chiaveContenuto(t?.url);
+      if (!k || gia.has(k)) continue;
+      const testo = `${t?.titolo || ''} ${t?.sintesi || ''}`.toLowerCase();
+      if (!miei.some((seme) => testo.includes(seme))) continue;
+      gia.add(k); fuori.push(k);
+    }
+    return fuori;
+  }, [argomenti, prefs]);
+
+  // b.482 — I COLORI VENGONO DAL TEMA. La campanella e il filo parlano la
+  // lingua di lib/styles.js (accent1/accent3/glassCard); il Mondo chiama
+  // gli stessi colori con altri nomi (accent/red/card, vedi MondoView).
+  // Senza questo ponte i due pannelli ripiegherebbero sulle tinte
+  // scritte a mano dentro di loro, sorde al tema scelto.
+  const temaMondoUi = useMemo(() => ({
+    ...C,
+    accent1: C.accent, accent2: C.purple, accent3: C.red,
+    glassCard: C.card, inputBg: C.input,
+  }), [C]);
+
+  // LA RIGA DELLA CAMPANELLA PORTA AL CONTENUTO, non a una pagina di
+  // avvisi da cui ricominciare a cercare: e la mezza frase di Luca
+  // «aprire il commento/lista direttamente dal pulsante». Si cerca prima
+  // fra le schede del giornale, poi fra le discussioni gia scaricate.
+  const apriDaChiave = useCallback((chiave) => {
+    const k = String(chiave || '').trim();
+    if (!k) return;
+    const t = (argomenti || []).find((x) => chiaveContenuto(x?.url) === k);
+    if (t) {
+      // b.542 — il feed e un velo fisso: quello che si apre sotto resta
+      // invisibile. Chi arriva dalla campanella deve vedere l'articolo.
+      setFeedAperto(false);
+      setLettura({ url: t.url, titolo: t.titolo, fonte: t.fonti?.[0]?.fonte, dati: t, faccia: testataChiusa(t.url) ? 'sintesi' : 'articolo' });
+      return;
+    }
+    const d = (feed || []).find((x) => chiaveContenuto(x?.media?.url) === k);
+    if (!d) return;
+    setFeedAperto(false);
+    const suaFonte = fonteDi(d.media);
+    // b.383 — un video non si LEGGE: se dietro non c'e un articolo si
+    // apre la discussione, che e comunque il posto dove se ne parla.
+    // b.519 — `dati.titolo` deve esserci, se no la faccia della sintesi
+    // non si disegna e chi arriva qui trova un vicolo cieco.
+    if (d.media?.url && tipoContenuto(d.media) !== 'video') {
+      setLettura({
+        url: d.media.url, titolo: d.title, fonte: suaFonte,
+        dati: { titolo: d.title, fonti: suaFonte ? [{ fonte: suaFonte, titolo: d.title }] : [] },
+      });
+    } else setDiscAperta(d.id);
+  }, [argomenti, feed]);
+
+  // IL FILO APERTO ADESSO: su quale contenuto, con che titolo, e con i
+  // dati che servono a «Parlane» se dal filo si passa alla stanza.
+  const [filo, setFilo] = useState(null);   // { url, titolo, dati }
+
+  const apriCommenti = useCallback((c) => {
+    // il feed manda le schede degli articoli e quelle dei video: gli uni
+    // hanno l'indirizzo, gli altri il solo id di YouTube. La chiave dei
+    // commenti e la stessa dei cuori (chiaveContenuto), quindi l'indirizzo
+    // va ricostruito allo stesso modo di lib/punteggioFeed.js.
+    const url = c?.url || c?.media?.url
+      || (c?.id && c?.canale ? `https://www.youtube.com/watch?v=${c.id}` : '');
+    if (!url) return;
+    vibrate(8);
+    setFilo({ url, titolo: c?.titolo || c?.title || '', dati: c?.dati || c });
+  }, []);
+
+  // APRIRE E UN SEGNALE. Sta qui e non sui singoli tasti apposta: le
+  // porte che portano al lettore sono sei (titolo, foto, icona leggi,
+  // bacchetta, feed, campanella) e una sola di loro dimenticata
+  // basterebbe a falsare il conto. Il lettore invece e uno.
+  useEffect(() => {
+    if (!lettura?.url) return;
+    mandaSegnale(chiaveContenuto(lettura.url), 'apertura', 1);
+  }, [lettura, mandaSegnale]);
+
   const bordo = `1px solid ${C.cardBorder}`;
 
   // b.149 — su un monitor largo le card diventavano lenzuola con
@@ -697,6 +888,16 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
           }}>
           {L('newsUpdate')}
         </button>
+        {/* ═══ b.545 — LA CAMPANELLA STA QUI, IN ALTO ═══
+            Ordine di Luca: «dobbiamo avvisare l'utente in alto nelle
+            pagine di commenti come instagram o facebook». In alto vuol
+            dire nella testata, accanto al campo che sta gia nella pagina
+            da b.523 — non un affare che galleggia sopra il giornale
+            (b.363 la vetrina di attrezzi l'aveva tolta, e non torna).
+            Il conto e il raggruppamento stanno in lib/campanella.js. */}
+        <Campanella C={temaMondoUi} L={L}
+          chiaviSeguite={chiaviSeguite}
+          onApriContenuto={apriDaChiave} />
       </div>
 
       {/* INIZIO b.535 — «quando scelgo il milan ac aggiungi un selettore
@@ -1442,6 +1643,30 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
                 {t.pubblicato ? ` · ${quando(t.pubblicato, L)}` : ''}
               </span>
             </div>
+            {/* ═══ b.545 — COMMENTA: LA SECONDA PORTA, NON LA STESSA ═══
+                Luca: «parlane e un atto volontario che apre una
+                discussione, ma anche il commento apre una "stanza" di
+                commenti che possono susseguirsi». Sono due cose diverse e
+                per questo sono due tasti: «Parlane» qui sopra fa nascere
+                subito una discussione, questo lascia una riga sotto
+                l'articolo che puo anche restare sola — diventa stanza da
+                se quando qualcuno risponde (lib/commentiContenuto.js,
+                soglia due).
+                Porta la PAROLA e non la sola icona: nella fila di sopra
+                la chiacchiera e gia «Parlane», e due icone uguali una
+                accanto all'altra non le distingue nessuno. */}
+            <button onClick={() => apriCommenti({ url: t.url, titolo: t.titolo, dati: t })}
+              aria-label={L('commentsWord')} title={L('commentsWord')}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: 9,
+                padding: '7px 12px', minHeight: 44, borderRadius: 10, cursor: 'pointer',
+                background: 'rgba(255,255,255,0.045)', border: bordo,
+                color: C.textSecondary, fontSize: 12, fontWeight: 500, fontFamily: FONT,
+                WebkitTapHighlightColor: 'transparent',
+              }}>
+              <Icon name="chat" size={13} color={C.textSecondary} />
+              {L('commentsWord')}
+            </button>
             {/* b.517 — «apri discussione» non sta piu qui: e la stessa
                 cosa di «parlane», e Luca ha chiesto una porta sola. La
                 funzione non si perde — apriDiscussione() e ancora quella,
@@ -1536,12 +1761,18 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
           apriva dietro, invisibile: tocco morto per chi guarda. Ora il velo
           si chiude (onApriArticolo), il lettore appare, e il back del
           lettore riporta al feed da dove si era partiti. FINE b.535 */}
+      {/* b.545 — `onCommenta` e la porta dei commenti per il feed, di
+          fianco a onParlane/onCresci/onCerca. Non chiude il velo: il filo
+          si monta su Sovrapposizione (portale su body, zIndex 131) e sta
+          SOPRA il feed, che vive a 97 — chi commenta dentro la
+          presentazione non perde il segno dove era arrivato. */}
       <FeedNotizieMondo aperto={feedAperto} onChiudi={() => setFeedAperto(false)} C={C} L={L}
         argomenti={argomenti || []} video={video || []} filtro={feedFiltro}
         onFiltro={(id) => savePrefs({ ...prefs, mondoFeedFiltro: id })}
         onParlane={(d) => { setFeedAperto(false); onParlane?.(d); }}
         onStrumenti={suApriStrumenti}
         onCresci={cresci}
+        onCommenta={apriCommenti}
         crescendo={crescendo}
         onCerca={(q) => { setQuery(q); setChipAttiva(null); cerca(q); }}
         onApriArticolo={(d) => { tornaAlFeedRef.current = true; setFeedAperto(false); setLettura({ url: d.url, titolo: d.titolo, fonte: d.fonti?.[0]?.fonte, dati: d, faccia: testataChiusa(d.url) ? 'sintesi' : 'articolo' }); }} />
@@ -1584,6 +1815,26 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
         <MondoPersona publicId={personaAperta} onClose={() => setPersonaAperta(null)}
           onOpenDiscussione={(id) => { setPersonaAperta(null); setDiscAperta(id); }} />
       )}
+
+      {/* ═══ b.545 — IL FILO DEI COMMENTI ═══
+          Sta SOPRA tutto e non su una faccia del foglio: si apre da una
+          card, dal feed e (domani) da un avviso, e girando il foglio
+          sparirebbe. La stessa scelta gia fatta per il profilo qui sopra. */}
+      <FiloCommenti aperto={!!filo} url={filo?.url} titolo={filo?.titolo}
+        C={temaMondoUi} L={L} nome={prefs?.mondoNick || ''}
+        onChiudi={() => setFilo(null)}
+        onApriStanza={() => {
+          // DAL FILO ALLA STANZA SI PASSA DALLA PORTA DI «PARLANE», la
+          // stessa che usano le card e il feed. Una strada sola: se il
+          // filo ne aprisse una sua, sullo stesso articolo nascerebbero
+          // due discussioni diverse e nessuna delle due sarebbe «quella».
+          const dati = filo?.dati;
+          setFilo(null);
+          // b.542 — il velo del feed si chiude, se no il foglio «apri una
+          // discussione» nasce dietro di lui e il tocco sembra morto.
+          setFeedAperto(false);
+          onParlane?.(dati || { titolo: filo?.titolo || '', url: filo?.url || '' });
+        }} />
 
       {/* b.400 — COSA NE PENSA IL MONDO. Sta SOPRA tutto come il profilo
           qui accanto, e per lo stesso motivo: e una cosa che si guarda un

@@ -11,29 +11,28 @@ import { join } from 'node:path';
 
 const leggi = (p) => readFileSync(join(process.cwd(), p), 'utf8');
 
-describe('b.511 — il modulo per commentare sta dietro un\'icona', () => {
-  it('esiste lo stato che apre/chiude la popup, e l\'icona che la apre', () => {
-    const p = leggi('app/components/MondoDiscussioni.js');
-    expect(p).toMatch(/const \[composerAperto, setComposerAperto\] = useState\(false\);/);
-    expect(p).toMatch(/onClick=\{\(\) => setComposerAperto\(true\)\}/);
+describe('b.511 -> b.529 — il modulo per commentare, senza popup', () => {
+  // b.546 — ROSSA PRE-ESISTENTE, dichiarata. b.511 aveva messo il modulo
+  // dei commenti dentro una popup che si apriva da un'icona, e questa
+  // prova difendeva proprio quella. Poi l'ordine di Luca in b.529:
+  // «la popup che apri devi eliminarla e inserire in basso direttamente
+  // campo testo e pulsanti. inutile ripetere in basso il nome chat».
+  // La popup e' stata tolta, e da allora la prova cercava uno stato che
+  // non esiste piu: difendeva la forma di ieri contro un ordine di oggi.
+  // Cio che b.511 voleva davvero — che si possa commentare, e che il
+  // modulo non rubi la pagina — vale ancora: la prova segue quello.
+  const leggi = (p) => readFileSync(join(process.cwd(), p), 'utf8');
+  const disc = leggi('app/components/MondoDiscussioni.js');
+
+  it('si commenta da un campo in fondo, non da una finestra che si apre', () => {
+    expect(disc, 'il campo per scrivere c\'e').toMatch(/textarea/);
+    // b.546 — e lo stato che la apriva e' uscito con lei: era rimasto
+    // dichiarato e mai letto, coda di b.529 eseguito a meta.
+    expect(disc, 'e non c\'e piu la popup').not.toMatch(/const \[composerAperto/);
   });
 
-  it('la popup contiene soprannome, testo e invia, e si chiude da sola dopo un invio riuscito', () => {
-    const p = leggi('app/components/MondoDiscussioni.js');
-    expect(p, 'la popup e condizionata a composerAperto').toMatch(/\{composerAperto && \(/);
-    expect(p, 'dentro la popup c\'e ancora il campo soprannome').toMatch(/placeholder=\{L\('publicNickname'\)\}/);
-    expect(p, 'dopo un invio riuscito la popup si chiude').toMatch(/setTesto\(''\); setComposerAperto\(false\);/);
-  });
-
-  it('i tasti veloci per commento (cuore, traduci, segnala, blocca) restano fuori da qualsiasi popup, non toccati', () => {
-    const p = leggi('app/components/MondoDiscussioni.js');
-    // sono tutti PRIMA della sezione Composer/popup nel file: se ci sono
-    // ancora, nella stessa forma di prima, e in quella posizione, non
-    // sono stati spostati dentro la nuova popup.
-    const iComposer = p.indexOf('{/* Composer */}');
-    const primaDelComposer = p.slice(0, iComposer);
-    expect(primaDelComposer, 'il cuore/like resta visibile per ogni commento, fuori dalla popup').toMatch(/onClick=\{\(\) => metti\(c\.id\)\}/);
-    expect(primaDelComposer, 'segnala il singolo commento resta fuori').toMatch(/onClick=\{\(\) => segnalaCommento\(c\.id\)\}/);
-    expect(primaDelComposer, 'blocca resta fuori').toMatch(/cambiaBlocco\(prefs, c\.author_user_id\)/);
+  it('e non si ripete il nome della chat sopra il campo (b.529)', () => {
+    const fondo = disc.slice(disc.lastIndexOf('textarea') - 2000);
+    expect(fondo).not.toMatch(/placeholder=\{L\('yourNickname'\)\}/);
   });
 });
