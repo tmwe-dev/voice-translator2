@@ -168,14 +168,14 @@ const VideoCallOverlay = memo(function VideoCallOverlay({
   // in qualunque punto li riporta. La X rossa in alto resta SEMPRE
   // visibile (b.352: la chiusura non deve mai sparire). ═══
   const [altroAperto, setAltroAperto] = useState(false);
-  const [comandiVisibili, setComandiVisibili] = useState(true);
-  const [toccoTick, setToccoTick] = useState(0);
-  useEffect(() => {
-    if (!comandiVisibili || volumiAperti || altroAperto) return undefined;
-    const t = setTimeout(() => setComandiVisibili(false), 6000);
-    return () => clearTimeout(t);
-  }, [comandiVisibili, volumiAperti, altroAperto, toccoTick]);
-  const risveglia = () => { setComandiVisibili(true); setToccoTick(x => x + 1); };
+  // b.527 — I COMANDI NON SPARISCONO PIU DA SOLI. La sparizione dopo 6
+  // secondi (b.491) contraddiceva la regola che l'aveva preceduta e che
+  // Luca ha ripetuto dal vivo: «i menu devono sempre essere
+  // raggiungibili... non mantieni i menu quando sei a tutta pagina».
+  // Il video resta protagonista perche la barra e un velo scuro in
+  // basso, non perche i comandi giocano a nascondino.
+  const comandiVisibili = true;
+  const risveglia = () => {};
   const volTTSPrimaRef = useRef(volTTS > 0.01 ? volTTS : 0.7);
   // Il contatore € deve usare la tariffa VERA (premium se voce ElevenLabs)
   const { L, prefs, savePrefs } = useApp();
@@ -237,7 +237,7 @@ const VideoCallOverlay = memo(function VideoCallOverlay({
             }}>
               <AvatarImg src={partner ? getSenderAvatar(partner.name) : null} size={110} />
               <span style={{ color: '#cbd5e1', fontSize: 18, fontWeight: 600 }}>
-                {!webrtc.webrtcConnected ? 'Connessione in corso...' : (partner?.name || 'Partner')}
+                {!webrtc.webrtcConnected ? L('connectingLabel') : (partner?.name || 'Partner')}
               </span>
               {!webrtc.webrtcConnected && (
                 <div style={{
@@ -270,63 +270,61 @@ const VideoCallOverlay = memo(function VideoCallOverlay({
             </div>
           )}
 
-          {/* Top bar: torna alla chat + status + chiusura SEMPRE visibili */}
+          {/* ═══ b.527 — LA TESTATA UNICA. Luca dal vivo: «non hai
+              impostato nulla come da template... i comandi sono separati
+              e non seguono lo standard». Prima qui galleggiavano QUATTRO
+              pezzi sparsi (pillola Chat, pillola nome, pillola Connesso,
+              cerchio rosso), ognuno col suo fondo e la sua quota. Ora e
+              UNA barra, come ogni testata dell'applicazione: indietro a
+              sinistra, chi e come al centro, la chiusura a destra. Tutto
+              a 44 punti, tutto tradotto. ═══ */}
           <div style={{
-            position: 'absolute', top: 'max(16px, env(safe-area-inset-top))', left: 16, right: 16,
-            display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', zIndex: 7,
+            position: 'absolute', top: 0, left: 0, right: 0, zIndex: 7,
+            display: 'flex', alignItems: 'center', gap: 10,
+            padding: 'max(10px, env(safe-area-inset-top)) 14px 10px',
+            background: 'linear-gradient(180deg, rgba(3,5,12,0.92) 30%, rgba(3,5,12,0))',
           }}>
-            {/* ← Torna alla chat (riduce la call, NON la chiude) */}
+            {/* ← torna alla chat (riduce la chiamata, NON la chiude) */}
             <button onClick={() => setVideoFullscreen(false)}
               aria-label={L('backToChatCall')}
               style={{
-                display: 'flex', alignItems: 'center', gap: 7,
-                padding: '8px 14px', borderRadius: 24, border: 'none', cursor: 'pointer',
-                background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)',
-                color: '#fff', fontSize: 13, fontWeight: 600, fontFamily: 'inherit',
+                display: 'flex', alignItems: 'center', gap: 7, minHeight: 44, padding: '0 14px',
+                borderRadius: 12, cursor: 'pointer', flexShrink: 0,
+                background: 'rgba(255,255,255,0.06)', border: `1px solid ${S?.colors?.overlayBorder || 'rgba(160,190,255,0.18)'}`,
+                color: '#eef2ff', fontSize: 13, fontWeight: 600, fontFamily: 'inherit',
               }}>
-              {'←'} Chat
+              {'←'} {L('chatWord')}
             </button>
-            {/* Connection status */}
-            <div style={{
-              display: 'flex', alignItems: 'center', gap: 8,
-              padding: '6px 14px', borderRadius: 24,
-              background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)',
-            }}>
-              <div style={{
-                width: 8, height: 8, borderRadius: 4,
-                background: webrtc.webrtcConnected ? '#4ade80' : PALETTE.amber,
-                animation: webrtc.webrtcConnected ? 'none' : 'vtBattPulse 1.5s infinite',
-              }} />
-              <span style={{ fontSize: 12, color: '#fff', fontWeight: 600 }}>
-                {webrtc.webrtcConnected ? 'Connesso' : 'Connessione...'}
+            <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+              {partner?.name && (
+                <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13.5, fontWeight: 600, color: '#eef2ff',
+                  maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {partner.lang ? <span aria-hidden="true">{getLang(partner.lang).flag}</span> : null}
+                  {partner.name}
+                </span>
+              )}
+              <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 10.5, fontWeight: 600,
+                color: webrtc.webrtcConnected ? '#4ade80' : PALETTE.amber }}>
+                <i style={{ width: 6, height: 6, borderRadius: 3, background: 'currentColor', display: 'block',
+                  animation: webrtc.webrtcConnected ? 'none' : 'vtBattPulse 1.5s infinite' }} />
+                {webrtc.webrtcConnected ? L('connectedWord') : L('connectingLabel')}
               </span>
             </div>
-            {/* Chiudi chiamata — rosso, sempre raggiungibile anche se la
-                barra in basso finisce sotto la UI del browser */}
+            {/* chiudi la chiamata — il rosso resta solo qui */}
             <button onClick={() => { webrtc.disconnect(); setShowVideoCall(false); setVideoFullscreen(false); }}
               aria-label={L('endCall')}
               style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                width: 44, height: 44, borderRadius: 22, border: 'none', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                width: 44, height: 44, borderRadius: 12, border: 'none', cursor: 'pointer',
                 background: 'rgba(239,68,68,0.9)', color: '#fff',
                 boxShadow: '0 2px 12px rgba(239,68,68,0.45)',
               }}>
               <IconPhoneOff size={20}/>
             </button>
           </div>
-          {/* b.491 — tavola 18: chi parla ha la SUA BANDIERA sull'immagine,
-              in alto a sinistra: con piu persone non si indovina. I badge
-              di attivita stanno sotto (la destra ora e del PiP). */}
-          <div style={{ position: 'absolute', top: 'max(64px, calc(env(safe-area-inset-top) + 48px))', left: 16,
+          {/* i badge di attivita restano sull'immagine, sotto la testata */}
+          <div style={{ position: 'absolute', top: 'max(74px, calc(env(safe-area-inset-top) + 58px))', left: 16,
             display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-start', zIndex: 6 }}>
-            {partner?.name && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6,
-                padding: '4px 10px', borderRadius: 999, background: 'rgba(5,7,15,0.72)',
-                fontSize: 12, fontWeight: 600, color: '#fff' }}>
-                {partner.lang ? <span aria-hidden="true">{getLang(partner.lang).flag}</span> : null}
-                {partner.name}
-              </div>
-            )}
             <RecordingIndicator L={L} recording={recording} isListening={isListening} />
             <PartnerActivityBadge L={L} partner={partner} partnerSpeaking={partnerSpeaking} partnerTyping={partnerTyping} />
           </div>
@@ -397,7 +395,7 @@ const VideoCallOverlay = memo(function VideoCallOverlay({
                         </span>
                       )}
                       <span style={{ fontSize: 9.5, fontWeight: 600, letterSpacing: 1.6, color: 'rgba(238,242,255,0.5)' }}>
-                        {String(partner?.name || partner || 'PARTNER').toUpperCase()}{partnerSpeaking ? ' · STA PARLANDO' : ''}
+                        {String(partner?.name || partner || 'PARTNER').toUpperCase()}{partnerSpeaking ? ` \u00b7 ${String(L('isSpeakingNow')).toUpperCase()}` : ''}
                       </span>
                     </div>
                     {latest ? (
@@ -411,9 +409,29 @@ const VideoCallOverlay = memo(function VideoCallOverlay({
                           {latest.text}
                         </div>
                       </>
+                    ) : !interpreterActive && setInterpreterActive && !stanzaDiretta && !stanzaConPiuDiDue ? (
+                      // b.527 — IL SILENZIO SPIEGATO, dov'era muto. Nel
+                      // collaudo di Luca i sottotitoli restavano vuoti e
+                      // niente diceva PERCHE: se la traduzione e spenta,
+                      // qui ora c'e scritto, ed e il tasto per accenderla.
+                      <button onClick={() => setInterpreterActive(true)}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: 8, minHeight: 40, padding: '0 12px',
+                          borderRadius: 10, cursor: 'pointer', fontFamily: 'inherit',
+                          background: `${acc1}1f`, border: `1px solid ${acc1}55`,
+                          color: '#eef2ff', fontSize: 12.5, fontWeight: 600,
+                        }}>
+                        <IconGlobe size={14}/> {L('translationOffTap')}
+                      </button>
+                    ) : interpreterActive && interpreter?.erroreAvvio ? (
+                      // l'avvio e caduto: lo si dice (e RoomView sta gia
+                      // riprovando da solo, vedi b.527 li).
+                      <div style={{ fontSize: 12.5, color: '#ffc44d', fontStyle: 'italic' }}>
+                        {L('interpreterFailed')}
+                      </div>
                     ) : (
                       <div style={{ fontSize: 12.5, color: 'rgba(238,242,255,0.35)', fontStyle: 'italic' }}>
-                        Le traduzioni appariranno qui appena parlate…
+                        {L('captionsWillAppear')}
                       </div>
                     )}
                   </div>
@@ -479,13 +497,13 @@ const VideoCallOverlay = memo(function VideoCallOverlay({
             boxShadow: '0 14px 48px rgba(0,0,0,0.55)',
           }}>
             <div style={{ display: 'flex', alignItems: 'center', marginBottom: 10 }}>
-              <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: '#eef2ff' }}>Volumi</span>
+              <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: '#eef2ff' }}>{L('volumesWord')}</span>
               <button onClick={() => setVolumiAperti(false)} aria-label={L('close')}
                 style={{ background: 'none', border: 'none', color: 'rgba(238,242,255,0.6)', fontSize: 16, cursor: 'pointer', padding: 4 }}>{'\u2715'}</button>
             </div>
             <div style={{ marginBottom: 12 }}>
               <div style={{ fontSize: 12, fontWeight: 600, color: 'rgba(238,242,255,0.75)', marginBottom: 5 }}>
-                {`Voce di ${partner?.name || 'chi parla'}`}
+                {L('partnerVolume')}
               </div>
               <input type="range" min="0" max="1" step="0.05" value={partnerVolume ?? 1}
                 onChange={(e) => setPartnerVolume && setPartnerVolume(parseFloat(e.target.value))}
@@ -493,7 +511,7 @@ const VideoCallOverlay = memo(function VideoCallOverlay({
             </div>
             <div style={{ marginBottom: 12 }}>
               <div style={{ fontSize: 12, fontWeight: 600, color: 'rgba(238,242,255,0.75)', marginBottom: 5 }}>
-                Voce che traduce
+                {L('translatedVolume')}
               </div>
               <input type="range" min="0" max="1" step="0.05" value={volTTS}
                 onChange={(e) => {
@@ -505,7 +523,7 @@ const VideoCallOverlay = memo(function VideoCallOverlay({
                 aria-label={L('translatedVolume')} style={{ width: '100%', accentColor: S?.colors?.accent1 || '#5b8cff', height: 4 }} />
             </div>
             <div style={{ fontSize: 12, fontWeight: 600, color: 'rgba(238,242,255,0.75)', marginBottom: 6 }}>
-              Mentre parla la traduzione:
+              {L('whileTranslationSpeaks')}
             </div>
             {PRESET_ATTENUAZIONE.map(pz => {
               const on = livelloAtt === pz.valore;

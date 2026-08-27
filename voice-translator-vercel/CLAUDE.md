@@ -267,6 +267,61 @@ perche il working tree lo conteneva ancora.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.527** (push #815) — LA VIDEOCHIAMATA COL COLLAUDO DI
+  LUCA DAVANTI (chiamata vera con «ernesto», spagnolo): «la traduzione
+  scritta e parlata non vengono attivate, la voce dell'ospite non viene
+  resa piu soffice per default, i comandi sono separati e non seguono
+  lo standard template, non mantieni i menu quando sei a tutta pagina,
+  non hai impostato nulla come da template».
+
+  **1 — IL SILENZIO DELLA TRADUZIONE, SPIEGATO E RIPARATO.** L'avvio
+  dell'interprete poteva fallire (microfono conteso, presa di linea
+  lenta) e il fallimento era PER SEMPRE: l'effetto di avvio non
+  ripartiva, l'errore finiva solo in console, e a schermo restava il
+  segnaposto «le traduzioni appariranno...» — che non apparivano mai,
+  senza un perche. Tre cure:
+  - il guasto d'avvio e uno STATO (`erroreAvvio` in useInterpreterMode)
+    che la UI legge;
+  - RoomView RIPROVA da solo ogni 2,5s finche la traduzione e accesa;
+  - nel riquadro sottotitoli il silenzio si spiega: traduzione spenta =
+    un TASTO che la accende li dov'e lo sguardo; avvio fallito = la
+    riga «non e partita, riprovo...». Mai piu il vuoto muto.
+  [ASSUNTO] la causa esatta del mancato avvio nel collaudo di Luca non
+  e riproducibile dal sandbox (serve una chiamata vera a due): con
+  questi tre pezzi, al prossimo collaudo la ragione sara SCRITTA A
+  SCHERMO invece che da indovinare — e il riavvio automatico dovrebbe
+  gia coprire i fallimenti transitori.
+
+  **2 — LA VOCE DELL'OSPITE E PIU SOFFICE PER DEFAULT.** Con lingue
+  diverse il volume dell'originale parte a 0.45 (era 0.7): la
+  protagonista e la traduzione, l'originale resta sottofondo. Solo come
+  default: il cursore toccato dall'utente non viene mai scavalcato
+  (ref `partnerVolumeToccato`).
+
+  **3 — I COMANDI NON SPARISCONO PIU.** La barra si nascondeva da sola
+  dopo 6 secondi (b.491), contraddicendo la regola che Luca ha ripetuto
+  dal vivo: «i menu devono sempre essere raggiungibili». Ora resta.
+
+  **4 — LA TESTATA UNICA, DA TEMPLATE.** Quattro pezzi galleggianti
+  (pillola Chat, pillola nome, pillola Connesso, cerchio rosso) sono
+  diventati UNA barra come ogni testata dell'app: indietro a sinistra,
+  chi e come al centro (nome+bandiera+stato), chiusura rossa a destra,
+  44 punti, colori del tema.
+
+  **5 — NIENTE PIU ITALIANO FISSO IN CHIAMATA.** «Le traduzioni
+  appariranno...», «Connesso», «Connessione in corso...», «STA
+  PARLANDO», «Volumi», «Voce di X», «Voce che traduce», «Mentre parla
+  la traduzione» erano scritti a mano in italiano: chi ha l'app in
+  coreano li leggeva cosi. Cinque chiavi nuove in it/en (le altre 30
+  lingue ripiegano su en, come da meccanismo dei mini-pacchetti).
+
+  TEST: 13 nuovi (`videochiamata-tradotta-b527.test.js`) — 102/102
+  sulla batteria stanze+video+motore. eslint: 0 errori (9 warning
+  preesistenti di exhaustive-deps, stesse classi di origin/main).
+  NON provato con una chiamata vera a due dispositivi: e ESATTAMENTE il
+  caso per cui CLAUDE.md §8 chiede il collaudo di Luca — da fare al
+  prossimo push, con la traduzione che ora si spiega da sola.
+
 - Versione: **b.526** (push #814) — L'OMONIMO INGOIAVA L'OSPITE. Luca
   dal vivo: «in chat non traduce piu l'ospite», poi l'indizio giusto:
   «forse le impostazioni di chi invita sono mantenute», e «lascia lo

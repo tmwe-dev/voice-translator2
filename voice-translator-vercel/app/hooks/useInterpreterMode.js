@@ -39,6 +39,12 @@ export default function useInterpreterMode({
   preferisciEleven = false, // b.352 — la voce premium in chiamata
 }) {
   const [active, setActive] = useState(false);
+  // b.527 — IL SILENZIO SPIEGATO ANCHE ALL'AVVIO. Se l'interprete non
+  // parte (microfono negato, registratore rotto), prima l'errore finiva
+  // solo in console e a schermo restava il segnaposto muto: l'utente
+  // vedeva «le traduzioni appariranno...» e non apparivano mai, senza
+  // un perche. Ora il guasto d'avvio e uno stato che la UI legge.
+  const [erroreAvvio, setErroreAvvio] = useState(null);
   const [mySubtitles, setMySubtitles] = useState([]);
   const [partnerSubtitles, setPartnerSubtitles] = useState([]);
   const [lastSubtitle, setLastSubtitle] = useState(null);
@@ -456,9 +462,11 @@ export default function useInterpreterMode({
       codaChunkRef.current = [];
       recorder.start(CHUNK_DURATION);
       setActive(true);
+      setErroreAvvio(null);
       dbg.debug('[Interpreter] Started');
     } catch (e) {
       console.error('[Interpreter] Failed to start:', e);
+      setErroreAvvio(e?.message || 'avvio non riuscito');
       setActive(false);
       // b.381 — IL MICROFONO RESTAVA APERTO. Qui si prende il microfono
       // per PRIMA cosa, e solo dopo si costruiscono il filtro del rumore
@@ -562,6 +570,7 @@ export default function useInterpreterMode({
   const startUnifiedInterno = useCallback(async () => {
     const streamingOk = await streaming.start();
     if (streamingOk) {
+      setErroreAvvio(null);
       dbg.debug('[Interpreter] Using streaming pipeline (subtitle-first)');
       return;
     }
@@ -624,5 +633,7 @@ export default function useInterpreterMode({
     // b.352 — il silenzio spiegato: la voce non partita si dichiara.
     voceGuasta: streaming.voceGuasta,
     partnerVoceMancata: streaming.partnerVoceMancata,
+    // b.527 — il guasto d'avvio, leggibile dalla UI (vedi sopra).
+    erroreAvvio,
   };
 }

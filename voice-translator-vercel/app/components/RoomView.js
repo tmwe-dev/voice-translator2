@@ -269,9 +269,20 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
   }, [webrtc?.webrtcState, webrtc?.callType]);
 
   // Auto-enable ducking when in video call and languages differ
+  // b.527 — Luca dal vivo: «la voce dell'ospite non viene resa piu
+  // soffice per default». Quando le lingue sono diverse, la voce
+  // originale del partner parte a 0.45 (non a 0.7): la protagonista e
+  // la traduzione, l'originale resta un sottofondo comprensibile. Solo
+  // come DEFAULT: se l'utente ha gia toccato il cursore, comanda lui.
+  const partnerVolumeToccatoRef = useRef(false);
+  const cambiaPartnerVolume = useCallback((v) => {
+    partnerVolumeToccatoRef.current = true;
+    setPartnerVolume(v);
+  }, []);
   useEffect(() => {
     if (webrtc?.webrtcConnected && partner && partner.lang !== myLang) {
       setVideoDucking(true);
+      if (!partnerVolumeToccatoRef.current) setPartnerVolume(0.45);
     }
   }, [webrtc?.webrtcConnected, partner?.lang, myLang]);
 
@@ -318,14 +329,23 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
   }, [webrtc?.webrtcConnected]);
 
   // Interpreter start/stop
+  // b.527 — PRIMA UN AVVIO FALLITO ERA PER SEMPRE: se start() cadeva
+  // (microfono conteso, presa di linea lenta) `active` restava falso ma
+  // questo effetto non ripartiva piu, e la chiamata proseguiva con i
+  // sottotitoli vuoti e nessuna voce — in silenzio. Ora il fallimento
+  // e uno stato (erroreAvvio, vedi useInterpreterMode) e si RIPROVA con
+  // un piccolo respiro, finche l'utente tiene la traduzione accesa.
   useEffect(() => {
-    if (!interpreter) return;
+    if (!interpreter) return undefined;
     if (interpreterActive && !interpreter.active) {
-      interpreter.start();
-    } else if (!interpreterActive && interpreter.active) {
+      const t = setTimeout(() => { interpreter.start(); }, interpreter.erroreAvvio ? 2500 : 0);
+      return () => clearTimeout(t);
+    }
+    if (!interpreterActive && interpreter.active) {
       interpreter.stop();
     }
-  }, [interpreterActive, interpreter]);
+    return undefined;
+  }, [interpreterActive, interpreter, interpreter?.active, interpreter?.erroreAvvio]);
 
   // b.277 — P1: CAMBIO LINGUA A INTERPRETE ACCESO.
   // Chi trascrive la voce viene istruito sulla lingua UNA volta, alla
@@ -791,7 +811,7 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
         videoFullscreen={videoFullscreen} setVideoFullscreen={setVideoFullscreen}
         showVideoCall={showVideoCall} setShowVideoCall={setShowVideoCall}
         videoDucking={videoDucking} setVideoDucking={setVideoDucking}
-        partnerVolume={partnerVolume} setPartnerVolume={setPartnerVolume}
+        partnerVolume={partnerVolume} setPartnerVolume={cambiaPartnerVolume}
         lastTranslationSubtitle={lastTranslationSubtitle}
         interpreter={interpreter}
         interpreterActive={interpreterActive}
