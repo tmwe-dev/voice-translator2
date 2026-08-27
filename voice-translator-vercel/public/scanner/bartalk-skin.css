@@ -1,27 +1,203 @@
 /* ═══════════════════════════════════════════════════════════════
-   b.346 — LA PELLE BARTALK per il BizCard Scanner.
-   Ordine di Luca: prima il codice copiato ESATTO, poi l'adattamento
-   alla nostra grafica. Questo file e TUTTO l'adattamento: solo le
-   variabili di colore e qualche angolo, nessuna riga di logica.
-   Si carica soltanto con ?skin=bartalk (vedi js/bartalk-skin.js):
-   il programma originale resta intatto e aggiornabile.
+   LA PELLE BARTALK per il BizCard Scanner — b.521
+   Si carica SOLO con ?skin=bartalk (vedi js/bartalk-skin.js): il
+   BizCard autonomo resta identico a se stesso, aggiornabile.
+
+   b.346 aveva scritto qui le sole variabili di colore, dando per
+   scontato che il programma le usasse dappertutto. Non e cosi: la
+   testata, la barra della chiave, le linguette e i titoli delle
+   sezioni portavano ancora il viola dell'originale, le emoji nei
+   titoli e un secondo marchio "BizCard 4Business" sotto quello di
+   BarTalk. Aperto dentro BarTalk sembrava un altro programma
+   incollato dentro una finestra — che e esattamente quello che era.
+   Questo file lo veste per davvero. Nessuna riga di logica.
    ═══════════════════════════════════════════════════════════════ */
+
 :root {
-  --bg:      #05070f;                      /* bgDeep di BarTalk */
-  --bg2:     rgba(14, 19, 34, .78);
-  --bg3:     rgba(36, 46, 76, .5);
-  --bg4:     rgba(56, 66, 106, .4);
-  --fg:      #eef2ff;                      /* grayLight */
+  --bg:      #05070f;
+  --bg2:     rgba(11, 15, 28, .94);
+  --bg3:     rgba(255, 255, 255, .05);
+  --bg4:     rgba(255, 255, 255, .08);
+  --fg:      #eef2ff;
   --fg2:     #b8bdd0;
   --fg3:     #7c82a0;
-  --fg4:     #4e5470;
-  --accent:  #5b8cff;                      /* purple/blue BarTalk */
-  --accent2: #38e1ff;                      /* cyan BarTalk */
+  --fg4:     #7c82a0;
+  --lilac:   #5b8cff;
+  --purple:  #5b8cff;
+  --accent:  #5b8cff;
+  --accent2: #38e1ff;
   --accent3: #9db9ff;
-  --green:   #3ddc84;                      /* green BarTalk */
-  --red:     #ff5470;                      /* coral BarTalk */
-  --orange:  #ffc44d;                      /* amber BarTalk */
+  --green:   #3ddc84;
+  --red:     #ff5470;
+  --orange:  #ffc44d;
+  --bt-bordo: 1px solid rgba(255, 255, 255, .08);
+  --bt-raggio: 14px;
 }
 
-/* Il marchio in testata: qui dentro e uno strumento di BarTalk. */
-header .logo-badge, .app-title .badge { filter: hue-rotate(-25deg); }
+html, body {
+  background: var(--bg) !important;
+  color: var(--fg);
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif;
+}
+
+/* ── LA TESTATA DOPPIA. Sopra questo riquadro BarTalk scrive gia
+   «Business — Scansiona un biglietto»: un secondo marchio qui sotto
+   e solo una riga rubata al contenuto. ── */
+body > header { display: none !important; }
+
+/* ── LA CHIAVE API NON E LA PRIMA COSA CHE SI VEDE.
+   Era in cima a ogni schermata, campo in chiaro e tasto viola: un
+   dettaglio da impostazioni messo davanti a chi voleva solo
+   fotografare un biglietto. Ora vive dove vivono le impostazioni —
+   nella linguetta Setup — e altrove non c'e. Non e nascosta: e al
+   suo posto. ── */
+.api-key-bar { display: none !important; }
+body:has(#panel-settings.active) .api-key-bar {
+  display: block !important;
+  background: var(--bg2);
+  border: var(--bt-bordo);
+  border-radius: var(--bt-raggio);
+  margin: 14px 16px 0;
+  padding: 12px 14px;
+}
+.api-key-inner { gap: 10px; }
+.api-key-label {
+  font-size: 0 !important;           /* via l'emoji, che e nel testo */
+  color: var(--fg3);
+}
+.api-key-label::before {
+  content: 'OpenAI API Key';
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--fg3);
+}
+.api-key-toggle { font-size: 0 !important; }
+.api-key-toggle::before { content: '\002022\002022\002022'; font-size: 13px; letter-spacing: 1px; color: var(--fg3); }
+
+/* ── I CAMPI ── */
+input, select, textarea {
+  background: rgba(255, 255, 255, .04) !important;
+  border: var(--bt-bordo) !important;
+  border-radius: 11px !important;
+  color: var(--fg) !important;
+  font-family: inherit;
+  min-height: 42px;
+  padding: 0 12px;
+}
+input::placeholder, textarea::placeholder { color: var(--fg4); }
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: rgba(91, 140, 255, .55) !important;
+}
+
+/* ── LE LINGUETTE: come quelle di BarTalk, testo e una riga sotto
+   quella accesa. Prima erano quattro caselle col fondo viola. ── */
+nav {
+  background: transparent !important;
+  border-bottom: var(--bt-bordo) !important;
+  padding: 0 8px !important;
+}
+nav button {
+  background: none !important;
+  border: none !important;
+  border-radius: 0 !important;
+  color: var(--fg3) !important;
+  padding: 12px 6px 10px !important;
+  position: relative;
+}
+nav button .nav-label { font-size: 12px; font-weight: 600; }
+nav button .nav-ico { stroke: currentColor; opacity: .9; }
+nav button.active { color: var(--accent) !important; }
+nav button.active::after {
+  content: '';
+  position: absolute; left: 12%; right: 12%; bottom: -1px; height: 2px;
+  background: var(--accent); border-radius: 2px;
+}
+
+/* ── I RIQUADRI ── */
+.settings-section, .card, .contact-card, .export-card, .qr-section, .panel > .box {
+  background: var(--bg2) !important;
+  border: var(--bt-bordo) !important;
+  border-radius: var(--bt-raggio) !important;
+}
+
+/* ── I TITOLI DI SEZIONE: l'emoji sta nel testo, quindi il testo si
+   spegne e si riscrive pulito. Sono cinque, in quest'ordine. ── */
+.settings-section h3 {
+  font-size: 0 !important;
+  color: var(--fg) !important;
+  margin-bottom: 12px;
+}
+.settings-section h3::before {
+  font-size: 13.5px;
+  font-weight: 600;
+  letter-spacing: -.01em;
+  color: var(--fg);
+}
+.settings-section:nth-of-type(1) h3::before { content: 'Motore OCR'; }
+.settings-section:nth-of-type(2) h3::before { content: 'Webhook CRM'; }
+.settings-section:nth-of-type(3) h3::before { content: 'Statistiche'; }
+.settings-section:nth-of-type(4) h3 { font-size: 13.5px !important; font-weight: 600; }
+.settings-section:nth-of-type(4) h3 svg { display: none; }
+.settings-section:nth-of-type(5) h3::before { content: 'Gestione dati'; }
+
+.setting-row { border-bottom: var(--bt-bordo); padding: 10px 0; }
+.setting-row:last-child { border-bottom: none; }
+.setting-row label { color: var(--fg3); font-size: 12.5px; }
+
+/* ── I TASTI ── */
+.btn {
+  border-radius: 11px !important;
+  font-family: inherit;
+  font-weight: 600;
+  min-height: 42px;
+}
+.btn-primary {
+  background: linear-gradient(135deg, #5b8cff, #38e1ff) !important;
+  border: none !important;
+  color: #05070f !important;
+}
+.btn-secondary, .btn-icon {
+  background: rgba(255, 255, 255, .05) !important;
+  border: var(--bt-bordo) !important;
+  color: var(--fg2) !important;
+}
+.btn-danger {
+  background: rgba(255, 84, 112, .12) !important;
+  border: 1px solid rgba(255, 84, 112, .3) !important;
+  color: var(--red) !important;
+}
+/* il tasto «Salva impostazioni» porta un dischetto nel testo */
+#btnSaveSettings { font-size: 0 !important; }
+#btnSaveSettings::before { content: 'Salva impostazioni'; font-size: 12.5px; font-weight: 600; }
+
+/* ── I TRE MODI (Camera / Remoto / File): pillole BarTalk ── */
+.mode-selector { gap: 8px; }
+.mode-btn {
+  background: rgba(255, 255, 255, .04) !important;
+  border: var(--bt-bordo) !important;
+  border-radius: 12px !important;
+  color: var(--fg3) !important;
+}
+.mode-btn.active {
+  background: rgba(91, 140, 255, .12) !important;
+  border-color: rgba(91, 140, 255, .35) !important;
+  color: var(--accent) !important;
+}
+.mode-btn .mode-icon { filter: grayscale(1) brightness(1.6); opacity: .8; }
+.mode-btn.active .mode-icon { filter: none; opacity: 1; }
+.mode-label { font-size: 12px; font-weight: 600; }
+
+/* ── L'area della fotocamera ── */
+.camera-area { border-radius: var(--bt-raggio) !important; border: var(--bt-bordo) !important; }
+
+/* ── Il badge di versione, se qualcuno lo rimette in pagina ── */
+.version-badge {
+  background: rgba(91, 140, 255, .15) !important;
+  color: var(--accent) !important;
+  border: 1px solid rgba(91, 140, 255, .3);
+  border-radius: 999px;
+  font-weight: 600;
+}
