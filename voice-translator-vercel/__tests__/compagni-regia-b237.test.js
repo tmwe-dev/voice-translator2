@@ -154,10 +154,14 @@ describe('i call site veri usano davvero il secondo asse', () => {
     const s = leggi('app/lib/compagni/corsi/generatore.js');
     expect(s).toMatch(/promptProfilo\('didattico'\)/);
   });
-  it('Archimede ragiona col modello pieno, gli altri restano sul default', () => {
+  // b.525 — assunzione cambiata: la vetrina non e piu «il modello pieno di
+  // OpenAI» ma la DIVERSITA delle menti (come in RadioChat): Archimede
+  // ragiona con Claude, Margaret con Gemini, Omar con Grok. Il vecchio
+  // assert (Archimede = gpt-4o) descriveva il mondo prima del motore.
+  it('Archimede ragiona con Claude (la vetrina e la diversita delle menti)', () => {
     const s = leggi('app/lib/compagni/catalogo.js');
     const archimede = s.slice(s.indexOf("id: 'archimede'"), s.indexOf("id: 'dott-elena'"));
-    expect(archimede).toMatch(/modello: 'gpt-4o'/);
+    expect(archimede).toMatch(/provider: 'anthropic', modello: 'claude-sonnet'/);
     const elena = s.slice(s.indexOf("id: 'dott-elena'"), s.indexOf("id: 'avv-marco'"));
     expect(elena).not.toMatch(/modello: 'gpt-4o'[^-]/);
   });

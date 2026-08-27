@@ -51,6 +51,7 @@ RISPONDI SOLO con JSON valido, senza markdown, senza backtick, solo il JSON, con
   "nome": "il nome del Compagno (max 4 parole; per una persona reale usa il suo nome)",
   "ruolo": "ruolo/titolo che lo descrive e ne dice l'epoca/campo (max 8 parole)",
   "personalita": "profilo di carattere ricco e strutturato di QUESTA persona (stile RadioChat), in seconda persona ('Sei ...'), 3-5 frasi che coprano: come PARLA (registro/tono e cadenza tipica), cosa SA e come ARGOMENTA, come SUPPORTA/incoraggia chi ha davanti, il suo UMORISMO, 1-2 sue FRASI o intercalari tipici (senza citazioni lunghe protette), e cosa EVITA. Concreto e specifico, non generico.",
+  "regolaDibattito": "COME questa persona dissente in un dibattito (1-2 frasi, seconda persona): il suo modo specifico di litigare — col dato, col controesempio, con la domanda, smontando il presupposto... Deve essere DIVERSO dal modo generico di dire 'non sono d'accordo'.",
   "liberta": "uno tra: strict | balanced | creative | autonomous",
   "genere": "male | female | neutral",
   "barre": { "tono": 0-100 (0=formale,100=informale), "calore": 0-100 (0=distaccato,100=caloroso), "sintesi": 0-100 (0=conciso,100=prolisso), "umorismo": 0-100 (0=serio,100=spiritoso), "assertivita": 0-100 (0=cauto,100=deciso), "creativita": 0-100 (0=preciso,100=creativo) }
@@ -139,6 +140,7 @@ export function normalizzaAgente(d = {}) {
     nome: String(d.nome || '').slice(0, 60).trim(),
     ruolo: String(d.ruolo || '').slice(0, 80).trim(),
     personalita: String(d.personalita || '').slice(0, 1200).trim(),
+    regolaDibattito: String(d.regolaDibattito || '').slice(0, 300).trim(),
     liberta: LIBERTA_VALIDE.includes(d.liberta) ? d.liberta : 'balanced',
     genere: ['male', 'female', 'neutral'].includes(d.genere) ? d.genere : 'neutral',
     barre: {

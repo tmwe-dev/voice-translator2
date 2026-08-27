@@ -19,18 +19,17 @@
 
 import { involucroCompagno } from './contratto.js';
 import { profiloEffettivo } from './profili.js';
+import { regoleDibattito, bloccoRegolaDibattito, kbVoceParlata } from './orchestratore.js';
 
 export const TAVOLO_MAX = 4;
 
-// Regole del dibattito (adattate da RadioChat DEBATE_FRAMEWORK), per lingua app.
-const REGOLE_DIBATTITO =
-`REGOLE DEL TAVOLO (valgono su tutto):
-• Ascolta davvero gli altri prima di rispondere.
-• Aggiungi VALORE NUOVO: mai ripetere ciò che è già stato detto.
-• Se concordi con qualcuno, approfondisci o estendi il suo punto — oppure, se non hai nulla di fondato da aggiungere, dillo in una riga e passa: vale piu di un punto costruito per forza.
-• Se dissenti, spiega perché con argomenti concreti.
-• Tono collaborativo ma non conformista: dì la tua anche fuori dal tuo ruolo.
-• L'OBIETTIVO è CONVERGERE, insieme, verso la risposta migliore possibile.`;
+// b.525 — LA COPIA LOCALE DELLE REGOLE E MORTA. Qui viveva ancora il
+// DEBATE_FRAMEWORK originale di RadioChat («l'OBIETTIVO e CONVERGERE»),
+// cioe le regole che in b.380 erano gia state bocciate da Luca e
+// riscritte in orchestratore.js perche producevano un coro di
+// complimenti. Il Podcast usava le nuove, il Tavolo le vecchie: stessa
+// app, due filosofie di dibattito. Da oggi la fonte e UNA:
+// regoleDibattito() di orchestratore.js, per tutte le superfici.
 
 /**
  * Prompt di un turno al tavolo (per callLLM via cerniera).
@@ -42,7 +41,7 @@ const REGOLE_DIBATTITO =
  * @param convergenza      istruzione di convergenza (facoltativa)
  * @param lingua
  */
-export function promptTavolo({ compagno, storia = [], ultimoUmano = '', altriQuestoGiro = [], obiettivo = '', convergenza = '', lingua = 'it', briefing = '' } = {}) {
+export function promptTavolo({ compagno, storia = [], ultimoUmano = '', altriQuestoGiro = [], obiettivo = '', convergenza = '', lingua = 'it', briefing = '', apertura = false } = {}) {
   const nome = (compagno && compagno.nome) || 'Ospite';
   const persona = (compagno && compagno.personalita) || '';
   const bloccoObiettivo = obiettivo
@@ -81,19 +80,45 @@ Avvicinare il gruppo al risultato vale anche in negativo: nominare un dato che m
     // saltare chi passa. Era scritto da b.359 ma nessuno lo attivava.
     esitoTipizzato: true,
   });
+  // b.525 — IL PRIMO GIRO PIANTA LE BANDIERE (da RadioChat, primi 4
+  // turni forzati): prima ognuno stabilisce la SUA posizione
+  // distintiva, poi ci si scontra. Senza questo, il dibattito parte
+  // gia in cortesia.
+  const bloccoApertura = apertura
+    ? `\n\nPRIMO GIRO: stabilisci la TUA posizione distintiva sul tema, netta e riconoscibile. Non commentare gli altri: pianta la tua bandiera.`
+    : '';
   const system =
 `${persona}
 Sei ${nome}, a una tavola rotonda con una persona e altri interlocutori. Rispondi in prima persona, conciso e sostanzioso (2-3 frasi). Parli con la persona e reagisci a cosa dicono gli altri, sempre puntando al risultato. Rispondi nella lingua: ${lingua}.
 
-${REGOLE_DIBATTITO}${bloccoObiettivo}${bloccoBriefing}${bloccoConvergenza}${involucro}`;
+${regoleDibattito(lingua)}${bloccoRegolaDibattito(compagno)}${bloccoApertura}${bloccoObiettivo}${bloccoBriefing}${bloccoConvergenza}${involucro}
 
-  const passato = (storia || []).slice(-8)
-    .map(m => `[${m.ruolo === 'persona' ? 'persona' : m.ruolo}]: ${m.testo}`).join('\n');
+${kbVoceParlata(lingua)}`;
+
+  // b.525 — LA MEMORIA NON FINISCE A OTTO MESSAGGI (da RadioChat, memoria
+  // a livelli): gli ultimi 8 interi, e i 12 prima CONDENSATI a una riga.
+  // Al quinto giro i Compagni ricordavano solo il quarto: ora il filo
+  // della discussione resta in mano a tutti.
+  const tutta = storia || [];
+  const interi = tutta.slice(-8);
+  const prima = tutta.slice(-20, -8);
+  const rigaDi = (m) => `[${m.ruolo === 'persona' ? 'persona' : m.ruolo}]: ${m.testo}`;
+  const condensati = prima.length
+    ? `PRIMA (in breve):\n${prima.map(m => rigaDi(m).slice(0, 110)).join('\n')}\n\n`
+    : '';
+  const passato = condensati + interi.map(rigaDi).join('\n');
   const oraAltri = (altriQuestoGiro || []).length
     ? `\n\nIn questo giro hanno già detto:\n${altriQuestoGiro.map(a => `${a.nome}: ${a.testo}`).join('\n')}`
     : '';
   const prompt =
-`${passato ? passato + '\n\n' : ''}[persona]: ${ultimoUmano}${oraAltri}\n\nRispondi come ${nome} SOLO se hai qualcosa di fondato: in quel caso aggiungi un punto nuovo. Se la domanda non e chiara, chiedi il chiarimento. Se ti manca un dato, di' quale. Se non hai nulla oltre a cio che e gia stato detto, passa.`;
+`${passato ? passato + '\n\n' : ''}[persona]: ${ultimoUmano}${oraAltri}\n\nRispondi come ${nome}.`;
+  // b.525 — VIA IL TRIPLO INVITO A TACERE. Qui c'era «rispondi SOLO se
+  // hai qualcosa di fondato... se ti manca un dato di' quale... se non
+  // hai nulla, passa»: tre uscite di sicurezza nello stesso prompt, in
+  // aggiunta al canale esito dell'involucro che dice gia le stesse cose.
+  // RadioChat non ne ha nemmeno una: i suoi agenti sono spinti a
+  // CONTRIBUIRE. L'uscita resta una sola — il canale [esito] — e i «mi
+  // manca il dato» di cortesia spariscono con lei.
   return { system, prompt };
 }
 

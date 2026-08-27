@@ -121,6 +121,17 @@ export function temperaturaLiberta(liberta) {
   return (LIB[liberta] || LIB[LIB_DEF]).t;
 }
 
+// b.525 — LA TEMPERATURA DI SCENA. In RadioChat il dibattito gira a
+// 0.8-0.9 («massima varieta per il formato radio»); qui girava alla
+// temperatura della barra liberta del singolo Compagno — e i profili
+// `strict` (Dott.ssa Elena, Avv. Marco) dibattevano a 0.3, col freno a
+// mano tirato: risposte rigide e tutte simili. A un tavolo si recita a
+// caldo. La liberta resta il carattere del Compagno (vale in chat);
+// sulla scena del dibattito vale il pavimento del formato.
+export function temperaturaDibattito(liberta) {
+  return Math.max(temperaturaLiberta(liberta), 0.8);
+}
+
 /** Riga di comportamento a partire dalla barra libertà. */
 export function promptLiberta(liberta) {
   return (LIB[liberta] || LIB[LIB_DEF]).testo;

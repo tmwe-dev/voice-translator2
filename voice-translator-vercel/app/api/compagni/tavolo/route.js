@@ -7,7 +7,7 @@ import { promptTavolo, promptSintesi, TAVOLO_MAX } from '../../../lib/compagni/t
 import { analizzaConvergenza, istruzioneConvergenza } from '../../../lib/compagni/orchestratore.js';
 import { formattaObiettivi } from '../../../lib/compagni/obiettivi.js';
 import { generaTesto } from '../../../lib/compagni/ponte.js';
-import { temperaturaLiberta, staccaEsito } from '../../../lib/compagni/contratto.js';
+import { temperaturaLiberta, temperaturaDibattito, staccaEsito } from '../../../lib/compagni/contratto.js';
 
 const log = createLogger('compagni-tavolo');
 
@@ -79,8 +79,10 @@ async function handlePost(req) {
       // di quattro si riduceva sempre a una voce sola. Ora chi tace lo
       // decide da se, col canale esito di b.362 ("passo"), che guarda quel
       // singolo compagno e quel singolo turno.
-      const { system, prompt } = promptTavolo({ compagno: c, storia, ultimoUmano, altriQuestoGiro, obiettivo, convergenza, lingua, briefing });
-      const r = await generaTesto({ system: system + bloccoObiettivi, prompt, provider: c.provider, modello: c.modello, userToken, maxTokens: 260, temperature: temperaturaLiberta(c.liberta) });
+      // b.525 — primo giro = nessun intervento di agenti ancora in storia
+      const apertura = !storia.some(m => m.ruolo !== 'persona');
+      const { system, prompt } = promptTavolo({ compagno: c, storia, ultimoUmano, altriQuestoGiro, obiettivo, convergenza, lingua, briefing, apertura });
+      const r = await generaTesto({ system: system + bloccoObiettivi, prompt, provider: c.provider, modello: c.modello, userToken, maxTokens: 400, temperature: temperaturaDibattito(c.liberta) });
       if (!r.ok) {
         if (r.status === 401) return NextResponse.json({ error: 'Sessione non valida' }, { status: 401 });
         if (r.status === 402) return NextResponse.json({ error: 'Credito insufficiente', creditoEsaurito: true }, { status: 402 });

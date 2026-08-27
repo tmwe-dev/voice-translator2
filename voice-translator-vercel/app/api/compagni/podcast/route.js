@@ -6,7 +6,7 @@ import { risolviCompagni } from '../../../lib/compagni/persistenza.js';
 import { ordineTurni, promptTurno, validaPodcast, PODCAST_LIMITI, PODCAST_RICHIESTE_MAX } from '../../../lib/compagni/podcast.js';
 import { generaTesto } from '../../../lib/compagni/ponte.js';
 import { analizzaConvergenza, istruzioneConvergenza } from '../../../lib/compagni/orchestratore.js';
-import { temperaturaLiberta, staccaEsito } from '../../../lib/compagni/contratto.js';
+import { temperaturaLiberta, temperaturaDibattito, staccaEsito } from '../../../lib/compagni/contratto.js';
 
 const log = createLogger('compagni-podcast');
 
@@ -72,8 +72,13 @@ async function handlePost(req) {
       });
       const esito = await generaTesto({
         system, prompt: user, provider: c.provider, modello: c.modello,
-        userToken, maxTokens: t.round === 1 ? 200 : 150,   // b.303: turni brevi e umani
-        temperature: temperaturaLiberta(c.liberta),
+        userToken,
+        // b.525 — il tetto sale (300/350): la brevita la governa il prompt
+        // («2-3 frasi»), non un taglio duro che tronca la frase a meta e
+        // la fa leggere tronca alla voce. E la temperatura e quella di
+        // scena (pavimento 0.8, come il formato radio di RadioChat).
+        maxTokens: t.round === 1 ? 350 : 300,
+        temperature: temperaturaDibattito(c.liberta),
       });
       if (!esito.ok) {
         if (esito.status === 401) return NextResponse.json({ error: 'Sessione non valida' }, { status: 401 });

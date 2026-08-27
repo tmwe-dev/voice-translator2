@@ -267,6 +267,86 @@ perche il working tree lo conteneva ancora.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.525** (push #813) — IL MOTORE DI RADIOCHAT ENTRA NEI
+  COMPAGNI. Ordine di Luca, dopo l'analisi comparata dei due sistemi:
+  «RadioChat resta il riferimento, BarTalk riceve il motore». RadioChat
+  (deploy live `radiochat-pro`, v8.2.6; sorgente analizzato dallo zip
+  v8.0) da «il piacere di ascoltare i protagonisti»; il porting fatto a
+  suo tempo aveva preso lo scheletro (convergenza, regole, turni) ma
+  non il cuore teatrale. Sette innesti, tutti provati sui PROMPT VERI:
+
+  **1 — REGOLE DEL DIBATTITO: UNA FONTE SOLA.** `tavolo.js` aveva
+  ancora la SUA copia del DEBATE_FRAMEWORK originale («l'OBIETTIVO e
+  CONVERGERE») — cioe le regole gia bocciate da Luca in b.380 perche
+  producevano un coro di complimenti, e riscritte in orchestratore.js.
+  Il Podcast usava le nuove, il Tavolo le vecchie: stessa app, due
+  filosofie. La copia locale e morta; la fonte e `regoleDibattito()`.
+
+  **2 — OGNI COMPAGNO LITIGA A MODO SUO.** La `debateRule` di
+  RadioChat, il motore della differenziazione: Albert dissente col
+  dato, Archimede scavando il perche, Pitagora smontando il
+  presupposto. Nuovo campo `regolaDibattito` per gli 8 predefiniti
+  (tutte diverse: il controesempio di Omar, la domanda socratica di
+  Margaret, il presupposto non dichiarato di Marco, la misura di
+  Yuki...), nel generatore dei Compagni creati dall'utente, e iniettato
+  nei prompt di Tavolo e Podcast.
+
+  **3 — MENTI DAVVERO DIVERSE.** In RadioChat Albert e GPT-4o,
+  Archimede e Claude, Pitagora e Gemini: le differenze di carattere
+  sono REALI, il prompt le amplifica invece di inventarle. Qui erano
+  quasi tutti gpt-4o-mini. Ora: Archimede su Claude Sonnet (la
+  vetrina), Marco e Yuki su Claude Haiku, Margaret su Gemini Flash,
+  Omar su Grok (che b.227 gia prevedeva per la tavola).
+  E il BUG PRE-ESISTENTE che lo rendeva impossibile, dichiarato:
+  `ponte.js` passava l'ALIAS del modello ('claude-haiku') dritto
+  all'API, che lo rifiutava, e il ripiego rigenerava in silenzio con
+  gpt-4o-mini — chiunque scegliesse Claude o Gemini per un Compagno
+  riceveva OpenAI senza saperlo. Ora l'alias passa da MODEL_MAP (la
+  mappa esisteva dal primo giorno, usata da /api/translate).
+
+  **4 — LA TEMPERATURA DI SCENA.** RadioChat dibatte a 0.8-0.9; qui si
+  dibatteva alla temperatura della barra liberta del singolo Compagno,
+  e i profili strict (Elena, Marco, Alex, Yuki) parlavano a 0.3 — il
+  freno a mano tirato che appiattiva tutto. Nuova
+  `temperaturaDibattito()` = max(liberta, 0.8), SOLO su Tavolo e
+  Podcast: in chat 1:1 la liberta resta il carattere.
+
+  **5 — SI SCRIVE PER LA VOCE.** La KB TTS di RadioChat (meta del
+  piacere d'ascolto: sigle sciolte, numeri in lettere, frasi da
+  discorso), condensata in `kbVoceParlata()` e iniettata nei prompt di
+  Tavolo e Podcast. Prima gli agenti scrivevano per essere letti, e
+  venivano letti ad alta voce.
+
+  **6 — IL PRIMO GIRO PIANTA LE BANDIERE.** Come i 4 turni forzati di
+  RadioChat: al primo giro del Tavolo ognuno stabilisce la SUA
+  posizione distintiva, senza commentare gli altri. Prima le bandiere,
+  poi lo scontro.
+
+  **7 — MEMORIA PIU LUNGA, UNA SOLA USCITA, NIENTE FRASI TRONCHE.**
+  La storia del Tavolo non finisce piu a 8 messaggi: 8 interi + 12
+  condensati a una riga. Via il TRIPLO invito a tacere dal prompt
+  utente («rispondi SOLO se... se ti manca un dato... passa»): l'uscita
+  resta una, il canale esito. E i tetti duri che troncavano la frase a
+  meta (150-260 token) salgono a 300-400: la brevita la governa il
+  prompt, non il taglio.
+
+  TEST: 21 nuovi (`motore-radiochat-b525.test.js`) che provano i
+  PROMPT VERI in uscita dai costruttori puri — non la forma del codice:
+  la lezione del globo. 1 test vecchio aggiornato all'assunzione nuova
+  (b.237: «Archimede = gpt-4o» descriveva il mondo prima del motore).
+  [VERIFICATO] 234/234 sull'intera batteria. eslint: 0 errori.
+  NON ancora collaudato con le orecchie: il confronto alla cieca con
+  RadioChat live (stesso tema, due sistemi) e il vero collaudo, e va
+  fatto da Luca dopo il push.
+
+  DEBITO DICHIARATO: Gemini e Grok funzionano solo se in produzione
+  esistono GEMINI_API_KEY e XAI_API_KEY (apiAuth.js le prevede gia);
+  senza, il ripiego passa a OpenAI/Anthropic e lo dichiara nel campo
+  `ripiego` — non piu in silenzio, ma va verificato su Vercel quali
+  chiavi ci sono. Lo zip analizzato e la v8.0: la 8.2.6 live potrebbe
+  avere ritocchi ulteriori (Newton e passato a xAI) — serve il sorgente
+  aggiornato per l'ultimo miglio.
+
 - Versione: **b.524** (push #812) — Luca: «le side bar delle tre pagine
   stanze, notizie e mondo hanno la stessa selezione campi?????».
 

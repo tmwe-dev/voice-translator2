@@ -27,6 +27,7 @@ import { riserva, commit, release } from '../../wallet/riserva.js';
 import { preventivoTesto } from '../../wallet/addebita.js';
 import { COSTO_AVATAR_SECONDI, LIVE_TRATTO_SECONDI, LIVE_SOGLIA_RINNOVO, LIVE_BATTITO_SECONDI, MOLTIPLICATORE_DAL_VIVO, creditoDalVivo } from '../../wallet/tariffe.js';
 import { costoProviderCent } from '../../wallet/provider-costi.js';
+import { MODEL_MAP } from '../translateValidation.js';
 import { redis } from '../redis.js';
 import { randomUUID } from 'crypto';
 import { callLLMWithFallback } from '../llmCaller.js';
@@ -73,6 +74,18 @@ export async function generaTesto({
   timeoutMs = 45000,
   // ── FINE b.205 ──
 } = {}) {
+  // b.525 — L'ALIAS DEL MODELLO DIVENTA IL MODELLO VERO.
+  // BUG PRE-ESISTENTE dichiarato: il form dei Compagni offre alias come
+  // 'claude-haiku' o 'gemini-flash' (catalogo.js, MODELLI_COMPAGNO), ma
+  // qui l'alias passava DRITTO all'API del fornitore, che non lo
+  // conosce e rifiutava; il ripiego rigenerava in silenzio con
+  // gpt-4o-mini. Risultato: chiunque scegliesse Claude o Gemini per un
+  // Compagno riceveva OpenAI senza saperlo — la diversita di provider
+  // esisteva solo sulla carta. La mappa alias->modello vero esiste da
+  // sempre (MODEL_MAP, usata da /api/translate): ora la usa anche
+  // questa porta.
+  const _mappa = MODEL_MAP[modello];
+  if (_mappa) { modello = _mappa.actual; provider = _mappa.provider || provider; }
   if (!prompt) return { ok: false, motivo: 'prompt-mancante' };
 
   // 1. Autorizzazione + chiave (throw = non autorizzato).

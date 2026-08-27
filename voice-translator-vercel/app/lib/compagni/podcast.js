@@ -16,7 +16,7 @@
 
 import { involucroCompagno } from './contratto.js';
 import { profiloEffettivo } from './profili.js';
-import { regoleDibattito } from './orchestratore.js';
+import { regoleDibattito, bloccoRegolaDibattito, kbVoceParlata } from './orchestratore.js';
 
 export const PODCAST_LIMITI = {
   MIN_COMPAGNI: 2,
@@ -106,8 +106,8 @@ export function promptTurno({ compagno, argomento, round = 1, totaleRound = 1, p
 
 Sei ${nome}, in un podcast a piu voci, IN TEMPO REALE, come persone vere al bar — non in un'aula. Parli in prima persona, con la tua voce. Rispondi nella lingua: ${lingua}.
 
-${regoleDibattito(lingua)}${convergenza ? `\n${convergenza}` : ''}
-Quando hai una posizione fondata, dilla BREVE e viva: quando ti aggancia una frase di un altro, nominalo e reagisci a QUELLA. Niente monologhi. Se su questo giro non hai nulla di fondato, va bene dirlo in una riga e passare: al bar succede.${involucroCompagno({ liberta: compagno && compagno.liberta, capacita: { ricerca: false, fonti: false, memoria: false }, profilo: profiloEffettivo(compagno, 'podcast'), esitoTipizzato: true })}`;
+${regoleDibattito(lingua)}${bloccoRegolaDibattito(compagno)}${convergenza ? `\n${convergenza}` : ''}
+Quando hai una posizione fondata, dilla BREVE e viva: quando ti aggancia una frase di un altro, nominalo e reagisci a QUELLA. Niente monologhi. Se su questo giro non hai nulla di fondato, va bene dirlo in una riga e passare: al bar succede.${involucroCompagno({ liberta: compagno && compagno.liberta, capacita: { ricerca: false, fonti: false, memoria: false }, profilo: profiloEffettivo(compagno, 'podcast'), esitoTipizzato: true })}\n\n${kbVoceParlata(lingua)}`;
 
   // b.303 — turni BREVI e umani (come RadioChat): 2-4 frasi, non paragrafi.
   const cornice = round === 1

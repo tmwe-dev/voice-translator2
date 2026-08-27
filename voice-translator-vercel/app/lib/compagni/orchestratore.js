@@ -107,3 +107,44 @@ const REGOLE_DIBATTITO = {
 export function regoleDibattito(lingua = 'it') {
   return REGOLE_DIBATTITO[lingua] || REGOLE_DIBATTITO.en;
 }
+
+// ── 3. COME LITIGA *QUESTO* COMPAGNO (b.525, da RadioChat) ──
+//
+// In RadioChat ogni agente ha una `debateRule`: Albert dissente col
+// dato, Archimede scavando il perche, Pitagora smontando il
+// presupposto. E il motore della differenziazione: quattro persone che
+// dissentono in quattro MODI diversi, e ogni scontro ha una forma
+// nuova. I Compagni avevano caratteri diversi ma un solo stile di
+// conflitto (quello educato): questa riga li divide.
+export function bloccoRegolaDibattito(compagno) {
+  const r = compagno && compagno.regolaDibattito;
+  if (!r) return '';
+  return `\nIL TUO MODO DI DISSENTIRE (tuo e di nessun altro): ${r}`;
+}
+
+// ── 4. SCRIVERE PER LA VOCE (b.525, da RadioChat buildTTSKnowledgeBase) ──
+//
+// In RadioChat, quando la voce e accesa, ogni agente riceve le regole
+// dello scrivere PARLATO — ed e meta del piacere d'ascolto: i suoi
+// agenti scrivono per essere ascoltati, i nostri scrivevano per essere
+// letti e poi venivano letti ad alta voce. Versione condensata: gli
+// obiettivi, non un dizionario per lingua — il modello la fonetica la
+// sa gia.
+const KB_VOCE = {
+  it: `[VOCE] Il tuo testo verra LETTO AD ALTA VOCE da una voce sintetica. Scrivi come se parlassi a gente presente:
+- frasi corte e connesse, mai elenchi puntati, mai markdown, mai emoji;
+- numeri in forma parlata («il quindici percento», «due milioni», «dal dieci al venti»);
+- sigle sciolte alla prima uscita («l'Organizzazione Mondiale della Sanita»), poi pure la sigla;
+- niente simboli (%, &, /, →): sempre la parola;
+- punti e virgole come respiri: e un discorso, non una pagina.`,
+  en: `[VOICE] Your text will be READ ALOUD by a synthetic voice. Write as if speaking to people in the room:
+- short connected sentences, never bullet lists, never markdown, never emoji;
+- numbers in spoken form ("fifteen percent", "two million", "ten to twenty");
+- expand acronyms on first use, then the acronym alone is fine;
+- no symbols (%, &, /): always the word;
+- periods and commas are breaths: this is speech, not a page.`,
+};
+export function kbVoceParlata(lingua = 'it') {
+  return KB_VOCE[lingua] || KB_VOCE.en;
+}
+
