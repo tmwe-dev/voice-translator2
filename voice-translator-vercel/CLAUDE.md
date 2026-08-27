@@ -267,6 +267,62 @@ perche il working tree lo conteneva ancora.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.526** (push #814) — L'OMONIMO INGOIAVA L'OSPITE. Luca
+  dal vivo: «in chat non traduce piu l'ospite», poi l'indizio giusto:
+  «forse le impostazioni di chi invita sono mantenute», e «lascia lo
+  spagnolo anche a me».
+
+  RIPRODOTTO in produzione con due schede (stanza 88286BD9, ospite
+  spagnolo via link della sala d'attesa): il messaggio spagnolo
+  dell'ospite compariva sullo schermo dell'host come «You», la stanza
+  restava a UN membro, e «Translating...» restava appeso per sempre.
+
+  CAUSA, nello strato piu profondo (redisLua.js, JOIN_ROOM):
+  **l'identita in stanza era il NOME.** Chi entrava con un nome gia
+  presente non diventava un secondo membro: lo script AGGIORNAVA il
+  record esistente — lingua compresa. Con due dispositivi che condividono
+  il profilo salvato (il caso di ogni collaudo di Luca: «Kenji» ovunque),
+  l'ospite veniva ingoiato dall'host: un membro solo, nessun partner,
+  nessuna lingua per cui tradurre. La funzione per cui esiste il
+  prodotto, spenta da un'omonimia. E spiega anche lo spagnolo che
+  l'host si ritrovava addosso: era il join dell'ospite a riscrivergli
+  la lingua sul record.
+
+  Non si poteva semplicemente rifiutare i nomi uguali: il rientro
+  d'emergenza (b.325) e la riammissione col gettone (b.250) usano
+  proprio il join per nome per riprendere il proprio posto. La
+  distinzione giusta e la PRESENZA:
+
+  - omonimo VIVO (lastSeen entro la soglia dei 60s): chi arriva e
+    un'ALTRA persona → entra come membro nuovo col suffisso «(2)»
+    (primo libero: (3), (4)...); il gettone di sessione nasce sul nome
+    assegnato, la risposta lo dichiara (verifiedName), il client lo
+    adotta per messaggi, filtri e broadcast.
+  - omonimo STANTIO: e una riconnessione → riprende il suo posto,
+    identico a prima.
+  - identita provata dal gettone (riammissione b.250): `fidato`, mai il
+    suffisso — quello E' lui.
+
+  TRADE-OFF DICHIARATO: il rientro d'emergenza senza gettone valido
+  mentre il proprio vecchio record e ancora «vivo» (finestra di pochi
+  secondi) puo generare un doppione col suffisso, potato entro 60s.
+  Accettato: e lo stesso trattamento che merita un impostore, e b.169
+  gia declassava quel caso a guest.
+
+  «LASCIA LO SPAGNOLO ANCHE A ME»: la tendina della lingua ospite in
+  QuickInvite escludeva la lingua dell'invitante — ma b.465 ha gia
+  stabilito che due lingue uguali sono un caso legittimo. Ora offre
+  tutte le lingue.
+
+  TEST: 9 nuovi (`omonimi-in-stanza-b526.test.js`) + batteria stanze
+  (120/120) e motore b.525 verdi. eslint: 0 errori (3 warning
+  preesistenti in useRoomPolling, identici su origin/main).
+  [ATTESO] La prova FINALE e dal vivo post-push: rifare il giro a due
+  schede sulla 88286BD9-bis e vedere l'ospite «Kenji (2)» spagnolo
+  tradotto in italiano sullo schermo dell'host. Va fatta appena Luca
+  pusha — il codice della stanza gira sul server, non si prova in
+  locale dal sandbox.
+
 - Versione: **b.525** (push #813) — IL MOTORE DI RADIOCHAT ENTRA NEI
   COMPAGNI. Ordine di Luca, dopo l'analisi comparata dei due sistemi:
   «RadioChat resta il riferimento, BarTalk riceve il motore». RadioChat

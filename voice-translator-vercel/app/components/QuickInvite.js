@@ -240,7 +240,11 @@ function QuickInvite({ handleCreateRoom, roomId, setViewAfterCreate }) {
                   backgroundRepeat: 'no-repeat', backgroundPosition: 'right 14px center',
                   textAlign: 'center',
                 }}>
-                {LANGS.filter(l => l.code !== lang).map(l => (
+                {/* b.526 — «lascia lo spagnolo anche a me» (Luca): la tendina
+                    escludeva la lingua dell'invitante, ma b.465 ha gia
+                    stabilito che due lingue uguali sono un caso legittimo
+                    (si usa la stanza senza traduzione). Tutte le lingue. */}
+                {LANGS.map(l => (
                   <option key={l.code} value={l.code}>{l.flag} {l.name}</option>
                 ))}
               </select>

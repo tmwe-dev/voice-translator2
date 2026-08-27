@@ -99,7 +99,8 @@ export async function riammettiConGettone(roomId, token, lang, avatar) {
     log.warn('controllo blocco non riuscito in riammissione:', e.message);
     return null;
   }
-  const esito = await joinRoom(roomId, session.name, lang || 'en', avatar || null);
+  // b.526 — identita provata dal gettone: mai il suffisso omonimi.
+  const esito = await joinRoom(roomId, session.name, lang || 'en', avatar || null, { fidato: true });
   if (!esito || esito.piena) return null;
   return { name: session.name, role: session.role, verified: true, riammesso: true };
 }
@@ -255,14 +256,29 @@ export async function getRoom(id) {
   let parsed; try { parsed = JSON.parse(data); } catch (e) { log.warn('Failed to parse room:', e.message); return null; } return parsed;
 }
 
-export async function joinRoom(id, name, lang, avatar = null) {
+export async function joinRoom(id, name, lang, avatar = null, opzioni = {}) {
   const key = `room:${id.toUpperCase()}`;
-  const result = await redis('EVAL', JOIN_ROOM, 1, key, name, lang, avatar || '', Date.now().toString());
+  // b.526 — vedi JOIN_ROOM in redisLua.js: la soglia di presenza decide
+  // se un omonimo e una riconnessione (stantio: riprende il suo posto) o
+  // un'ALTRA persona (vivo: suffisso). `fidato` = identita gia provata
+  // da un gettone (riammissione b.250): niente suffisso, e' lui.
+  const result = await redis('EVAL', JOIN_ROOM, 1, key, name, lang, avatar || '', Date.now().toString(),
+    String(opzioni.sogliaMs || SOGLIA_PRESENZA_MS), opzioni.fidato ? '1' : '0');
   if (!result) return null;
   // b.126 — la stanza piena ora si dichiara, invece di far fuori qualcuno
   // per fare posto. Chi chiama deve poterlo distinguere da "non esiste".
   if (result === 'PIENA') return { piena: true };
-  try { return JSON.parse(result); } catch (e) { log.warn('Failed to parse joinRoom result:', e.message); return null; }
+  try {
+    const esito = JSON.parse(result);
+    // b.526 — nuovo contratto {stanza, nome}; il vecchio (la stanza nuda)
+    // resta accettato per non rompere niente durante un deploy misto.
+    if (esito && esito.stanza) {
+      const room = esito.stanza;
+      room.nomeAssegnato = esito.nome || name;
+      return room;
+    }
+    return esito;
+  } catch (e) { log.warn('Failed to parse joinRoom result:', e.message); return null; }
 }
 
 export async function setSpeaking(roomId, memberName, speaking, liveText = null, typing = false) {

@@ -715,7 +715,11 @@ export default function useRoomPolling({
             try {
               const ri = await fetch('/api/room', {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action: 'join', roomId: rid, name: prefsRef.current.name,
+                // b.526 — si rientra col nome VERIFICATO della sessione
+                // (che puo portare il suffisso omonimi), non con quello
+                // delle preferenze: rientrare col nome "sbagliato" creava
+                // un terzo membro invece di riprendere il proprio posto.
+                body: JSON.stringify({ action: 'join', roomId: rid, name: verifiedNameRef.current || prefsRef.current.name,
                   lang: prefsRef.current.lang || 'en', avatar: prefsRef.current.avatar || null, hostSecret }),
                 // b.363 — anche il rientro d'emergenza era senza scadenza:
                 // proprio il tentativo che deve rimettere in linea poteva
@@ -1093,6 +1097,10 @@ export default function useRoomPolling({
       if (!data.room) throw new Error(tFuori('roomNotFound'));
       const { room, roomSessionToken: token } = data;
       if (token) roomSessionTokenRef.current = token;
+      // b.526 — il server puo aver assegnato un nome col suffisso «(2)»
+      // (omonimo vivo in stanza, vedi JOIN_ROOM): da qui in poi IO sono
+      // quel nome — i messaggi, il filtro dei partner, il broadcast.
+      if (data.verifiedName) verifiedNameRef.current = data.verifiedName;
       setRoomId(room.id);
       setRoomInfo(room);
       setMessages([]);
@@ -1100,7 +1108,7 @@ export default function useRoomPolling({
       startPolling(room.id);
 
       // Broadcast member join via Realtime
-      broadcastMemberUpdate({ room, action: 'join', name });
+      broadcastMemberUpdate({ room, action: 'join', name: verifiedNameRef.current || name });
 
       return room;
     } catch (e) {

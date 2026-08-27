@@ -119,12 +119,18 @@ export async function handleJoin({ roomId, name, lang, avatar, hostSecret }) {
   // estesa su creaSegretoHost in store.js per il perche e per l'effetto
   // collaterale dichiarato (host che perde il segreto non rientra piu
   // come host da solo).
-  const ruoloRichiesto = ruoloDi(room, name);
+  // b.526 — se in stanza c'era gia un omonimo VIVO, il server ha
+  // assegnato un nome col suffisso (vedi JOIN_ROOM): il gettone, il
+  // ruolo e la risposta parlano di QUEL nome. Senza questo, il gettone
+  // nasceva sul nome vecchio e l'ospite operava a nome dell'host.
+  const nomeVero = room.nomeAssegnato || name;
+  delete room.nomeAssegnato;
+  const ruoloRichiesto = ruoloDi(room, nomeVero);
   const ruoloFinale = (ruoloRichiesto === 'host' && !(await verificaSegretoHost(roomId, hostSecret)))
     ? 'guest'
     : ruoloRichiesto;
-  const { token } = await createRoomSession(room.id, name, ruoloFinale);
-  return NextResponse.json({ room, roomSessionToken: token });
+  const { token } = await createRoomSession(room.id, nomeVero, ruoloFinale);
+  return NextResponse.json({ room, roomSessionToken: token, verifiedName: nomeVero });
 }
 
 // ── Action: heartbeat ──

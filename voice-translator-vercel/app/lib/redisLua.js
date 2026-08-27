@@ -28,16 +28,47 @@ local name = ARGV[1]
 local lang = ARGV[2]
 local avatar = ARGV[3] ~= '' and ARGV[3] or nil
 local now = tonumber(ARGV[4])
+-- b.526 · IL NOME NON E' LA PERSONA. Trovato dal vivo da Luca («in chat
+-- non traduce piu l'ospite... forse le impostazioni di chi invita sono
+-- mantenute»): un ospite che entrava col nome gia presente in stanza
+-- (due dispositivi con lo stesso profilo salvato) non diventava un
+-- secondo membro — SOSTITUIVA il record dell'host, gli cambiava pure la
+-- lingua, e la stanza restava a UNO. Senza un secondo membro non c'e
+-- nessuno per cui tradurre: la funzione per cui esiste il prodotto,
+-- spenta da un'omonimia.
+-- La distinzione giusta e la PRESENZA: se il membro omonimo e VIVO
+-- adesso (lastSeen entro la soglia) chi arriva e una persona diversa e
+-- prende un suffisso «(2)»; se e stantio, e una riconnessione e
+-- riprende il suo posto come sempre. ARGV[6]='1' (identita provata da
+-- gettone: riammissione b.250) salta il controllo: quello E' lui.
+local soglia = tonumber(ARGV[5]) or 60000
+local fidato = ARGV[6] == '1'
 local found = false
 for i, m in ipairs(room.members) do
   if m.name == name then
-    room.members[i].lang = lang
-    room.members[i].joined = now
-    room.members[i].avatar = avatar
-    -- b.248 · chi (ri)entra e presente ADESSO: il dato di presenza
-    -- nasce qui, non al primo battito (che potrebbe non arrivare mai).
-    room.members[i].lastSeen = now
-    found = true
+    if (not fidato) and type(m.lastSeen) == 'number' and (now - m.lastSeen) <= soglia then
+      -- omonimo VIVO: chi arriva e un'altra persona. Nome libero col suffisso.
+      local n = 2
+      local candidato = name .. ' (' .. n .. ')'
+      local occupato = true
+      while occupato do
+        occupato = false
+        for j, mm in ipairs(room.members) do
+          if mm.name == candidato then occupato = true end
+        end
+        if occupato then n = n + 1; candidato = name .. ' (' .. n .. ')' end
+      end
+      name = candidato
+      -- found resta falso: si entra come membro NUOVO qui sotto.
+    else
+      room.members[i].lang = lang
+      room.members[i].joined = now
+      room.members[i].avatar = avatar
+      -- b.248 · chi (ri)entra e presente ADESSO: il dato di presenza
+      -- nasce qui, non al primo battito (che potrebbe non arrivare mai).
+      room.members[i].lastSeen = now
+      found = true
+    end
     break
   end
 end
@@ -60,7 +91,9 @@ if not found then
 end
 local encoded = cjson.encode(room)
 redis.call('SET', KEYS[1], encoded, 'EX', 3600)
-return encoded
+-- b.526 · si torna anche il NOME ASSEGNATO: se c'e stato il suffisso,
+-- il gettone di sessione va emesso su QUEL nome, non su quello chiesto.
+return cjson.encode({stanza=room, nome=name})
 `;
 
 /**
