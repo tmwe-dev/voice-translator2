@@ -267,6 +267,49 @@ perche il working tree lo conteneva ancora.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.539** (push #827) — LA RETE CHE MANCAVA (e i tasti che
+  mancavano ai video). Luca, con la schermata rossa in faccia:
+  «TypeError: (0, l.getStyles) is not a function ... sembra ci siano
+  problemi, verifica se dobbiamo fare un rifactoring».
+
+  LA RIGA SBAGLIATA, e la mia: in StanzeView (b.537) avevo scritto
+  `import { getStyles } from '../lib/styles.js'` — ma getStyles e' un
+  export DEFAULT. Con le graffe arriva `undefined`, e la schermata muore
+  al primo disegno. Un carattere.
+
+  IL DIFETTO GRAVE NON E' QUELLO. E' che nessuna delle QUATTORDICI prove
+  di b.537 se n'e' accorta, perche' leggevano il TESTO del file («c'e
+  scritto StanzeView? c'e scritto onJoinRoom?») e il testo era giusto.
+  Nessuna ha mai provato a FARLO PARTIRE. E' la trappola n.6 del
+  CLAUDE.md nella sua forma peggiore: prove verdi su codice morto.
+
+  RISPOSTA ALLA DOMANDA DI LUCA — no, non serve un rifacimento: il
+  codice non e' malato, mancava la RETE. Due strati, aggiunti qui:
+    1. nessun-import-fantasma-b539: scandaglia TUTTI i file di app/
+       (434) e verifica che ogni import a graffe da un file nostro
+       corrisponda a un export vero. Un secondo di prova, e chiude la
+       classe intera per sempre, in tutta l'applicazione. (Oggi: zero
+       import fantasma, dopo il fix.)
+    2. schermate-che-partono-b539: le schermate si MONTANO davvero
+       (jsdom + testing-library; l'ostacolo tecnico era gia caduto in
+       b.406 e non l'avevo mai sfruttato). StanzeView parte, e con
+       stanze vere disegna l'argomento vivo tradotto — la prova che
+       avrebbe preso il bug prima di Luca.
+
+  E LA DOMANDA CHE E' ARRIVATA MENTRE RIPARAVO: «perche questo contenuto
+  non ha tasti?» — un video nel feed. Perche' quando il feed e' nato
+  (b.515) i tasti erano stati dati solo agli articoli: per i video
+  l'unica azione prevista era guardare. Ma un video che ti colpisce e'
+  esattamente il momento in cui vuoi parlarne. Ora c'e la COLONNINA
+  delle azioni sul bordo destro a mezza altezza — Parlane e la porta
+  verso YouTube per i video, Leggi + Parlane + sito per gli articoli:
+  stessa grammatica su tutte le slide. Sul bordo destro e non in fondo,
+  perche' in fondo ci sono i comandi del player: la lezione di b.538,
+  pagata due volte, adesso e una regola scritta anche nella prova.
+
+  PROVE: 16 nuove fra i due file, tutte verdi; 102 verdi sulle suite che
+  toccano feed e schermate nuove. eslint pulito.
+
 - Versione: **b.538** (push #826) — IL VELO SI ALZA, E LO SCHERMO SI PUO
   RIBALTARE. Due collaudi di Luca sullo stesso schermo, il primo per la
   SECONDA volta (e aveva ragione a ripeterlo).

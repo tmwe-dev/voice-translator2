@@ -35,6 +35,41 @@ const FILTRI = [
 // meglio due dita d'aria in piu che un tasto coperto.
 const BARRA_YT = 60;
 
+// ═══════════════════════════════════════════════════════════════
+// b.539 — LA COLONNINA DELLE AZIONI. Luca, guardando un video nel feed:
+// «perche questo contenuto non ha tasti?».
+// Perche' quando il feed e' nato (b.515) i tasti erano stati dati solo
+// agli articoli: per i video l'unica azione prevista era guardare. Ma un
+// video che ti colpisce e' esattamente il momento in cui vuoi parlarne —
+// e li non c'era niente da toccare.
+// Sta sul BORDO DESTRO, a mezza altezza: e' il posto che usano tutti
+// (e chi guarda lo cerca li), e soprattutto e' lontano dalla barra dei
+// comandi del player, che in fondo allo schermo deve restare libera —
+// la lezione di b.538, pagata due volte.
+// ═══════════════════════════════════════════════════════════════
+function Azioni({ voci }) {
+  return (
+    <div style={{
+      position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)',
+      zIndex: 3, display: 'flex', flexDirection: 'column', gap: 12,
+    }}>
+      {voci.filter(Boolean).map((v) => (
+        <button key={v.chiave} onClick={v.onTocca}
+          aria-label={v.parola} title={v.parola}
+          style={{
+            width: 46, height: 46, borderRadius: 999, cursor: 'pointer', padding: 0,
+            background: 'rgba(10,14,26,0.72)', border: '1px solid rgba(255,255,255,0.18)',
+            backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            WebkitTapHighlightColor: 'transparent',
+          }}>
+          <Icon name={v.icona} size={19} color="#fff" />
+        </button>
+      ))}
+    </div>
+  );
+}
+
 export default function FeedNotizieMondo({ aperto, onChiudi, C, L, argomenti = [], video = [], filtro, onFiltro, onParlane, onApriArticolo, onStrumenti }) {
   const contenitoreRef = useRef(null);
   const sentinelleRef = useRef(new Map());
@@ -229,6 +264,12 @@ export default function FeedNotizieMondo({ aperto, onChiudi, C, L, argomenti = [
                       style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.85 }} />
                   )}
                 </div>
+                {/* b.539 — i tasti che mancavano ai video. */}
+                <Azioni voci={[
+                  { chiave: 'parlane', icona: 'chat', parola: L('newsTalkAbout'), onTocca: () => { vibrate(10); onParlane?.({ titolo: el.dati.titolo, sintesi: el.dati.canale ? `YouTube \u00b7 ${el.dati.canale}` : '' }); } },
+                  { chiave: 'fuori', icona: 'link', parola: L('newsOpenSite'), onTocca: () => { vibrate(6); try { window.open(`https://www.youtube.com/watch?v=${el.dati.id}`, '_blank', 'noopener,noreferrer'); } catch { /* il browser ha rifiutato la finestra */ } } },
+                ]} />
+
                 {/* b.535 — Luca: «il menu di youtube rimane nascosto».
                     Questo velo col titolo copriva la barra dei comandi del
                     player e si mangiava i tocchi: ora e' solo pittura
@@ -264,6 +305,14 @@ export default function FeedNotizieMondo({ aperto, onChiudi, C, L, argomenti = [
                     <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(5,7,15,0.15), rgba(5,7,15,0.92) 65%)' }} />
                   </div>
                 )}
+                {/* b.539 — le stesse porte dei video, nello stesso posto:
+                    il feed non cambia grammatica a meta scorrimento. */}
+                <Azioni voci={[
+                  { chiave: 'leggi', icona: 'doc', parola: L('newsOpenTranslate'), onTocca: () => { vibrate(8); onApriArticolo?.(el.dati); } },
+                  { chiave: 'parlane', icona: 'chat', parola: L('newsTalkAbout'), onTocca: () => { vibrate(10); onParlane?.(el.dati); } },
+                  el.dati.url ? { chiave: 'fuori', icona: 'link', parola: L('newsOpenSite'), onTocca: () => { vibrate(6); try { window.open(el.dati.url, '_blank', 'noopener,noreferrer'); } catch { /* finestra rifiutata */ } } } : null,
+                ]} />
+
                 <div style={{ position: 'relative', zIndex: 1, padding: '16px 20px calc(28px + env(safe-area-inset-bottom))' }}>
                   <h3 style={{ margin: 0, fontSize: 17, fontWeight: 600, color: '#fff', lineHeight: 1.3 }}>{el.dati.titolo}</h3>
                   {el.dati.sintesi && (

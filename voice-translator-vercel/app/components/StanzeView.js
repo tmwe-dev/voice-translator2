@@ -28,7 +28,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { FONT, vibrate, getLang } from '../lib/constants.js';
 import { useApp } from '../contexts/AppContext.js';
-import { getStyles } from '../lib/styles.js';
+import getStyles from '../lib/styles.js'; // b.539 — e' un export DEFAULT: l'import a graffe lo rendeva undefined
 import Icon from './Icon.js';
 import { mieStanze, dimenticaStanza } from '../lib/mieStanze.js';
 import { quando, viva, stileEtichetta, PUNTO } from '../lib/schedaMondo.js';
