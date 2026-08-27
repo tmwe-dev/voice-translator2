@@ -19,7 +19,8 @@ import { memo, useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { segnaApertura } from '../lib/interessi.js';
 import { COLONNA } from '../lib/righello.js';
 import { ordinaFeed } from '../lib/ordineFeed.js';
-import { cercaTopics } from '../lib/topics/cliente.js';   // b.409 — il lettore a righe, uno per tutti
+import { cercaTopics, chiediRami } from '../lib/topics/cliente.js';   // b.409 — il lettore a righe, uno per tutti; b.541 — i rami del giardino
+import { semiDi, prossimaQuery, esaurito, sanaRami } from '../lib/giardino.js'; // b.541 — le ricerche sono semi
 import Scelta from './ui/Scelta.js';
 import { ricerchePredefinite } from '../lib/casaEViaggio.js';
 import { preferitiAggiunti, ePreferita, aggiungiPreferita, togliPreferita } from '../lib/preferitiRicerche.js'; // b.535
@@ -169,7 +170,14 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
     if (typeof window === 'undefined') return;
     if (argomenti !== null || cercando) return;
     try {
-      const giri = ricerchePredefinite(prefs, nomePaese);
+      // b.541 — SI PARTE DAI TUOI SEMI. Luca: «se le mie ricerche ultime
+      // sono dentro perche nei reel non vedo piu questi contenuti?».
+      // Perche' all'apertura si piantava sempre e solo il giro
+      // predefinito. Ora il primo a entrare e' il seme piu importante
+      // che hai (una ricerca salvata con la stella, poi le recenti), e
+      // il giro predefinito resta come ultima riserva.
+      const semiUtente = semiDi(prefs, ricerchePredefinite(prefs, nomePaese));
+      const giri = semiUtente.length ? semiUtente : ricerchePredefinite(prefs, nomePaese);
       // b.535 — «perche mi presenta sempre le stesse notizie quando
       // entro????» (Luca): la prima ricerca era SEMPRE giri[0], quindi
       // stesso mazzo a ogni ingresso (e articoli anche vecchi di
@@ -193,8 +201,12 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
   // b.185 — seconda modalita: Veloce (default) o Approfondita (piu fonti,
   // Wikipedia in testa). `numFonti` = quanto approfondire (3/6/10).
   // b.363 — il modo lo dice la PREFERENZA: si decide una volta e resta.
-  const profonda = (prefs?.mondoModo || 'veloce') === 'approfondita';
-  const [numFonti, setNumFonti] = useState(6);
+  // b.541 — il predefinito e' APPROFONDITA (ordine di Luca: «questo deve
+  // essere il default»). Il valore scritto qui deve dire lo stesso del
+  // pannello: se i due si scostano, il pannello mente — gia successo col
+  // ritmo del globo in b.535.
+  const profonda = (prefs?.mondoModo || 'approfondita') === 'approfondita';
+  const [numFonti, setNumFonti] = useState(10); // b.541 — dieci, come nello schermo che Luca ha eletto a predefinito
   const abortRef = useRef(null);
   const [feedGuasto, setFeedGuasto] = useState(false);
   // b.363 — LA PREFERENZA "QUANDO AGGIORNO", che fa una cosa vera: se e
@@ -204,7 +216,7 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
   const giaCercato = useRef(false);
   const tornaAlFeedRef = useRef(false); // b.535 — chi apre un articolo DAL FEED, chiudendolo torna al feed
   useEffect(() => {
-    if ((prefs?.mondoAggiorna || 'richiesta') !== 'apertura') return;
+    if ((prefs?.mondoAggiorna || 'apertura') !== 'apertura') return;
     if (giaCercato.current || !userToken) return;
     giaCercato.current = true;
     cercaChip(CATEGORIE[0], true); // b.535 — apertura automatica: silenziosa
@@ -220,6 +232,16 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
   // ogni operazione»). Paese e «Cerca la fuori» non scattano piu al
   // tocco: si sceglie con calma e si APPLICA una volta sola.
   const [ultimaRicerca, setUltimaRicerca] = useState(null); // b.535 — per la stella «salva nei preferiti»
+  // ═══ b.541 — IL GIARDINO ═══
+  // Luca: «le ricerche sono un seme che fa crescere una pianta... ogni
+  // ramo ne crea altri quando ha esaurito le informazioni». Qui vive lo
+  // stato della pianta: cosa e' gia stato cercato, quali rami sono noti,
+  // e cosa e' gia finito sotto gli occhi (per non ripetere le stesse
+  // schede quando si accoda un giro nuovo).
+  const [ramiNoti, setRamiNoti] = useState([]);
+  const usateRef = useRef([]);
+  const vistiRef = useRef(new Set());   // url gia mostrati: il feed non ripete
+  const [crescendo, setCrescendo] = useState(false);
   const [bozzaPaese, setBozzaPaese] = useState(null);
   const [bozzaCategoria, setBozzaCategoria] = useState('');
   // b.386 — il paese toccato sul pianeta filtra anche le notizie. Prima
@@ -352,7 +374,12 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
     } catch { /* i video sono un di piu, mai un errore in faccia */ }
   }, [lingua]);
 
-  const cerca = useCallback(async (q, cat = 'notizie', fresca = false, silenziosa = false) => {
+  // b.541 — `accoda`: il giro nuovo si AGGIUNGE a quello che gia si sta
+  // guardando, invece di sostituirlo. E' cio che permette al feed di non
+  // finire mai — e cio che mancava perche' i semi di Luca (Tom Cruise,
+  // Chelsea) non si vedevano: il giornale teneva UNA ricerca alla volta,
+  // l'ultima, e le altre sparivano.
+  const cerca = useCallback(async (q, cat = 'notizie', fresca = false, silenziosa = false, accoda = false) => {
     const pulita = (q || '').trim();
     if (!pulita || cercando) return;
     cercaVideoPer(pulita);
@@ -375,9 +402,25 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
         },
       );
       if (fine) {
-        setArgomenti(fine.argomenti || []);
-        setStanze(fine.stanze || []);
+        const arrivati = fine.argomenti || [];
+        // b.541 — niente doppioni fra un giro e l'altro: due rami vicini
+        // pescano spesso la stessa notizia, e vederla due volte nel feed
+        // e' il modo piu rapido per far sembrare finito il giornale.
+        const nuovi = arrivati.filter((a) => {
+          const chiave = a?.url || a?.id || a?.titolo;
+          if (!chiave || vistiRef.current.has(chiave)) return false;
+          vistiRef.current.add(chiave);
+          return true;
+        });
+        usateRef.current = [...usateRef.current, pulita];
+        setArgomenti((prima) => (accoda ? [...(prima || []), ...nuovi] : arrivati));
+        if (!accoda) setStanze(fine.stanze || []);
         setDaCache(!!fine.daCache);
+        // b.541 — il ramo che non porta niente di nuovo e' esaurito: si
+        // annota, cosi il giardino sa che deve ramificare piu in la.
+        if (accoda && esaurito({ trovati: arrivati.length, nuovi: nuovi.length })) {
+          setRamiNoti((r) => r.map((x) => (x.query === pulita ? { ...x, secco: true } : x)));
+        }
         // b.529 — ULTIME RICERCHE (Luca: «quando faccio una ricerca devi
         // inserire in alto nella sidebar ultime ricerche e devi
         // recuperare il logo e inserirlo a sinistra del nome abbreviato»).
@@ -408,6 +451,49 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
       setCercando(false);
     }
   }, [lingua, cercando, descriviStadio, cercaVideoPer, profonda, numFonti, prefs, savePrefs]);
+
+  // ═══ b.541 — FAI CRESCERE IL GIARDINO ═══
+  // Il gesto che tiene vivo il feed. Ordine di Luca: «la pianta nasce da
+  // un seme che sviluppa rami in tutte le direzioni e ogni ramo ne crea
+  // altri quando ha esaurito le informazioni e i contenuti».
+  // Tre passi, sempre gli stessi:
+  //   1. c'e' un seme dell'utente non ancora piantato? si pianta quello
+  //      — le SUE ricerche vengono prima di qualunque cosa inventiamo noi;
+  //   2. se no, si prende il ramo che tocca (giardino.js sceglie
+  //      alternando famiglia e seme di provenienza: mai sei ricerche di
+  //      fila sullo stesso attore);
+  //   3. se non ci sono piu rami, se ne chiedono di nuovi al giardiniere,
+  //      partendo dal seme piu importante che non ha ancora figli.
+  const cresci = useCallback(async () => {
+    if (crescendo || cercando) return;
+    setCrescendo(true);
+    try {
+      const semi = semiDi(prefs, ricerchePredefinite(prefs, nomePaese));
+      let rami = ramiNoti.filter((r) => !r.secco);
+      let scelta = prossimaQuery({ semi, rami, usate: usateRef.current });
+
+      if (!scelta) {
+        // il giardino ha bisogno di rami nuovi: si parte dal seme piu
+        // importante che non ne ha ancora, e si scende di un livello.
+        const senzaFigli = semi.find((x) => !ramiNoti.some((r) => r.seme === x.query))
+          || semi[0]
+          || { query: usateRef.current[usateRef.current.length - 1] || '' };
+        if (!senzaFigli.query) return;
+        const nuovi = sanaRami(
+          await chiediRami({ seme: senzaFigli.query, lingua, paese: paeseFiltro || '', livello: 1, userToken }),
+          senzaFigli.query,
+          1,
+        );
+        if (!nuovi.length) return;
+        rami = [...rami, ...nuovi];
+        setRamiNoti((r) => [...r, ...nuovi]);
+        scelta = prossimaQuery({ semi, rami, usate: usateRef.current });
+      }
+      if (scelta?.query) await cerca(scelta.query, 'notizie', false, true, true);
+    } finally {
+      setCrescendo(false);
+    }
+  }, [crescendo, cercando, prefs, nomePaese, ramiNoti, lingua, paeseFiltro, userToken, cerca]);
 
   const cercaChip = useCallback((c, silenziosa = false) => {
     setChipAttiva(c.id);
@@ -1374,6 +1460,9 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
         onFiltro={(id) => savePrefs({ ...prefs, mondoFeedFiltro: id })}
         onParlane={(d) => onParlane?.(d)}
         onStrumenti={suApriStrumenti}
+        onCresci={cresci}
+        crescendo={crescendo}
+        onCerca={(q) => { setQuery(q); setChipAttiva(null); cerca(q); }}
         onApriArticolo={(d) => { tornaAlFeedRef.current = true; setFeedAperto(false); setLettura({ url: d.url, titolo: d.titolo, fonte: d.fonti?.[0]?.fonte, dati: d, faccia: testataChiusa(d.url) ? 'sintesi' : 'articolo' }); }} />
 
       {/* ─── La scheda di visione (solo VIDEO: gli articoli passano da LettoreArticolo) ─── */}

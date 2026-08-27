@@ -70,10 +70,11 @@ function Azioni({ voci }) {
   );
 }
 
-export default function FeedNotizieMondo({ aperto, onChiudi, C, L, argomenti = [], video = [], filtro, onFiltro, onParlane, onApriArticolo, onStrumenti }) {
+export default function FeedNotizieMondo({ aperto, onChiudi, C, L, argomenti = [], video = [], filtro, onFiltro, onParlane, onApriArticolo, onStrumenti, onCresci, crescendo = false, onCerca }) {
   const contenitoreRef = useRef(null);
   const sentinelleRef = useRef(new Map());
   const [indiceAttivo, setIndiceAttivo] = useState(0);
+  const [seme, setSeme] = useState('');   // b.541 — il campo dell'ultima slide
 
   const elementi = useMemo(() => {
     const art = (argomenti || []).map((t) => ({ tipo: 'articolo', dati: t, chiave: `a-${t.id || t.url || t.titolo}` }));
@@ -153,6 +154,17 @@ export default function FeedNotizieMondo({ aperto, onChiudi, C, L, argomenti = [
       window.removeEventListener('resize', rimetti);
     };
   }, [aperto, indiceAttivo, elementi]);
+
+  // ═══ b.541 — IL FEED NON FINISCE ═══
+  // Luca: «perche in fondo alla lista non metti un tasto continua cerca
+  // ancora con un campo di ricerca?». Due risposte, tutte e due qui: il
+  // giardino cresce DA SOLO quando mancano tre slide alla fine (chi
+  // scorre non deve accorgersi di niente), e in fondo resta comunque la
+  // riga per seminare a mano.
+  useEffect(() => {
+    if (!aperto || !onCresci || crescendo) return;
+    if (elementi.length && indiceAttivo >= elementi.length - 3) onCresci();
+  }, [aperto, indiceAttivo, elementi.length, onCresci, crescendo]);
 
   // riparte dall'inizio ogni volta che si apre o si cambia filtro: una
   // lista diversa merita di ripartire dalla prima, non da un indice che
@@ -348,6 +360,62 @@ export default function FeedNotizieMondo({ aperto, onChiudi, C, L, argomenti = [
             )}
           </div>
         ))}
+
+        {/* ═══ b.541 — L'ULTIMA SLIDE: SEMINA ANCORA ═══
+            Ordine di Luca: «perche in fondo alla lista non metti un tasto
+            continua cerca ancora con un campo di ricerca?». Eccolo — ed e'
+            una slide come le altre, non un tasto appiccicato: si arriva
+            qui scorrendo, e si riparte da qui.
+            Sopra al campo si dice cosa sta gia facendo il giardino: se
+            sta crescendo da solo, chi guarda lo vede e aspetta invece di
+            credere che sia finito. */}
+        {(onCerca || onCresci) && (
+          <div style={{
+            height: '100dvh', scrollSnapAlign: 'start', scrollSnapStop: 'always',
+            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+            gap: 14, padding: '24px 24px calc(40px + env(safe-area-inset-bottom))', textAlign: 'center',
+          }}>
+            <div style={{ fontSize: 17, fontWeight: 600, color: '#fff', fontFamily: FONT }}>
+              {crescendo ? L('growingWord') : L('seedMoreTitle')}
+            </div>
+            <div style={{ fontSize: 12.5, color: 'rgba(255,255,255,0.66)', fontFamily: FONT, maxWidth: 300, lineHeight: 1.55 }}>
+              {L('seedMoreDesc')}
+            </div>
+            <div style={{ display: 'flex', gap: 8, width: '100%', maxWidth: 420, marginTop: 4 }}>
+              <input value={seme} onChange={(e) => setSeme(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter' && seme.trim()) { onCerca?.(seme.trim()); setSeme(''); } }}
+                placeholder={L('newsWhatFollow')} aria-label={L('newsWhatFollow')}
+                style={{
+                  flex: 1, minHeight: 46, padding: '0 14px', borderRadius: 14,
+                  background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.18)',
+                  outline: 'none', color: '#fff', fontSize: 14, fontFamily: FONT,
+                }} />
+              <button onClick={() => { if (seme.trim()) { vibrate(10); onCerca?.(seme.trim()); setSeme(''); } }}
+                disabled={!seme.trim()}
+                aria-label={L('newsUpdate')}
+                style={{
+                  minWidth: 52, minHeight: 46, borderRadius: 14, border: 'none',
+                  cursor: seme.trim() ? 'pointer' : 'default', opacity: seme.trim() ? 1 : 0.5,
+                  background: `linear-gradient(135deg, ${C.accent}, ${C.purple})`,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                <Icon name="search" size={17} color="#fff" />
+              </button>
+            </div>
+            {/* e chi non ha niente da chiedere lascia crescere il giardino */}
+            {onCresci && (
+              <button onClick={() => { vibrate(8); onCresci(); }} disabled={crescendo}
+                style={{
+                  marginTop: 6, minHeight: 44, padding: '0 20px', borderRadius: 999,
+                  cursor: crescendo ? 'default' : 'pointer', opacity: crescendo ? 0.6 : 1,
+                  background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.2)',
+                  color: '#fff', fontSize: 13, fontWeight: 600, fontFamily: FONT,
+                }}>
+                {crescendo ? L('growingWord') : L('growMoreWord')}
+              </button>
+            )}
+          </div>
+        )}
       </div>
     </div>
     </Sovrapposizione>

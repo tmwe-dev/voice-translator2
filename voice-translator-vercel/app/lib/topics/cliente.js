@@ -71,6 +71,25 @@ export async function leggiARighe(risposta, suStadio) {
  * Un solo posto dove si compone l'indirizzo: se un giorno cambia un
  * parametro, cambia qui e non in due schermate diverse.
  */
+/**
+ * b.541 — I RAMI di un seme: dove puo crescere questa ricerca.
+ * Non lancia mai: un giardino che non cresce non deve fermare il
+ * giornale — si torna un elenco vuoto e chi guarda continua coi semi.
+ */
+export async function chiediRami({ seme, lingua = 'it', paese = '', livello = 1, userToken = null }) {
+  try {
+    const r = await fetch('/api/topics/rami', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ seme, lingua, paese, livello, userToken }),
+      signal: AbortSignal.timeout(20000),
+    });
+    if (!r.ok) return [];
+    const d = await r.json().catch(() => null);
+    return Array.isArray(d?.rami) ? d.rami : [];
+  } catch { return []; }
+}
+
 export async function cercaTopics({
   q, lingua = 'it', cat = 'notizie',
   fresca = false, profonda = false, fonti = 0, segnale = null,

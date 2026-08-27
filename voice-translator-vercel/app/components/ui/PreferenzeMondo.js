@@ -61,8 +61,14 @@ const COLORE_VALORE = 'rgba(236,243,255,0.96)';
 
 const PREFERENZE = [
   {
+    // b.541 — ORDINE DI LUCA sullo schermo delle preferenze: «questo deve
+    // essere il default». I quattro valori che aveva davanti diventano i
+    // predefiniti: titoli TRADOTTI, ricerca APPROFONDITA, ritmo 5 minuti,
+    // aggiornamento ALL'APERTURA (piu dieci fonti, in MondoNews). E' il
+    // giornale che si comporta bene da solo, senza che nessuno vada a
+    // configurarlo: chi vuole meno puo sempre stringere.
     chiave: 'mondoTitoli',
-    predefinito: 'originali',
+    predefinito: 'tradotti',
     tipo: 'ciclo',
     icona: 'swap',
     titoloKey: 'prefTitlesTitle',
@@ -76,7 +82,7 @@ const PREFERENZE = [
   // ogni apertura. Ora si decide una volta e resta.
   {
     chiave: 'mondoModo',
-    predefinito: 'veloce',
+    predefinito: 'approfondita',
     tipo: 'ciclo',
     icona: 'zap',
     titoloKey: 'prefModeTitle',
@@ -107,7 +113,7 @@ const PREFERENZE = [
   },
   {
     chiave: 'mondoAggiorna',
-    predefinito: 'richiesta',
+    predefinito: 'apertura',
     tipo: 'ciclo',
     icona: 'refresh',
     titoloKey: 'prefRefreshTitle',

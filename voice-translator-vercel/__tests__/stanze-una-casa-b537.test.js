@@ -26,11 +26,19 @@ describe('b.537 — 1. le Stanze hanno una casa: il tasto «Chat»', () => {
     const vista = p.slice(p.indexOf("if (view === 'stanze')"), p.indexOf("if (view === 'mondo')"));
     expect(vista).not.toMatch(/<CreateRoomSheet/);
   });
-  it('il Mondo non ha piu il tab Stanze, ma accompagna chi le cerca', () => {
+  it('il Mondo non ha piu il tab Stanze: la porta e il tasto «Chat»', () => {
+    // b.540 — AGGIORNATA: b.537 aveva lasciato nel Mondo una riga-ponte
+    // verso le Stanze, per accompagnare chi le cercava li. Luca l'ha
+    // bocciata al collaudo — «il tasto stanze non funziona e occupa
+    // tutta la riga, non va bene» — e aveva ragione: una riga intera
+    // per una porta secondaria, mentre la porta vera (il tasto «Chat»
+    // della barra) c'era gia. Il ponte e' uscito; cio che questa prova
+    // difende resta: il tab non c'e piu, si atterra sul giornale, e alle
+    // Stanze si arriva.
     const m = leggi('app/components/MondoView.js');
     expect(m).not.toMatch(/\{ id: 'stanze', parola: L\('tabRooms'\)/);
-    expect(m).toMatch(/setView\('stanze'\)/);          // il ponte
-    expect(m).toMatch(/useState\('news'\)/);            // e si atterra sul giornale
+    expect(m).toMatch(/useState\('news'\)/);
+    expect(leggi('app/components/BottomNav.js'), 'la porta vera').toMatch(/views: \['stanze'/);
   });
 });
 

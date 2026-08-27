@@ -267,6 +267,78 @@ perche il working tree lo conteneva ancora.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.541** (push #829) — IL GIARDINO: le ricerche sono semi.
+  Il disegno e' di Luca, per intero:
+    «le mie ricerche devono farti allargare automaticamente le ricerche...
+     tom cruise e il chelsea con priorita, ma devi allargare a altri
+     attori che fanno film simili, altri contenuti sul cinema, altre
+     squadre in champions league, risultati eventi. in sostanza le
+     ricerche sono un seme che fa crescere una pianta... e ogni ramo ne
+     crea altri quando ha esaurito le informazioni e i contenuti.»
+
+  ① IL BUG CHE STAVA SOTTO. «Se le mie ricerche ultime sono dentro
+  perche nei reel non vedo piu questi contenuti?» — perche' il giornale
+  teneva UNA ricerca alla volta, l'ultima: `setArgomenti` sostituiva
+  sempre. Le ricerche salvate stavano nella sidebar come promemoria e
+  non venivano mai ripiantate. Ora `cerca(..., accoda)` ACCODA, con
+  memoria di cio che e' gia passato sotto gli occhi (vistiRef): due rami
+  vicini pescano spesso la stessa notizia, e vederla due volte e' il
+  modo piu rapido per far sembrare finito il giornale.
+
+  ② LA PIANTA (lib/giardino.js, logica pura e provata sui risultati):
+  `semiDi` mette in fila i TUOI semi per importanza — salvate con la
+  stella, poi recenti, poi i giri predefiniti, senza doppioni;
+  `prossimaQuery` sceglie cosa cercare adesso: prima tutti i semi
+  (Tom Cruise e il Chelsea si vedono subito), poi i rami alternando
+  FAMIGLIA e SEME di provenienza, cosi non escono sei ricerche di fila
+  sullo stesso attore; `esaurito` dice quando un ramo non porta piu
+  niente di nuovo; `sanaRami` ripulisce cio che torna dal giardiniere.
+
+  ③ IL GIARDINIERE (/api/topics/rami). L'unico pezzo che non si puo
+  scrivere a mano: sapere che accanto a «tom cruise» ci sono Brad Pitt,
+  Mission Impossible e il cinema d'azione e' conoscenza del mondo — un
+  elenco fisso invecchierebbe in un mese e sarebbe italiano-centrico. Un
+  modello propone sei rami in cinque famiglie (stesso / vicino / ambito /
+  evento / luogo, l'ultima legata al Paese di chi guarda). Spesa tenuta
+  bassa: cache di SETTE GIORNI condivisa fra tutti (i rami di «tom
+  cruise» in italiano si calcolano una volta a settimana per chiunque),
+  tetto di otto rami, e si chiede solo quando il giardino ha bisogno.
+
+  ④ IL FEED NON FINISCE. Cresce da solo tre slide prima della fine (chi
+  scorre non si accorge di niente), e in fondo c'e una slide vera —
+  «Semina ancora» — col campo di ricerca e il tasto «Fai crescere»:
+  Luca, «perche in fondo alla lista non metti un tasto continua cerca
+  ancora con un campo di ricerca?».
+
+  ⑤ IL BUG DEI ROMANZI, trovato nello stesso collaudo: «il sistema
+  interpreta erroneamente i contenuti da cercare». Cercando «ultime
+  notizie» il giornale apriva con tre OMONIMI enciclopedici — un romanzo
+  di Ballard del 1981, un film di Tim Whelan del 1935, un romanzo di
+  Pennac — messi pure IN TESTA. Causa: in approfondita si interrogava
+  Wikipedia con la query tale e quale, e Wikipedia risponde per TITOLO.
+  Con una richiesta di attualita l'enciclopedia non ha niente da dire.
+  Nasce lib/topics/enciclopediaUtile.js: `eDiCronaca` riconosce le
+  richieste di attualita in 20 lingue, `meritaEnciclopedia` apre la
+  porta solo alle domande che hanno un soggetto dietro. Il difetto stava
+  per diventare la NORMA, perche' «approfondita» e' il nuovo predefinito
+  dello stesso giorno.
+
+  ⑥ I PREDEFINITI CHE LUCA HA ELETTO («questo deve essere il default»,
+  con lo schermo delle preferenze davanti): titoli TRADOTTI, ricerca
+  APPROFONDITA, ritmo 5 minuti, aggiornamento ALL'APERTURA, dieci fonti.
+  Allineati anche nel codice, non solo nel pannello — la lezione di
+  b.535, quando il pannello diceva «mai» e il globo girava lo stesso.
+
+  PROVE: giardino-b541 (17, tutte sui RISULTATI: ordine dei semi,
+  alternanza di famiglia e seme, niente ripetizioni, esaurimento,
+  pulizia dei rami, i tre omonimi veri di Luca in 20 lingue) + 734 verdi
+  sulle 59 suite toccate. Aggiornata con spiegazione: stanze-una-casa-b537
+  (la riga-ponte verso le Stanze, bocciata da Luca in b.540).
+
+  RESTA DA FARE, dichiarato: il tasto «migliora le fonti» accanto al
+  Paese (il FONTIERE proposto in b.540) non e ancora costruito — il
+  giardino allarga le RICERCHE, non ancora l'elenco delle TESTATE.
+
 - Versione: **b.540** (push #828) — LA TESTATA TORNA DI ACCIAIO, e si
   parte dal feed. Sei ordini di Luca in un colpo, piu un difetto trovato
   dal vivo mentre lavoravo.

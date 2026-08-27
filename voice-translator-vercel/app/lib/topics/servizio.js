@@ -21,6 +21,7 @@ import { redis } from '../redis.js';
 import { immagineSicura } from './ricerca.js';
 import { cercaNotizie, risolviLinkGoogle } from './ricerca.js';
 import { cercaWikipedia } from './wikipedia.js';
+import { meritaEnciclopedia } from './enciclopediaUtile.js'; // b.541 — l'enciclopedia solo dove c'entra
 import { arricchisci } from './estrai.js';
 import { raggruppaInArgomenti } from './raggruppa.js';
 import { riordina } from './riordino.js';
@@ -103,10 +104,17 @@ export async function cercaArgomenti(query, lingua = 'en', {
   // b.185 — in modalita profonda si aprono PIU porte in parallelo:
   // le notizie (Bing/Google) E l'enciclopedia (Wikipedia). `fonti`
   // decide quante voci enciclopediche (2..6). Nella veloce, wiki = 0.
-  const wikiMax = profonda ? Math.max(2, Math.min(Math.round(fonti / 2), 6)) : 0;
+  // b.541 — L'ENCICLOPEDIA SOLO DOVE C'ENTRA. Collaudo di Luca: cercando
+  // «ultime notizie» il giornale apriva con tre OMONIMI — un romanzo di
+  // Ballard, un film del 1935, un romanzo di Pennac — perche' Wikipedia
+  // risponde per TITOLO e quella e' una richiesta di attualita, non un
+  // soggetto. Adesso la porta si apre solo per le domande che hanno
+  // davvero un soggetto dietro (enciclopediaUtile.js).
+  const wikiSensata = profonda && meritaEnciclopedia(q);
+  const wikiMax = wikiSensata ? Math.max(2, Math.min(Math.round(fonti / 2), 6)) : 0;
   const [articoli, wiki] = await Promise.all([
     cercaNotizie(q, lingua, { massimo: 20 }),
-    profonda ? cercaWikipedia(q, lingua, { massimo: wikiMax }).catch(() => []) : Promise.resolve([]),
+    wikiSensata ? cercaWikipedia(q, lingua, { massimo: wikiMax }).catch(() => []) : Promise.resolve([]),
   ]);
   racconta('fonti', { quante: articoli.length + wiki.length });
   // b.150 — se e entrata la riserva Google, i rimbalzi si sbucciano
