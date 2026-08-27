@@ -248,29 +248,14 @@ const HomeView = memo(function HomeView({ selectedMode, setSelectedMode,
         <div style={{ marginBottom: 8, position: 'relative', width: '100%', flexShrink: 0 }}>
           {/* b.265 — numero di rilascio, nell'angolo in alto a sinistra */}
 
-          {/* b.457 — LE BANDIERE TORNANO IN ALTO (ordine di Luca), e stavolta
-              dicono una cosa vera: da che lingua parli tu, a quale ti
-              sentono. Prima ci avevo messo «myLang -> prefs.lang», che sono
-              LA STESSA COSA, e mostrava due volte la stessa bandiera: e per
-              quello l'avevo tolta. Adesso la lingua di arrivo e una
-              preferenza vera, condivisa con «Parla ora», e non coincide mai
-              con la tua. Toccandola si apre «Parla ora», che e il posto dove
-              quella coppia si cambia. */}
-          <button
-            onClick={() => { vibrate(); riapriPrimaProva(); setMostraPrimaProva(true); }}
-            aria-label={`${getLang(prefs.lang)?.name || prefs.lang} → ${getLang(metaScelta(prefs))?.name || metaScelta(prefs)}`}
-            style={{
-              position: 'absolute', top: 0, left: 0, zIndex: 3,
-              display: 'inline-flex', alignItems: 'center', gap: 8,
-              height: 44, padding: '0 14px', borderRadius: 999,
-              border: `1px solid ${C.cardBorder}`, background: 'rgba(255,255,255,0.04)',
-              fontFamily: FONT, fontSize: 24, color: C.textPrimary, whiteSpace: 'nowrap',
-              cursor: 'pointer', WebkitTapHighlightColor: 'transparent',
-            }}>
-            <span>{getLang(prefs.lang)?.flag || String(prefs.lang).toUpperCase()}</span>
-            <span style={{ color: C.textMuted, fontSize: 18 }}>&rarr;</span>
-            <span>{getLang(metaScelta(prefs))?.flag || String(metaScelta(prefs)).toUpperCase()}</span>
-          </button>
+          {/* INIZIO b.535 — via il doppione. Ordine di Luca: «ora che hai
+              messo le bandiere della home sotto il tasto elimina il
+              duplicato rimasto in alto». La pillola b.457 dell'angolo
+              mostrava la stessa coppia (prefs.lang -> meta) che da b.532
+              vive dentro il tasto del microfono, e apriva lo stesso
+              pannello «Parla ora» che apre il tasto stesso: due strade
+              identiche verso la stessa porta. Resta quella del microfono;
+              l'angolo torna libero. FINE b.535 */}
           {/* b.444 — LA PILLOLA DELLE LINGUE E' STATA TOLTA, ed era un mio
               difetto (collaudo di Luca: «i selettori della lingua associano a
               tutti e due gli utenti la stessa lingua»). Aveva ragione:

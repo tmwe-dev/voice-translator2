@@ -2,6 +2,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { FONT, vibrate, LANGS, getLang } from '../../lib/constants.js';
 import Icon from '../Icon.js';
+import TendinaVetro from './TendinaVetro.js'; // b.535 — la tendina unica dell'app
+import { testataChiusa, imparaChiusa } from '../../lib/testateChiuse.js'; // b.535
 
 // ═══════════════════════════════════════════════════════════════
 // IL LETTORE — l'articolo si legge qui, ma resta LORO.
@@ -54,8 +56,19 @@ export default function LettoreArticolo({ url, titolo, fonte, dati, prefs, userT
   // due FACCE della stessa lettura, e si sceglie quale guardare: prima
   // la sintesi stava incollata sopra il riquadro e gli rubava spazio
   // sempre, anche a chi voleva solo leggere.
-  const [vista, setVista] = useState(faccia === 'sintesi' ? 'sintesi' : 'articolo');
-  useEffect(() => { setVista(faccia === 'sintesi' ? 'sintesi' : 'articolo'); }, [faccia, url]);
+  // b.535 — LA PORTA CHE SAPPIAMO CHIUSA NON SI OFFRE PIU. Ordine di
+  // Luca: «di sicuro non vogliamo aprire una maschera che sappiamo e'
+  // vuota e ti obbliga a fare altre scelte». Se la testata e' nota per
+  // rifiutare la cornice (testateChiuse: elenco seminato + imparato),
+  // si atterra DIRITTI sulla sintesi; il mondo in alto a destra resta
+  // la porta per l'originale sul sito.
+  const [chiusaNota, setChiusaNota] = useState(() => testataChiusa(url));
+  const [vista, setVista] = useState(() => (testataChiusa(url) || faccia === 'sintesi') ? 'sintesi' : 'articolo');
+  useEffect(() => {
+    const chiusa = testataChiusa(url);
+    setChiusaNota(chiusa);
+    setVista(chiusa || faccia === 'sintesi' ? 'sintesi' : 'articolo');
+  }, [faccia, url]);
 
   const [sintesiAI, setSintesiAI] = useState('');
   const [generando, setGenerando] = useState(false);
@@ -169,6 +182,16 @@ export default function LettoreArticolo({ url, titolo, fonte, dati, prefs, userT
   // a GUARDARE dentro il riquadro, vuol dire che NON c'e una pagina di
   // un altro sito — le pagine vere di altri siti sono chiuse a chiave
   // dal browser. Quindi: se si apre, e vuota; se non si apre, e piena.
+  // b.535 — il rifiuto appena scoperto diventa memoria (testateChiuse):
+  // dalla prossima volta niente porta finta. E QUI, subito, si passa
+  // alla sintesi invece di lasciare il lucchetto in mano al lettore.
+  useEffect(() => {
+    if (!rifiutata) return;
+    imparaChiusa(url);
+    setChiusaNota(true);
+    setVista('sintesi');
+  }, [rifiutata, url]);
+
   const controllaSeVuota = useCallback(() => {
     clearTimeout(orologio.current);
     const f = telaio.current;
@@ -245,31 +268,37 @@ export default function LettoreArticolo({ url, titolo, fonte, dati, prefs, userT
           striscia incollata sopra il riquadro (rubava spazio a chi
           voleva solo leggere) ma una vista intera per conto suo. */}
       {dati?.titolo && (
-        <div style={{ display: 'flex', gap: 8, alignItems: 'stretch', margin: '10px 12px 0', flexShrink: 0 }}>
-        {/* bandiera + freccia: la lingua in cui leggere (default: profilo) */}
-        <div style={{ position: 'relative', flexShrink: 0 }}>
-          <select value={linguaLettura} onChange={(e) => { vibrate(6); setLinguaLettura(e.target.value); }}
-            aria-label={L('uiLanguage')}
-            style={{
-              appearance: 'none', WebkitAppearance: 'none', height: '100%', minHeight: 44,
-              padding: '0 26px 0 10px', borderRadius: 12, border: bordo, cursor: 'pointer',
-              background: 'rgba(255,255,255,0.05)', color: 'transparent', fontSize: 15, fontFamily: FONT,
-            }}>
-            <option value="orig" style={{ color: '#111' }}>{'\u{1F310}'}</option>
-            {LANGS.map((l) => <option key={l.code} value={l.code} style={{ color: '#111' }}>{l.flag} {l.name}</option>)}
-          </select>
-          <span aria-hidden="true" style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}>
-            <Icon name="chevDown" size={12} color={C.textMuted} />
-          </span>
-          <span aria-hidden="true" style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', fontSize: 16 }}>
-            {linguaLettura === 'orig' ? '\u{1F310}' : getLang(linguaLettura).flag}
-          </span>
-        </div>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'stretch', margin: '10px 16px 0', flexShrink: 0 }}>
+        {/* bandiera + freccia: la lingua in cui leggere (default: profilo).
+            INIZIO b.535 — via la <select> di sistema (Luca: «il dropdown
+            stile windows non rispetta lo stile e il design»): TendinaVetro,
+            la tendina unica dell'app. Stesso posto, stessa bandiera,
+            pannello di vetro del template. FINE b.535 */}
+        <TendinaVetro
+          valore={linguaLettura}
+          onScegli={(v) => setLinguaLettura(v)}
+          targa={L('uiLanguage')}
+          C={C}
+          soloIcona
+          opzioni={[
+            // niente emoji in interfaccia (collaudo-manuale): il mondo e' l'icona mono
+            { id: 'orig', label: L('linguaOriginale'), icona: <Icon name="globe" size={14} color={C.textPrimary} /> },
+            ...LANGS.map((l) => ({ id: l.code, label: l.name, icona: l.flag })),
+          ]}
+          stile={{ minHeight: 44, height: '100%', padding: '0 12px', borderRadius: 12,
+            border: bordo, background: 'rgba(255,255,255,0.05)', color: C.textPrimary,
+            fontSize: 15, flexShrink: 0 }}
+        />
         <div role="tablist" aria-label={L('readWord')} style={{
           display: 'flex', gap: 4, flex: 1, padding: 4,
           borderRadius: 12, background: 'rgba(255,255,255,0.05)', border: bordo,
         }}>
-          {[{ id: 'articolo', testo: L('newsOpen') }, { id: 'sintesi', testo: L('schedaSintesi') }].map((f) => {
+          {/* b.535 — la testata chiusa non offre la scheda «Apri»: e' la
+              porta che sappiamo vuota. Resta la sintesi, e l'originale
+              vive nel mondo in alto a destra. */}
+          {(chiusaNota
+            ? [{ id: 'sintesi', testo: L('schedaSintesi') }]
+            : [{ id: 'articolo', testo: L('newsOpen') }, { id: 'sintesi', testo: L('schedaSintesi') }]).map((f) => {
             const acceso = vista === f.id;
             return (
               <button key={f.id} role="tab" aria-selected={acceso}
@@ -347,7 +376,7 @@ export default function LettoreArticolo({ url, titolo, fonte, dati, prefs, userT
             altrimenti si mangerebbe il tocco). */}
         <div onTouchStart={iniziaPresa} onTouchEnd={finiscePresa}
           style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 22, zIndex: 4, touchAction: 'pan-y' }} />
-        {url && (
+        {url && !chiusaNota && (
           <iframe
             ref={telaio}
             src={linguaLettura === 'orig' ? url : `https://translate.google.com/translate?sl=auto&tl=${encodeURIComponent(String(linguaLettura).split('-')[0])}&u=${encodeURIComponent(url)}`}

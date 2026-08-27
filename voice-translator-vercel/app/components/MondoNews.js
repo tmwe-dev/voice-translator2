@@ -22,6 +22,8 @@ import { ordinaFeed } from '../lib/ordineFeed.js';
 import { cercaTopics } from '../lib/topics/cliente.js';   // b.409 — il lettore a righe, uno per tutti
 import Scelta from './ui/Scelta.js';
 import { ricerchePredefinite } from '../lib/casaEViaggio.js';
+import { preferitiAggiunti, ePreferita, aggiungiPreferita, togliPreferita } from '../lib/preferitiRicerche.js'; // b.535
+import { testataChiusa } from '../lib/testateChiuse.js'; // b.535 — la porta chiusa non si offre
 import { bandieraPaese, nomePaese, quando, tipoContenuto, fonteDi, viva, stileEtichetta, PUNTO, paeseDaLingua } from '../lib/schedaMondo.js';
 import PannelloLaterale from './ui/PannelloLaterale.js';
 import PreferenzeMondo from './ui/PreferenzeMondo.js';
@@ -70,7 +72,35 @@ const QUERY_RAPIDE = {
 // Mondo, non un filtro locale di una singola pagina»: se lo cambi da una
 // parte deve cambiare dappertutto, altrimenti passando da News a Stanze
 // ti ritrovi in un altro posto senza averlo chiesto.
-function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApertaDiscussione, strumenti = false, suChiudiStrumenti, paeseDalGlobo = null, suPaeseScelto, suScorrimento, temaDaFuori = null, suTemaLetto }) {
+// b.535 — LA CARD DI VETRO DELLA SIDEBAR (scelta di Luca dal ventaglio:
+// «Card di vetro con icona»). Chip con icona blu, titolo bianco,
+// didascalia LEGGIBILE (mai piu grigio smorto su fondo scuro), contenuto
+// dentro. Una sola forma per tutte le sezioni del pannello.
+function CardSezione({ icona, titolo, sotto, C, children }) {
+  return (
+    <div style={{
+      background: 'rgba(255,255,255,0.035)', border: `1px solid ${C.cardBorder}`,
+      borderRadius: 14, padding: '12px 12px 13px', marginBottom: 12,
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <span style={{
+          width: 30, height: 30, borderRadius: 9, flexShrink: 0,
+          background: `${C.accent}16`, border: `1px solid ${C.accent}3a`,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+          <Icon name={icona} size={15} color={C.accent} />
+        </span>
+        <div style={{ minWidth: 0, flex: 1 }}>
+          <div style={{ fontSize: 13, fontWeight: 600, color: '#fff', fontFamily: FONT }}>{titolo}</div>
+          {sotto && <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.62)', fontFamily: FONT, marginTop: 1 }}>{sotto}</div>}
+        </div>
+      </div>
+      <div style={{ marginTop: 10 }}>{children}</div>
+    </div>
+  );
+}
+
+function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApertaDiscussione, strumenti = false, suChiudiStrumenti, suApriStrumenti, paeseDalGlobo = null, suPaeseScelto, suScorrimento, temaDaFuori = null, suTemaLetto }) {
   const { L, prefs, userToken, savePrefs } = useApp();
   const lingua = prefs.uiLang || 'en';
   // b.186 — "cerca -> apri discussione col link": la discussione pubblica
@@ -126,12 +156,32 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
   // apre da solo (b.529) non e mai vuoto. Silenziosa: non finisce
   // nelle «ultime ricerche», che sono le TUE.
   useEffect(() => {
-    if (typeof window === 'undefined' || window.__VT_GAZZETTA) return;
+    // b.535 — BUG (collaudo di Luca: «quando apro notizie non mi fai
+    // vedere le notizie»): la bandierina window.__VT_GAZZETTA valeva per
+    // TUTTA la sessione, ma i risultati vivono nello stato del
+    // componente, che muore uscendo dalla scheda. Secondo ingresso:
+    // bandierina alzata, stato vuoto -> giornale bianco per sempre.
+    // La guardia giusta e' lo stato stesso: se il giornale e' vuoto e
+    // nessuna ricerca corre, la Gazzetta parte. Resta silenziosa e la
+    // cache del server evita di ripagare le ricerche gia' fatte.
+    if (typeof window === 'undefined') return;
     if (argomenti !== null || cercando) return;
-    window.__VT_GAZZETTA = true;
     try {
       const giri = ricerchePredefinite(prefs, nomePaese);
-      if (giri[0]?.query) cerca(giri[0].query, 'notizie', false, true);
+      // b.535 — «perche mi presenta sempre le stesse notizie quando
+      // entro????» (Luca): la prima ricerca era SEMPRE giri[0], quindi
+      // stesso mazzo a ogni ingresso (e articoli anche vecchi di
+      // giorni: VERI, non finti — ma sempre quelli). Ora i giri
+      // RUOTANO a ogni ingresso (la Gazzetta di casa, il paese dove
+      // sei, i temi): il giornale cambia faccia da solo, senza
+      // spendere ricerche in piu.
+      let n = 0;
+      try {
+        n = parseInt(localStorage.getItem('vt-gazzetta-giro') || '0', 10) || 0;
+        localStorage.setItem('vt-gazzetta-giro', String(n + 1));
+      } catch { /* senza memoria si parte dal primo giro */ }
+      const giro = giri[n % Math.max(giri.length, 1)];
+      if (giro?.query) cerca(giro.query, 'notizie', false, true);
     } catch { /* senza default si resta sull'invito a cercare */ }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- parte una volta, all'ingresso
   }, []);
@@ -150,11 +200,12 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
   // entra, una volta sola. Altrimenti si aspetta che tu tocchi Aggiorna,
   // che e il modo di non spendere credito senza averlo chiesto.
   const giaCercato = useRef(false);
+  const tornaAlFeedRef = useRef(false); // b.535 — chi apre un articolo DAL FEED, chiudendolo torna al feed
   useEffect(() => {
     if ((prefs?.mondoAggiorna || 'richiesta') !== 'apertura') return;
     if (giaCercato.current || !userToken) return;
     giaCercato.current = true;
-    cercaChip(CATEGORIE[0]);
+    cercaChip(CATEGORIE[0], true); // b.535 — apertura automatica: silenziosa
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [prefs?.mondoAggiorna, userToken]);
 
@@ -166,6 +217,7 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
   // conferma dentro le side bar perche non dobbiamo ripetere query per
   // ogni operazione»). Paese e «Cerca la fuori» non scattano piu al
   // tocco: si sceglie con calma e si APPLICA una volta sola.
+  const [ultimaRicerca, setUltimaRicerca] = useState(null); // b.535 — per la stella «salva nei preferiti»
   const [bozzaPaese, setBozzaPaese] = useState(null);
   const [bozzaCategoria, setBozzaCategoria] = useState('');
   // b.386 — il paese toccato sul pianeta filtra anche le notizie. Prima
@@ -341,6 +393,7 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
           const vecchie = Array.isArray(prefs?.ricercheRecenti) ? prefs.ricercheRecenti : [];
           const nuove = [{ q: pulita, etichetta, img }, ...vecchie.filter(r => r.q !== pulita)].slice(0, 6);
           savePrefs?.({ ...prefs, ricercheRecenti: nuove });
+          setUltimaRicerca({ q: pulita, etichetta, img }); // b.535 — offre la stella qui sotto
         } catch { /* la memoria delle ricerche non deve mai rompere la ricerca */ }
       }
     } catch (e) {
@@ -354,11 +407,11 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
     }
   }, [lingua, cercando, descriviStadio, cercaVideoPer, profonda, numFonti, prefs, savePrefs]);
 
-  const cercaChip = useCallback((c) => {
+  const cercaChip = useCallback((c, silenziosa = false) => {
     setChipAttiva(c.id);
     const q = (QUERY_RAPIDE[c.id] || {})[lingua] || (QUERY_RAPIDE[c.id] || {}).en || c.id;
     setQuery('');
-    cerca(q, c.cat);
+    cerca(q, c.cat, false, silenziosa); // b.535 — le partenze automatiche non firmano le «ultime ricerche»
   }, [lingua, cerca]);
 
   // b.186 — crea una discussione pubblica PERSISTENTE da una card di
@@ -521,6 +574,35 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
         </button>
       </div>
 
+      {/* INIZIO b.535 — «quando scelgo il milan ac aggiungi un selettore
+          aggiungi alle notizie preferite e aggiungi il badge» (Luca).
+          Dopo una ricerca TUA compare la stella: un tocco la salva tra i
+          Preferiti della sidebar (badge col logo), un altro la toglie. */}
+      {ultimaRicerca && (
+        <div style={{ padding: '0 16px', marginBottom: 8 }}>
+          <button
+            onClick={() => {
+              vibrate(8);
+              savePrefs?.(ePreferita(prefs, ultimaRicerca.q)
+                ? togliPreferita(prefs, ultimaRicerca.q)
+                : aggiungiPreferita(prefs, ultimaRicerca));
+            }}
+            aria-pressed={ePreferita(prefs, ultimaRicerca.q)}
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 7, minHeight: 34,
+              padding: '0 12px', borderRadius: 999, cursor: 'pointer', fontFamily: FONT,
+              background: ePreferita(prefs, ultimaRicerca.q) ? `${C.accent}22` : 'rgba(255,255,255,0.05)',
+              border: `1px solid ${ePreferita(prefs, ultimaRicerca.q) ? `${C.accent}66` : C.cardBorder}`,
+              color: ePreferita(prefs, ultimaRicerca.q) ? C.accent : 'rgba(255,255,255,0.78)',
+              fontSize: 12, fontWeight: 600, WebkitTapHighlightColor: 'transparent',
+            }}>
+            <span aria-hidden="true" style={{ fontSize: 14, lineHeight: 1 }}>{ePreferita(prefs, ultimaRicerca.q) ? '\u2605' : '\u2606'}</span>
+            {(ePreferita(prefs, ultimaRicerca.q) ? L('inFavWord') : L('addFavWord')) + ' \u00b7 ' + ultimaRicerca.etichetta}
+          </button>
+        </div>
+      )}
+      {/* FINE b.535 */}
+
 
 
       {/* b.363 — GLI STRUMENTI STANNO DIETRO IL GIORNALE. Sopra il pianeta
@@ -528,30 +610,60 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
           modi, la fila delle categorie — che coprivano meta mondo anche
           quando nessuno li stava usando. Ora si aprono toccando l'icona
           del giornale in alto a sinistra, e si richiudono. */}
-      <PannelloLaterale aperto={strumenti} onChiudi={suChiudiStrumenti} titolo={L('tabNews')} C={C}>
-      {/* b.524 — LO SCHELETRO DEL PANNELLO E UNO SOLO, su tutte e tre le
-          schede. Luca: «le side bar delle tre pagine stanze, notizie e
-          mondo hanno la stessa selezione campi?????» — no, non
-          l'avevano: Preferiti e Paese esistevano solo nel pannello di
-          Stanze/Mondo, e le Notizie ne avevano uno tutto diverso.
-          Ordine comune, da qui in avanti:
-            1. PREFERITI (i temi, badge di vetro)
-            2. PAESE (da dove guardo il mondo)
-            3. i filtri PROPRI della scheda
-            4. PREFERENZE (le quattro, identiche ovunque)
-          Qui i preferiti sono i temi VERI del giornale in mano
-          (argomentiVeri, gia contati per il filtro qui sotto): toccarne
-          uno filtra, la x lo toglie con la stessa memoria persistente
-          di Stanze/Mondo (prefs.temiTolti). */}
-      {/* b.529 — LE ULTIME RICERCHE, in alto: badge di vetro
-          rettangolari, miniatura a sinistra e nome abbreviato. Un tocco
-          rifa quella ricerca (azione esplicita: parte subito), la x la
-          dimentica. */}
+      <PannelloLaterale aperto={strumenti} onChiudi={suChiudiStrumenti} titolo={L('tabNews')} C={C} sopra={feedAperto}>
+      {/* b.524 — LO SCHELETRO DEL PANNELLO E UNO SOLO su tutte e tre le
+          schede: 1 Preferiti, 2 Paese, 3 filtri propri, 4 Preferenze.
+          INIZIO b.535 — L'ALBERO A CARD DI VETRO. Ordine di Luca:
+          «questa sezione non rispecchia la grafica, e' brutto, smorto...
+          non ci sono le icone magari blu, e non e' chiaro cosa puoi
+          fare» + la sua scelta dal ventaglio: «Card di vetro con icona»
+          + «un albero di selezioni e filtri facile da usare anche da un
+          bambino». L'albero: ① Preferiti (le cose TUE) ② Ultime
+          ricerche ③ Da dove guardo ④ Cosa cerco ⑤ Preferenze; Applica
+          sfumato sotto i filtri che applica, acceso solo se c'e'
+          qualcosa da applicare. Ogni card: chip icona blu + titolo
+          bianco + didascalia leggibile (mai piu grigio smorto). */}
+      {/* b.535 — la ricerca RAPIDA in testa al pannello, solo quando lo
+          si apre dalla linguetta del feed: li sotto il campo della pagina
+          non si vede, e l'ordine e' «fare ricerche nuove in tempo reale»
+          senza uscire dalla presentazione. */}
+      {feedAperto && (
+        <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+          <input
+            value={query}
+            onChange={(e) => { setQuery(e.target.value); setChipAttiva(null); }}
+            onKeyDown={(e) => { if (e.key === 'Enter' && query.trim()) { cerca(query); suChiudiStrumenti?.(); } }}
+            placeholder={L('newsWhatFollow')}
+            style={{
+              flex: 1, padding: '11px 13px', borderRadius: 12,
+              background: C.input, border: `1px solid ${C.cardBorder}`, outline: 'none',
+              color: C.textPrimary, fontSize: 14, fontFamily: FONT,
+            }} />
+          <button onClick={() => { if (query.trim()) { vibrate(8); cerca(query); suChiudiStrumenti?.(); } }}
+            disabled={cercando || !query.trim()}
+            aria-label={L('newsUpdate')}
+            style={{
+              padding: '0 16px', minHeight: 44, borderRadius: 12, cursor: 'pointer',
+              background: `linear-gradient(135deg, ${C.accent}, ${C.purple})`, border: 'none',
+              color: '#fff', fontSize: 13, fontWeight: 600, fontFamily: FONT,
+              opacity: cercando || !query.trim() ? 0.5 : 1, WebkitTapHighlightColor: 'transparent',
+            }}>
+            <Icon name="search" size={15} color="#fff" />
+          </button>
+        </div>
+      )}
+      <CardSezione icona="star" titolo={L('favouritesWord')} sotto={L('sbFavCaption')} C={C}>
+        <PreferitiTemi nudo temi={argomentiVeri.map(([arg, n]) => ({ topic: arg, discussioni: n }))}
+          prefs={prefs} savePrefs={savePrefs} C={C} L={L}
+          aggiunte={preferitiAggiunti(prefs)}
+          onScegliAggiunta={(q) => { setQuery(q); setChipAttiva(null); cerca(q); suChiudiStrumenti?.(); }}
+          onTogliAggiunta={(q) => savePrefs?.(togliPreferita(prefs, q))}
+          onScegli={(topic) => { setArgomentoFiltro(topic); suChiudiStrumenti?.(); }} />
+      </CardSezione>
+
+      {/* b.529 — le ultime ricerche: un tocco la rifa, la x la dimentica. */}
       {Array.isArray(prefs?.ricercheRecenti) && prefs.ricercheRecenti.length > 0 && (
-        <div style={{ marginBottom: 12 }}>
-          <div style={{ fontSize: 10.5, fontWeight: 600, letterSpacing: 1, color: C.textMuted, margin: '0 0 8px' }}>
-            {L('recentSearches')}
-          </div>
+        <CardSezione icona="history" titolo={L('recentSearches')} sotto={L('sbRecentCaption')} C={C}>
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
             {prefs.ricercheRecenti.map((r, i) => (
               <span key={r.q} style={{
@@ -583,103 +695,102 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
               </span>
             ))}
           </div>
-        </div>
-      )}
-      <PreferitiTemi temi={argomentiVeri.map(([arg, n]) => ({ topic: arg, discussioni: n }))}
-        prefs={prefs} savePrefs={savePrefs} C={C} L={L}
-        onScegli={(topic) => { setArgomentoFiltro(topic); suChiudiStrumenti?.(); }} />
-
-      {/* b.524 — IL PAESE, che qui mancava: filtrava solo dal globo o
-          dalla bandierina di una scheda. Stessa tendina di Stanze/Mondo,
-          stesso giro (scegliPaese risale a MondoView, che aggiorna anche
-          il globo: un filtro solo, non due che litigano). */}
-      <Scelta C={C}
-        etichetta={L('countryLabel')}
-        valore={bozzaPaese || 'tutto'}
-        opzioni={[
-          { valore: 'tutto', etichetta: L('wholeWorld'), conto: feed?.length || 0 },
-          ...PAESI
-            .map((pa) => ({
-              valore: pa.codice,
-              etichetta: `${pa.bandiera} ${nomePaese(pa.codice)}`,
-              conto: (feed || []).filter((d) => d.country === pa.codice).length,
-            }))
-            .sort((a, b) => a.etichetta.localeCompare(b.etichetta)),
-        ]}
-        onCambia={(v) => setBozzaPaese(v === 'tutto' ? null : v)} />
-
-      {/* b.363 — I DUE MODI SONO DIVENTATI UNA PREFERENZA (qui sopra):
-          era una scelta da rifare a ogni apertura, e invece e una cosa
-          che si decide una volta. Qui resta solo quante fonti leggere
-          quando si va a fondo, che e un dettaglio del momento. */}
-      {profonda && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
-          <span style={{ fontSize: 11, color: C.textMuted, fontFamily: FONT }}>{L('newsSourcesShort')}</span>
-          {/* b.482 — erano tondini da 30x28: un bersaglio piu piccolo del
-              polpastrello. Portati alla misura minima del template. */}
-          {[3, 6, 10].map(n => (
-            <button key={n} onClick={() => { setNumFonti(n); vibrate(8); }}
-              style={{
-                width: 44, height: 44, borderRadius: 9, cursor: 'pointer', fontFamily: FONT, fontSize: 12, fontWeight: 600,
-                background: numFonti === n ? `${C.accent}20` : C.card,
-                border: numFonti === n ? `1px solid ${C.accent}45` : bordo,
-                color: numFonti === n ? C.accent : C.textSecondary,
-                WebkitTapHighlightColor: 'transparent',
-              }}>{n}</button>
-          ))}
-        </div>
+        </CardSezione>
       )}
 
-      {/* b.363 — DUE TENDINE AL POSTO DI DUE PARETI DI PILLOLE (ordine di
-          Luca: «in dropdown se la scelta e singola»). Erano quaranta
-          bottoni su otto righe, per due scelte che sono SINGOLE: una fila
-          di pillole promette "puoi averne piu di una", una tendina dice
-          la verita, e occupa una riga invece di otto.
-          Sono due cose diverse e vanno tenute distinte: la prima filtra
-          cio che c'e QUI DENTRO, la seconda va a cercare LA FUORI. */}
-      {argomentiVeri.length > 0 && (
+      {/* b.524 — il Paese: stesso giro di Stanze/Mondo (scegliPaese
+          risale a MondoView, che aggiorna anche il globo). */}
+      <CardSezione icona="globe" titolo={L('sbWhereTitle')} sotto={L('sbWhereCaption')} C={C}>
         <Scelta C={C}
-          etichetta={L('topicsWord')}
-          valore={argomentoFiltro || ''}
+          valore={bozzaPaese || 'tutto'}
           opzioni={[
-            { valore: '', etichetta: L('allTopicsWord'), conto: feed?.length || 0 },
-            ...argomentiVeri.map(([arg, n]) => ({ valore: arg, etichetta: arg, conto: n })),
+            { valore: 'tutto', etichetta: L('wholeWorld'), conto: feed?.length || 0 },
+            /* b.535 — paese fuori elenco (dal globo): mostrato onesto,
+               non ripiegato zitto su «Mondo intero». */
+            ...(bozzaPaese && !PAESI.some((pa) => pa.codice === bozzaPaese)
+              ? [{ valore: bozzaPaese, etichetta: `${bandieraPaese(bozzaPaese)} ${nomePaese(bozzaPaese)}` }]
+              : []),
+            ...PAESI
+              .map((pa) => ({
+                valore: pa.codice,
+                etichetta: `${pa.bandiera} ${nomePaese(pa.codice)}`,
+                conto: (feed || []).filter((d) => d.country === pa.codice).length,
+              }))
+              .sort((a, b) => a.etichetta.localeCompare(b.etichetta)),
           ]}
-          onCambia={(v) => setArgomentoFiltro(v || null)} />
-      )}
+          onCambia={(v) => setBozzaPaese(v === 'tutto' ? null : v)} />
+      </CardSezione>
 
-      <Scelta C={C}
-        etichetta={L('searchCategoryWord')}
-        valore={bozzaCategoria || ''}
-        opzioni={[
-          { valore: '', etichetta: L('allTopicsWord') },
-          ...CATEGORIE.map((c) => ({ valore: c.id, etichetta: L(c.labelKey) })),
-        ]}
-        onCambia={(v) => setBozzaCategoria(v)} />
+      {/* b.363 — due tendine per due scelte SINGOLE: la prima filtra cio
+          che c'e QUI DENTRO, la seconda va a cercare LA FUORI. */}
+      <CardSezione icona="target" titolo={L('sbWhatTitle')} sotto={L('sbWhatCaption')} C={C}>
+        {argomentiVeri.length > 0 && (
+          <Scelta C={C}
+            etichetta={L('topicsWord')}
+            valore={argomentoFiltro || ''}
+            opzioni={[
+              { valore: '', etichetta: L('allTopicsWord'), conto: feed?.length || 0 },
+              ...argomentiVeri.map(([arg, n]) => ({ valore: arg, etichetta: arg, conto: n })),
+            ]}
+            onCambia={(v) => setArgomentoFiltro(v || null)} />
+        )}
+        <Scelta C={C}
+          etichetta={L('searchCategoryWord')}
+          valore={bozzaCategoria || ''}
+          opzioni={[
+            { valore: '', etichetta: L('allTopicsWord') },
+            ...CATEGORIE.map((c) => ({ valore: c.id, etichetta: L(c.labelKey) })),
+          ]}
+          onCambia={(v) => setBozzaCategoria(v)} />
+        {profonda && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.62)', fontFamily: FONT }}>{L('newsSourcesShort')}</span>
+            {[3, 6, 10].map(n => (
+              <button key={n} onClick={() => { setNumFonti(n); vibrate(8); }}
+                style={{
+                  width: 44, height: 44, borderRadius: 9, cursor: 'pointer', fontFamily: FONT, fontSize: 12, fontWeight: 600,
+                  background: numFonti === n ? `${C.accent}20` : C.card,
+                  border: numFonti === n ? `1px solid ${C.accent}45` : bordo,
+                  color: numFonti === n ? C.accent : C.textSecondary,
+                  WebkitTapHighlightColor: 'transparent',
+                }}>{n}</button>
+            ))}
+          </div>
+        )}
+      </CardSezione>
 
+      {/* b.529 — UNA conferma sola. b.535 — si accende solo se c'e'
+          qualcosa da applicare: un tasto sempre acceso promette effetti
+          che spesso non ha. */}
+      {(() => {
+        const cambiato = (bozzaPaese !== paeseFiltro) || ((bozzaCategoria || '') !== (chipAttiva || ''));
+        return (
+          <button onClick={() => {
+              vibrate(10);
+              if (bozzaPaese !== paeseFiltro) scegliPaese(bozzaPaese);
+              if ((bozzaCategoria || '') !== (chipAttiva || '')) {
+                if (!bozzaCategoria) setChipAttiva(null);
+                else { const c = CATEGORIE.find((x) => x.id === bozzaCategoria); if (c) cercaChip(c); }
+              }
+              suChiudiStrumenti?.();
+            }}
+            disabled={!cambiato}
+            style={{
+              width: '100%', minHeight: 46, borderRadius: 12, cursor: cambiato ? 'pointer' : 'default', margin: '2px 0 14px',
+              background: `linear-gradient(135deg, ${C.accent}, ${C.purple})`, border: 'none',
+              color: '#fff', fontSize: 13.5, fontWeight: 600, fontFamily: FONT,
+              opacity: cambiato ? 1 : 0.45,
+              WebkitTapHighlightColor: 'transparent',
+            }}>
+            {L('applyWord')}
+          </button>
+        );
+      })()}
 
-      <div style={{ height: 1, background: C.cardBorder, margin: '6px 0 16px' }} />
-      {/* b.529 — UNA conferma sola: si applica cio che e cambiato, e il
-          pannello si chiude cosi si VEDE l'effetto. */}
-      <button onClick={() => {
-          vibrate(10);
-          if (bozzaPaese !== paeseFiltro) scegliPaese(bozzaPaese);
-          if ((bozzaCategoria || '') !== (chipAttiva || '')) {
-            if (!bozzaCategoria) setChipAttiva(null);
-            else { const c = CATEGORIE.find((x) => x.id === bozzaCategoria); if (c) cercaChip(c); }
-          }
-          suChiudiStrumenti?.();
-        }}
-        style={{
-          width: '100%', minHeight: 46, borderRadius: 12, cursor: 'pointer', margin: '2px 0 14px',
-          background: `linear-gradient(135deg, ${C.accent}, ${C.purple})`, border: 'none',
-          color: '#fff', fontSize: 13.5, fontWeight: 600, fontFamily: FONT,
-          WebkitTapHighlightColor: 'transparent',
-        }}>
-        {L('applyWord')}
-      </button>
-
-      <PreferenzeMondo C={C} />
+      <CardSezione icona="settings" titolo={L('sbPrefsTitle')} sotto={L('sbPrefsCaption')} C={C}>
+        <PreferenzeMondo C={C} />
+      </CardSezione>
+      {/* FINE b.535 */}
       </PannelloLaterale>
 
       {/* ─── Il pannello COBRA: il lavoro si vede ─── */}
@@ -1024,7 +1135,7 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
               riquadro esiste soltanto quando c'e una foto da farci
               stare dentro. */}
           {t.immagine && (
-            <div onClick={() => { vibrate(8); setLettura({ url: t.url, titolo: t.titolo, fonte: t.fonti?.[0]?.fonte, dati: t, faccia: 'articolo' }); }} style={{
+            <div onClick={() => { vibrate(8); setLettura({ url: t.url, titolo: t.titolo, fonte: t.fonti?.[0]?.fonte, dati: t, faccia: testataChiusa(t.url) ? 'sintesi' : 'articolo' }); }} style={{
               position: 'relative', aspectRatio: '16/9', cursor: 'pointer',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               background: `linear-gradient(135deg, ${C.accent}14, ${C.purple}18)`,
@@ -1058,6 +1169,10 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
               «Apri» e «Apri e traduci» aprono LA STESSA pagina: cambia
               solo su quale delle due facce si atterra. */}
           <div style={{ display: 'flex', gap: 8, padding: '10px 20px 0', alignItems: 'center' }}>
+            {/* b.535 — la porta che sappiamo chiusa non si offre: niente
+                icona «leggi dentro» per le testate che vietano la
+                cornice (testateChiuse). Restano bacchetta e mondo. */}
+            {!testataChiusa(t.url) && (
             <button onClick={() => { vibrate(8); setLettura({ url: t.url, titolo: t.titolo, fonte: t.fonti?.[0]?.fonte, dati: t, faccia: 'articolo' }); }}
               aria-label={L('readWord')} title={L('readWord')}
               style={{
@@ -1068,6 +1183,7 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
               }}>
               <Icon name="doc" size={16} color={C.accent} />
             </button>
+            )}
             {/* b.529 — Luca: «cambia l'icona: mondo ti porta sul browser,
                 per riassunto o tutto tradotto metti bacchetta magica». */}
             <button onClick={() => { vibrate(8); setLettura({ url: t.url, titolo: t.titolo, fonte: t.fonti?.[0]?.fonte, dati: t, faccia: 'sintesi' }); }}
@@ -1127,7 +1243,7 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
             {/* b.482 — il titolo e un tasto e su un titolo di una riga
                 sola restava alto una ventina di punti: troppo poco per
                 un dito. */}
-            <h3 onClick={() => { vibrate(8); setLettura({ url: t.url, titolo: t.titolo, fonte: t.fonti?.[0]?.fonte, dati: t, faccia: 'articolo' }); }} style={{
+            <h3 onClick={() => { vibrate(8); setLettura({ url: t.url, titolo: t.titolo, fonte: t.fonti?.[0]?.fonte, dati: t, faccia: testataChiusa(t.url) ? 'sintesi' : 'articolo' }); }} style={{
               margin: 0, fontSize: 15, fontWeight: 600, lineHeight: 1.35,
               color: C.textPrimary, letterSpacing: -0.2, cursor: 'pointer',
               minHeight: 44, display: 'flex', alignItems: 'center',
@@ -1242,11 +1358,18 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
         </button>
       )}
 
+      {/* INIZIO b.535 — «apri e traduci non va» (Luca, dal feed). Il tasto
+          LAVORAVA: setLettura girava il foglio sul lettore. Ma il feed e un
+          velo fixed a zIndex 97 che restava aperto SOPRA, e l'articolo si
+          apriva dietro, invisibile: tocco morto per chi guarda. Ora il velo
+          si chiude (onApriArticolo), il lettore appare, e il back del
+          lettore riporta al feed da dove si era partiti. FINE b.535 */}
       <FeedNotizieMondo aperto={feedAperto} onChiudi={() => setFeedAperto(false)} C={C} L={L}
         argomenti={argomenti || []} video={video || []} filtro={feedFiltro}
         onFiltro={(id) => savePrefs({ ...prefs, mondoFeedFiltro: id })}
         onParlane={(d) => onParlane?.(d)}
-        onApriArticolo={(d) => { setLettura({ url: d.url, titolo: d.titolo, fonte: d.fonti?.[0]?.fonte, dati: d }); }} />
+        onStrumenti={suApriStrumenti}
+        onApriArticolo={(d) => { tornaAlFeedRef.current = true; setFeedAperto(false); setLettura({ url: d.url, titolo: d.titolo, fonte: d.fonti?.[0]?.fonte, dati: d, faccia: testataChiusa(d.url) ? 'sintesi' : 'articolo' }); }} />
 
       {/* ─── La scheda di visione (solo VIDEO: gli articoli passano da LettoreArticolo) ─── */}
       <SchedaArgomento
@@ -1273,7 +1396,7 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
           <LettoreArticolo url={lettura.url} titolo={lettura.titolo} fonte={lettura.fonte}
             dati={lettura.dati} prefs={prefs} userToken={userToken}
             faccia={lettura.faccia || 'articolo'}
-            C={C} L={L} onIndietro={() => setLettura(null)} />
+            C={C} L={L} onIndietro={() => { setLettura(null); if (tornaAlFeedRef.current) { tornaAlFeedRef.current = false; setFeedAperto(true); } }} />
         ) : discAperta ? (
           <MondoDiscussioni discussionId={discAperta} onClose={() => setDiscAperta(null)}
             onOpenPersona={(id) => setPersonaAperta(id)} />

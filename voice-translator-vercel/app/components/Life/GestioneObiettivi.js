@@ -1,4 +1,5 @@
 'use client';
+import TendinaVetro from '../ui/TendinaVetro.js'; // b.535
 import { memo, useState, useEffect, useCallback } from 'react';
 import { FONT, vibrate, clayCard, CLAY_OMBRA } from '../../lib/constants.js';
 import Icon from '../Icon.js';
@@ -97,9 +98,11 @@ function GestioneObiettivi({ L, userToken, testoP, muto, accent, card, bordo, ca
           placeholder={L('lifeGoalDescPh')} style={{ ...input, resize: 'vertical' }} />
 
         <label style={etich}>{L('lifeGoalCat')}</label>
-        <select value={bozza.categoria} onChange={campo('categoria')} style={input}>
-          {CATEGORIE_OBIETTIVO.map((c) => <option key={c.id} value={c.id}>{c.etichetta}</option>)}
-        </select>
+        {/* b.535 — TendinaVetro al posto delle select di sistema. */}
+        <TendinaVetro valore={bozza.categoria} targa={L('lifeGoalCat')}
+          onScegli={(id) => setBozza((b) => ({ ...b, categoria: id }))}
+          opzioni={CATEGORIE_OBIETTIVO.map((c) => ({ id: c.id, label: c.etichetta }))}
+          stile={{ ...input, width: '100%' }} />
 
         <label style={etich}>{L('lifeGoalProgress')}: {bozza.progresso}%</label>
         <input type="range" min={0} max={100} value={bozza.progresso}
@@ -118,18 +121,19 @@ function GestioneObiettivi({ L, userToken, testoP, muto, accent, card, bordo, ca
         </div>
 
         <label style={etich}>{L('lifeGoalStatus')}</label>
-        <select value={bozza.stato} onChange={campo('stato')} style={input}>
-          {STATI_OBIETTIVO.map((s) => <option key={s} value={s}>{STATO_ETI[s] || s}</option>)}
-        </select>
+        <TendinaVetro valore={bozza.stato} targa={L('lifeGoalStatus')}
+          onScegli={(id) => setBozza((b) => ({ ...b, stato: id }))}
+          opzioni={STATI_OBIETTIVO.map((st) => ({ id: st, label: STATO_ETI[st] || st }))}
+          stile={{ ...input, width: '100%' }} />
 
         {/* b.334 — CORSO COLLEGATO: superare le lezioni muove la barra da
             sola; al 100% arriva la coppa. Basta obiettivi spostati a mano. */}
         {corsiMiei.length > 0 && <>
           <label style={etich}>{L('lifeGoalCourse')}</label>
-          <select value={bozza.corsoId || ''} onChange={(e) => setBozza((b) => ({ ...b, corsoId: e.target.value || null }))} style={input}>
-            <option value="">{L('lifeGoalNoCourse')}</option>
-            {corsiMiei.map((c) => <option key={c.id} value={c.id}>{c.titolo || c.argomento} ({c.percento}%)</option>)}
-          </select>
+          <TendinaVetro valore={bozza.corsoId || ''} targa={L('lifeGoalCourse')}
+            onScegli={(id) => setBozza((b) => ({ ...b, corsoId: id || null }))}
+            opzioni={[{ id: '', label: L('lifeGoalNoCourse') }, ...corsiMiei.map((c) => ({ id: c.id, label: `${c.titolo || c.argomento} (${c.percento}%)` }))]}
+            stile={{ ...input, width: '100%' }} />
         </>}
 
         <button onClick={salva} disabled={!bozza.titolo.trim()} style={{ width: '100%', marginTop: 16, padding: 14, minHeight: 44, borderRadius: 14, border: 'none', cursor: 'pointer', background: accent, color: '#04121c', fontWeight: 600, fontSize: 15, fontFamily: FONT, opacity: bozza.titolo.trim() ? 1 : 0.6, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>

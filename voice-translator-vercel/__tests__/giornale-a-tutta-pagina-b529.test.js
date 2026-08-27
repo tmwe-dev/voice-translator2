@@ -26,7 +26,7 @@ describe('b.529 — il pannello applica UNA volta', () => {
   it('il tasto Applica esiste nei due pannelli e chiude', () => {
     expect(f).toMatch(/\{L\('applyWord'\)\}/);
     expect(v).toMatch(/\{L\('applyWord'\)\}/);
-    expect(f).toMatch(/suChiudiStrumenti\?\.\(\);\n        \}\}/);
+    expect(f).toMatch(/suChiudiStrumenti\?\.\(\);\s*\n\s*\}\}/ /* b.535: Applica vive in una IIFE col `cambiato`, il rientro e' cambiato ma il gesto (applica e chiudi) e' identico */);
   });
 });
 
@@ -54,7 +54,7 @@ describe('b.529 — preferiti: dropdown, alfabetici, bassi e rettangolari', () =
   });
   it('richiusi dietro una riga col conteggio', () => {
     expect(f).toMatch(/aria-expanded=\{aperti\}/);
-    expect(f).toMatch(/\(\{visibili\.length\}\)/);
+    expect(f).toMatch(/\(\{visibili\.length \+ \(aggiunte\?\.length \|\| 0\)\}\)/ /* b.535: il conteggio somma anche le ricerche salvate con la stella */);
   });
   it('rettangolari e piu bassi', () => {
     expect(f).toMatch(/borderRadius: 7/);
@@ -92,8 +92,8 @@ describe('b.529 — l articolo intero, tradotto, dentro l app', () => {
   const f = leggi('app/components/ui/LettoreArticolo.js');
   it('bandiera + freccia scelgono la lingua, default profilo', () => {
     expect(f).toMatch(/useState\(prefs\?\.lang \|\| prefs\?\.uiLang \|\| 'en'\)/);
-    expect(f).toMatch(/<select value=\{linguaLettura\}/);
-    expect(f).toMatch(/getLang\(linguaLettura\)\.flag/);
+    expect(f).toMatch(/valore=\{linguaLettura\}/ /* b.535: la select di sistema e' diventata TendinaVetro (ordine di Luca sui dropdown): stessa scelta, veste dell'app */);
+    expect(f).toMatch(/icona: l\.flag/ /* b.535: la bandiera del valore la disegna TendinaVetro (soloIcona) dalle opzioni; niente piu span dedicato */);
   });
   it('la pagina dell editore viene servita TRADOTTA (mai copiata da noi)', () => {
     expect(f).toMatch(/translate\.google\.com\/translate\?sl=auto&tl=/);

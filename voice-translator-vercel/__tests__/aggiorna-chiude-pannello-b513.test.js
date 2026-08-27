@@ -30,9 +30,11 @@ describe('b.513 — Aggiorna chiude il pannello, il velo chiude gia ovunque', ()
   });
 
   it('PannelloLaterale — il componente condiviso da tutte le maschere — chiude gia cliccando fuori (il velo)', () => {
+    // b.535 — il velo ha imparato `sopra` (z 120 sopra il feed z 97):
+    // la prova segue, il gesto e' identico.
     const p = leggi('app/components/ui/PannelloLaterale.js');
     expect(p, 'il velo di sfondo chiama onChiudi al click').toMatch(
-      /onClick=\{\(\) => \{ vibrate\(6\); onChiudi\?\.\(\); \}\}\s*\n\s*style=\{\{ position: 'fixed', inset: 0, zIndex: 88/
+      /onClick=\{\(\) => \{ vibrate\(6\); onChiudi\?\.\(\); \}\}\s*\n\s*style=\{\{ position: 'fixed', inset: 0, zIndex: sopra \? 120 : 88/
     );
   });
 

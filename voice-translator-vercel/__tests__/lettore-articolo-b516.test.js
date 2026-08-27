@@ -63,11 +63,11 @@ describe('b.516 — MondoNews: articoli aprono LettoreArticolo, icone leggi/parl
     expect(f).toMatch(/setLettura\(\{ url: t\.url, titolo: t\.titolo, fonte: t\.fonti\?\.\[0\]\?\.fonte, dati: t, faccia: 'articolo' \}\)/);
   });
   it('la riga icone leggi/parlane esiste subito dopo il blocco immagine', () => {
-    expect(f).toMatch(/L\('readWord'\)/);
+    expect(f).toMatch(/L\('newsOpenTranslate'\)/ /* b.535: la prova era verde solo grazie a una COPIA VECCHIA del file nel worktree (par. 7-ter): dal b.517 il bottone largo del feed dice «Apri e traduci», ed e' il nome con cui Luca stesso lo chiama. Si prova il vivo. */);
     expect(f).toMatch(/L\('newsTalkAbout'\)/);
   });
   it('onApriArticolo dal feed apre LettoreArticolo (non piu SchedaArgomento)', () => {
-    expect(f).toMatch(/onApriArticolo=\{\(d\) => \{ setLettura\(\{ url: d\.url, titolo: d\.titolo, fonte: d\.fonti\?\.\[0\]\?\.fonte, dati: d \}\); \}\}/);
+    expect(f).toMatch(/onApriArticolo=\{\(d\) => \{ tornaAlFeedRef\.current = true; setFeedAperto\(false\); setLettura\(/ /* b.535: il velo del feed ora si chiude e il back ci riporta — il collaudo «apri e traduci non va» */);
   });
   it('LettoreArticolo riceve dati/prefs/userToken', () => {
     expect(f).toMatch(/<LettoreArticolo url=\{lettura\.url\} titolo=\{lettura\.titolo\} fonte=\{lettura\.fonte\}/);
@@ -75,9 +75,9 @@ describe('b.516 — MondoNews: articoli aprono LettoreArticolo, icone leggi/parl
   });
 });
 
-describe('b.516 — FeedNotizieMondo: bottone articolo dice "Leggi", non "Apri e traduci"', () => {
-  it('usa readWord', () => {
+describe('b.516->b.535 — FeedNotizieMondo: il bottone largo dice «Apri e traduci» (dal b.517; la versione «Leggi» viveva solo in una copia vecchia del worktree, par. 7-ter)', () => {
+  it('usa newsOpenTranslate', () => {
     const f = leggi('app/components/FeedNotizieMondo.js');
-    expect(f).toMatch(/L\('readWord'\)/);
+    expect(f).toMatch(/L\('newsOpenTranslate'\)/);
   });
 });

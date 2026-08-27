@@ -1,4 +1,5 @@
 'use client';
+import TendinaVetro from '../ui/TendinaVetro.js'; // b.535 — la tendina unica dell'app
 import { memo, useState, useCallback, useEffect, useRef } from 'react';
 import { useApp } from '../../contexts/AppContext.js';
 import { FONT, LANGS, vibrate, clayCard } from '../../lib/constants.js';
@@ -52,9 +53,10 @@ function SezioneNuova({ L, accent, suAccento, input, muto, onAggiungi }) {
   return (
     <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 6 }}>
       <div style={{ display: 'flex', gap: 6 }}>
-        <select value={tipo} onChange={(e) => setTipo(e.target.value)} style={{ ...input, flex: '0 0 130px' }}>
-          {['regole', 'argomento', 'contesto'].map(t => <option key={t} value={t}>{L('kbTipo_' + t)}</option>)}
-        </select>
+        {/* b.535 — TendinaVetro al posto della select di sistema. */}
+        <TendinaVetro valore={tipo} onScegli={setTipo} targa={L('kbSectionsTitle')}
+          opzioni={['regole', 'argomento', 'contesto'].map(t => ({ id: t, label: L('kbTipo_' + t) }))}
+          stile={{ ...input, flex: '0 0 130px' }} />
         <input value={titolo} onChange={(e) => setTitolo(e.target.value)} placeholder={L('kbTitlePh')} style={{ ...input, flex: 1 }} />
       </div>
       {tipo === 'argomento' && (
@@ -426,25 +428,27 @@ function GestioneCompagni({ miei, onCambiato, L, C = {}, lingua, userToken, test
 
         <label style={etich}>{L('lifeVoice')}</label>
         <div style={{ display: 'flex', gap: 8 }}>
-          <select value={bozza.voce?.id || ''} onChange={(e) => { const v = VOCI_ELENCO.find(x => x.id === e.target.value); setBozza((b) => ({ ...b, voce: v || b.voce })); }} style={{ ...input, flex: 1 }}>
-            {VOCI_ELENCO.map((v) => <option key={v.id} value={v.id}>{v.nome}</option>)}
-          </select>
+          <TendinaVetro valore={bozza.voce?.id || ''} targa={L('lifeVoice')}
+            onScegli={(id) => { const v = VOCI_ELENCO.find(x => x.id === id); setBozza((b) => ({ ...b, voce: v || b.voce })); }}
+            opzioni={VOCI_ELENCO.map((v) => ({ id: v.id, label: v.nome }))}
+            stile={{ ...input, flex: 1 }} />
           <Ascolta onAscolta={() => provaVoce(bozza.voce?.id)} parola={L('lifeTryVoice')} sfondo={accent} colore={suAccento} etichetta={L('lifeTryVoice')} />
         </div>
 
         <div style={{ display: 'flex', gap: 8 }}>
           <div style={{ flex: 1 }}>
             <label style={etich}>{L('lifeLanguage')}</label>
-            <select value={bozza.lingua || ''} onChange={campo('lingua')} style={input}>
-              <option value="">{L('lifeLangAuto')}</option>
-              {LANGS.map((l) => <option key={l.code} value={l.code}>{l.flag} {l.name}</option>)}
-            </select>
+            <TendinaVetro valore={bozza.lingua || ''} targa={L('lifeLanguage')}
+              onScegli={(id) => setBozza((b) => ({ ...b, lingua: id }))}
+              opzioni={[{ id: '', label: L('lifeLangAuto') }, ...LANGS.map((l) => ({ id: l.code, label: l.name, icona: l.flag }))]}
+              stile={{ ...input, width: '100%' }} />
           </div>
           <div style={{ flex: 1 }}>
             <label style={etich}>{L('lifeFreedom')}</label>
-            <select value={bozza.liberta} onChange={campo('liberta')} style={input}>
-              {LIBERTA.map((k) => <option key={k} value={k}>{L('lifeFreedom')}: {LIBERTA_ETICHETTE[k]}</option>)}
-            </select>
+            <TendinaVetro valore={bozza.liberta} targa={L('lifeFreedom')}
+              onScegli={(id) => setBozza((b) => ({ ...b, liberta: id }))}
+              opzioni={LIBERTA.map((k) => ({ id: k, label: `${L('lifeFreedom')}: ${LIBERTA_ETICHETTE[k]}` }))}
+              stile={{ ...input, width: '100%' }} />
           </div>
         </div>
 
@@ -476,9 +480,10 @@ function GestioneCompagni({ miei, onCambiato, L, C = {}, lingua, userToken, test
         })()}
 
         <label style={etich}>{L('lifeModel')}</label>
-        <select value={`${bozza.provider}|${bozza.modello}`} onChange={(e) => { const [p, m] = e.target.value.split('|'); setBozza((b) => ({ ...b, provider: p, modello: m })); }} style={input}>
-          {MODELLI.map((m) => <option key={`${m.provider}|${m.modello}`} value={`${m.provider}|${m.modello}`}>{m.label}</option>)}
-        </select>
+        <TendinaVetro valore={`${bozza.provider}|${bozza.modello}`} targa={L('lifeModel')}
+          onScegli={(id) => { const [p, m] = String(id).split('|'); setBozza((b) => ({ ...b, provider: p, modello: m })); }}
+          opzioni={MODELLI.map((m) => ({ id: `${m.provider}|${m.modello}`, label: m.label }))}
+          stile={{ ...input, width: '100%' }} />
 
         <label style={{ ...etich, display: 'flex', alignItems: 'center', gap: 10, minHeight: 44, cursor: 'pointer', marginTop: 14 }}
           onClick={() => setBozza((b) => ({ ...b, memoria: !b.memoria }))}>
@@ -498,17 +503,19 @@ function GestioneCompagni({ miei, onCambiato, L, C = {}, lingua, userToken, test
             {SUPERFICI_PROFILO.map((s) => (
               <div key={s}>
                 <label style={etich}>{{ amico: 'Amico', impara: 'Impara', tavolo: 'Tavolo', podcast: 'Podcast' }[s]}</label>
-                <select
-                  value={(bozza.profili && bozza.profili[s]) || ''}
-                  onChange={(e) => setBozza((b) => {
+                <TendinaVetro
+                  valore={(bozza.profili && bozza.profili[s]) || ''}
+                  targa={{ amico: 'Amico', impara: 'Impara', tavolo: 'Tavolo', podcast: 'Podcast' }[s]}
+                  onScegli={(id) => setBozza((b) => {
                     const profili = { ...(b.profili || {}) };
-                    if (e.target.value) profili[s] = e.target.value; else delete profili[s];
+                    if (id) profili[s] = id; else delete profili[s];
                     return { ...b, profili: Object.keys(profili).length ? profili : null };
                   })}
-                  style={input}>
-                  <option value="">{`— ${PROFILI[profiloPerSuperficie(s)].etichetta}`}</option>
-                  {PROFILI_ELENCO.map((p) => <option key={p.id} value={p.id}>{p.etichetta}</option>)}
-                </select>
+                  opzioni={[
+                    { id: '', label: `\u2014 ${PROFILI[profiloPerSuperficie(s)].etichetta}` },
+                    ...PROFILI_ELENCO.map((pr) => ({ id: pr.id, label: pr.etichetta })),
+                  ]}
+                  stile={{ ...input, width: '100%' }} />
               </div>
             ))}
           </div>

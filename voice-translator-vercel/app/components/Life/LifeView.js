@@ -1,4 +1,5 @@
 'use client';
+import TendinaVetro from '../ui/TendinaVetro.js'; // b.535
 import { memo, useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { FONT, LANGS, vibrate, clayCard } from '../../lib/constants.js';
 import Icon from '../Icon.js';
@@ -1995,9 +1996,10 @@ function Impara({ compagni, L, C, lingua, userToken, testoP, muto, accent, card,
 
       {/* b.213 — lingua del corso: scelta esplicita. Conta soprattutto per i
           bambini (registro e vocabolario adatti nella loro lingua). */}
-      <select value={linguaCorso} onChange={(e) => setLinguaCorso(e.target.value)} style={{ ...stileSelect, width: '100%', marginBottom: 10 }}>
-        {LANGS.map((l) => <option key={l.code} value={l.code}>{l.flag} {l.name}</option>)}
-      </select>
+      {/* b.535 — TendinaVetro al posto della select di sistema. */}
+      <TendinaVetro valore={linguaCorso} onScegli={(v) => setLinguaCorso(v)} targa={L('lifeLanguage')}
+        opzioni={LANGS.map((l) => ({ id: l.code, label: l.name, icona: l.flag }))}
+        stile={{ ...stileSelect, width: '100%', marginBottom: 10 }} />
 
       {/* b.300 — il Maestro si SCEGLIE con la faccia, come nelle altre
           sezioni: avatar tondo + nome, non un menu di nomi. */}

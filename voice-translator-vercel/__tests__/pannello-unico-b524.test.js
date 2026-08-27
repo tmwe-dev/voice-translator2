@@ -13,12 +13,17 @@ describe('b.524 — lo scheletro del pannello e lo stesso su tutte le schede', (
 
   it('tutti e due i pannelli hanno i Preferiti', () => {
     expect(vista).toMatch(/<PreferitiTemi temi=\{schedaPaese\?\.temiCaldi\}/);
-    expect(news).toMatch(/<PreferitiTemi temi=\{argomentiVeri\.map/);
+    expect(news).toMatch(/<PreferitiTemi nudo temi=\{argomentiVeri\.map/ /* b.535: dentro la card di vetro i Preferiti vanno nudi (il titolo lo da la card) */);
   });
 
   it('tutti e due i pannelli hanno la tendina Paese, con Mondo intero in testa', () => {
+    // b.535 — in Notizie il titolo «Paese» lo porta la CARD di vetro
+    // (sbWhereTitle + icona globe); in Stanze/Mondo resta l'etichetta
+    // classica. La tendina sotto e' la stessa Scelta, con «Mondo
+    // intero» in testa in entrambi.
+    expect(vista).toMatch(/etichetta=\{L\('countryLabel'\)\}/);
+    expect(news).toMatch(/icona="globe" titolo=\{L\('sbWhereTitle'\)\}/);
     for (const f of [vista, news]) {
-      expect(f).toMatch(/etichetta=\{L\('countryLabel'\)\}/);
       expect(f).toMatch(/etichetta: L\('wholeWorld'\)/);
     }
   });
@@ -32,7 +37,11 @@ describe('b.524 — lo scheletro del pannello e lo stesso su tutte le schede', (
     for (const f of [vista, news]) {
       const pannello = f.slice(f.indexOf('<PannelloLaterale'));
       const iPref = pannello.indexOf('<PreferitiTemi');
-      const iPaese = pannello.indexOf("L('countryLabel')");
+      // b.535 — il segnaposto del Paese cambia veste per scheda: card
+      // di vetro in Notizie, etichetta classica in Stanze/Mondo.
+      const iPaese = pannello.indexOf("L('countryLabel')") !== -1
+        ? pannello.indexOf("L('countryLabel')")
+        : pannello.indexOf("L('sbWhereTitle')");
       const iPreferenze = pannello.indexOf('<PreferenzeMondo');
       expect(iPref).toBeGreaterThan(-1);
       expect(iPref).toBeLessThan(iPaese);

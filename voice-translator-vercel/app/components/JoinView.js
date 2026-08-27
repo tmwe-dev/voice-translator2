@@ -1,4 +1,5 @@
 'use client';
+import TendinaVetro from './ui/TendinaVetro.js'; // b.535
 import Icon from './Icon.js';
 import { useState, useEffect, useRef } from 'react';
 import { LANGS, VOICES, AVATARS, AVATAR_NAMES, FONT } from '../lib/constants.js';
@@ -318,15 +319,17 @@ export default function JoinView({ joinCode,
           {/* Language */}
           <div style={{ marginBottom: 16 }}>
             <div style={{ fontSize: 12, fontWeight: 600, color: C.textMuted, marginBottom: 6 }}>{L('yourLang')}</div>
-            <select style={{
-              width: '100%', padding: '12px 14px', borderRadius: 12,
-              background: C.input, border: `1px solid ${C.inputBorder}`,
-              color: C.textPrimary, fontSize: 14, fontFamily: FONT, outline: 'none',
-              boxSizing: 'border-box', appearance: 'none',
-            }} value={myLang} onChange={e => { setMyLang(e.target.value); setPrefs(p => ({...p, lang: e.target.value})); }}>
-              {/* b.146 — elenco in ordine alfabetico, come chiesto da Luca */}
-              {[...LANGS].sort((a, b) => a.name.localeCompare(b.name, 'en')).map(l => <option key={l.code} value={l.code}>{l.flag} {l.name}</option>)}
-            </select>
+            {/* b.535 — TendinaVetro al posto della select di sistema.
+                L'ordine alfabetico di b.146 resta. */}
+            <TendinaVetro
+              valore={myLang}
+              onScegli={(v) => { setMyLang(v); setPrefs(p => ({ ...p, lang: v })); }}
+              targa={L('yourLang')}
+              C={C}
+              opzioni={[...LANGS].sort((a, b) => a.name.localeCompare(b.name, 'en')).map(l => ({ id: l.code, label: l.name, icona: l.flag }))}
+              stile={{ width: '100%', padding: '12px 14px', borderRadius: 12,
+                background: C.input, border: `1px solid ${C.inputBorder}`,
+                color: C.textPrimary, fontSize: 14, boxSizing: 'border-box' }} />
           </div>
 
           <PrimaryBtn C={C} FONT={FONT} onClick={() => { if (unlockAudio) unlockAudio(); savePrefs(prefs); handleJoinRoom(); }}

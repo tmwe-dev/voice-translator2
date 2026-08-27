@@ -1,4 +1,5 @@
 'use client';
+import TendinaVetro from './ui/TendinaVetro.js'; // b.535
 import { memo, useState, useEffect, useRef } from 'react';
 import { LANGS, APP_URL, FONT } from '../lib/constants.js';
 import { useApp } from '../contexts/AppContext.js';
@@ -76,9 +77,10 @@ const LobbyView = memo(function LobbyView({ roomId, roomInfo, partnerConnected, 
             <div style={S.label}>{L('inviteLangLabel')}</div>
             {/* b.482 — la tendina e un bersaglio da toccare: sotto i 44 punti
                 di altezza il dito sbaglia. */}
-            <select style={{...S.select, fontSize:14, minHeight:44}} value={inviteLang} onChange={e => setInviteLang(e.target.value)}>
-              {LANGS.map(l => <option key={l.code} value={l.code}>{l.flag} {l.name}</option>)}
-            </select>
+            {/* b.535 — TendinaVetro al posto della select di sistema. */}
+            <TendinaVetro valore={inviteLang} onScegli={(v) => setInviteLang(v)} targa={L('inviteLangLabel')}
+              opzioni={LANGS.map(l => ({ id: l.code, label: l.name, icona: l.flag }))}
+              stile={{ ...S.select, fontSize: 14, minHeight: 44, width: '100%' }} />
           </div>
           {/* b.487 — tavola 14: DUE pillole, Copia e Condividi. «Copia»
               mancava: chi non ha (o non vuole) il foglio di condivisione

@@ -306,7 +306,10 @@ describe('la scelta del paese e la prima schermata', () => {
 
   it('la schermata ha un campo di ricerca per il paese', () => {
     const codice = senzaCommenti(leggi('app/components/SceltaPaeseView.js'));
-    expect(codice).toContain('cercaPaesi(ricerca)');
+    // b.535 — AGGIORNATA (rosso pre-esistente): cercaPaesi ha guadagnato
+    // la lingua di chi guarda (cercaPaesi(ricerca, prefs?.uiLang), b.398):
+    // la prova pretendeva la firma vecchia a un argomento.
+    expect(codice).toContain('cercaPaesi(ricerca');
     expect(codice).toContain("L('countrySearch')");
   });
 

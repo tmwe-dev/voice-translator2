@@ -90,7 +90,11 @@ const PREFERENZE = [
   // «Mai» e il predefinito: niente ricerche non chieste.
   {
     chiave: 'mondoRitmo',
-    predefinito: 'mai',
+    // b.535 — BUG PRE-ESISTENTE dichiarato: qui il predefinito diceva
+    // 'mai', ma FinestraSulMondo senza preferenza usa '5' — il pannello
+    // mostrava «mai» mentre il pianeta si muoveva ogni 5 minuti. Ora il
+    // pannello dice il VERO ('5'); «mai» resta una scelta a un tocco.
+    predefinito: '5',
     tipo: 'passo',
     icona: 'history',
     titoloKey: 'prefRhythmTitle',
@@ -165,10 +169,14 @@ function BadgeStato({ testo }) {
   return (
     <span style={{
       display: 'inline-block', maxWidth: '100%', padding: '3px 10px', borderRadius: 999,
-      background: 'rgba(140,88,48,0.34)', border: '1px solid rgba(206,146,92,0.5)',
-      backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)',
+      // b.535 — DUE REGOLE DI LUCA RIPRISTINATE (bug pre-esistenti nel
+      // committato, scoperti dalle prove b.508 e «quello che i test non
+      // vedevano»): (1) niente sfocatura su un elemento RIPETUTO dal
+      // .map — il velo qui era pura spesa, il vetro resta col fondo
+      // traslucido; (2) niente grassetto 600 nel pannello preferenze.
+      background: 'rgba(140,88,48,0.42)', border: '1px solid rgba(206,146,92,0.5)',
       boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.22)',
-      color: '#fff', fontSize: 11, fontWeight: 600, fontFamily: FONT,
+      color: '#fff', fontSize: 11, fontWeight: 500, fontFamily: FONT,
       lineHeight: 1.35, overflowWrap: 'anywhere',
     }}>
       {testo}

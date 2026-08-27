@@ -13,10 +13,19 @@ const pref = readFileSync(join(process.cwd(), 'app/components/ui/PreferenzeMondo
 const mondo = readFileSync(join(process.cwd(), 'app/components/MondoView.js'), 'utf8');
 
 describe('la finestra sul mondo', () => {
-  it('il ritmo e una preferenza con «mai» come predefinito', () => {
+  it('il ritmo e una preferenza — e il predefinito dichiarato e quello vero', () => {
+    // b.506 nasceva con «mai» (niente spesa non chiesta). Poi il prodotto
+    // ha scelto il giornale del viaggiatore: senza preferenza il pianeta
+    // si muove piano (5 minuti) — ma questa prova era rimasta alla
+    // fotografia del primo giorno ed era ROSSA DA PRIMA di b.535 (bug
+    // pre-esistente del registro prove, dichiarato). In piu il pannello
+    // dichiarava «mai» come predefinito mentre FinestraSulMondo usava
+    // '5': il pannello mentiva. b.535 allinea il pannello al vero e la
+    // prova alla regola: predefinito unico '5', «mai» resta una scelta.
     expect(pref).toMatch(/chiave: 'mondoRitmo'/);
-    expect(pref).toMatch(/predefinito: 'mai'/);
-    expect(fin).toMatch(/prefs\?\.mondoRitmo \|\| 'mai'/);
+    expect(pref).toMatch(/predefinito: '5'/);
+    expect(fin).toMatch(/prefs\?\.mondoRitmo \|\| '5'/);
+    expect(pref).toMatch(/valore: 'mai'/); // la scelta di fermarlo resta
   });
 
   it('si ferma quando la pagina e nascosta', () => {

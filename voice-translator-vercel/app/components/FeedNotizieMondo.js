@@ -28,7 +28,7 @@ const FILTRI = [
   { id: 'entrambi', labelKey: 'feedEntrambi' },
 ];
 
-export default function FeedNotizieMondo({ aperto, onChiudi, C, L, argomenti = [], video = [], filtro, onFiltro, onParlane, onApriArticolo }) {
+export default function FeedNotizieMondo({ aperto, onChiudi, C, L, argomenti = [], video = [], filtro, onFiltro, onParlane, onApriArticolo, onStrumenti }) {
   const contenitoreRef = useRef(null);
   const sentinelleRef = useRef(new Map());
   const [indiceAttivo, setIndiceAttivo] = useState(0);
@@ -85,13 +85,14 @@ export default function FeedNotizieMondo({ aperto, onChiudi, C, L, argomenti = [
         display: 'flex', alignItems: 'center', gap: 8, padding: '14px 16px',
         background: 'linear-gradient(180deg, rgba(5,7,15,0.85), transparent)',
       }}>
-        <button onClick={() => { vibrate(6); onChiudi?.(); }} aria-label={L('closeWord')}
+        {/* b.535 — Luca: «la x in alto deve essere una freccia back». */}
+        <button onClick={() => { vibrate(6); onChiudi?.(); }} aria-label={L('backWord')}
           style={{
             width: 44, height: 44, borderRadius: 12, cursor: 'pointer', flexShrink: 0,
             background: 'rgba(10,14,26,0.7)', border: '1px solid rgba(255,255,255,0.14)',
             color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
-          <Icon name="x" size={16} color="#fff" />
+          <Icon name="back" size={16} color="#fff" />
         </button>
         <div role="tablist" aria-label={L('feedFiltroLabel')} style={{
           display: 'flex', gap: 4, flex: 1, overflow: 'hidden', padding: 3,
@@ -113,6 +114,25 @@ export default function FeedNotizieMondo({ aperto, onChiudi, C, L, argomenti = [
           })}
         </div>
       </div>
+
+      {/* b.535 — Luca: «non c'e la linguetta in primo piano per
+          modificare le ricerche o farne in tempo reale di nuove.
+          inseriscila a sinistra». Bordo sinistro, meta' altezza: apre
+          gli strumenti SOPRA il feed (PannelloLaterale con `sopra`). */}
+      {onStrumenti && (
+        <button onClick={() => { vibrate(8); onStrumenti(); }}
+          aria-label={L('tabNews')} title={L('tabNews')}
+          style={{
+            position: 'absolute', left: 0, top: '44%', zIndex: 3,
+            width: 34, height: 64, borderRadius: '0 14px 14px 0', cursor: 'pointer',
+            background: 'rgba(10,14,26,0.78)', border: '1px solid rgba(255,255,255,0.16)',
+            borderLeft: 'none', backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            WebkitTapHighlightColor: 'transparent',
+          }}>
+          <Icon name="search" size={15} color="#fff" />
+        </button>
+      )}
 
       {/* ═══ il feed: una slide per schermata, scroll-snap verticale ═══ */}
       <div ref={contenitoreRef} style={{
@@ -156,9 +176,15 @@ export default function FeedNotizieMondo({ aperto, onChiudi, C, L, argomenti = [
                       style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.85 }} />
                   )}
                 </div>
+                {/* b.535 — Luca: «il menu di youtube rimane nascosto».
+                    Questo velo col titolo copriva la barra dei comandi del
+                    player e si mangiava i tocchi: ora e' solo pittura
+                    (pointerEvents none) — il titolo si vede, il menu di
+                    YouTube si tocca. */}
                 <div style={{
                   position: 'relative', zIndex: 1, padding: '16px 20px calc(28px + env(safe-area-inset-bottom))',
                   background: 'linear-gradient(180deg, transparent, rgba(5,7,15,0.92) 55%)',
+                  pointerEvents: 'none',
                 }}>
                   <div style={{ fontSize: 15, fontWeight: 600, color: '#fff', lineHeight: 1.3 }}>{el.dati.titolo}</div>
                   <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.65)', marginTop: 4 }}>{el.dati.canale}</div>

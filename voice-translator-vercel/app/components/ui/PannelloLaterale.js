@@ -23,7 +23,7 @@ import { formaLinguetta, LINGUETTA, postoASinistra } from '../../lib/righello.js
 // fondo: si vede sempre, dice da che parte si apre, e non copre niente.
 // ═══════════════════════════════════════════════════════════════
 
-export default function PannelloLaterale({ aperto, onChiudi, titolo, C, children }) {
+export default function PannelloLaterale({ aperto, onChiudi, titolo, C, children , sopra = false }) {
   // b.514 — CONFERMATO (Luca: «il velo non chiude piu, ho dovuto rompere
   // tutto per fartelo vedere»): il velo (position:fixed, inset:0) viveva
   // dentro il flusso normale della colonna della sezione. Un antenato con
@@ -63,7 +63,7 @@ export default function PannelloLaterale({ aperto, onChiudi, titolo, C, children
     <>
       {/* il velo: si tocca fuori e si chiude */}
       <div onClick={() => { vibrate(6); onChiudi?.(); }}
-        style={{ position: 'fixed', inset: 0, zIndex: 88, background: 'rgba(0,0,0,0.5)' }} />
+        style={{ position: 'fixed', inset: 0, zIndex: sopra ? 120 : 88, background: 'rgba(0,0,0,0.5)' }} />
 
       <aside role="dialog" aria-modal="true" aria-label={titolo}
         style={{
@@ -78,7 +78,10 @@ export default function PannelloLaterale({ aperto, onChiudi, titolo, C, children
           //   La "dynamic viewport height" si aggiusta da sola.
           // - largo il doppio (era fisso a 330px, che su schermi ampi
           //   lasciava piu della meta della finestra come solo velo).
-          position: 'fixed', left: 0, top: 0, zIndex: 89,
+          // b.535 — `sopra`: aperto dalla linguetta DENTRO il feed (z 97)
+          // il pannello deve salirci sopra, se no e' un'altra porta che si
+          // apre dietro un velo (la stessa malattia di «apri e traduci»).
+          position: 'fixed', left: 0, top: 0, zIndex: sopra ? 121 : 89,
           height: '100dvh', maxHeight: '100dvh',
           width: 'min(460px, 92vw)', display: 'flex', flexDirection: 'column',
           // coprente: dietro c'e il pianeta, e attraverso un pannello

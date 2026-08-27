@@ -133,7 +133,13 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
   // la gerarchia resta Mondo → argomento → persone → conversazione.
   // b.335 — HOME MONDO NUOVA: si atterra su "Per te" — cosa e caldo ADESSO
   // (discussioni piu vive, stanze piu piene), a colpo d'occhio.
-  const [tab, setTab] = useState('stanze');
+  // b.535 — ORDINE DI LUCA: «quando vado su mondo devi andare qui con
+  // questa visualizzazione come default. non aprire stanze. poi da qui
+  // l'utente sceglie se proseguire». Si atterra sulle NOTIZIE, e la
+  // presentazione a tutta pagina si apre da sola (b.529, __VT_FEED_VISTO
+  // dentro MondoNews): l'utente passa piu tempo a leggere e guardare,
+  // le Stanze restano a un tocco sulla linguetta.
+  const [tab, setTab] = useState('news');
   const [feedCaldo, setFeedCaldo] = useState(null);
   // b.363 — un elenco CADUTO non e un elenco VUOTO: prima, se la chiamata
   // non riusciva, la corsia "di cosa si parla" restava muta e sembrava che
@@ -177,7 +183,11 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
   // b.529 — la bozza del pannello (vedi MondoNews): il Paese si sceglie
   // e si APPLICA, non scatta a ogni tocco della tendina.
   const [bozzaPaesePanello, setBozzaPaesePanello] = useState(null);
-  useEffect(() => { if (strumenti) setBozzaPaesePanello(paeseScelto); }, [strumenti]); // eslint-disable-line react-hooks/exhaustive-deps -- fotografia all'apertura
+  // b.535 — collaudo di Luca: «non evidenzia il paese selezionato e non
+  // la sincronizza con la bandiera in alto a destra». La fotografia era
+  // solo all'apertura: se il paese cambiava dal globo col pannello gia'
+  // aperto, la tendina restava indietro. Ora segue anche il paese.
+  useEffect(() => { if (strumenti) setBozzaPaesePanello(paeseScelto); }, [strumenti, paeseScelto]);
   // b.398 — QUANTO SEI SCESO, da 0 a 1. Serve al pianeta: il documento di
   // Luca dice che il globo «con lo scroll perde importanza» e «dopo il
   // primo blocco contenuti puo scomparire». Finora non lo sapeva nessuno:
@@ -721,6 +731,14 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
         valore={bozzaPaesePanello || 'tutto'}
         opzioni={[
           { valore: 'tutto', etichetta: L('wholeWorld'), conto: rooms.length },
+          /* b.535 — il paese scelto DAL GLOBO puo' non stare nell'elenco
+             curato (PAESI): la tendina ripiegava zitta su «Mondo intero»
+             e sembrava non sincronizzata con la bandiera in testata
+             (collaudo di Luca, bandiera Tonga vs «Mondo intero»). Se il
+             paese e' fuori elenco, lo si aggiunge in testa, onesto. */
+          ...(bozzaPaesePanello && !PAESI.some((pa) => pa.codice === bozzaPaesePanello)
+            ? [{ valore: bozzaPaesePanello, etichetta: `${bandieraPaese(bozzaPaesePanello)} ${nomePaese(bozzaPaesePanello)}` }]
+            : []),
           ...PAESI
             .map((pa) => ({
               valore: pa.codice,
@@ -848,7 +866,7 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
               tutta larghezza; ora sta nella colonna centrata (regola di Luca,
               gia standard in Life). */}
           <div style={{ ...COLONNA, flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-            <MondoNews strumenti={strumenti} suChiudiStrumenti={() => setStrumenti(false)} apriDiscussioneId={apriDiscussione} suApertaDiscussione={() => setApriDiscussione(null)} paeseDalGlobo={paeseScelto}
+            <MondoNews strumenti={strumenti} suChiudiStrumenti={() => setStrumenti(false)} suApriStrumenti={() => setStrumenti(true)} apriDiscussioneId={apriDiscussione} suApertaDiscussione={() => setApriDiscussione(null)} paeseDalGlobo={paeseScelto}
               // b.398 — e il ritorno: la bandiera toccata dentro le News
               // risale fin qui, e da qui va al pianeta e alle Stanze.
               suPaeseScelto={(codice) => { setPaeseScelto(codice); setLangFilter(codice ? (linguaDelPaese(codice) || 'all') : 'all'); }}

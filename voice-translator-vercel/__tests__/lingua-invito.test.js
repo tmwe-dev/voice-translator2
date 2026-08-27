@@ -109,7 +109,7 @@ describe('e collegato al codice vivo', () => {
     // Se il selettore offrisse codici diversi da quelli di LANGS, il
     // filtro li scarterebbe tutti in silenzio.
     expect(app('components/LobbyView.js'))
-      .toMatch(/LANGS\.map\(l => <option key=\{l\.code\} value=\{l\.code\}/);
+      .toMatch(/LANGS\.map\(l => \(\{ id: l\.code, label: l\.name, icona: l\.flag \}\)\)/ /* b.535: da <option> a opzioni di TendinaVetro — stessi codici veri di LANGS */);
   });
 
   it('il commento fuorviante e stato corretto', () => {

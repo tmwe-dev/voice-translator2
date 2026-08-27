@@ -1,4 +1,5 @@
 'use client';
+import TendinaVetro from './ui/TendinaVetro.js'; // b.535 — la tendina unica dell'app
 import { memo, useRef, useEffect, useState } from 'react';
 import AvatarImg from './AvatarImg.js';
 import { IconMic, IconKeyboard, IconVolume, IconVolumeOff, IconVolumeLow, IconCamera, IconCameraOff,
@@ -536,19 +537,18 @@ const VideoCallOverlay = memo(function VideoCallOverlay({
               <div style={{ fontSize: 12, fontWeight: 600, color: 'rgba(238,242,255,0.75)', marginBottom: 5 }}>
                 {L('ttsVoicePick')}
               </div>
-              <select value={voceTraduzione}
-                onChange={(e) => { const v = e.target.value; setVoceTraduzione(v); setVoceChiamata(v); }}
-                aria-label={L('ttsVoicePick')}
-                style={{
-                  width: '100%', minHeight: 44, padding: '0 10px', borderRadius: 10, cursor: 'pointer',
+              {/* INIZIO b.535 — via la <select> di sistema: TendinaVetro,
+                  stesso campo, pannello di vetro del template. FINE b.535 */}
+              <TendinaVetro
+                valore={voceTraduzione}
+                onScegli={(v) => { setVoceTraduzione(v); setVoceChiamata(v); }}
+                targa={L('ttsVoicePick')}
+                accento={S?.colors?.accent2 || '#38e1ff'}
+                opzioni={[{ id: '', label: L('autoVoiceWord') }, ...VOCI_ELENCO.map((v) => ({ id: v.id, label: v.nome }))]}
+                stile={{ width: '100%', minHeight: 44, padding: '0 12px', borderRadius: 10,
                   background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(160,190,255,0.18)',
-                  color: '#eef2ff', fontSize: 13, fontFamily: 'inherit',
-                }}>
-                <option value="" style={{ color: '#111' }}>{L('autoVoiceWord')}</option>
-                {VOCI_ELENCO.map((v) => (
-                  <option key={v.id} value={v.id} style={{ color: '#111' }}>{v.nome}</option>
-                ))}
-              </select>
+                  color: '#eef2ff', fontSize: 13 }}
+              />
             </div>
             <div style={{ marginBottom: 12 }}>
               <div style={{ fontSize: 12, fontWeight: 600, color: 'rgba(238,242,255,0.75)', marginBottom: 5 }}>

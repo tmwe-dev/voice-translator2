@@ -1,4 +1,5 @@
 'use client';
+import TendinaVetro from './ui/TendinaVetro.js'; // b.535
 import { memo, useState, useEffect, useRef, useCallback } from 'react';
 import { APP_URL, LANGS, FONT, vibrate, metaScelta} from '../lib/constants.js';
 import Icon from './Icon.js';
@@ -227,27 +228,25 @@ function QuickInvite({ handleCreateRoom, roomId, setViewAfterCreate }) {
               </div>
               {/* b.482 — la scelta della lingua e un bersaglio da toccare:
                   almeno quarantaquattro di altezza utile. */}
-              <select
-                value={guestLang}
-                onChange={e => { vibrate(); setGuestLang(e.target.value); }}
-                style={{
-                  width: '100%', padding: '12px 14px', minHeight: 44, borderRadius: 14, boxSizing: 'border-box',
+              {/* b.526 — «lascia lo spagnolo anche a me» (Luca): la tendina
+                  escludeva la lingua dell'invitante, ma b.465 ha gia
+                  stabilito che due lingue uguali sono un caso legittimo
+                  (si usa la stanza senza traduzione). Tutte le lingue. */}
+              {/* INIZIO b.535 — la tendina di sistema esce, entra la
+                  TendinaVetro dell'app (stessa forma del kit, pannello di
+                  vetro coerente). FINE b.535 */}
+              <TendinaVetro
+                valore={guestLang}
+                onScegli={(v) => setGuestLang(v)}
+                targa={L('inviteReadLang')}
+                C={C}
+                centrato
+                opzioni={LANGS.map(l => ({ id: l.code, label: l.name, icona: l.flag }))}
+                stile={{ width: '100%', padding: '12px 14px', minHeight: 44, borderRadius: 14, boxSizing: 'border-box',
                   background: C.inputBg || 'rgba(140,170,255,0.05)',
                   border: `1px solid ${C.inputBorder || 'rgba(160,190,255,0.16)'}`,
-                  color: glass.text.primary, fontSize: 15, fontFamily: FONT, outline: 'none',
-                  appearance: 'none', WebkitAppearance: 'none',
-                  backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='rgba(242,244,247,0.5)' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10l-5 5z'/%3E%3C/svg%3E")`,
-                  backgroundRepeat: 'no-repeat', backgroundPosition: 'right 14px center',
-                  textAlign: 'center',
-                }}>
-                {/* b.526 — «lascia lo spagnolo anche a me» (Luca): la tendina
-                    escludeva la lingua dell'invitante, ma b.465 ha gia
-                    stabilito che due lingue uguali sono un caso legittimo
-                    (si usa la stanza senza traduzione). Tutte le lingue. */}
-                {LANGS.map(l => (
-                  <option key={l.code} value={l.code}>{l.flag} {l.name}</option>
-                ))}
-              </select>
+                  color: glass.text.primary, fontSize: 15 }}
+              />
             </div>
 
             {/* b.482 — IL QR RESTA NERO SU BIANCO: e l'unica eccezione ai

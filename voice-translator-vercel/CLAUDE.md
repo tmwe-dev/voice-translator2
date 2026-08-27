@@ -267,6 +267,111 @@ perche il working tree lo conteneva ancora.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.535** (push #823) — IL GRANDE GIRO DEL GIORNALE. Dieci
+  ordini di Luca arrivati in fila nella stessa mattina, tutti chiusi:
+
+  1. «elimina il duplicato rimasto in alto»: via la pillola bandiere
+     b.457 dall'angolo della Home — da b.532 la stessa coppia vive nel
+     tasto microfono, che apre lo stesso pannello. Un doppione esatto.
+  2. «apri e traduci non va» (dal feed): il tasto LAVORAVA, ma il
+     lettore si apriva DIETRO il velo fixed z97 del feed. Ora il velo
+     si chiude e il back del lettore riporta al feed (tornaAlFeedRef).
+  3. «il dropdown stile windows non rispetta lo stile!!! verifica che
+     tutti i dropdown siano coerenti»: nasce ui/TendinaVetro.js (portal
+     su body — dentro il Ribalta position:fixed si rompe, e absolute
+     resterebbe tagliato; listbox/option, Escape, frecce, fuori-click)
+     e TUTTE le 15 <select> native di 9 file diventano TendinaVetro.
+     Nei componenti non resta nessuna <select>.
+  4. «non vogliamo aprire una maschera che sappiamo e' vuota»:
+     lib/testateChiuse.js — elenco seminato (tuttomercatoweb,
+     VERIFICATO dallo screenshot) + apprendimento al primo rifiuto
+     (localStorage, sottodomini inclusi). Card e feed non offrono piu
+     l'icona «leggi dentro» per le porte chiuse; la foto porta alla
+     SINTESI; il lettore chiuso non monta nemmeno la cornice.
+  5. «quando apro notizie non mi fai vedere le notizie»: BUG MIO —
+     la bandierina window.__VT_GAZZETTA era di sessione ma i risultati
+     vivono nello stato del componente: al secondo ingresso giornale
+     bianco per sempre. Ora la guardia e' lo stato stesso (argomenti
+     null + non cercando); la cache del server para le ripetizioni.
+  6. «non vedo le ultime ricerche»: si salvavano solo scrivendo, e chi
+     naviga a tocchi non scrive. Ora salvano anche i giri delle chip
+     (etichetta = testo della query); le partenze AUTOMATICHE restano
+     silenziose (cercaChip ha il parametro). CAUSA vera pero' anche a
+     monte: vedi 7 — il blocco c'era ma spariva a lista vuota.
+  7. «questa sezione e' brutta, smorta... facciamolo insieme» + scelta
+     dal ventaglio («Card di vetro con icona») + «albero facile da
+     capire a vista d'occhio»: la sidebar Notizie e' rifatta a CARD DI
+     VETRO — chip icona blu, titolo bianco, didascalia leggibile
+     (rgba .62/.78: mai piu grigio smorto, come da sfuriata sul
+     contrasto) — nell'ordine ①Preferiti ②Ultime ricerche ③Da dove
+     guardo ④Cosa cerco ⑤Preferenze, con Applica sfumato che si
+     accende SOLO se c'e' qualcosa da applicare.
+  8. «quando scelgo il milan ac aggiungi un selettore aggiungi alle
+     notizie preferite e aggiungi il badge»: lib/preferitiRicerche.js
+     (pure: aggiungi/togli/e'/elenco, tetto 12, dedup case-insensitive)
+     + la STELLA sotto la riga di ricerca + badge blu col logo dentro
+     i Preferiti (tocco = rifa la ricerca, x = toglie).
+  9. «quando vado su mondo devi andare qui con questa visualizzazione
+     come default, non aprire stanze»: MondoView parte su 'news', e la
+     presentazione a tutta pagina si apre da sola (b.529).
+  10. Dal vivo sul feed: la X e' diventata FRECCIA BACK; la LINGUETTA
+     a sinistra apre gli strumenti SOPRA il feed (PannelloLaterale ha
+     imparato `sopra`: z 120/121 — se no era un'altra porta dietro il
+     velo) con la ricerca rapida in testa, solo li'; il velo del titolo
+     sui video e' diventato solo pittura (pointerEvents none): il menu
+     di YouTube ora si tocca («il menu di youtube rimane nascosto»).
+
+  BUG PRE-ESISTENTI dichiarati e chiusi strada facendo:
+  - PARITA' DELLE LINGUE: 36 pacchetti su 38 erano rimasti indietro di
+    40 chiavi (da b.515 in poi: feed, KB, videochiamata, applica...).
+    Riempiti TUTTI, tradotti lingua per lingua, 38/38 pieni. Le prove
+    di parita' (la-lingua-viene-prima, niente-stringhe-cablate,
+    mondo-paese-vero trentotto-pacchetti) erano ROSSE DA PRIMA.
+  - mondoRitmo: il pannello dichiarava predefinito 'mai' mentre
+    FinestraSulMondo usava '5' — il pannello mentiva. Allineato al
+    vero ('5'; 'mai' resta scelta) e prova aggiornata.
+  - Tre prove ferme a versioni vecchie (b506 ritmo, mondo-paese x2,
+    la-lingua cercaPaesi): aggiornate CON spiegazione, mai cancellate.
+  - §7-ter di nuovo: il worktree era SFASATO dal committato per
+    FeedNotizieMondo.js (readWord vs newsOpenTranslate — riallineato al
+    blob) e per questo stesso CLAUDE.md (voce b.534 assente: questa
+    voce nasce dal blob committato, non dal file sul disco).
+  - Sincronia Paese (Mondo): un paese scelto dal globo ma fuori
+    dall'elenco curato faceva ripiegare la tendina su «Mondo intero»
+    zitta (bandiera Tonga vs tendina, screenshot). Ora l'opzione fuori
+    elenco si mostra onesta, e la fotografia del pannello segue anche
+    il paese ([strumenti, paeseScelto]).
+
+  PROVE: vetro-e-giornale-b535 (17, con testateChiuse e
+  preferitiRicerche provati sui RISULTATI, localStorage vero) + le tre
+  aggiornate; eslint 0 errori (2 warning pre-esistenti dichiarati:
+  no-img-element Home, direttiva inutile b.529 in MondoNews).
+
+  [ATTESO] da collaudare vivo dopo il push: resa della TendinaVetro
+  sulle 15 sedi, linguetta+ricerca rapida sopra il feed, scroll del
+  pannello Mondo («non scrolla bene»: il fix b.516 c'e, serve il
+  dito), play/pianeta fermo (il ▷ e' l'autoplay dei breaking — va
+  chiarito o cambiato), notturno del globo.
+
+  DEBITO DICHIARATO (prossime versioni, ordinate con Luca):
+  - b.536 IL MOTORE: like + emoticon + commenti su video E articoli
+    dal feed; il commento apre da solo la stanza-commenti (entra in
+    elenco quando qualcuno scrive); campanella notifiche stile
+    Instagram; segnali (tempo di visione, like, commenti, ricerche)
+    -> punteggio condiviso che ordina il feed; profilo interessi che
+    si ALLARGA per vicinanza (Chopin -> pianoforte -> altra classica;
+    Milan -> calcio -> calciomercato -> altri campionati); backstage
+    che ricarica contenuti quando lo spettacolo si esaurisce.
+  - INTERPRETE DEL VIDEO: player muto via API + sottotitoli tradotti
+    o voce ElevenLabs coi 5 secondi di rincorsa (frasi compiute,
+    scaletta pre-tradotta); tasto solo dove i sottotitoli esistono;
+    doppiaggio Dubbing API come opzione premium. USO DIFFERENZIATO
+    Asia/mondo: lingue asiatiche via DashScope/CosyVoice, resto via
+    ElevenLabs (ordine permanente di Luca).
+  - Le card di vetro anche nelle sidebar Stanze e Mondo (b.524: lo
+    scheletro e' unico — Luca approva la resa in Notizie, poi si
+    estende).
+
 - Versione: **b.534** (push #822) — GROK FUORI, QWEN DENTRO. Ordine di
   Luca: «lascia attivi solo tre agenti anthropic, chatgpt e gemini,
   grok disattivalo e attiva qwen alibaba come aggiunto».

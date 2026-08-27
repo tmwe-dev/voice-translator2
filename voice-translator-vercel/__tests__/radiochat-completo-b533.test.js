@@ -76,7 +76,7 @@ describe('b.533 — il giornale del viaggiatore e la copertina del podcast', () 
     const f = leggi('app/components/MondoNews.js');
     expect(f).toMatch(/__VT_GAZZETTA/);
     expect(f).toMatch(/ricerchePredefinite\(prefs, nomePaese\)/);
-    expect(f).toMatch(/cerca\(giri\[0\]\.query, 'notizie', false, true\)/);
+    expect(f).toMatch(/cerca\(giro\.query, 'notizie', false, true\)/ /* b.535: i giri RUOTANO a ogni ingresso («sempre le stesse notizie», Luca) — resta silenziosa: non sporca le tue */);
     expect(f).toMatch(/if \(silenziosa\) throw/);
   });
   it('il podcast ha la copertina dalla rotta video gia in cache (niente wallet)', () => {

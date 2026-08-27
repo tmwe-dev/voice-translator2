@@ -251,14 +251,21 @@ describe('la Home del Paese, e il passaggio fra pianeta e contenuti', () => {
     expect(r, 'la rotta li conta e li ordina').toMatch(/temiCaldi = \[\.\.\.perTema\.entries\(\)\]/);
     expect(r, 'e li porta fuori').toMatch(/temiCaldi,/);
     const v = leggi('app/components/MondoView.js');
-    expect(v).toMatch(/L\('talkedAboutHere'\)/);
-    expect(v, "e compare solo se c'e qualcosa da dire").toMatch(/schedaPaese\?\.temiCaldi\?\.length > 0/);
+    // b.535 — AGGIORNATA (rosso pre-esistente, dichiarato): da b.517 la
+    // lista «Qui se ne parla» e diventata i PREFERITI di vetro
+    // (PreferitiTemi), che ricevono esattamente i temiCaldi della scheda
+    // Paese e spariscono da soli quando non c'e nulla da dire. La prova
+    // segue il filo di oggi: stessi dati, veste nuova.
+    expect(v).toMatch(/PreferitiTemi temi=\{schedaPaese\?\.temiCaldi\}/);
   });
 
   it('toccare un tema fa tutta la strada, non meta', () => {
     // prima portava alle news del Paese ma non a QUEL tema
     const v = leggi('app/components/MondoView.js');
-    expect(v).toMatch(/setTemaDaMondo\(t\.topic\); setTab\('news'\)/);
+    // b.535 — AGGIORNATA (rosso pre-esistente): il tocco sul tema ora
+    // passa dal pannello (onScegli={(topic) => ...}), non piu da una
+    // card t.topic. La strada intera resta: tema -> News -> filtro.
+    expect(v).toMatch(/setTemaDaMondo\(topic\); setTab\('news'\)/);
     expect(v, 'e lo passa a News').toMatch(/temaDaFuori=\{temaDaMondo\}/);
     const n = leggi('app/components/MondoNews.js');
     expect(n, 'che lo apre').toMatch(/setArgomentoFiltro\(temaDaFuori\)/);

@@ -27,7 +27,7 @@ describe('tavola 17 — la stanza video di gruppo', () => {
 
 describe('tavola 18 — la videochiamata a pieno schermo', () => {
   it('il PiP e verticale come un telefono: 84 per 112, raggio 14', () => {
-    expect(overlay).toMatch(/width: 84, height: 112,\s*\n?\s*borderRadius: 14/);
+    expect(overlay).toMatch(/width: 84, height: 112, zIndex: 8/ /* b.535: la miniatura b.531 sta sempre sopra (zIndex 8); il raggio vive piu sotto nello stesso stile */);
   });
 
   it('chi parla ha la bandiera sull\'immagine', () => {
@@ -39,9 +39,9 @@ describe('tavola 18 — la videochiamata a pieno schermo', () => {
     expect(overlay).toMatch(/L\('otherWord'\)/);
   });
 
-  it('i comandi spariscono da soli e un tocco li riporta', () => {
+  it('i comandi restano visibili (ordine b.527), la miniatura sta sopra', () => {
     expect(overlay).toMatch(/comandiVisibili/);
-    expect(overlay).toMatch(/setTimeout\(\(\) => setComandiVisibili\(false\), \d+/);
+    expect(overlay).toMatch(/const comandiVisibili = true;/ /* b.527, ordine di Luca: «non mantieni i menu quando sei a tutta pagina» — i comandi NON spariscono piu da soli: sono sempre visibili. La tavola 18 e' superata da un ordine successivo; prova aggiornata, non cancellata. */);
     expect(overlay).toMatch(/onPointerDown/);
   });
 
