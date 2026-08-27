@@ -10,7 +10,8 @@ import { IconMic, IconGlobe, IconKey, IconMusic, IconUser, IconVolume, IconCredi
 import PageHeader from './ui/PageHeader.js';
 import AvatarImg from './AvatarImg.js';
 import { useApp } from '../contexts/AppContext.js';
-import { memGet } from '../lib/memoria.js';
+import { memGet, memDel } from '../lib/memoria.js';
+import { eInstallata } from '../hooks/usePWAInstall.js';
 
 // ═══════════════════════════════════════════════
 // SettingsView — riscritta: ogni riga FA qualcosa.
@@ -404,6 +405,23 @@ const SettingsView = memo(function SettingsView({ apiKeyInputs, userAccount, log
 
         {/* ═══ 6 · STRUMENTI ═══ */}
         <Gruppo c={c} titolo={L('settingsGroupTools')}>
+          {/* b.517 — INSTALLA L'APP, UNA VOCE STABILE.
+              BUG PRE-ESISTENTE dichiarato: il pannello di installazione
+              (InstallaApp.js, completo di istruzioni per cinque
+              piattaforme) esisteva gia ed era collegato, ma compariva
+              DA SOLO 2,5 secondi dopo l'avvio e, una volta chiuso,
+              scriveva `vt-install-dismissed` e non tornava MAI piu.
+              Chi l'aveva chiuso una volta non aveva nessun modo di
+              installare l'applicazione dall'interno — Luca infatti ha
+              dovuto chiedere «ma quindi non posso installarla sul mio
+              pc?». Qui la porta resta aperta per sempre: la riga
+              cancella il segno di rifiuto e riapre il pannello.
+              Sparisce solo quando l'app e gia installata. */}
+          {!eInstallata() && (
+            <Riga c={c} icona={<IconExport size={17} />} titolo={L('installTheApp')}
+              sotto={L('installGenericDesc')}
+              onClick={() => { memDel('vt-install-dismissed'); window.location.reload(); }} />
+          )}
           <Riga c={c} icona={<IconMic size={17} />} titolo={L('tryVoices')}
             sotto={L('tryVoicesDesc')}
             onClick={() => setView('voicetest')} />

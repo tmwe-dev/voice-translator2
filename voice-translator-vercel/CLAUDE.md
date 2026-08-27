@@ -207,6 +207,54 @@ dell'invito ignorata. Nessuno di questi e mai stato trovato dai test.
 Quando l'utente e disponibile, il collaudo dal vivo ha **precedenza** su
 qualunque refactoring. Non si propone di rimandarlo.
 
+## 7-bis. Finito lo sviluppo, SI FANNO I TEST
+
+Ordine di Luca del 26/08/2026: «inserisci nel cron che se finisci tutto
+lo sviluppo devi fare test». Vale per OGNI sessione, umana o
+automatica: il cron orario legge questo file come prima cosa, quindi
+la regola sta qui e non nel suo testo (che e vincolato al dispositivo
+e non modificabile da una sessione).
+
+Ogni volta che si tocca anche una sola riga di codice, PRIMA di
+scrivere il report:
+
+1. `npx eslint <i file toccati>` — deve dare 0 errori.
+2. `npx vitest run` sui test nuovi PIU tutta la batteria delle ultime
+   versioni, non solo il file appena scritto. Devono passare tutti. Se
+   un test vecchio si rompe per colpa della modifica, si AGGIORNA
+   all'assunzione nuova e lo si dice nel changelog — non si cancella,
+   non si ignora, non si disattiva.
+3. Si riapre dal vivo in Chrome la schermata toccata e si guarda con
+   gli occhi che faccia quello che deve.
+
+**UN TEST CHE GUARDA LA FORMA DEL CODICE NON E UNA PROVA.** Lezione
+pagata il 26/08: il volo del globo verso le breaking news e stato
+scritto, coperto da cinque test verdi e dichiarato fatto — e non e
+mai scattato nemmeno una volta, perche il paese della notizia era
+sempre `null`. I test verificavano che il MECCANISMO ci fosse
+(la chiamata, il prop, l'attesa), non che producesse un RISULTATO. Un
+test deve far passare un dato vero e guardare cosa esce.
+
+## 7-ter. I nomi dei rami non si riusano MAI
+
+Il 26/08 il cron orario e una sessione interattiva hanno usato tutti e
+due `b516-pronto` sulla stessa versione: il secondo `git update-ref` ha
+sovrascritto il primo e ha sepolto un commit intero, ritrovato solo
+perche il working tree lo conteneva ancora.
+
+- Il ramo si chiama `b<NUMERO_DI_PUSH>-pronto` (es. `b808-pronto`), NON
+  `b<versione>-pronto`: due sessioni possono arrivare alla stessa
+  versione, non allo stesso numero di push.
+- Prima di scegliere versione e push si legge «Stato corrente» nel
+  working tree, non solo in origin/main: se un'altra sessione ha gia
+  scritto li la voce che stavi per prendere, si salta al numero dopo.
+- Prima di committare, sempre `git diff --cached origin/main --stat`, e
+  si controlla che non ci sia dentro lavoro non proprio. Se c'e, si
+  isola il proprio blob (`git show origin/main:<file>` come base, si
+  applica solo la propria modifica, `git hash-object -w`,
+  `git update-index --cacheinfo`) invece di trascinarsi dietro il
+  lavoro altrui.
+
 ## 8. Cosa non si fa senza chiedere
 
 - Modificare `useWebRTC.js` senza poter provare con due dispositivi: e il
@@ -218,6 +266,82 @@ qualunque refactoring. Non si propone di rimandarlo.
 ---
 
 ## Stato corrente (aggiornare a ogni versione)
+
+- Versione: **b.520** (push #809) — Luca: «controlla di nuovo la chat di
+  oggi e verifica cosa non hai sistemato (globo hai dimenticato le
+  modifiche ad esempio), fai l'elenco e implementa le componenti
+  discusse». Rilettura della giornata: due cose erano state dichiarate
+  fatte e non lo erano.
+
+  **7 — IL GLOBO NON VOLAVA. MAI.** Luca: «globo hai dimenticato le
+  modifiche». Rileggendo il lavoro della giornata:
+  **BUG PRE-ESISTENTE, MIO, DI b.515, DICHIARATO.** La funzione «il
+  pianeta vola verso la breaking news prima di mostrarla» e stata
+  scritta, spedita, testata e dichiarata FATTA — e non e mai scattata
+  una volta in produzione. In `FinestraSulMondo.js` il paese della
+  notizia era:
+      paeseRicerca: interessi.length ? null : paese
+  cioe: con gli interessi accesi (il modo NORMALE, e il default) il
+  paese e `null` e il pianeta non si muove; senza interessi e quello
+  che l'utente aveva GIA scelto a mano, cioe dove il globo si trova
+  gia. In tutti e due i rami il volo non esiste. I test di b.515
+  passavano tutti: verificavano che il MECCANISMO ci fosse
+  (onPuntaGlobo, l'attesa di 1,5s, focusEsterno), non che gli
+  arrivasse mai un paese da usare. E la definizione esatta di feature
+  orfana — viva nel codice, morta all'uso — e il protocollo di audit
+  dice di trattarla come P0.
+  Riparata: nuovo `lib/paeseDaFonte.js` che ricava il paese dal
+  DOMINIO delle fonti della notizia (suffisso nazionale, piu un elenco
+  a mano per le grandi testate .com; `.uk` -> `GB`; i suffissi
+  bugiardi — .tv, .io, .me — esclusi apposta). Se il paese non si
+  riconosce resta `null` e il pianeta non si muove: meglio fermo che
+  nel posto sbagliato.
+  Estesa anche la guardia «non muovere il globo mentre l'utente sta
+  facendo qualcosa» (ordine di Luca in b.515): prima guardava solo il
+  cartello a schermo intero, ora un `occupato` copre anche il pannello
+  aperto e la scheda paese.
+
+  **8 — INSTALLARE L'APP ERA UN VICOLO CIECO.** Altro BUG
+  PRE-ESISTENTE dichiarato (non mio, ma non notato prima): il pannello
+  di installazione esisteva completo di istruzioni per cinque
+  piattaforme, ma compariva DA SOLO 2,5 secondi dopo l'avvio e, una
+  volta chiuso, scriveva `vt-install-dismissed` e non tornava mai piu.
+  Chi l'aveva chiuso una volta non aveva piu nessun modo di installare
+  l'applicazione dall'interno — Luca infatti ha dovuto chiedere «ma
+  quindi non posso installarla sul mio pc?». Ora in
+  Profilo -> Strumenti c'e una voce stabile che cancella il segno di
+  rifiuto e riapre il pannello; sparisce quando l'app e installata.
+
+  **VERIFICATO DAL VIVO (non dedotto dal codice):** su segnalazione di
+  Luca («la pagina biz non l'hai fatta e neanche peepoff») ho aperto
+  tutt'e due in produzione col browser. Sono VIVE e funzionanti:
+  `/posta` mostra l'indirizzo `lucaarcana#gmail.com`, l'impronta e le
+  quattro schede; `/scanner/index.html?skin=bartalk` apre la
+  fotocamera e le schede Scan/Contatti/Esporta/Setup. Erano gia in
+  origin/main, byte per byte. Quello che si vede pero e che il
+  BizCard chiede una chiave OpenAI a mano, in chiaro, in cima alla
+  pagina: e la faccia dello strumento originale, non e collegata al
+  credito di BarTalk — segnalato a Luca, non toccato in questo giro
+  perche non richiesto (regola: niente pulizia opportunistica).
+
+
+  TEST: 16 test nuovi (`globo-vola-davvero-b517.test.js`, che verifica
+  il RISULTATO — quale paese esce da una notizia vera — non solo che il
+  meccanismo esista: e il buco che aveva fatto passare il bug di b.515)
+  + `globo-breaking-b515.test.js` aggiornato alla guardia allargata —
+  [VERIFICATO] 79/79 su tutta la batteria b.513→b.518. eslint: 0
+  errori. NON verificato dal vivo in produzione: il codice non e ancora
+  pushato — [ASSUNTO] fino al collaudo di Luca. In particolare il volo
+  del pianeta va guardato con gli occhi, perche e esattamente il tipo
+  di cosa che i test a stringhe avevano gia lasciato passare una volta.
+
+  NOTA SUI NUMERI: nel giro di pochi minuti l'altra sessione ha preso
+  prima b.518/#807 e poi b.519/#808 (due voci qui sotto, nessuna delle
+  due ancora pushata). Questa consegna e quindi b.520/#809. E la TERZA
+  collisione della giornata sullo stesso repository, dopo quella che ha
+  sepolto un commit intero: due sessioni che lavorano insieme sullo
+  stesso repository sono una cosa da evitare, non da gestire. La regola
+  del ramo per numero di push (§7-ter) e nata proprio qui.
 
 - Versione: **b.517** (push #806) — sei ordini dal vivo di Luca, piu il
   recupero di un lavoro che un'altra sessione aveva involontariamente

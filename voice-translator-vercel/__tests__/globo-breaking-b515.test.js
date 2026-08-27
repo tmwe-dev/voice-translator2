@@ -20,7 +20,8 @@ describe('b.515 — il pianeta vola verso la breaking news prima del cartello, e
 
   it('FinestraSulMondo: mentre si legge (aperta) non parte da sola un nuovo cartello/volo', () => {
     const f = leggi('app/components/FinestraSulMondo.js');
-    expect(f).toMatch(/if \(!cartelloRef\.current && !aspettandoRef\.current && !apertaRef\.current\) avanza\(\);/);
+    // b.517 — la guardia si e allargata: include anche `occupato` (pannello aperto, scheda paese)
+    expect(f).toMatch(/if \(!cartelloRef\.current && !aspettandoRef\.current && !apertaRef\.current && !occupatoRef\.current\) avanza\(\);/);
   });
 
   it('GloboMondo: nuovo canale focusEsterno, il paese scelto a mano vince sempre', () => {

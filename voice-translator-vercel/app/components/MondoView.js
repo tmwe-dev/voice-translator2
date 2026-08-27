@@ -496,6 +496,11 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
       <FinestraSulMondo C={C} L={L} lingua={prefs?.lang || 'it'} prefs={prefs}
         attiva={tab === 'mondo' && !cercando} paese={paeseScelto} nomePaese={nomePaese}
         onPuntaGlobo={setPaeseFocusNotizia}
+        /* b.517 — «quando l'utente sta lavorando leggendo o interagendo
+           con un articolo, video etc, non fai muovere il globo»: col
+           pannello aperto o una scheda paese sotto gli occhi il pianeta
+           sta fermo. */
+        occupato={strumenti || !!schedaPaese}
         autoplayVideo={prefs?.mondoAutoplayVideo !== false} />
 
       {/* b.363 — LA LINGUETTA DEL PANNELLO, sul bordo sinistro: si vede

@@ -4,6 +4,8 @@ import { FONT, vibrate } from '../lib/constants.js';
 import Icon from './Icon.js';
 import AnteprimaCoperta from './ui/AnteprimaCoperta.js';
 import { cercaTopics } from '../lib/topics/cliente.js';
+import { paeseDellaNotizia } from '../lib/paeseDaFonte.js';
+import { PAESI } from '../lib/paesi.js';
 import { bandieraPaese } from '../lib/schedaMondo.js';
 
 // ═══════════════════════════════════════════════════════════════
@@ -39,8 +41,10 @@ const MINUTI = { 2: 2, 5: 5, 10: 10 };
 // mondo-globo.html (lerpFactor 0.03 per frame, converge in ~1.2-1.6s a
 // 60fps) — nessuna animazione nuova, solo il tempo per vederla finire.
 const ATTESA_VOLO_MS = 1500;
+// i codici che il globo sa raggiungere: fuori da questi non si vola.
+const CODICI_NOTI = new Set(PAESI.map((p) => p.codice));
 
-export default function FinestraSulMondo({ C, L, lingua, prefs, attiva, paese, nomePaese, onPuntaGlobo, autoplayVideo = true }) {
+export default function FinestraSulMondo({ C, L, lingua, prefs, attiva, paese, nomePaese, onPuntaGlobo, autoplayVideo = true, occupato = false }) {
   // b.515 — ordine di Luca: «di default lo fai partire». La regola di
   // sopra (mai spesa non chiesta) resta vera nello spirito: ora e acceso
   // di base, e chi non lo vuole lo spegne lui dal pannello — non il
@@ -63,6 +67,11 @@ export default function FinestraSulMondo({ C, L, lingua, prefs, attiva, paese, n
   const apertaRef = useRef(null);
   useEffect(() => { cartelloRef.current = cartello; }, [cartello]);
   useEffect(() => { apertaRef.current = aperta; }, [aperta]);
+  // b.517 — «occupato» arriva da fuori (pannello aperto, lettura in
+  // corso...): si legge da un ref, non da una dipendenza, perche non
+  // deve rigenerare il timer del ritmo ogni volta che cambia.
+  const occupatoRef = useRef(false);
+  useEffect(() => { occupatoRef.current = occupato; }, [occupato]);
   const voloRef = useRef(null);          // il timer dell'attesa prima di mostrare
   const aspettandoRef = useRef(false);   // tra "ho puntato il pianeta" e "mostro il cartello"
 
@@ -121,12 +130,35 @@ export default function FinestraSulMondo({ C, L, lingua, prefs, attiva, paese, n
         return true;
       });
       if (nuovi.length) {
-        codaRef.current.push(...nuovi.slice(0, 5).map((t) => ({ ...t, paeseRicerca: interessi.length ? null : paese })));
+        // b.517 — IL PAESE LO DICE LA NOTIZIA, NON LA RICERCA.
+        //
+        // BUG PRE-ESISTENTE (mio, b.515), dichiarato: qui c'era
+        //   paeseRicerca: interessi.length ? null : paese
+        // che nei fatti non faceva volare il pianeta MAI. Con gli
+        // interessi accesi (il modo normale) il paese era `null`;
+        // senza interessi era quello che l'utente aveva GIA scelto,
+        // cioe dove il globo si trovava gia. La funzione era viva nel
+        // codice e morta all'uso: Luca l'ha vista mancare dal vivo.
+        //
+        // Il paese si legge dalle FONTI della notizia (dominio ->
+        // paese, vedi lib/paeseDaFonte.js). Se non si riconosce, resta
+        // `null` e il pianeta non si muove: meglio fermo che nel posto
+        // sbagliato.
+        codaRef.current.push(...nuovi.slice(0, 5).map((t) => ({
+          ...t,
+          paeseRicerca: paeseDellaNotizia(t, CODICI_NOTI) || (interessi.length ? null : paese),
+        })));
         // b.515 — parte da sola SOLO se non c'e gia un cartello in
         // mostra, nessun volo in corso, e l'utente non sta leggendo: la
         // guardia vera («non muovere il globo mentre l'utente legge»)
         // sta qui.
-        if (!cartelloRef.current && !aspettandoRef.current && !apertaRef.current) avanza();
+        // b.517 — la guardia si estende: «quando l'utente sta
+        // lavorando leggendo o interagendo con un articolo, video etc,
+        // non fai muovere il globo» (ordine di Luca, b.515). Prima
+        // guardava solo il cartello a schermo intero di questa
+        // finestra; ora `occupato` copre anche il pannello aperto e
+        // qualunque altra cosa l'utente abbia davanti.
+        if (!cartelloRef.current && !aspettandoRef.current && !apertaRef.current && !occupatoRef.current) avanza();
       }
     } catch { /* vere o niente: senza notizie nessun cartello, mai un errore in faccia */ }
     cercandoRef.current = false;
