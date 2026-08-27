@@ -267,6 +267,42 @@ perche il working tree lo conteneva ancora.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.542** (push #830) — TRE DIFETTI NELLA STESSA SCHERMATA,
+  e tutti e tre miei, di ieri.
+
+  ① «CONTROLLA PERCHE HAI FATTO UNA PAGINA NERA». Non era una pagina
+  rotta: era una slide SENZA IMMAGINE. Lo sfondo si disegnava dentro un
+  `se c'e l'immagine`, e le card dell'enciclopedia (piu diverse notizie)
+  non ne hanno una: restava mezzo schermo di nero con due righe di testo
+  in fondo. Adesso il fondo c'e SEMPRE — quando manca la fotografia si
+  mette una copertina fatta in casa, sfumatura del tema e iniziale della
+  fonte in filigrana, come gia fanno le card della lista. Una slide
+  senza foto puo essere spoglia; non puo essere vuota.
+
+  ② «DEVI TOGLIERLO DA SOTTO SE LASCI UN DUPLICATO A DESTRA, E ANCHE
+  APRI E TRADUCI GIUSTO?». Giusto. In b.539, aggiungendo la colonnina
+  delle azioni a destra, ho lasciato in piedi anche i due bottoni in
+  fondo alla slide: ogni articolo aveva DUE «Apri e traduci» e DUE
+  «Parlane» che facevano la stessa identica cosa. Via quelli sotto: le
+  porte stanno nella colonnina, dove stanno anche per i video.
+
+  ③ «IL TASTO PARLANE NON VA». Non era rotto: si apriva DIETRO. Il feed
+  e un velo fisso a zIndex 97 e il foglio della discussione nasceva
+  sotto di lui, invisibile — esattamente il difetto di «apri e traduci»
+  chiuso in b.535. Li avevo chiuso il velo per l'articolo e NON per la
+  discussione: mezzo lavoro, e la meta lasciata indietro e tornata a
+  presentarsi. La prova nuova controlla che TUTTE le strade che escono
+  dal feed chiudano il velo, non solo quella che ho corretto per prima.
+
+  PROVE: feed-pulito-b542 (5) + 257 verdi sulle suite del feed.
+
+  LEZIONE: due volte in due giorni ho corretto UN caso di una famiglia
+  invece della famiglia intera — prima il velo che copriva i comandi
+  (b.535 i tocchi, b.538 la pittura), adesso il velo che nasconde cio
+  che si apre (b.535 l'articolo, b.542 la discussione). Quando trovo un
+  difetto, la domanda da farsi non e «l'ho corretto?» ma «dove ALTRO
+  vive la stessa cosa?».
+
 - Versione: **b.541** (push #829) — IL GIARDINO: le ricerche sono semi.
   Il disegno e' di Luca, per intero:
     «le mie ricerche devono farti allargare automaticamente le ricerche...

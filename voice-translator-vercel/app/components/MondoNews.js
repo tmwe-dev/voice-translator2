@@ -1458,7 +1458,14 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
       <FeedNotizieMondo aperto={feedAperto} onChiudi={() => setFeedAperto(false)} C={C} L={L}
         argomenti={argomenti || []} video={video || []} filtro={feedFiltro}
         onFiltro={(id) => savePrefs({ ...prefs, mondoFeedFiltro: id })}
-        onParlane={(d) => onParlane?.(d)}
+        {/* b.542 — «IL TASTO PARLANE NON VA» (Luca). Non era rotto: si
+            apriva DIETRO. Il feed e' un velo fisso a zIndex 97, e il
+            foglio «apri una discussione» nasceva sotto di lui —
+            invisibile, esattamente come «apri e traduci» in b.535. Li
+            avevo chiuso il velo per l'articolo e non per la
+            discussione: mezzo lavoro. Adesso il velo si chiude anche
+            qui, e il foglio si vede. */}
+        onParlane={(d) => { setFeedAperto(false); onParlane?.(d); }}
         onStrumenti={suApriStrumenti}
         onCresci={cresci}
         crescendo={crescendo}

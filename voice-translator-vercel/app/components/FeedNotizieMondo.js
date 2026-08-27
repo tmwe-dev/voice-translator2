@@ -309,14 +309,39 @@ export default function FeedNotizieMondo({ aperto, onChiudi, C, L, argomenti = [
               </>
             ) : (
               <>
-                {el.dati.immagine && (
-                  <div style={{ position: 'absolute', inset: 0 }}>
-                    <AnteprimaCoperta src={el.dati.immagine} L={L}
-                      contenuto={{ url: el.dati.url, source: el.dati.fonti?.[0]?.fonte || el.dati.fonti?.[0]?.dominio }}
-                      stile={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
-                    <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(5,7,15,0.15), rgba(5,7,15,0.92) 65%)' }} />
-                  </div>
-                )}
+                {/* ═══ b.542 — LA PAGINA NERA ═══
+                    Collaudo di Luca: «controlla perche hai fatto una
+                    pagina nera». Non era una pagina rotta: era una slide
+                    SENZA IMMAGINE. Le card dell'enciclopedia (e diverse
+                    notizie) non ne hanno una, e qui lo sfondo si
+                    disegnava solo `se` l'immagine c'era — altrimenti
+                    restava il vuoto, con due righe di testo in fondo e
+                    mezzo schermo di nero.
+                    Ora il fondo c'e SEMPRE: quando manca la fotografia
+                    si mette una copertina fatta in casa — il colore del
+                    tema in sfumatura e l'iniziale della fonte in
+                    filigrana, come gia fanno le card della lista. Una
+                    slide senza foto puo essere spoglia; non puo essere
+                    vuota. */}
+                <div style={{ position: 'absolute', inset: 0, background: `linear-gradient(160deg, ${C.accent}22, ${C.purple || C.accent}18 45%, rgba(5,7,15,0.96))` }}>
+                  {el.dati.immagine ? (
+                    <>
+                      <AnteprimaCoperta src={el.dati.immagine} L={L}
+                        contenuto={{ url: el.dati.url, source: el.dati.fonti?.[0]?.fonte || el.dati.fonti?.[0]?.dominio }}
+                        stile={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+                      <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(5,7,15,0.15), rgba(5,7,15,0.92) 65%)' }} />
+                    </>
+                  ) : (
+                    <div aria-hidden="true" style={{
+                      position: 'absolute', inset: 0, display: 'flex',
+                      alignItems: 'center', justifyContent: 'center',
+                      fontSize: 132, fontWeight: 700, fontFamily: FONT,
+                      color: 'rgba(255,255,255,0.07)', letterSpacing: 2, userSelect: 'none',
+                    }}>
+                      {String(el.dati.fonti?.[0]?.fonte || el.dati.titolo || '·').slice(0, 1).toUpperCase()}
+                    </div>
+                  )}
+                </div>
                 {/* b.539 — le stesse porte dei video, nello stesso posto:
                     il feed non cambia grammatica a meta scorrimento. */}
                 <Azioni voci={[
@@ -335,26 +360,15 @@ export default function FeedNotizieMondo({ aperto, onChiudi, C, L, argomenti = [
                       {el.dati.sintesi}
                     </p>
                   )}
-                  <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-                    {/* b.515 — stessa scelta della card in lista: «apri e
-                        traduci» qui non aspetta il tocco sul tasto Genera. */}
-                    <button onClick={() => { vibrate(8); onApriArticolo?.(el.dati); }}
-                      style={{
-                        flex: 1, minHeight: 44, borderRadius: 11, cursor: 'pointer',
-                        background: `linear-gradient(135deg, ${C.accent}, ${C.purple})`,
-                        border: 'none', color: '#fff', fontSize: 12.5, fontWeight: 600, fontFamily: FONT,
-                      }}>
-                      {L('newsOpenTranslate')}
-                    </button>
-                    <button onClick={() => { vibrate(10); onParlane?.(el.dati); }}
-                      style={{
-                        flex: 1, minHeight: 44, borderRadius: 11, cursor: 'pointer',
-                        background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.2)',
-                        color: '#fff', fontSize: 12.5, fontWeight: 600, fontFamily: FONT,
-                      }}>
-                      {L('newsTalkAbout')}
-                    </button>
-                  </div>
+                  {/* b.542 — I DUE BOTTONI IN BASSO SONO USCITI. Luca:
+                      «devi toglierlo da sotto se lasci un duplicato a
+                      destra, e anche apri e traduci giusto?». Giusto: in
+                      b.539 ho aggiunto la colonnina a destra e ho
+                      lasciato in piedi anche questi, cosi ogni articolo
+                      aveva DUE «Apri e traduci» e DUE «Parlane» che
+                      facevano la stessa identica cosa. Le porte stanno
+                      nella colonnina, dove stanno anche per i video: una
+                      grammatica sola. */}
                 </div>
               </>
             )}
