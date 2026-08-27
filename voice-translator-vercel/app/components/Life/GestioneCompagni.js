@@ -501,6 +501,16 @@ function GestioneCompagni({ miei, onCambiato, L, C = {}, lingua, userToken, test
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontWeight: 600, color: testoP, fontSize: 15 }}>{c.nome}</div>
           <div style={{ fontSize: 11.5, color: muto, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.ruolo}</div>
+          {/* b.528 — Luca: «l'utente e in grado attraverso la sidebar di
+              vedere e modificare il setting??». VEDERE: la mente di ogni
+              Compagno ora e scritta sulla sua riga (era invisibile fuori
+              dal form). MODIFICARE: per i predefiniti la via resta il
+              Duplica (per scelta: l'originale non si tocca), per i tuoi
+              il form — e vale al giro successivo, senza ricaricare:
+              Tavolo, Podcast e Amico rileggono il Compagno a OGNI turno. */}
+          <div style={{ fontSize: 10, color: muto, opacity: 0.8, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {(MODELLI.find((m) => m.modello === c.modello) || {}).label || `${c.provider || 'openai'} \u00b7 ${c.modello || 'gpt-4o-mini'}`}
+          </div>
         </div>
         {mio
           ? <>

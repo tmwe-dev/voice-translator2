@@ -267,6 +267,63 @@ perche il working tree lo conteneva ancora.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.528** (push #816) — IL CAST DI RADIOCHAT E CONNESSO, e
+  la mente di ogni Compagno si vede e si cambia. Tre domande di Luca:
+  «sono connessi albert etc? le icone e le gif animate le hai
+  raccolte?», «l'utente e in grado attraverso la sidebar di vedere e
+  modificare il setting?», «confermami il miglioramento».
+
+  **1 — I PROTAGONISTI.** Albert (OpenAI GPT-4o, voce Adam), Pitagora
+  (Gemini Flash, voce Arnold) e Newton (Grok xAI, voce Daniel — in
+  RadioChat 8.2.6 Newton e passato a xAI) entrano fra i predefiniti,
+  con le personalita ricostruite dai 5 campi di AGENT_PERSONALITIES e
+  la loro debateRule come regolaDibattito. Archimede c'era gia (su
+  Claude da b.525, con la SUA regola di RadioChat) e ora indossa il suo
+  ritratto. Gli 8 file (4 ritratti + 4 GIF del parlato) vengono dallo
+  zip sorgente e stanno in /public/compagni/.
+
+  **2 — CHI PARLA SI ANIMA.** Nel podcast di Vita il turno attivo
+  mostra la GIF animata del Compagno che sta parlando, gli altri il
+  ritratto fermo — il meccanismo di RadioChat (staticImage/talkGif),
+  portato sulle card dei turni.
+
+  **3 — LA MENTE SI VEDE E SI CAMBIA.** Verifica chiesta da Luca, esito
+  onesto: il form di Gestione Compagni AVEVA gia la tendina
+  provider/modello (openai/anthropic/gemini/grok) e ogni superficie di
+  Vita rilegge il Compagno A OGNI turno (risolviCompagni per richiesta:
+  la modifica vale in tempo reale, dal turno dopo). Ma due buchi:
+  - la tendina NON offriva claude-sonnet — il modello di Archimede non
+    si poteva ne vedere ne scegliere. Aggiunto («Claude Sonnet ·
+    profondo»);
+  - nella LISTA la mente era invisibile (si scopriva solo aprendo il
+    form): ora ogni riga dice il suo modello.
+  Per i predefiniti la modifica resta via «Duplica» (scelta di design:
+  l'originale non si tocca); i propri si modificano dal form.
+
+  **CONFERMA DEL MIGLIORAMENTO — il punto onesto del trapianto:**
+  - PROMPT: regole del dibattito ora UNA fonte (b.525), e MIGLIORI
+    dell'originale (le b.380 anti-coro contro il «CONVERGERE» di
+    RadioChat); debateRule per agente: PORTATA; convergenza: PARI
+    (stesso motore); posizionamento primo giro: PORTATO; KB TTS:
+    PORTATA (condensata); temperatura di scena: PORTATA.
+  - CREAZIONE PERSONAGGI: BarTalk resta PIU ricco (vocazione, barre,
+    liberta, voci, avatar generato, memoria persistente server-side —
+    RadioChat tiene tutto in localStorage) e da b.525 il generatore
+    scrive anche la regolaDibattito.
+  - ORCHESTRATORE: pari o meglio su regole/convergenza/temperatura/
+    troncature. NON ancora portati, dichiarati: le strategie di turno
+    della modalita singola (smart 70/30), la skip-logic globale, la
+    memoria a 3 LIVELLI col riassunto cumulativo automatico (il Tavolo
+    da b.525 ha 8 interi + 12 condensati; il riassunto cumulativo
+    manca), e la KB a sezioni per argomento (Prompt Sections). Sono i
+    prossimi pezzi se il collaudo d'ascolto dice che servono.
+  - Il COLLAUDO VERO resta l'ascolto alla cieca contro RadioChat live
+    (stesso tema, due sistemi): non e stato ancora fatto.
+
+  TEST: 7 nuovi (`cast-radiochat-b528.test.js`) che verificano anche
+  l'ESISTENZA dei file su disco, non solo i percorsi dichiarati —
+  125/125 sulla batteria Compagni+stanze. eslint: 0 errori.
+
 - Versione: **b.527** (push #815) — LA VIDEOCHIAMATA COL COLLAUDO DI
   LUCA DAVANTI (chiamata vera con «ernesto», spagnolo): «la traduzione
   scritta e parlata non vengono attivate, la voce dell'ospite non viene

@@ -76,7 +76,9 @@ const MODELLO_DEFAULT = { provider: 'openai', modello: 'gpt-4o-mini' };
 export const COMPAGNI_PREDEFINITI = [
   {
     id: 'archimede', nome: 'Archimede', ruolo: 'Filosofo e stratega',
-    emoji: '🏛️', colore: '#a855f7', avatar: '/avatars/1.webp', voce: VOCI.Marcus,
+    // b.528 — il volto VERO di RadioChat: ritratto + GIF mentre parla.
+    avatarParla: '/compagni/archimede-parla.gif',
+    emoji: '🟣', colore: '#a855f7', avatar: '/compagni/archimede.png', voce: VOCI.Marcus,
     // b.237 — il "filosofo dai principi primi" col cervello mini era una
     // promessa a vuoto: Archimede è la vetrina del prodotto e ragiona col
     // modello pieno. Gli altri restano sul default gratuito; l'utente può
@@ -87,6 +89,48 @@ export const COMPAGNI_PREDEFINITI = [
 `Sei Archimede. Guardi ogni questione dai principi primi: cerchi la struttura profonda di un problema e il quadro d'insieme prima dei dettagli, con calma, per analogie, senza fretta di concludere.
 La tua vocazione è far vedere alla persona ciò che da sola potrebbe non vedere. Ti senti responsabile della qualità del suo pensiero, non delle sue conclusioni: offri rigore, prospettiva e orientamento senza mai sostituirti alla sua libertà di scegliere.
 Sei autorevole senza essere autoritario. Distingui sempre ciò che è ragionamento da ciò che è dato, e se non sai, lo dici.`,
+  },
+  // ═══ b.528 — IL CAST DI RADIOCHAT, CONNESSO. Luca: «le icone e le
+  // gif animate le hai raccolte? sono connessi albert etc??». I tre
+  // protagonisti che mancavano (Archimede c'era gia, sopra, e ora
+  // indossa il suo ritratto): personalita ricostruite dai 5 campi di
+  // AGENT_PERSONALITIES di RadioChat (ruolo, stile, forze, approccio),
+  // regolaDibattito = la loro debateRule, provider e voci ORIGINALI
+  // (Albert su OpenAI, Pitagora su Gemini, Newton su Grok — in
+  // RadioChat 8.2.6 Newton e passato a xAI). Ritratti e GIF del parlato
+  // in /public/compagni/, presi dallo zip sorgente. ═══
+  {
+    id: 'albert', nome: 'Albert', ruolo: 'Analista scientifico',
+    emoji: '🟢', colore: '#22c55e', avatar: '/compagni/albert.png',
+    avatarParla: '/compagni/albert-parla.gif',
+    voce: { id: 'pNInz6obpgDQGcFmaJgB', nome: 'Adam' },
+    provider: 'openai', modello: 'gpt-4o', liberta: 'balanced', predefinito: true,
+    regolaDibattito: 'Quando dissenti, presenta dati o casi studio a supporto. Non criticare mai senza proporre un\'alternativa concreta.',
+    personalita:
+`Sei Albert, analista scientifico e tecnologo. Diretto, pragmatico, orientato ai dati: parti sempre da fatti verificabili, citi ricerche, studi o numeri quando li hai, e preferisci le soluzioni concrete alle teorie astratte.
+I tuoi punti di forza sono l'analisi tecnica, l'innovazione, il problem-solving pratico e le tendenze tecnologiche. Quando un'affermazione non ha un dato dietro, lo fai notare — e proponi come procurarselo.`,
+  },
+  {
+    id: 'pitagora', nome: 'Pitagora', ruolo: 'Logico e matematico',
+    emoji: '🔵', colore: '#06b6d4', avatar: '/compagni/pitagora.png',
+    avatarParla: '/compagni/pitagora-parla.gif',
+    voce: { id: 'VR6AewLTigWG4xSOukaG', nome: 'Arnold' },
+    provider: 'gemini', modello: 'gemini-flash', liberta: 'strict', predefinito: true,
+    regolaDibattito: 'Quando dissenti, identifica l\'errore logico o il presupposto non dichiarato, e proponi un framework piu rigoroso.',
+    personalita:
+`Sei Pitagora, analista logico e matematico. Preciso, strutturato, metodico: organizzi ogni ragionamento in passaggi chiari e sequenziali, identifichi i presupposti nascosti, e usi analogie matematiche o logiche quando aiutano a chiarire.
+I tuoi punti di forza sono la logica formale, le strutture, i pattern, l'analisi quantitativa e i framework decisionali.`,
+  },
+  {
+    id: 'newton', nome: 'Newton', ruolo: 'Sperimentatore pratico',
+    emoji: '🟠', colore: '#f59e0b', avatar: '/compagni/newton.png',
+    avatarParla: '/compagni/newton-parla.gif',
+    voce: { id: 'onwK4e9ZLuTAKqWW03F9', nome: 'Daniel' },
+    provider: 'grok', modello: 'grok-2-latest', liberta: 'creative', predefinito: true,
+    regolaDibattito: 'Quando dissenti, porta un controesempio pratico: testa le teorie con scenari reali, e vinca chi regge la prova.',
+    personalita:
+`Sei Newton, esperto pratico e sperimentatore. Energico, concreto, orientato all'azione: vai dritto al punto con esempi reali, rispondi con casi d'uso vissuti, e proponi sempre un'azione pratica o un passo successivo.
+I tuoi punti di forza sono le applicazioni pratiche, l'esperienza sul campo e le soluzioni rapide. Semplifichi i concetti complessi senza tradirli.`,
   },
   {
     id: 'dott-elena', nome: 'Dott.ssa Elena', ruolo: 'Esperta medica',
@@ -206,6 +250,7 @@ export const AVATAR_SCELTE = Array.from({ length: 9 }, (_, i) => `/avatars/${i +
 export const MODELLI = [
   { provider: 'openai',    modello: 'gpt-4o-mini', label: 'Veloce (predefinito)' },
   { provider: 'openai',    modello: 'gpt-4o',      label: 'OpenAI · più preciso' },
+  { provider: 'anthropic', modello: 'claude-sonnet', label: 'Claude Sonnet · profondo' },
   { provider: 'anthropic', modello: 'claude-haiku', label: 'Claude · caldo' },
   { provider: 'gemini',    modello: 'gemini-flash', label: 'Gemini · rapido' },
   // b.227 — 4° provider per la tavola rotonda: Grok (xAI). Serve la chiave xAI

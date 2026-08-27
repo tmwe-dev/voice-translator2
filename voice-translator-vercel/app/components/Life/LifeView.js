@@ -402,13 +402,24 @@ function Podcast({ compagni, L, C, lingua, userToken, testoP, muto, accent, card
       {/* Copione / trascrizione */}
       {copioni.length > 0 && (
         <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {copioni.map((t, i) => (
+          {copioni.map((t, i) => {
+            // b.528 — come in RadioChat: chi STA parlando ha la sua GIF
+            // animata, gli altri il ritratto fermo. Il volto giusto lo
+            // dice il compagnoId del turno.
+            const chi = compagni.find((c) => c.id === t.compagnoId);
+            const volto = i === attuale ? (chi?.avatarParla || chi?.avatar) : chi?.avatar;
+            return (
             <div key={t.ordine} style={{ padding: 12, borderRadius: 12, background: card,
               border: `1px solid ${i === attuale ? accent : bordo.split(' ').pop()}` }}>
-              <div style={{ fontSize: 12, fontWeight: 600, color: accent, marginBottom: 4 }}>{t.nome}</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                {volto && <img src={volto} alt="" width={i === attuale ? 34 : 22} height={i === attuale ? 34 : 22}
+                  style={{ borderRadius: 8, objectFit: 'cover', flexShrink: 0 }} />}
+                <div style={{ fontSize: 12, fontWeight: 600, color: accent }}>{t.nome}</div>
+              </div>
               <div style={{ fontSize: 14, color: testoP, lineHeight: 1.5 }}>{t.testo}</div>
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
