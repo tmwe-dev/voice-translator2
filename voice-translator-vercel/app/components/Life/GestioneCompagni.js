@@ -1,5 +1,6 @@
 'use client';
 import { memo, useState, useCallback, useEffect, useRef } from 'react';
+import { useApp } from '../../contexts/AppContext.js';
 import { FONT, LANGS, vibrate, clayCard } from '../../lib/constants.js';
 import Icon from '../Icon.js';
 import { COMPAGNI_PREDEFINITI, compagnoVuoto, voceDaGenere, avatarDaGenere, VOCI_ELENCO, AVATAR_SCELTE, MODELLI, LIBERTA, LIBERTA_ETICHETTE } from '../../lib/compagni/catalogo.js';
@@ -42,9 +43,44 @@ const MAX_GEN_IMG = 6;
 // pacchetti non ci sono ancora.
 // ═══════════════════════════════════════════════════════════════
 
+// b.533 — il modulo per una sezione nuova della KB personale.
+function SezioneNuova({ L, accent, suAccento, input, muto, onAggiungi }) {
+  const [tipo, setTipo] = useState('regole');
+  const [titolo, setTitolo] = useState('');
+  const [testo, setTesto] = useState('');
+  const [tag, setTag] = useState('');
+  return (
+    <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 6 }}>
+      <div style={{ display: 'flex', gap: 6 }}>
+        <select value={tipo} onChange={(e) => setTipo(e.target.value)} style={{ ...input, flex: '0 0 130px' }}>
+          {['regole', 'argomento', 'contesto'].map(t => <option key={t} value={t}>{L('kbTipo_' + t)}</option>)}
+        </select>
+        <input value={titolo} onChange={(e) => setTitolo(e.target.value)} placeholder={L('kbTitlePh')} style={{ ...input, flex: 1 }} />
+      </div>
+      {tipo === 'argomento' && (
+        <input value={tag} onChange={(e) => setTag(e.target.value)} placeholder={L('kbTagsPh')} style={input} />
+      )}
+      <div style={{ display: 'flex', gap: 6 }}>
+        <input value={testo} onChange={(e) => setTesto(e.target.value)} placeholder={L('kbTextPh')} style={{ ...input, flex: 1 }} />
+        <button onClick={() => {
+            if (!testo.trim()) return;
+            onAggiungi({ tipo, titolo: titolo.trim(), testo: testo.trim(), tag: tag.split(',').map(x => x.trim()).filter(Boolean), priorita: 5, attiva: true });
+            setTitolo(''); setTesto(''); setTag('');
+          }}
+          style={{ padding: '0 14px', minHeight: 44, borderRadius: 10, border: 'none', background: accent, color: suAccento, fontWeight: 600, cursor: 'pointer', fontFamily: FONT }}>
+          +
+        </button>
+      </div>
+      <div style={{ fontSize: 10.5, color: muto }}>{L('kbHint')}</div>
+    </div>
+  );
+}
+
 function GestioneCompagni({ miei, onCambiato, L, C = {}, lingua, userToken, testoP, muto, accent, card, bordo }) {
   // I colori vengono dai token del tema: scritti a mano restavano quelli del
   // tema scuro anche sul chiaro, dove l'errore e il fondo sono altri due colori.
+  // b.533 — le sezioni KB vivono nelle preferenze: qui serve il contesto.
+  const { prefs, savePrefs } = useApp();
   const rosso = C.statusError;   // avvisi ed errori
   const suAccento = C.bg;        // il testo sopra una superficie in accento
   // b.482 — anche il riquadro dell'avviso prende fondo e bordo dai token:
@@ -573,6 +609,39 @@ function GestioneCompagni({ miei, onCambiato, L, C = {}, lingua, userToken, test
 
       <div style={{ fontSize: 12, color: muto, marginBottom: 8 }}>{L('lifePredefined')}</div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>{COMPAGNI_PREDEFINITI.map((c) => carta(c, false))}</div>
+
+      {/* ═══ b.533 — LA KB PERSONALE (le Prompt Sections di RadioChat).
+          Tre tipi: regole (sempre), argomento (si accende sui tag),
+          contesto (sfondo). Valgono su Tavolo, Podcast e Amico: le
+          rotte le iniettano nel system a ogni turno. ═══ */}
+      <div style={{ padding: '14px 20px', ...clayCard(card), marginTop: 18 }}>
+        <div style={{ fontSize: 13, fontWeight: 600, color: testoP, marginBottom: 4 }}>{L('kbSectionsTitle')}</div>
+        <div style={{ fontSize: 11.5, color: muto, marginBottom: 10 }}>{L('kbSectionsDesc')}</div>
+        {(prefs?.sezioniPrompt || []).map((sz, i) => (
+          <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '8px 0', borderTop: i ? bordo : 'none' }}>
+            <button onClick={() => { vibrate(6); const nuove = [...prefs.sezioniPrompt]; nuove[i] = { ...sz, attiva: sz.attiva === false }; savePrefs({ ...prefs, sezioniPrompt: nuove }); }}
+              aria-pressed={sz.attiva !== false} title={sz.attiva !== false ? 'ON' : 'OFF'}
+              style={{ width: 34, height: 22, borderRadius: 11, border: 'none', cursor: 'pointer', flexShrink: 0, marginTop: 2,
+                background: sz.attiva !== false ? accent : 'rgba(255,255,255,0.15)', position: 'relative' }}>
+              <span style={{ position: 'absolute', top: 3, left: sz.attiva !== false ? 16 : 3, width: 16, height: 16, borderRadius: 8, background: '#fff', transition: 'left 0.15s' }} />
+            </button>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 12.5, fontWeight: 600, color: testoP }}>
+                {sz.titolo || L('kbTipo_' + (sz.tipo || 'regole'))}
+                <span style={{ fontWeight: 400, color: muto }}> · {L('kbTipo_' + (sz.tipo || 'regole'))}{sz.tipo === 'argomento' && sz.tag?.length ? ` (${sz.tag.join(', ')})` : ''}</span>
+              </div>
+              <div style={{ fontSize: 12, color: muto, whiteSpace: 'pre-wrap' }}>{sz.testo}</div>
+            </div>
+            <button onClick={() => { vibrate(6); savePrefs({ ...prefs, sezioniPrompt: prefs.sezioniPrompt.filter((_, j) => j !== i) }); }}
+              aria-label={L('removeWord')} style={{ width: 30, height: 30, borderRadius: 8, cursor: 'pointer', flexShrink: 0,
+                background: 'none', border: bordo, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Icon name="x" size={11} color={muto} />
+            </button>
+          </div>
+        ))}
+        <SezioneNuova L={L} accent={accent} suAccento={suAccento} input={input} muto={muto}
+          onAggiungi={(sz) => savePrefs({ ...prefs, sezioniPrompt: [...(prefs?.sezioniPrompt || []), sz] })} />
+      </div>
 
       {/* b.498 — tavola 24: aggiungerne uno e la pillola grande in
           fondo, dopo cio che c'e gia. */}

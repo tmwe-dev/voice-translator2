@@ -27,7 +27,7 @@ const IDEE_CORSO = [
   { etK: 'lifeIdeaComputer', et: 'Computer', qK: 'lifeIdeaComputerTopic', q: 'Usare il computer e internet senza paura, passo dopo passo' },
   { etK: 'lifeIdeaArt', et: 'Arte', qK: 'lifeIdeaArtTopic', q: 'Storia dell\'arte: opere famose e artisti da conoscere' },
 ];
-import { generaTurnoPodcast, generaSyllabus, generaLezione, generaQuiz, parlaTurno, parlaBilingue, elencoMiei, corsiDisponibili, pubblicaCorso, generaIllustrazione, generaTavola, arricchisciLezione, registraEsito, chiediAlMaestro, salvaCorsoMio, mieiCorsiUtente, segnaLibroCorso, progressoCorso, profiloStudente, salvaProfiloStudente } from '../../lib/compagni/cliente.js';
+import { aggiornaRiassunto, generaTurnoPodcast, generaSyllabus, generaLezione, generaQuiz, parlaTurno, parlaBilingue, elencoMiei, corsiDisponibili, pubblicaCorso, generaIllustrazione, generaTavola, arricchisciLezione, registraEsito, chiediAlMaestro, salvaCorsoMio, mieiCorsiUtente, segnaLibroCorso, progressoCorso, profiloStudente, salvaProfiloStudente } from '../../lib/compagni/cliente.js';
 import { pausa as pausaAudio, ferma as fermaAudio, fermaElemento, suInterruzione, apriCiclo } from '../../lib/voce.js';
 import { rilevaLinguaStudiata, testoVisibile, staccaLettura } from '../../lib/compagni/corsi/lingua.js';
 import PannelloLettura from './PannelloLettura.js';
@@ -39,7 +39,7 @@ import CompagnoLive from './CompagnoLive.js';
 import { assistentePer, vocePrestata } from '../../lib/compagni/corsi/assistenti.js';
 import { staccaScena } from '../../lib/compagni/corsi/scena.js';
 import { apriScanner, ascoltaScansioni } from '../../lib/scanPonte.js';
-import { sesSet } from '../../lib/memoria.js';
+import { sesSet, memGet } from '../../lib/memoria.js';
 import { staccaEsercizio } from '../../lib/compagni/corsi/pronuncia.js';
 import PannelloPronuncia from './PannelloPronuncia.js';
 import GestioneCompagni from './GestioneCompagni.js';
@@ -268,6 +268,9 @@ function Podcast({ compagni, L, C, lingua, userToken, testoP, muto, accent, card
   const [round, setRound] = useState(3);
   const [stato, setStato] = useState('pronto'); // pronto | genero | ascolto
   const [copioni, setCopioni] = useState([]);
+  // b.533 — memoria cumulativa del podcast + copertina dell'episodio.
+  const riassuntoRef = useRef('');
+  const [copertina, setCopertina] = useState(null);
   const [attuale, setAttuale] = useState(-1);
   const [errore, setErrore] = useState('');
   const fermatoRef = useRef(false);
@@ -314,12 +317,32 @@ function Podcast({ compagni, L, C, lingua, userToken, testoP, muto, accent, card
       // voce. Ora il primo turno si sente quasi subito, e mentre parla si
       // prepara il successivo: nessuna richiesta puo scadere.
       const lista = [];
+      riassuntoRef.current = '';
+      // b.533 — LA COPERTINA: la faccia video dell'argomento, dalla
+      // stessa rotta gia in uso nelle Notizie (GET con cache condivisa,
+      // niente wallet). Se non c'e, nessun buco: solo niente copertina.
+      fetch(`/api/topics/video?q=${encodeURIComponent(argomento.trim())}&lang=${encodeURIComponent(lingua)}`, { signal: AbortSignal.timeout(12000) })
+        .then(r => r.ok ? r.json() : null)
+        .then(d2 => { const v = d2?.video?.[0]; if (v?.miniatura) setCopertina({ img: v.miniatura, titolo: v.titolo }); })
+        .catch(() => {});
       setStato('ascolto');
       for (let i = 0; ; i++) {
         if (fermatoRef.current) break;
+        // b.533 — ogni 8 turni, il pezzo vecchio diventa VERBALE: al
+        // round 8 ci si ricorda del 2 (la memoria che a RadioChat c'era
+        // e qui mancava).
+        if (lista.length >= 10 && lista.length % 8 === 0) {
+          try {
+            const vecchi = lista.slice(0, -6).map((t) => `${t.nome}: ${t.testo}`).join('\n');
+            const rv = await aggiornaRiassunto({ testo: vecchi, riassunto: riassuntoRef.current, lingua, userToken });
+            if (rv?.riassunto) riassuntoRef.current = rv.riassunto;
+          } catch { /* senza verbale si vive */ }
+        }
         const d = await generaTurnoPodcast({
           argomento: argomento.trim(), compagni: scelti, round, lingua, userToken,
           indice: i, precedenti: lista.slice(-6).map((t) => ({ nome: t.nome, testo: t.testo })),
+          riassunto: riassuntoRef.current,
+          sezioni: (() => { try { return JSON.parse(memGet('vt-prefs') || '{}').sezioniPrompt; } catch { return undefined; } })(),
         });
         // b.405 — SI RICONTROLLA DOPO L'ATTESA, non solo prima.
         //
@@ -402,6 +425,15 @@ function Podcast({ compagni, L, C, lingua, userToken, testoP, muto, accent, card
       {/* Copione / trascrizione */}
       {copioni.length > 0 && (
         <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {copertina && (
+            <div style={{ position: 'relative', borderRadius: 12, overflow: 'hidden', border: bordo }}>
+              {/* eslint-disable-next-line @next/next/no-img-element -- miniatura YouTube esterna */}
+              <img src={copertina.img} alt="" style={{ width: '100%', maxHeight: 160, objectFit: 'cover', display: 'block', opacity: 0.9 }} />
+              <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, padding: '18px 12px 8px', fontSize: 12, fontWeight: 600, color: '#fff', background: 'linear-gradient(transparent, rgba(0,0,0,0.75))' }}>
+                {argomento}
+              </div>
+            </div>
+          )}
           {copioni.map((t, i) => {
             // b.528 — come in RadioChat: chi STA parlando ha la sua GIF
             // animata, gli altri il ritratto fermo. Il volto giusto lo

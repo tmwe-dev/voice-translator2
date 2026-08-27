@@ -21,6 +21,7 @@ import { COLONNA } from '../lib/righello.js';
 import { ordinaFeed } from '../lib/ordineFeed.js';
 import { cercaTopics } from '../lib/topics/cliente.js';   // b.409 — il lettore a righe, uno per tutti
 import Scelta from './ui/Scelta.js';
+import { ricerchePredefinite } from '../lib/casaEViaggio.js';
 import { bandieraPaese, nomePaese, quando, tipoContenuto, fonteDi, viva, stileEtichetta, PUNTO, paeseDaLingua } from '../lib/schedaMondo.js';
 import PannelloLaterale from './ui/PannelloLaterale.js';
 import PreferenzeMondo from './ui/PreferenzeMondo.js';
@@ -117,6 +118,22 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
     if (typeof window === 'undefined' || window.__VT_FEED_VISTO) return;
     window.__VT_FEED_VISTO = true;
     setFeedAperto(true);
+  }, []);
+  // b.533 — IL GIORNALE DEL VIAGGIATORE: entrando in Notizie senza aver
+  // mai cercato, la prima ricerca parte DA SOLA col default di
+  // casaEViaggio (prima casa: la Gazzetta del mattino; il polo «dove
+  // sono» lo copre gia il giro delle breaking). Cosi il feed che si
+  // apre da solo (b.529) non e mai vuoto. Silenziosa: non finisce
+  // nelle «ultime ricerche», che sono le TUE.
+  useEffect(() => {
+    if (typeof window === 'undefined' || window.__VT_GAZZETTA) return;
+    if (argomenti !== null || cercando) return;
+    window.__VT_GAZZETTA = true;
+    try {
+      const giri = ricerchePredefinite(prefs, nomePaese);
+      if (giri[0]?.query) cerca(giri[0].query, 'notizie', false, true);
+    } catch { /* senza default si resta sull'invito a cercare */ }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- parte una volta, all'ingresso
   }, []);
   const feedFiltro = prefs?.mondoFeedFiltro || 'video'; // { tipo: 'articolo'|'video', dati }
   const [video, setVideo] = useState(null);   // null = mai cercati
@@ -281,7 +298,7 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
     } catch { /* i video sono un di piu, mai un errore in faccia */ }
   }, [lingua]);
 
-  const cerca = useCallback(async (q, cat = 'notizie', fresca = false) => {
+  const cerca = useCallback(async (q, cat = 'notizie', fresca = false, silenziosa = false) => {
     const pulita = (q || '').trim();
     if (!pulita || cercando) return;
     cercaVideoPer(pulita);
@@ -316,6 +333,7 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
         // VERO — un logo garantito per qualunque ricerca non esiste, la
         // faccia della notizia si.
         try {
+          if (silenziosa) throw new Error('auto');
           const VUOTE = new Set(['di','della','del','dello','delle','dei','degli','la','il','lo','le','gli','un','una','uno','che','per','con','sul','sulla','the','of','a','an','and']);
           const parole = pulita.split(/[\s,]+/).filter(w => w.length > 1 && !VUOTE.has(w.toLowerCase()));
           const etichetta = parole.slice(0, 2).map(w => w[0].toUpperCase() + w.slice(1)).join(' ') || pulita.slice(0, 18);

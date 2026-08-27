@@ -93,7 +93,7 @@ export function ordineTurni(compagni, round) {
  * @param lingua         lingua in cui far generare (poi si traduce comunque)
  * @returns {{system:string, user:string}}
  */
-export function promptTurno({ compagno, argomento, round = 1, totaleRound = 1, precedenti = [], lingua = 'it', convergenza = '' } = {}) {
+export function promptTurno({ compagno, argomento, round = 1, totaleRound = 1, precedenti = [], lingua = 'it', convergenza = '', riassunto = '', sezioniBlocco = '' } = {}) {
   const nome = (compagno && compagno.nome) || 'Ospite';
   const persona = (compagno && compagno.personalita) || '';
   const altri = (precedenti || [])
@@ -107,16 +107,21 @@ export function promptTurno({ compagno, argomento, round = 1, totaleRound = 1, p
 Sei ${nome}, in un podcast a piu voci, IN TEMPO REALE, come persone vere al bar — non in un'aula. Parli in prima persona, con la tua voce. Rispondi nella lingua: ${lingua}.
 
 ${regoleDibattito(lingua)}${bloccoRegolaDibattito(compagno)}${convergenza ? `\n${convergenza}` : ''}
-Quando hai una posizione fondata, dilla BREVE e viva: quando ti aggancia una frase di un altro, nominalo e reagisci a QUELLA. Niente monologhi. Se su questo giro non hai nulla di fondato, va bene dirlo in una riga e passare: al bar succede.${involucroCompagno({ liberta: compagno && compagno.liberta, capacita: { ricerca: false, fonti: false, memoria: false }, profilo: profiloEffettivo(compagno, 'podcast'), esitoTipizzato: true })}\n\n${kbVoceParlata(lingua)}`;
+Quando hai una posizione fondata, dilla BREVE e viva: quando ti aggancia una frase di un altro, nominalo e reagisci a QUELLA. Niente monologhi. Se su questo giro non hai nulla di fondato, va bene dirlo in una riga e passare: al bar succede.${involucroCompagno({ liberta: compagno && compagno.liberta, capacita: { ricerca: false, fonti: false, memoria: false }, profilo: profiloEffettivo(compagno, 'podcast'), esitoTipizzato: true })}${sezioniBlocco}\n\n${kbVoceParlata(lingua)}`;
 
   // b.303 — turni BREVI e umani (come RadioChat): 2-4 frasi, non paragrafi.
   const cornice = round === 1
     ? `Il tema e: "${argomento}". Apri con la TUA posizione, viva e diretta: 2-3 frasi, come parlando, non un saggio.`
     : `Round ${round} di ${totaleRound} su "${argomento}". Aggancia UNA cosa detta da un altro (nominalo), reagisci e aggiungi il TUO punto. Massimo 2-3 frasi. A volte basta una battuta secca.`;
 
+  // b.533 — il riassunto cumulativo: i round usciti dalla finestra dei
+  // precedenti arrivano compressi, cosi al round 8 ci si ricorda del 2.
+  const bloccoRiassunto = riassunto
+    ? `\n\nPRIMA, IN SINTESI:\n${String(riassunto).slice(0, 1000)}`
+    : '';
   const user = altri
-    ? `${cornice}\n\nCosa hanno detto finora gli altri:\n${altri}`
-    : cornice;
+    ? `${cornice}${bloccoRiassunto}\n\nCosa hanno detto finora gli altri:\n${altri}`
+    : `${cornice}${bloccoRiassunto}`;
 
   return { system, user };
 }

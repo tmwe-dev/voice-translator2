@@ -48,8 +48,8 @@ async function postJSON(url, corpo, segnale = null) {
  * puo scadere, e il numero di round non e piu limitato dal timeout.
  * Ritorna { turno } oppure { fine:true } quando il podcast e finito.
  */
-export function generaTurnoPodcast({ argomento, compagni, round, lingua, userToken, indice, precedenti }) {
-  return postJSON('/api/compagni/podcast', { azione: 'turno', argomento, compagni, round, lingua, userToken, indice, precedenti });
+export function generaTurnoPodcast({ argomento, compagni, round, lingua, userToken, indice, precedenti, riassunto, sezioni }) {
+  return postJSON('/api/compagni/podcast', { azione: 'turno', argomento, compagni, round, lingua, userToken, indice, precedenti, riassunto, sezioni });
 }
 
 /** Costruisce un Compagno completo da una descrizione/nome (o a sorpresa). */
@@ -239,10 +239,18 @@ export function parlaAmico({ compagnoId, messaggi, lingua, userToken, obiettivi,
   return postJSON('/api/compagni/amico', { compagnoId, messaggi, lingua, userToken, obiettivi, superficie, totale: Array.isArray(messaggi) ? messaggi.length : 0 });
 }
 
+
+/** b.533 — il VERBALE della memoria cumulativa: comprime il pezzo di
+ *  conversazione uscito dalla finestra. Si paga una volta ogni tanti
+ *  giri, non a ogni turno. */
+export function aggiornaRiassunto({ testo, riassunto, lingua, userToken }) {
+  return postJSON('/api/compagni/tavolo', { azione: 'riassunto', testo, riassunto, lingua, userToken });
+}
+
 /** Tavolo/Debate: tu + più Compagni verso un obiettivo comune.
  *  Ritorna { risposte: [{compagnoId,nome,voceId,testo}] }. */
-export function parlaTavolo({ compagni, messaggi, lingua, userToken, obiettivi, obiettivo, briefing, segnale = null }) {
-  return postJSON('/api/compagni/tavolo', { compagni, messaggi, lingua, userToken, obiettivi, obiettivo, briefing }, segnale);
+export function parlaTavolo({ compagni, messaggi, lingua, userToken, obiettivi, obiettivo, briefing, riassunto, sezioni, segnale = null }) {
+  return postJSON('/api/compagni/tavolo', { compagni, messaggi, lingua, userToken, obiettivi, obiettivo, briefing, riassunto, sezioni }, segnale);
 }
 
 /** Sintesi del Debate: la conclusione condivisa verso l'obiettivo. */

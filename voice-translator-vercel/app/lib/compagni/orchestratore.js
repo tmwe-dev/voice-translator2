@@ -148,3 +148,21 @@ export function kbVoceParlata(lingua = 'it') {
   return KB_VOCE[lingua] || KB_VOCE.en;
 }
 
+// ── 5. HA APPENA CONCORDATO? (b.533, la skip-logic di RadioChat resa
+// PERSONALE). Il cancello globale b.303 zittiva tutti in blocco ed e
+// stato giustamente demolito (b.363); la versione giusta guarda UN
+// compagno: se il suo ULTIMO intervento era un consenso, al giro dopo
+// riceve una riga secca — o porti un dato nuovo, o passi. Nessuno
+// viene zittito da fuori: gli si alza l'asticella.
+export function haAppenaConcordato(testo, lingua = 'it') {
+  const t = String(testo || '').toLowerCase();
+  if (!t) return false;
+  const parole = (PAROLE_ACCORDO[lingua] || Object.values(PAROLE_ACCORDO).flat());
+  return parole.some(w => t.includes(w));
+}
+export const RIGA_ANTI_ECO = {
+  it: "\nNel tuo ULTIMO intervento hai concordato. Questo giro vale solo se porti un DATO NUOVO o un'obiezione fondata: altrimenti passa (esito: passo).",
+  en: "\nIn your LAST turn you agreed. This round only counts if you bring a NEW fact or a grounded objection: otherwise pass (esito: passo).",
+};
+export function rigaAntiEco(lingua = 'it') { return RIGA_ANTI_ECO[lingua] || RIGA_ANTI_ECO.en; }
+

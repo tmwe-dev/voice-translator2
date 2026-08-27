@@ -3,7 +3,8 @@ import { memo, useState, useRef, useCallback, useEffect } from 'react';
 import { suInterruzione, apriCiclo } from '../../lib/voce.js';
 import { FONT, vibrate } from '../../lib/constants.js';
 import Icon from '../Icon.js';
-import { parlaTavolo, parlaTurno, sintesiTavolo, preparaBriefing, reportFinale } from '../../lib/compagni/cliente.js';
+import { parlaTavolo, parlaTurno, sintesiTavolo, preparaBriefing, reportFinale, aggiornaRiassunto } from '../../lib/compagni/cliente.js';
+import { memGet } from '../../lib/memoria.js';
 import { obiettiviAttivi } from '../../lib/compagni/obiettivi.js';
 
 // ═══════════════════════════════════════════════════════════════
@@ -36,6 +37,24 @@ function Tavolo({ compagni, L, C = {}, lingua, userToken, testoP, muto, accent, 
   const [scelti, setScelti] = useState([]);
   const [avviato, setAvviato] = useState(false);
   const [messaggi, setMessaggi] = useState([]); // {ruolo:'persona'|nome, testo, emoji, colore}
+  // b.533 — LA MEMORIA CUMULATIVA (livello 3 di RadioChat): oltre la
+  // finestra che il server vede (20 messaggi), il pezzo vecchio si
+  // comprime in un VERBALE che viaggia con ogni giro. Aggiornato a
+  // blocchi, non a ogni battuta. E le SEZIONI personali (KB) partono
+  // dalle preferenze salvate.
+  const riassuntoRef = useRef('');
+  const riassuntiFinoARef = useRef(0);
+  const sezioniUtente = () => { try { return JSON.parse(memGet('vt-prefs') || '{}').sezioniPrompt; } catch { return undefined; } };
+  const aggiornaVerbale = async (storia) => {
+    try {
+      if (storia.length < 24) return;
+      const daComprimere = storia.slice(riassuntiFinoARef.current, storia.length - 16);
+      if (daComprimere.length < 8) return;
+      const testo = daComprimere.map(m => `${m.ruolo}: ${m.testo}`).join('\n');
+      const d = await aggiornaRiassunto({ testo, riassunto: riassuntoRef.current, lingua, userToken });
+      if (d?.riassunto) { riassuntoRef.current = d.riassunto; riassuntiFinoARef.current = storia.length - 16; }
+    } catch { /* senza verbale si vive: resta la finestra corta */ }
+  };
   const [testo, setTesto] = useState('');
   const [attende, setAttende] = useState(false);
   // b.363 — il segnale di Interrompi che arriva dal telecomando di Life
@@ -96,7 +115,8 @@ function Tavolo({ compagni, L, C = {}, lingua, userToken, testoP, muto, accent, 
     // di un tale chiamato "__briefing", e sporcavano la conversazione.
     const perServer = storia.filter(soloVoci).map(m => ({ ruolo: m.ruolo, testo: m.testo }));
     try {
-      const d = await parlaTavolo({ compagni: scelti, messaggi: perServer, lingua, userToken, obiettivi: obiettiviAttivi(), obiettivo, briefing, segnale: abortRef.current?.signal });
+      await aggiornaVerbale(perServer);
+      const d = await parlaTavolo({ compagni: scelti, messaggi: perServer, lingua, userToken, obiettivi: obiettiviAttivi(), obiettivo, briefing, riassunto: riassuntoRef.current, sezioni: sezioniUtente(), segnale: abortRef.current?.signal });
       // b.412 · P1.11 — e si ricontrolla DOPO l'attesa, non solo prima:
       // fra la partenza e il ritorno ci stanno secondi, e in quei secondi
       // si preme Stop. Senza questo, le risposte comparivano lo stesso.

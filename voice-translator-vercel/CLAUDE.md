@@ -267,6 +267,54 @@ perche il working tree lo conteneva ancora.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.533** (push #821) — «PERCHE NON HAI COMPLETATO QUANTO
+  DISCUSSO?????» — aveva ragione: «in coda» era una scusa. Chiusi TUTTI
+  i pezzi rimasti del trapianto RadioChat, piu i due mai partiti:
+
+  **1 — LA MEMORIA CUMULATIVA (livello 3).** Nuova azione `riassunto`
+  sulla rotta del Tavolo: il client comprime in un VERBALE il pezzo di
+  conversazione uscito dalla finestra (una chiamata ogni tanti giri,
+  non a ogni turno) e il verbale viaggia con ogni giro — «PRIMA, IN
+  SINTESI» nel prompt. Tavolo E Podcast: al round 8 ci si ricorda del
+  round 2.
+
+  **2 — TURNI SMART (il 70/30).** Dal secondo giro del Tavolo l'ordine
+  RUOTA (chi ha aperto l'ultimo giro non riapre) e nel 30% dei casi due
+  vicini si scambiano: via il metronomo. Il primo giro resta
+  nell'ordine scelto: le bandiere si piantano nell'ordine dei posti.
+
+  **3 — SKIP-LOGIC, resa PERSONALE.** Il cancello globale di RadioChat
+  zittiva tutti (b.303, demolito con ragione in b.363): la versione
+  giusta guarda UN compagno — se il suo ultimo intervento era un
+  consenso, riceve la riga «o un dato nuovo o passa». Asticella alzata,
+  nessun bavaglio.
+
+  **4 — PROMPT SECTIONS (la KB personale).** `lib/compagni/sezioni.js`
+  puro: regole (sempre), argomento (si accende sui tag), contesto —
+  con priorita, interruttore e sanificazione server. Iniettate nei
+  prompt di Tavolo e Podcast; editor in Gestione Compagni (lista +
+  interruttore + aggiungi); vive in prefs.sezioniPrompt.
+
+  **5 — IL GIORNALE DEL VIAGGIATORE.** Entrando in Notizie senza aver
+  mai cercato, la prima ricerca parte DA SOLA col default di
+  casaEViaggio (prima casa): il feed che si apre da solo (b.529) non e
+  mai piu vuoto. Silenziosa: non finisce nelle «ultime ricerche».
+  (Il polo «dove sono» resta al giro delle breaking, come da b.523.)
+
+  **6 — LE IMMAGINI NEL PODCAST.** La copertina dell'episodio: la
+  miniatura video dell'argomento dalla rotta gia in cache condivisa
+  (GET, niente wallet). Se non c'e, nessun buco. I volti animati dei
+  turni c'erano gia da b.528.
+
+  RESTANO SOLO LE COSE CHE NON POSSO FARE IO, dette senza giri:
+  GEMINI_API_KEY e XAI_API_KEY su Vercel (pannello di Luca); il
+  collaudo videochiamata e l'ascolto alla cieca contro RadioChat live
+  (servono le sue orecchie); i due cron spenti su suo ordine.
+
+  TEST: 11 nuovi sui RISULTATI (risolviSezioni con tag veri,
+  haAppenaConcordato, i prompt col verbale dentro) — 125/125 su 12
+  file. eslint: 0 errori.
+
 - Versione: **b.532** (push #820) — LE DUE BANDIERE AL POSTO DI «PARLA
   ORA», solo in Home (ordine di Luca: «parla ora non serve»). Sotto il
   microfono ora c'e la coppia di lingue viva (bandiera -> bandiera,

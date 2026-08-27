@@ -41,7 +41,7 @@ export const TAVOLO_MAX = 4;
  * @param convergenza      istruzione di convergenza (facoltativa)
  * @param lingua
  */
-export function promptTavolo({ compagno, storia = [], ultimoUmano = '', altriQuestoGiro = [], obiettivo = '', convergenza = '', lingua = 'it', briefing = '', apertura = false } = {}) {
+export function promptTavolo({ compagno, storia = [], ultimoUmano = '', altriQuestoGiro = [], obiettivo = '', convergenza = '', lingua = 'it', briefing = '', apertura = false, riassunto = '', sezioniBlocco = '', antiEco = '' } = {}) {
   const nome = (compagno && compagno.nome) || 'Ospite';
   const persona = (compagno && compagno.personalita) || '';
   const bloccoObiettivo = obiettivo
@@ -66,6 +66,12 @@ Avvicinare il gruppo al risultato vale anche in negativo: nominare un dato che m
     ? `\n\nSUL TAVOLO C'E' QUESTO, e lo avete letto tutti:\n${String(briefing).slice(0, 2000)}\n\nUSALO. Se contiene un numero che risponde alla domanda, DILLO invece di dire che ti manca il dato: dire "mi manca un dato" con il dato davanti e la cosa peggiore che puoi fare qui.`
     : '';
   const bloccoConvergenza = convergenza ? `\n\n${convergenza}` : '';
+  // b.533 — IL RIASSUNTO CUMULATIVO (la memoria a 3 livelli di
+  // RadioChat, il pezzo che mancava): quello che e uscito dalla
+  // finestra non sparisce piu — arriva compresso, come un verbale.
+  const bloccoRiassunto = riassunto
+    ? `\n\nPRIMA, IN SINTESI (i giri usciti dalla finestra):\n${String(riassunto).slice(0, 1200)}`
+    : '';
   // b.231 — involucro comune: al Tavolo nessuno ha ricerca/fonti in tempo
   // reale, quindi le capacità lo dicono (Omar non inventa fonti). La barra
   // "libertà" del Compagno modula anche qui il comportamento.
@@ -91,7 +97,7 @@ Avvicinare il gruppo al risultato vale anche in negativo: nominare un dato che m
 `${persona}
 Sei ${nome}, a una tavola rotonda con una persona e altri interlocutori. Rispondi in prima persona, conciso e sostanzioso (2-3 frasi). Parli con la persona e reagisci a cosa dicono gli altri, sempre puntando al risultato. Rispondi nella lingua: ${lingua}.
 
-${regoleDibattito(lingua)}${bloccoRegolaDibattito(compagno)}${bloccoApertura}${bloccoObiettivo}${bloccoBriefing}${bloccoConvergenza}${involucro}
+${regoleDibattito(lingua)}${bloccoRegolaDibattito(compagno)}${antiEco}${bloccoApertura}${bloccoObiettivo}${bloccoBriefing}${bloccoRiassunto}${bloccoConvergenza}${sezioniBlocco}${involucro}
 
 ${kbVoceParlata(lingua)}`;
 

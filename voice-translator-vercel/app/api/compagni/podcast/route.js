@@ -6,6 +6,7 @@ import { risolviCompagni } from '../../../lib/compagni/persistenza.js';
 import { ordineTurni, promptTurno, validaPodcast, PODCAST_LIMITI, PODCAST_RICHIESTE_MAX } from '../../../lib/compagni/podcast.js';
 import { generaTesto } from '../../../lib/compagni/ponte.js';
 import { analizzaConvergenza, istruzioneConvergenza } from '../../../lib/compagni/orchestratore.js';
+import { bloccoSezioni } from '../../../lib/compagni/sezioni.js';
 import { temperaturaLiberta, temperaturaDibattito, staccaEsito } from '../../../lib/compagni/contratto.js';
 
 const log = createLogger('compagni-podcast');
@@ -69,6 +70,8 @@ async function handlePost(req) {
       const { system, user } = promptTurno({
         compagno: c, argomento, round: t.round, totaleRound: totRound,
         precedenti: precedentiClient, lingua, convergenza,
+        riassunto: typeof body.riassunto === 'string' ? body.riassunto.slice(0, 1000) : '',
+        sezioniBlocco: bloccoSezioni(body.sezioni, argomento),
       });
       const esito = await generaTesto({
         system, prompt: user, provider: c.provider, modello: c.modello,

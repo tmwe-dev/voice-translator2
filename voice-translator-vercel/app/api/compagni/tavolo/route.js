@@ -4,7 +4,8 @@ import { createLogger } from '../../../lib/logger.js';
 import { getSession } from '../../../lib/users.js';
 import { risolviCompagni } from '../../../lib/compagni/persistenza.js';
 import { promptTavolo, promptSintesi, TAVOLO_MAX } from '../../../lib/compagni/tavolo.js';
-import { analizzaConvergenza, istruzioneConvergenza } from '../../../lib/compagni/orchestratore.js';
+import { analizzaConvergenza, istruzioneConvergenza, haAppenaConcordato, rigaAntiEco } from '../../../lib/compagni/orchestratore.js';
+import { bloccoSezioni } from '../../../lib/compagni/sezioni.js';
 import { formattaObiettivi } from '../../../lib/compagni/obiettivi.js';
 import { generaTesto } from '../../../lib/compagni/ponte.js';
 import { temperaturaLiberta, temperaturaDibattito, staccaEsito } from '../../../lib/compagni/contratto.js';
@@ -33,6 +34,9 @@ async function handlePost(req) {
     // b.391 — il documento che sta sul tavolo: non un turno, un contesto.
     const briefing = typeof body.briefing === 'string' ? body.briefing.slice(0, 4000).trim() : '';
     const azione = typeof body.azione === 'string' ? body.azione : 'giro';
+    // b.533 — la memoria cumulativa e la KB a sezioni (da RadioChat).
+    const riassunto = typeof body.riassunto === 'string' ? body.riassunto.slice(0, 1200) : '';
+    const sezioniBlocco = bloccoSezioni(body.sezioni, (Array.isArray(body.messaggi) && body.messaggi.length) ? String(body.messaggi[body.messaggi.length - 1].testo || '') : '');
     // b.224 — obiettivi di vita nel prompt: anche al tavolo i Compagni li conoscono.
     const bloccoObiettivi = formattaObiettivi(Array.isArray(body.obiettivi) ? body.obiettivi.slice(0, 12) : []);
 
@@ -57,6 +61,22 @@ async function handlePost(req) {
       return NextResponse.json({ ok: true, sintesi: r.testo });
     }
 
+    // b.533 — AZIONE 'riassunto': il client manda il pezzo di
+    // conversazione uscito dalla finestra (+ il riassunto vecchio) e
+    // riceve il verbale aggiornato. E' il livello 3 della memoria di
+    // RadioChat, pagato UNA volta ogni tot giri, non a ogni turno.
+    if (azione === 'riassunto') {
+      const testo = typeof body.testo === 'string' ? body.testo.slice(0, 6000) : '';
+      if (!testo.trim()) return NextResponse.json({ error: 'Serve il testo' }, { status: 400 });
+      const r = await generaTesto({
+        system: `Comprimi conversazioni senza perdere i FATTI. Scrivi nella lingua: ${lingua}.`,
+        prompt: `${riassunto ? `Verbale finora:\n${riassunto}\n\n` : ''}Nuovo pezzo di conversazione:\n${testo}\n\nAggiorna il verbale in MASSIMO 8 righe: posizioni di ognuno, dati citati, punti aperti. Niente convenevoli.`,
+        userToken, maxTokens: 260,
+      });
+      if (!r.ok) return NextResponse.json({ error: 'Riassunto non riuscito', motivo: r.motivo }, { status: r.status === 402 ? 402 : 502 });
+      return NextResponse.json({ ok: true, riassunto: r.testo.slice(0, 1200) });
+    }
+
     const ultimoUmano = messaggi.length ? (messaggi[messaggi.length - 1].testo || '') : '';
     if (!ultimoUmano.trim()) return NextResponse.json({ error: 'Serve un messaggio' }, { status: 400 });
     const storia = messaggi.slice(0, -1);
@@ -69,7 +89,24 @@ async function handlePost(req) {
     const risposte = [];
     const altriQuestoGiro = [];
     let ultimoMotivo = '';
-    for (const c of compagni) {
+    // b.533 — TURNI SMART (il 70/30 di RadioChat, adattato al tavolo):
+    // l'ordine NON e piu sempre quello del catalogo. A ogni giro la
+    // partenza RUOTA (chi ha aperto l'ultimo giro non riapre questo), e
+    // nel 30% dei casi due vicini si scambiano: il metronomo sparisce,
+    // il tavolo respira. Il primo giro resta nell'ordine scelto
+    // dall'utente: le bandiere si piantano nell'ordine dei posti.
+    const giriFatti = Math.floor(storia.filter(m => m.ruolo !== 'persona').length / Math.max(1, compagni.length));
+    let ordine = [...compagni];
+    if (giriFatti > 0 && ordine.length > 1) {
+      const rot = giriFatti % ordine.length;
+      ordine = [...ordine.slice(rot), ...ordine.slice(0, rot)];
+      if (Math.random() < 0.3) {
+        const i = 1 + Math.floor(Math.random() * (ordine.length - 1));
+        const j = i === ordine.length - 1 ? i - 1 : i + 1;
+        [ordine[i], ordine[j]] = [ordine[j], ordine[i]];
+      }
+    }
+    for (const c of ordine) {
       // b.303 — SKIP ANTI-CONSENSO: chi non ha niente di nuovo da
       // aggiungere tace, come al bar. Ma non lascia mai il giro vuoto.
       //
@@ -81,7 +118,11 @@ async function handlePost(req) {
       // singolo compagno e quel singolo turno.
       // b.525 — primo giro = nessun intervento di agenti ancora in storia
       const apertura = !storia.some(m => m.ruolo !== 'persona');
-      const { system, prompt } = promptTavolo({ compagno: c, storia, ultimoUmano, altriQuestoGiro, obiettivo, convergenza, lingua, briefing, apertura });
+      // b.533 — anti-eco personale: chi ha CONCORDATO al giro scorso
+      // riceve l'asticella alzata, non il bavaglio (vedi orchestratore).
+      const suoUltimo = [...storia].reverse().find(m => m.ruolo === c.nome);
+      const antiEco = suoUltimo && haAppenaConcordato(suoUltimo.testo, lingua) ? rigaAntiEco(lingua) : '';
+      const { system, prompt } = promptTavolo({ compagno: c, storia, ultimoUmano, altriQuestoGiro, obiettivo, convergenza, lingua, briefing, apertura, riassunto, sezioniBlocco, antiEco });
       const r = await generaTesto({ system: system + bloccoObiettivi, prompt, provider: c.provider, modello: c.modello, userToken, maxTokens: 400, temperature: temperaturaDibattito(c.liberta) });
       if (!r.ok) {
         if (r.status === 401) return NextResponse.json({ error: 'Sessione non valida' }, { status: 401 });
