@@ -404,6 +404,10 @@ export default function FeedNotizieMondo({ aperto, onChiudi, C, L, argomenti = [
   // avviserebbe nessuno.
   const [apriInterprete, setApriInterprete] = useState(0);
   const [modoInterprete, setModoInterprete] = useState('spento');
+  // b.569 — e se il video non ha sottotitoli la voce non si mostra
+  // proprio: una porta che non si apre e' peggio di una porta che non
+  // c'e' (regola di b.535).
+  const [interpretePronto, setInterpretePronto] = useState(false);
   const prontoRef = useRef(false);
 
   // b.552 — la memoria dell'ordine gia mostrato. Dichiarata QUI, sopra a
@@ -952,7 +956,8 @@ export default function FeedNotizieMondo({ aperto, onChiudi, C, L, argomenti = [
                   attivo={i === indiceAttivo} C={C} L={L}
                   daFondo={BARRA_YT + PIEDE_VIDEO}
                   comandoNascosto apriOra={i === indiceAttivo ? apriInterprete : 0}
-                  onCambia={setModoInterprete} />
+                  onCambia={setModoInterprete}
+                  onDisponibile={i === indiceAttivo ? setInterpretePronto : undefined} />
 
                 {/* b.539 — i tasti che mancavano ai video. */}
                 <Azioni voci={[
@@ -982,9 +987,11 @@ export default function FeedNotizieMondo({ aperto, onChiudi, C, L, argomenti = [
                      sottotitoli di traduzione o la voce di traduzione».
                      Stava in un angolo in alto a sinistra; adesso e' una
                      voce come le altre, con la sua parola scritta. */
-                  { chiave: 'traduci', icona: 'mic', parola: L('interpreteTitolo'),
+                  (i === indiceAttivo && interpretePronto) ? {
+                    chiave: 'traduci', icona: 'mic', parola: L('interpreteTitolo'),
                     acceso: modoInterprete !== 'spento', restaAperto: false,
-                    onTocca: () => { vibrate(8); setApriInterprete((n) => n + 1); } },
+                    onTocca: () => { vibrate(8); setApriInterprete((n) => n + 1); },
+                  } : null,
                   /* ═══ b.552 — I DUE POLLICI, per ordine di Luca ═══
                      «un tasto preferito, da tenere in una bacheca che devi
                      mettere nella sidebar» e «un tasto non mostrare piu

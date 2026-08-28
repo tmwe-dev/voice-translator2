@@ -45,12 +45,24 @@ describe('chiusa, si vede il video e basta', () => {
 });
 
 describe('aperta, ogni voce dice cosa fa', () => {
-  it('compaiono tutte, e la traduzione e fra loro', () => {
+  it('compaiono tutte', () => {
     monta();
     fireEvent.click(screen.getByLabelText('actionsWord'));
-    for (const k of ['likeWord', 'newsTalkAbout', 'boardSave', 'hideForever', 'interpreteTitolo']) {
+    for (const k of ['likeWord', 'newsTalkAbout', 'boardSave', 'hideForever']) {
       expect(screen.getByLabelText(k), `${k} deve esserci da aperta`).toBeTruthy();
     }
+  });
+
+  it('ma l INTERPRETE solo se quel video ha davvero i sottotitoli', () => {
+    // b.569 — trovato col browser in mano: la voce «Interprete» c'era
+    // sempre, la si toccava e non succedeva NIENTE, perche' il pezzo non
+    // si disegna quando il video non ha sottotitoli. Una porta che non
+    // si apre e' peggio di una porta che non c'e' (regola di b.535,
+    // ordine di Luca). Qui non c'e' rete, quindi sottotitoli non ce ne
+    // sono: la voce NON deve comparire.
+    monta();
+    fireEvent.click(screen.getByLabelText('actionsWord'));
+    expect(screen.queryByLabelText('interpreteTitolo')).toBe(null);
   });
 
   it('e ognuna ha la parola scritta accanto, non solo l icona', () => {
@@ -58,8 +70,8 @@ describe('aperta, ogni voce dice cosa fa', () => {
     monta();
     fireEvent.click(screen.getByLabelText('actionsWord'));
     const parole = [...document.querySelectorAll('span')].map((x) => x.textContent);
-    expect(parole).toContain('interpreteTitolo');
     expect(parole).toContain('boardSave');
+    expect(parole).toContain('hideForever');
   });
 
   it('toccare una voce fa la cosa e richiude', () => {

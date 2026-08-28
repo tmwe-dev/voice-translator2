@@ -267,6 +267,23 @@ perche il working tree lo conteneva ancora.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.569** (push #854) — LA PORTA CHE NON SI APRIVA.
+
+  Ultimo difetto del collaudo dal vivo, e il piu insidioso perche' non
+  rompe niente: nel ventaglio c'era la voce **«Interprete»**, la si
+  toccava e **non succedeva niente**.
+
+  La causa: `InterpreteVideo` non si disegna quando il video non ha
+  sottotitoli — ed e' giusto, e' la regola «dove non e' disponibile non
+  se ne parla». Ma il ventaglio la voce la metteva SEMPRE, perche'
+  nessuno gli diceva niente. Adesso l'interprete dichiara se e' pronto
+  (`onDisponibile`) e la voce compare solo allora.
+
+  E' la regola di b.535, ordine di Luca: «considerato che sappiamo se e'
+  possibile o no aprire, evidenziamolo subito non dando disponibile
+  l'icona». **Una porta che non si apre e' peggio di una porta che non
+  c'e'**: la prima ti fa credere di aver sbagliato tu.
+
 - Versione: **b.568** (push #853) — TRE DIFETTI VISTI A SCHERMO, non
   dalle prove.
 

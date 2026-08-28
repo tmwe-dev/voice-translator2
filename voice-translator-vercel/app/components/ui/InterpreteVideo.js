@@ -51,7 +51,7 @@ const ORIGINE_YT = 'https://www.youtube-nocookie.com';
 const PASSO_MS = 250;                 // ogni quarto di secondo si guarda l'ora
 const MODI = ['spento', 'sottotitoli', 'voce'];
 
-export default function InterpreteVideo({ videoId, lingua, attivo, onCambia, C, L, daFondo = 132, comandoNascosto = false, apriOra = 0 }) {
+export default function InterpreteVideo({ videoId, lingua, attivo, onCambia, C, L, daFondo = 132, comandoNascosto = false, apriOra = 0, onDisponibile }) {
   // b.551 — il gettone serve alle rotte a pagamento (traduzione e voce).
   // Si legge dal contesto SENZA useApp(), che lancia se il contesto non
   // c'e': questo e' un componente di `ui/`, deve poter vivere anche
@@ -70,6 +70,18 @@ export default function InterpreteVideo({ videoId, lingua, attivo, onCambia, C, 
   // nel ventaglio delle azioni, insieme a tutto il resto: quando il
   // ventaglio la apre, incrementa `apriOra` e il pannello compare qui.
   useEffect(() => { if (apriOra) setAperto(true); }, [apriOra]);
+
+  // ═══ b.569 — E CHI OSPITA DEVE SAPERLO ═══
+  // Collaudo dal vivo: nel ventaglio c'era la voce «Interprete», la si
+  // toccava e non succedeva NIENTE. Perche' questo pezzo non si disegna
+  // quando il video non ha sottotitoli (giusto: «dove non e'
+  // disponibile, non se ne parla») — ma il ventaglio la voce la metteva
+  // sempre, e nessuno gli aveva detto niente.
+  // E' la regola di b.535, ordine di Luca: «considerato che sappiamo se
+  // e' possibile o no aprire, evidenziamolo subito non dando
+  // disponibile l'icona». Una porta che non si apre non si mostra.
+  const pronto = !!(cercati && frasi.length);
+  useEffect(() => { onDisponibile?.(pronto); }, [pronto, onDisponibile]);
   const [battuta, setBattuta] = useState('');      // la frase tradotta, adesso
 
   const dette = useRef(new Set());
