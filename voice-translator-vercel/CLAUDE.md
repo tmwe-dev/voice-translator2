@@ -267,6 +267,37 @@ perche il working tree lo conteneva ancora.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.555** (push #841) — IL SUONO DI UNO, L'IMMAGINE DI UN
+  ALTRO: riparato, e chiusa la porta per sempre.
+
+  Collaudo di Luca: «il video non parte piu, lo hai rotto», e poi la
+  descrizione esatta: «scrollando non aggiorna e non visualizza il video
+  dell'audio che sento».
+
+  LA CAUSA, ed e' mia. In b.552 le diapositive hanno smesso di montarsi
+  subito: si montano quando il feed e' «pronto». Ma l'osservatore che
+  decide QUALE slide stai guardando iscriveva le sentinelle che trovava
+  nel momento in cui nasceva — e in quel momento, con `pronto` ancora
+  falso, non ce n'era nessuna. Poi non veniva piu richiamato, perche'
+  l'elenco non era cambiato. Senza sentinelle nessuno diceva mai
+  «adesso stai guardando quella dopo»: l'indice restava a zero, il primo
+  video continuava a suonare e Luca scorreva vedendo altro.
+
+  E' ESATTAMENTE la trappola di b.546, tornata da una porta che ho
+  aperto io tre versioni dopo. Percio' due difese, non una:
+  ① l'osservatore vive in un riferimento e OGNI slide si iscrive da sola
+  quando nasce (non conta piu quando nasce rispetto all'effetto);
+  ② `pronto` sta fra le dipendenze dell'effetto, cosi quando le slide
+  passano dal non esserci all'esserci l'osservatore rinasce comunque.
+
+  REGOLA GENERALE, da tenere: quando si mette una CONDIZIONE davanti al
+  montaggio di una lista (`{pronto && ...}`), ogni effetto che iscrive,
+  misura o osserva quegli elementi va rivisto — nasce prima di loro.
+
+  In piu: 16 parole nuove in tutte e 38 le lingue (i temi di interesse e
+  le parole dell'accoglienza), pronte per la pagina di scelta interessi
+  che arriva col prossimo giro.
+
 - Versione: **b.554** (push #840) — IL REGISTRO HA UNA CASA VERA, E IL
   PONTE CON YOUTUBE E' TOLTO.
 

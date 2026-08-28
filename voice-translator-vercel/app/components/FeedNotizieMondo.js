@@ -253,6 +253,31 @@ export default function FeedNotizieMondo({ aperto, onChiudi, C, L, argomenti = [
   const [contenitore, setContenitore] = useState(null);
   const prendiContenitore = useCallback((nodo) => { contenitoreRef.current = nodo; setContenitore(nodo); }, []);
   const sentinelleRef = useRef(new Map());
+  // ═══ b.555 — L'OSSERVATORE CHE NON VEDEVA LE SLIDE NATE DOPO ═══
+  // Collaudo di Luca: «il video non parte piu», «scrollando non aggiorna
+  // e non visualizza il video dell'audio che sento».
+  // E' la trappola di b.546 tornata da una porta nuova, aperta da me in
+  // b.552: da allora le diapositive si montano solo quando il feed e'
+  // «pronto», cioe DOPO che l'effetto qui sotto e' gia passato. Lui
+  // iscriveva le sentinelle che trovava in quel momento — nessuna — e
+  // non veniva piu richiamato, perche' l'elenco non era cambiato. Senza
+  // sentinelle nessuno diceva mai «adesso stai guardando quella dopo»:
+  // l'indice restava a zero, il primo video continuava a suonare e tu
+  // scorrevi vedendo altro. Il suono di uno, l'immagine di un altro.
+  // Rimedio che chiude la porta per sempre: l'osservatore vive in un
+  // riferimento e OGNI slide si iscrive da sola quando nasce. Non conta
+  // piu quando nasce rispetto all'effetto.
+  const ossRef = useRef(null);
+  const prendiSentinella = useCallback((chiave, nodo) => {
+    if (nodo) {
+      sentinelleRef.current.set(chiave, nodo);
+      ossRef.current?.observe(nodo);
+    } else {
+      const vecchio = sentinelleRef.current.get(chiave);
+      if (vecchio) ossRef.current?.unobserve(vecchio);
+      sentinelleRef.current.delete(chiave);
+    }
+  }, []);
   const [indiceAttivo, setIndiceAttivo] = useState(0);
   const [seme, setSeme] = useState('');   // b.541 — il campo dell'ultima slide
   // ═══ b.544 — I CUORI ═══
@@ -515,14 +540,19 @@ export default function FeedNotizieMondo({ aperto, onChiudi, C, L, argomenti = [
       // slide si prende quasi tutto lo schermo lo si sappia subito,
       // senza aspettare il fermo del dito.
     }, { root: contenitore, threshold: [SOGLIA_VISTA, 0.6] });
+    ossRef.current = oss;
     sentinelleRef.current.forEach((el) => oss.observe(el));
-    return () => oss.disconnect();
+    return () => { oss.disconnect(); if (ossRef.current === oss) ossRef.current = null; };
     // b.546 — si guarda l'ELENCO, non la sua lunghezza. Una ricerca
     // nuova che riporta lo stesso numero di risultati cambia tutte le
     // slide ma non la misura: con la lunghezza sola l'osservatore
     // restava attaccato ai riquadri di prima, che nel frattempo non
     // esistono piu, e non avvisava mai piu di niente.
-  }, [aperto, contenitore, elementi]);
+    // b.555 — e `pronto` sta fra le dipendenze: quando le slide passano
+    // dal non esserci all'esserci, l'osservatore nasce di nuovo. Le due
+    // difese insieme (iscrizione alla nascita + questa) perche' un
+    // difetto che si e' gia ripresentato due volte non merita fiducia.
+  }, [aperto, contenitore, elementi, pronto]);
 
   // b.538 — E DOPO IL RIBALTAMENTO SI RESTA DOVE SI ERA. Cambiando
   // orientamento tutte le slide cambiano altezza e lo scorrimento
@@ -749,7 +779,7 @@ export default function FeedNotizieMondo({ aperto, onChiudi, C, L, argomenti = [
           const paese = el.tipo === 'articolo' ? paeseDellaNotizia(el.dati) : null;
           return (
           <div key={el.chiave}
-            ref={(node) => { if (node) sentinelleRef.current.set(el.chiave, node); else sentinelleRef.current.delete(el.chiave); }}
+            ref={(node) => prendiSentinella(el.chiave, node)}
             data-indice={i}
             style={{
               height: '100dvh', scrollSnapAlign: 'start', scrollSnapStop: 'always',
