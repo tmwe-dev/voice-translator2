@@ -51,12 +51,22 @@ export function estraiVideoDaHtml(html, { massimo = 8 } = {}) {
     const canaleMatch = dopo.match(/"ownerText":\{"runs":\[\{"text":"((?:[^"\\]|\\.)+)"/);
     let canale = '';
     if (canaleMatch) { try { canale = JSON.parse('"' + canaleMatch[1] + '"'); } catch { canale = canaleMatch[1]; } }
+    // b.552 — QUANDO E' STATO PUBBLICATO. Ordine di Luca: «data
+    // pubblicazione bene evidente». YouTube non ci da una data vera nella
+    // pagina dei risultati: da l'eta scritta a parole («2 giorni fa»,
+    // «3 settimane fa»), gia nella lingua in cui abbiamo chiesto. Quella
+    // e' l'informazione che esiste davvero, e quella si mostra — meglio
+    // una verita approssimata che una data inventata.
+    const quandoMatch = dopo.match(/"publishedTimeText":\{"simpleText":"((?:[^"\\]|\\.)+)"/);
+    let quandoTesto = '';
+    if (quandoMatch) { try { quandoTesto = JSON.parse('"' + quandoMatch[1] + '"'); } catch { quandoTesto = quandoMatch[1]; } }
     trovati.push({
       id,
       titolo: pulisciTestoWeb(titolo).testo,
       canale: pulisciTestoWeb(canale).testo,
       miniatura: `https://i.ytimg.com/vi/${id}/hqdefault.jpg`,
       pubblicato: null,
+      quandoTesto: pulisciTestoWeb(quandoTesto).testo,
     });
   }
   return trovati;

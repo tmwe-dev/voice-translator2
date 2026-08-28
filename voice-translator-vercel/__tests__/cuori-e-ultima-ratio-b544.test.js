@@ -87,7 +87,11 @@ describe('b.544 — il cuore nella colonnina', () => {
       const o = (await import(`../app/lib/locales/${f}`)).default;
       expect(typeof o.likeWord, f).toBe('string');
     }
-  });
+    // b.552 — questa prova apre a uno a uno TUTTI e 38 i pacchetti di
+    // lingua: mezzo megabyte di traduzioni. Sul portatile mentre lavora
+    // i cinque secondi di prammatica non bastano, e un rosso per
+    // stanchezza della macchina e' peggio di nessun rosso.
+  }, 30000);
 });
 
 describe('b.544 — «le persone sono pigre»: i contenuti si mettono in bocca', () => {
@@ -104,8 +108,13 @@ describe('b.544 — «le persone sono pigre»: i contenuti si mettono in bocca',
   });
   it('il feed corto o vuoto si riempie da solo, senza chiedere niente', () => {
     expect(feed).toMatch(/if \(elementi\.length < 4 \|\| indiceAttivo >= elementi\.length - 3\) onCresci\(\)/);
-    // e il vuoto dice che sta lavorando, non da un compito
-    const vuoto = feed.slice(feed.indexOf('IL FEED VUOTO NON CHIEDE NIENTE'));
-    expect(vuoto.slice(0, 900)).toMatch(/L\('growingWord'\)/);
+    // e l'attesa dice che sta lavorando, non da un compito. b.552: quel
+    // blocco adesso e' anche la schermata di attesa vera e propria — non
+    // si mostra niente finche' il primo giro non ha finito («deve
+    // presentare il primo contenuto solo quando e' certo», Luca) — e ha
+    // il suo anello che gira.
+    const vuoto = feed.slice(feed.indexOf("L'ATTESA HA UNA FACCIA"));
+    expect(vuoto.slice(0, 1800)).toMatch(/L\('growingWord'\)/);
+    expect(vuoto.slice(0, 1800), 'l icona mentre carica').toMatch(/vtGira/);
   });
 });

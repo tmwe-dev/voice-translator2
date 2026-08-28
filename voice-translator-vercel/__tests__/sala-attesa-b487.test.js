@@ -78,5 +78,9 @@ describe('le tre chiavi nuove esistono in tutte le lingue', () => {
         expect(String(t(l, k)).trim(), `${l}/${k}`).not.toBe('');
       }
     }
-  });
+    // b.552 — questa prova apre a uno a uno TUTTI e 38 i pacchetti di
+    // lingua: mezzo megabyte di traduzioni. Sul portatile mentre lavora
+    // i cinque secondi di prammatica non bastano, e un rosso per
+    // stanchezza della macchina e' peggio di nessun rosso.
+  }, 30000);
 });

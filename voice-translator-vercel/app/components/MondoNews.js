@@ -24,6 +24,7 @@ import { ordinaFeed } from '../lib/ordineFeed.js';
 // campanella degli avvisi e il filo dei commenti sotto ogni articolo.
 import { ordinaPerPunteggio, mescolaConInteresse } from '../lib/punteggioFeed.js';
 import { chiaveContenuto, mieiCuori } from '../lib/gradimento.js';
+import { giraBacheca, nascondi, senzaNascosti, bachecaDi, spostaInBacheca, togliDaBacheca } from '../lib/bacheca.js'; // b.552 — la bacheca e il «non mostrarmelo piu»
 import { cercaTopics, chiediRami, chiediFonti } from '../lib/topics/cliente.js';   // b.409 — il lettore a righe, uno per tutti; b.541 — i rami del giardino
 import { semiDi, prossimaQuery, esaurito, sanaRami } from '../lib/giardino.js'; // b.541 — le ricerche sono semi
 import { listaVecchia, giorniDiVita } from '../lib/topics/fonti.js'; // b.543 — il Fontiere
@@ -213,6 +214,7 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
   const [numFonti, setNumFonti] = useState(10); // b.541 — dieci, come nello schermo che Luca ha eletto a predefinito
   const abortRef = useRef(null);
   const cercandoRef = useRef(false);   // b.549 — la guardia vera, senza attese di ridisegno
+  const abortDietroRef = useRef(null); // b.552 — il giro che cresce da solo: si annulla da se, mai quello davanti
   const [feedGuasto, setFeedGuasto] = useState(false);
   // b.363 — LA PREFERENZA "QUANDO AGGIORNO", che fa una cosa vera: se e
   // impostata su "all'apertura", le notizie si cercano da sole appena si
@@ -255,6 +257,9 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
   const [listaFonti, setListaFonti] = useState(null);
   const [fontiInCorso, setFontiInCorso] = useState(false);
   const [bozzaPaese, setBozzaPaese] = useState(null);
+  // b.552 — resta come MEMORIA della categoria attiva (serve al
+  // Fontiere, che con un settore in mano sa dove pescare), non piu come
+  // tendina da compilare: quella l'ha tolta Luca.
   const [bozzaCategoria, setBozzaCategoria] = useState('');
   // b.386 — il paese toccato sul pianeta filtra anche le notizie. Prima
   // arrivava solo alle stanze: si zoomava sull'Italia e le news restavano
@@ -363,8 +368,22 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
   // query interroga anche YouTube (se la chiave c'e) e i risultati
   // compaiono sotto le card. Il fallimento e silenzioso: senza chiave
   // o senza quota, semplicemente niente sezione video.
-  const cercaVideoPer = useCallback(async (q) => {
-    setVideo(null);
+  // b.552 — ORDINE DI LUCA: «quando sto guardando un video non devi
+  // interrompermi per attivare la nuova ricerca, la devi fare in
+  // background. Mai rovinare l'esperienza dell'utente».
+  // Qui c'era il colpo peggiore: `setVideo(null)` in cima. Mentre stavi
+  // guardando, la crescita del giardino svuotava la lista dei video —
+  // e la diapositiva sotto i tuoi occhi spariva a meta. In sottofondo
+  // adesso non si svuota niente: i video nuovi si ACCODANO in fondo,
+  // dove li troverai scorrendo, senza toccare quello che stai vedendo.
+  // b.552 — le preferenze «di adesso» viste da dentro una richiesta che
+  // e' partita un minuto fa: senza questo, il filtro dei nascosti
+  // userebbe l'elenco che c'era quando la chiamata e' partita.
+  const prefsRef = useRef(prefs);
+  useEffect(() => { prefsRef.current = prefs; }, [prefs]);
+
+  const cercaVideoPer = useCallback(async (q, dietro = false) => {
+    if (!dietro) setVideo(null);
     try {
       const r = await fetch(`/api/topics/video?q=${encodeURIComponent(q)}&lang=${lingua}`, { signal: AbortSignal.timeout(60000) /* b.363 — prima non c'era tetto di attesa: se la rete restava muta la chiamata pendeva per sempre e l'utente non vedeva mai un esito */ });
       if (!r.ok) return;
@@ -376,12 +395,17 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
       // b.324 — audit Mondo D6: la griglia mostrava lo stesso video due
       // volte (fonti diverse, stesso id). Dedup per id/url prima di mostrare.
       if (d.disponibile) {
-        const visti = new Set();
-        setVideo((d.video || []).filter((v) => {
-          const k = v?.id || v?.url || v?.titolo;
-          if (!k || visti.has(k)) return false;
-          visti.add(k); return true;
-        }));
+        setVideo((prima) => {
+          const base = dietro && Array.isArray(prima) ? prima : [];
+          // b.552 — e neanche i video nascosti tornano indietro
+          const visti = new Set(base.map((v) => v?.id || v?.url || v?.titolo).filter(Boolean));
+          const nuovi = (d.video || []).filter((v) => {
+            const k = v?.id || v?.url || v?.titolo;
+            if (!k || visti.has(k)) return false;
+            visti.add(k); return true;
+          });
+          return senzaNascosti([...base, ...nuovi], prefsRef.current);
+        });
       }
     } catch { /* i video sono un di piu, mai un errore in faccia */ }
   }, [lingua]);
@@ -516,7 +540,14 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
   // senza conteggio prendono il punteggio del contenuto nuovo, cioe un
   // valore neutro. Scendono in mezzo, non spariscono — qui vale la
   // regola di sempre: SI ORDINA, NON SI FILTRA.
-  const riordinaConSegnali = useCallback(async (lista) => {
+  //
+  // b.552 — E CON `fermi` NON SI TOCCA QUELLO CHE STAI GIA GUARDANDO.
+  // Ordine di Luca: la crescita in sottofondo non deve interrompere il
+  // video. Riordinare TUTTO l'elenco mentre guardi e' un'interruzione
+  // anche se nessuna scritta compare: la diapositiva sotto il dito
+  // diventa un'altra. Quando il giro e' in sottofondo, le prime `fermi`
+  // schede restano dove sono e si ordina solo la coda appena arrivata.
+  const riordinaConSegnali = useCallback(async (lista, fermi = 0) => {
     const contenuti = Array.isArray(lista) ? lista : [];
     if (contenuti.length < 2) return;
     const chiavi = [...new Set(contenuti.map((t) => chiaveContenuto(t?.url)).filter(Boolean))].slice(0, 30);
@@ -535,7 +566,12 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
     // `mescolaConInteresse` garantisce che il migliore di ogni mio seme
     // resti nella prima meta: il punteggio di tutti non puo far sparire
     // le cose che ho chiesto io.
-    const ordinati = mescolaConInteresse(ordinaPerPunteggio(contenuti, conteggi, Date.now()), interessiMiei);
+    const testa = fermi > 0 ? contenuti.slice(0, fermi) : [];
+    const daOrdinare = fermi > 0 ? contenuti.slice(fermi) : contenuti;
+    const ordinati = [
+      ...testa,
+      ...mescolaConInteresse(ordinaPerPunteggio(daOrdinare, conteggi, Date.now()), interessiMiei),
+    ];
     // e si riordina SOLO se nel frattempo il giornale non e cambiato: una
     // ricerca nuova partita mentre i conteggi viaggiavano non deve
     // ritrovarsi in pagina l'elenco di quella vecchia.
@@ -552,14 +588,28 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
     // e uno stato di React: quando si incatenano due ricerche con await,
     // la seconda parte prima che il ridisegno lo abbia rimesso a falso, e
     // veniva scartata. Cosi i semi accodati non arrivavano mai.
-    if (!pulita || cercandoRef.current) return;
+    if (!pulita) return;
+    // b.552 — DIETRO = il giro che cresce da solo mentre guardi. Non
+    // vibra, non accende il pannello COBRA, non svuota i video, non
+    // spegne i tasti: si vede solo perche' in fondo compare altra roba.
+    // Ordine di Luca: «mai rovinare l'esperienza dell'utente».
+    const dietro = !!accoda;
+    if (cercandoRef.current) {
+      // due giri insieme si pestano i piedi: chi sta guardando comanda.
+      if (dietro) return;
+      abortDietroRef.current?.abort();
+    }
     cercandoRef.current = true;
-    cercaVideoPer(pulita);
-    abortRef.current?.abort();
+    cercaVideoPer(pulita, dietro);
     const ac = new AbortController();
-    abortRef.current = ac;
-    setCercando(true); setErrore(''); setProcesso([]); setDaCache(false);
-    vibrate(10);
+    if (dietro) {
+      abortDietroRef.current = ac;
+    } else {
+      abortRef.current?.abort();
+      abortRef.current = ac;
+      setCercando(true); setErrore(''); setProcesso([]); setDaCache(false);
+      vibrate(10);
+    }
     try {
       // b.409 — IL LETTORE A RIGHE NON VIVE PIU QUI DENTRO. Era scritto
       // a mano in questa funzione, e in Life non c'era: la stessa rotta
@@ -572,6 +622,7 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
         { q: pulita, lingua, cat, fresca, profonda, fonti: profonda ? numFonti : 0, segnale: ac.signal,
           paeseFonti: paeseFiltro || '', settoreFonti: bozzaCategoria || '' },
         (r) => {
+          if (dietro) return;   // b.552 — in sottofondo non si racconta niente a schermo
           const testo = descriviStadio(r);
           if (testo) setProcesso(p => [...p.slice(-5), { testo, id: p.length }]);
         },
@@ -581,7 +632,11 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
         // b.541 — niente doppioni fra un giro e l'altro: due rami vicini
         // pescano spesso la stessa notizia, e vederla due volte nel feed
         // e' il modo piu rapido per far sembrare finito il giornale.
-        const nuovi = arrivati.filter((a) => {
+        // b.552 — cio che hai detto di non volere piu non rientra dalla
+        // finestra al giro dopo: si filtra qui, dove il mazzo arriva, e
+        // non in venti posti diversi.
+        const puliti = senzaNascosti(arrivati, prefs);
+        const nuovi = puliti.filter((a) => {
           const chiave = a?.url || a?.id || a?.titolo;
           if (!chiave || vistiRef.current.has(chiave)) return false;
           vistiRef.current.add(chiave);
@@ -591,16 +646,21 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
         // b.548 — appena le schede sono in pagina, si traducono i titoli
         // che non sono gia nella lingua di chi guarda.
         if (nuovi.length) traduciSchede(nuovi);
-        setArgomenti((prima) => (accoda ? [...(prima || []), ...nuovi] : arrivati));
+        setArgomenti((prima) => (accoda ? [...(prima || []), ...nuovi] : puliti));
         // b.545 — appena l'elenco e in pagina si chiedono i segnali di
         // tutti e si riordina. `argomentiRef` qui vale ancora quello di
         // un attimo fa, cioe esattamente il `prima` della riga sopra.
-        riordinaConSegnali(accoda ? [...(argomentiRef.current || []), ...nuovi] : arrivati);
+        // b.552 — in sottofondo si ordina SOLO la coda nuova: quello che
+        // hai gia' sotto gli occhi non si sposta di un posto.
+        riordinaConSegnali(
+          accoda ? [...(argomentiRef.current || []), ...nuovi] : puliti,
+          dietro ? (argomentiRef.current || []).length : 0,
+        );
         if (!accoda) setStanze(fine.stanze || []);
         setDaCache(!!fine.daCache);
         // b.541 — il ramo che non porta niente di nuovo e' esaurito: si
         // annota, cosi il giardino sa che deve ramificare piu in la.
-        if (accoda && esaurito({ trovati: arrivati.length, nuovi: nuovi.length })) {
+        if (accoda && esaurito({ trovati: puliti.length, nuovi: nuovi.length })) {
           setRamiNoti((r) => r.map((x) => (x.query === pulita ? { ...x, secco: true } : x)));
         }
         // b.529 — ULTIME RICERCHE (Luca: «quando faccio una ricerca devi
@@ -628,10 +688,12 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
       // registro non compariva nulla, e il motivo vero (rete caduta, attesa
       // scaduta, credito finito, server rotto) restava irrecuperabile.
       if (e?.name !== 'AbortError') console.warn('[b.363] /api/topics/search:', e?.message || e);
-      if (e.name !== 'AbortError') setErrore('guasto');
+      // b.552 — un giro in sottofondo che non riesce resta in sottofondo:
+      // non si mette un cartello di guasto davanti a chi sta guardando.
+      if (e.name !== 'AbortError' && !dietro) setErrore('guasto');
     } finally {
       cercandoRef.current = false;
-      setCercando(false);
+      if (!dietro) setCercando(false);
     }
   }, [lingua, cercando, descriviStadio, cercaVideoPer, profonda, numFonti, prefs, savePrefs, riordinaConSegnali]);
 
@@ -677,6 +739,25 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
       setCrescendo(false);
     }
   }, [crescendo, cercando, prefs, nomePaese, ramiNoti, lingua, paeseFiltro, userToken, cerca]);
+
+  // ═══ b.552 — METTI DA PARTE / NON MOSTRARMELO PIU ═══
+  // Ordine di Luca. Due gesti che cambiano il giornale della persona e
+  // non quello di tutti: vivono nelle sue preferenze, non nei conteggi
+  // condivisi. Il contenuto nascosto sparisce SUBITO dall'elenco — se
+  // restasse fino al prossimo giro, il tasto sembrerebbe rotto.
+  const suBacheca = useCallback((d) => {
+    const url = d?.url || (d?.id ? `youtube.com/watch?v=${d.id}` : '');
+    savePrefs?.(giraBacheca(prefs, { ...d, url }));
+  }, [prefs, savePrefs]);
+
+  const suNascondi = useCallback((d) => {
+    const url = d?.url || (d?.id ? `youtube.com/watch?v=${d.id}` : '');
+    if (!url) return;
+    const dopo = nascondi(prefs, url);
+    savePrefs?.(dopo);
+    setArgomenti((prima) => senzaNascosti(prima, dopo));
+    setVideo((prima) => senzaNascosti(prima, dopo));
+  }, [prefs, savePrefs]);
 
   const cercaChip = useCallback((c, silenziosa = false) => {
     setChipAttiva(c.id);
@@ -1059,6 +1140,79 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
           onScegli={(topic) => { setArgomentoFiltro(topic); suChiudiStrumenti?.(); }} />
       </CardSezione>
 
+      {/* ═══ b.552 — LA BACHECA ═══
+          Ordine di Luca: «un tasto preferito, da tenere in una bacheca
+          che devi mettere nella sidebar. Ordinabile e con miniatura».
+          Tutte e tre le cose: la miniatura c'e' (ed e' quella vera del
+          contenuto, non un'icona), l'ordine lo decidi tu con le due
+          frecce, e la x toglie. Si apre come si apre tutto il resto del
+          Mondo — un tocco sulla scheda, non un menu. */}
+      {bachecaDi(prefs).length > 0 && (
+        <CardSezione icona="star" titolo={L('boardTitle')} sotto={L('boardCaption')} C={C}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {bachecaDi(prefs).map((v, i, tutte) => (
+              <div key={v.chiave} style={{
+                display: 'flex', alignItems: 'center', gap: 8,
+                padding: 6, borderRadius: 10,
+                background: 'rgba(26,40,74,0.42)', border: '1px solid rgba(150,178,255,0.26)',
+                backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
+              }}>
+                <button onClick={() => {
+                  vibrate(8);
+                  // il video si apre nella scheda di visione, come da
+                  // qualunque altra parte del Mondo: non si inventa una
+                  // seconda strada per la stessa cosa.
+                  if (v.tipo === 'video') { setScheda({ tipo: 'video', dati: { id: (v.url.split('v=')[1] || ''), titolo: v.titolo, canale: v.fonte, miniatura: v.img } }); }
+                  else { setLettura({ url: v.url, titolo: v.titolo, fonte: v.fonte, dati: v, faccia: testataChiusa(v.url) ? 'sintesi' : 'articolo' }); }
+                  suChiudiStrumenti?.();
+                }}
+                  title={v.titolo}
+                  style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 8,
+                    background: 'none', border: 'none', padding: 0, cursor: 'pointer',
+                    textAlign: 'left', WebkitTapHighlightColor: 'transparent' }}>
+                  {v.img
+                    // eslint-disable-next-line @next/next/no-img-element -- miniatura esterna del contenuto
+                    ? <img src={v.img} alt="" width={40} height={30} style={{ borderRadius: 6, objectFit: 'cover', display: 'block', flexShrink: 0 }} />
+                    : <span style={{ width: 40, height: 30, borderRadius: 6, flexShrink: 0, background: 'rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <Icon name={v.tipo === 'video' ? 'play' : 'doc'} size={13} color="#fff" />
+                      </span>}
+                  <span style={{ minWidth: 0 }}>
+                    <span style={{ display: 'block', fontSize: 12, fontWeight: 500, color: '#fff', fontFamily: FONT,
+                      overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{v.titolo}</span>
+                    {v.fonte ? (
+                      <span style={{ display: 'block', fontSize: 10.5, color: 'rgba(255,255,255,0.62)', fontFamily: FONT,
+                        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{v.fonte}</span>
+                    ) : null}
+                  </span>
+                </button>
+                {/* ordinabile: due frecce, e quella che non serve non c'e' */}
+                <button onClick={() => { vibrate(6); savePrefs?.(spostaInBacheca(prefs, v.chiave, 'su')); }}
+                  disabled={i === 0} aria-label={L('moveUp')} title={L('moveUp')}
+                  style={{ width: 24, height: 24, borderRadius: 6, flexShrink: 0, cursor: i === 0 ? 'default' : 'pointer',
+                    opacity: i === 0 ? 0.25 : 1, background: 'rgba(0,0,0,0.22)', border: 'none',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', WebkitTapHighlightColor: 'transparent' }}>
+                  <Icon name="chevUp" size={11} color="#fff" />
+                </button>
+                <button onClick={() => { vibrate(6); savePrefs?.(spostaInBacheca(prefs, v.chiave, 'giu')); }}
+                  disabled={i === tutte.length - 1} aria-label={L('moveDown')} title={L('moveDown')}
+                  style={{ width: 24, height: 24, borderRadius: 6, flexShrink: 0, cursor: i === tutte.length - 1 ? 'default' : 'pointer',
+                    opacity: i === tutte.length - 1 ? 0.25 : 1, background: 'rgba(0,0,0,0.22)', border: 'none',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', WebkitTapHighlightColor: 'transparent' }}>
+                  <Icon name="chevDown" size={11} color="#fff" />
+                </button>
+                <button onClick={() => { vibrate(6); savePrefs?.(togliDaBacheca(prefs, v.chiave)); }}
+                  aria-label={L('removeWord')} title={L('removeWord')}
+                  style={{ width: 24, height: 24, borderRadius: 6, flexShrink: 0, cursor: 'pointer',
+                    background: 'rgba(0,0,0,0.22)', border: 'none',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', WebkitTapHighlightColor: 'transparent' }}>
+                  <Icon name="x" size={10} color="#fff" />
+                </button>
+              </div>
+            ))}
+          </div>
+        </CardSezione>
+      )}
+
       {/* b.529 — le ultime ricerche: un tocco la rifa, la x la dimentica. */}
       {Array.isArray(prefs?.ricercheRecenti) && prefs.ricercheRecenti.length > 0 && (
         <CardSezione icona="history" titolo={L('recentSearches')} sotto={L('sbRecentCaption')} C={C}>
@@ -1157,30 +1311,26 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
         })()}
       </CardSezione>
 
-      {/* b.363 — due tendine per due scelte SINGOLE: la prima filtra cio
-          che c'e QUI DENTRO, la seconda va a cercare LA FUORI. */}
-      <CardSezione icona="target" titolo={L('sbWhatTitle')} sotto={L('sbWhatCaption')} C={C}>
-        {argomentiVeri.length > 0 && (
-          <Scelta C={C}
-            etichetta={L('topicsWord')}
-            valore={argomentoFiltro || ''}
-            opzioni={[
-              { valore: '', etichetta: L('allTopicsWord'), conto: feed?.length || 0 },
-              ...argomentiVeri.map(([arg, n]) => ({ valore: arg, etichetta: arg, conto: n })),
-            ]}
-            onCambia={(v) => setArgomentoFiltro(v || null)} />
-        )}
-        <Scelta C={C}
-          etichetta={L('searchCategoryWord')}
-          valore={bozzaCategoria || ''}
-          opzioni={[
-            { valore: '', etichetta: L('allTopicsWord') },
-            ...CATEGORIE.map((c) => ({ valore: c.id, etichetta: L(c.labelKey) })),
-          ]}
-          onCambia={(v) => setBozzaCategoria(v)} />
-        {profonda && (
+      {/* ═══ b.552 — LE DUE TENDINE «COSA CERCO» NON CI SONO PIU ═══
+          Collaudo di Luca, con la fotografia: «non mi e' chiara la
+          utilita di questi filtri, confondono. Se non sono necessari
+          accontentiamoci dei preferiti, del random, delle ultime
+          ricerche e dell'albero che cresce allargando agli argomenti
+          simili adiacenti».
+          Ha ragione, e non e' solo questione di gusto: chiedere «in che
+          categoria vuoi cercare?» e' chiedere alla persona di fare il
+          lavoro che il giardino (b.541) fa gia da solo, meglio e senza
+          domande — parte dai tuoi semi, allarga ai rami vicini, e quando
+          un ramo si secca ne apre un altro. Due tendine che promettono
+          un controllo che non serve valgono meno di zero: confondono.
+          Cosa resta, ed e' tutto quello che serve: i PREFERITI (la
+          stella), la BACHECA, le ULTIME RICERCHE, il campo per seminare
+          a mano, e l'albero che cresce da solo.
+          Il numero di fonti in modalita approfondita resta: quella non
+          e' una domanda sul cosa, e' una manopola sul quanto. */}
+      {profonda && (
+        <CardSezione icona="target" titolo={L('newsSourcesShort')} sotto={L('sbWhatCaption')} C={C}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.62)', fontFamily: FONT }}>{L('newsSourcesShort')}</span>
             {[3, 6, 10].map(n => (
               <button key={n} onClick={() => { setNumFonti(n); vibrate(8); }}
                 style={{
@@ -1192,22 +1342,24 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
                 }}>{n}</button>
             ))}
           </div>
-        )}
-      </CardSezione>
+        </CardSezione>
+      )}
 
       {/* b.529 — UNA conferma sola. b.535 — si accende solo se c'e'
           qualcosa da applicare: un tasto sempre acceso promette effetti
           che spesso non ha. */}
       {(() => {
-        const cambiato = (bozzaPaese !== paeseFiltro) || ((bozzaCategoria || '') !== (chipAttiva || ''));
+        // b.552 — resta UNA cosa sola da applicare: il Paese. La
+        // categoria era l'altra meta della tendina che Luca ha tolto
+        // («non mi e' chiara la utilita di questi filtri, confondono»):
+        // senza tendina non c'e' piu niente da confermare, e un tasto
+        // che conferma qualcosa che nessuno ha scelto e' peggio del
+        // filtro che l'aveva generato.
+        const cambiato = bozzaPaese !== paeseFiltro;
         return (
           <button onClick={() => {
               vibrate(10);
               if (bozzaPaese !== paeseFiltro) scegliPaese(bozzaPaese);
-              if ((bozzaCategoria || '') !== (chipAttiva || '')) {
-                if (!bozzaCategoria) setChipAttiva(null);
-                else { const c = CATEGORIE.find((x) => x.id === bozzaCategoria); if (c) cercaChip(c); }
-              }
               suChiudiStrumenti?.();
             }}
             disabled={!cambiato}
@@ -1840,12 +1992,18 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
           presentazione non perde il segno dove era arrivato. */}
       <FeedNotizieMondo aperto={feedAperto} onChiudi={() => setFeedAperto(false)} C={C} L={L}
         argomenti={argomenti || []} video={video || []} filtro={feedFiltro}
+        // b.552 — «deve presentare il primo contenuto solo quando e'
+        // certo» (Luca). `cercando` e' vero solo per il giro in primo
+        // piano: la crescita in sottofondo NON rimette il feed in
+        // attesa, altrimenti si tornerebbe a interrompere chi guarda.
+        caricando={cercando}
         onFiltro={(id) => savePrefs({ ...prefs, mondoFeedFiltro: id })}
         onParlane={(d) => setParlaneCon(d)}
         onStrumenti={suApriStrumenti}
         onCresci={cresci}
         miaLingua={prefs?.lang || prefs?.uiLang || 'it'}
         onCommenta={apriCommenti}
+        prefs={prefs} onBacheca={suBacheca} onNascondi={suNascondi}
         crescendo={crescendo}
         onCerca={(q) => { setQuery(q); setChipAttiva(null); cerca(q); }}
         onApriArticolo={(d) => { tornaAlFeedRef.current = true; setFeedAperto(false); setLettura({ url: d.url, titolo: d.titolo, fonte: d.fonti?.[0]?.fonte, dati: d, faccia: testataChiusa(d.url) ? 'sintesi' : 'articolo' }); }} />

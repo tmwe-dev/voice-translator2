@@ -296,6 +296,10 @@ function SpeakerView({ userToken }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text, langCode, gender: 'female' }),
       });
+      // b.552 — 204: dopo la pulizia non restava una parola (sole emoji o
+      // punteggiatura). Non si passa a OpenAI a pagamento per far dire il
+      // nulla: si torna a mani vuote e si sta zitti.
+      if (edgeRes.status === 204) return null;
       if (edgeRes.ok) {
         const blob = await edgeRes.blob();
         if (blob.size > 0) return blob;

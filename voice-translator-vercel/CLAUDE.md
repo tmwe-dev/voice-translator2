@@ -267,6 +267,64 @@ perche il working tree lo conteneva ancora.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.552** (push #838) — LA GIORNATA DEI COLLAUDI DI LUCA, e
+  l'errore piu frequente dell'applicazione che era colpa nostra.
+
+  ① **«Sintesi riuscita ma audio vuoto»: 65 volte in una settimana, sei
+  persone.** Era l'errore in cima ai registri di produzione e sembrava un
+  guasto di Edge TTS. Era `preprocessForTTS`: toglie markdown ed emoji —
+  giustamente — e un messaggio di SOLE emoji («👍😂»), che in chat e'
+  normale, dopo la pulizia e' la stringa vuota. Chiedevamo di pronunciare
+  il nulla e scrivevamo il nulla nei registri come errore. Adesso:
+  niente da dire → 204, chi ha chiamato tace (e non paga OpenAI per far
+  dire il vuoto); testo vero e buffer muto → un secondo tentativo, e se
+  fallisce il registro dice ANCHE voce e lingua.
+
+  ② **«Quando sto guardando un video non devi interrompermi per attivare
+  la nuova ricerca. Mai rovinare l'esperienza dell'utente»** (Luca). La
+  crescita del giardino usava la stessa `cerca` del campo in cima:
+  svuotava i video (`setVideo(null)`, la diapositiva spariva a meta),
+  faceva vibrare, accendeva il pannello COBRA, riordinava tutto l'elenco
+  e faceva rifare al feed l'intreccio articolo/video — cinque
+  interruzioni, nessuna necessaria. Adesso un giro `accoda` e' un giro
+  DIETRO: non tocca niente di cio che si vede, e ha il suo freno
+  (`abortDietroRef`) perche' il primo piano comandi sempre.
+
+  ③ **«Deve presentare il primo contenuto solo quando e' certo e mettere
+  una icona mentre carica».** Finche' il primo giro non ha finito non si
+  monta nessuna diapositiva: c'e' l'anello che gira. Da «pronto» in poi
+  l'ordine gia mostrato si CONGELA e cio che cresce si accoda in fondo.
+
+  ④ **La nota va in alto, in una riga sua**: bandiera, chi lo racconta,
+  la data — e l'ora a destra. In basso resta il titolo e basta, a due
+  righe al massimo, cosi il piede ha un'altezza CERTA (`PIEDE_VIDEO`) e
+  l'interprete sa dove fermarsi: i sottotitoli non finiscono piu sul
+  titolo. Per i video l'eta la da YouTube a parole («2 giorni fa»): si
+  mostra quella, non una data inventata.
+
+  ⑤ **Il vetro, e una ricetta sola** (`lib/vetro.js`): «tutti i badge e
+  pulsanti semi trasparenti con tonalita brown o blu e superficie
+  vetrata». In b.551 avevo fatto il contrario per risparmiare la
+  sfocatura: la ricetta la tiene leggera (12 punti) e sta in un posto
+  solo, cosi il giorno che si cambia idea si cambia una riga.
+
+  ⑥ **I due pollici**: la stella mette in BACHECA (nella sidebar, con
+  miniatura vera, ordinabile con le frecce) e l'occhio dice «non
+  mostrarmelo piu» — e quel contenuto sparisce subito e non rientra dal
+  giro dopo. Vivono nelle preferenze della persona, non nei conteggi di
+  tutti (`lib/bacheca.js`).
+
+  ⑦ **Via le due tendine «Cosa cerco»**: «non mi e' chiara la utilita di
+  questi filtri, confondono». Chiedere in che categoria cercare e'
+  chiedere alla persona il lavoro che il giardino fa gia da solo.
+  Restano i preferiti, la bacheca, le ultime ricerche, il campo per
+  seminare a mano e l'albero che cresce.
+
+  ⑧ Sei parole nuove tradotte DAVVERO in tutte e 38 le lingue (non
+  lasciate in inglese), e le prove che aprono tutti i pacchetti hanno
+  ora trenta secondi: un rosso per stanchezza della macchina e' peggio
+  di nessun rosso.
+
 - Versione: **b.551** (push #837) — IL GUASTO CHE SPIEGA «NON SI PUO DARE
   UN MI PIACE A NESSUNO», e la lista chiusa.
 

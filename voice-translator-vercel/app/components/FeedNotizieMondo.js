@@ -10,6 +10,8 @@ import { bandieraPaese, nomePaese } from '../lib/schedaMondo.js'; // b.546 — l
 import { paeseDellaNotizia } from '../lib/paeseDaFonte.js';       // b.546 — da dove arriva davvero la notizia
 import AnteprimaCoperta from './ui/AnteprimaCoperta.js';
 import Sovrapposizione from './ui/Sovrapposizione.js';
+import { VETRO, VETRO_ACCESO, VETRO_CUORE, VETRO_FASCIA } from '../lib/vetro.js'; // b.552 — la ricetta del vetro, una per tutti
+import { inBacheca } from '../lib/bacheca.js';                                    // b.552 — la stella: messo da parte
 
 // ═══════════════════════════════════════════════════════════════
 // FeedNotizieMondo — IL FEED A TUTTA PAGINA (b.515)
@@ -40,6 +42,12 @@ const FILTRI = [
 // una sessantina sullo schermo grande. Si tiene la misura piu generosa:
 // meglio due dita d'aria in piu che un tasto coperto.
 const BARRA_YT = 60;
+// b.552 — quanto e' alto il piede del video: due righe di titolo (15 x
+// 1.3 x 2 = 39) piu i suoi bordi (26), arrotondato in su. E' un patto
+// fra il piede e l'interprete: i sottotitoli si fermano sopra questa
+// quota e non toccano mai il titolo. Se un giorno il piede cresce,
+// questo numero cresce con lui — non si aggiusta a occhio.
+const PIEDE_VIDEO = 76;
 
 // b.546 — QUANTO BASTA VEDERSI PER ESSERE «LA SLIDE CHE SI STA
 // GUARDANDO». Fino a ieri la soglia era una sola, 0.6, e li stava meta
@@ -93,17 +101,16 @@ function Azioni({ voci }) {
               width: 46, height: 46, borderRadius: 999, cursor: 'pointer', padding: 0,
               // b.544 — acceso quando l'hai messo tu: si vede a colpo d'occhio
               // che il tocco e' arrivato, senza aspettare la rete.
-              // b.551 — fondo pieno, NON vetro sfocato. Questi cerchi
-              // esistono in copia su ogni slide del feed: una sfocatura
-              // ripetuta la paga il telefono a ogni scorrimento, e nel
-              // feed lo scorrimento e' continuo. Un fondo denso si legge
-              // uguale sopra qualunque foto e non costa nulla.
-              background: v.acceso ? 'rgba(150,30,50,0.88)' : 'rgba(10,14,26,0.86)',
-              border: `1px solid ${v.acceso ? 'rgba(255,84,112,0.65)' : 'rgba(255,255,255,0.18)'}`,
+              // b.552 — vetro, per ordine di Luca (vedi lib/vetro.js).
+              // In b.551 qui c'era un fondo pieno per risparmiare la
+              // sfocatura: la ricetta condivisa la tiene leggera.
+              ...(v.acceso ? VETRO_CUORE : VETRO),
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               WebkitTapHighlightColor: 'transparent',
             }}>
-            <Icon name={v.icona} size={19} color={v.acceso ? '#ff5470' : '#fff'} />
+            {/* b.552 — acceso non vuol dire sempre rosso: il cuore e' caldo,
+                la stella della bacheca e' d'oro. */}
+            <Icon name={v.icona} size={19} color={v.acceso ? (v.caldo ? '#ff5470' : '#ffd479') : '#fff'} />
           </button>
           )}
           {v.conto ? (
@@ -145,48 +152,86 @@ function Azioni({ voci }) {
 // E' pittura, non un tasto (`pointerEvents: 'none'`): non deve rubare
 // il tocco ne al player ne all'anteprima ancora da scoprire.
 // ═══════════════════════════════════════════════════════════════
-function BadgeOrigine({ bandiera, luogo, origine }) {
-  if (!bandiera && !origine) return null;
+// ═══ b.552 — UNA RIGA SUA, IN ALTO, E NIENTE PIU SOVRAPPOSIZIONI ═══
+// Collaudo di Luca, con la fotografia: «titoli e sottotitoli in basso a
+// volte si sovrappongono. Se devi mettere una nota mettila in alto in
+// una riga dedicata con bandiera e origine e data pubblicazione bene
+// evidente con la ora a destra in alto».
+//
+// Aveva ragione due volte. In basso si accatastavano titolo, nome del
+// canale e sottotitoli dell'interprete: tre cose che crescono ognuna per
+// conto suo, e prima o poi si toccano. E l'origine, che e' la prima cosa
+// da sapere, stava schiacciata li in mezzo.
+//
+// Ora la nota ha la SUA riga in cima, larga quanto lo schermo: a
+// sinistra bandiera, chi lo racconta e quando; a destra l'ora. In basso
+// resta il titolo e basta — a due righe al massimo, cosi il piede ha
+// un'altezza certa e i sottotitoli sanno dove fermarsi.
+//
+// LA BANDIERA SOLO SE E' VERA: `paeseDellaNotizia` torna `null` quando
+// il dominio non dice il paese, e allora resta la sola fonte. Meglio
+// nessuna bandiera che una bandiera sbagliata.
+// E' pittura, non un tasto (`pointerEvents: 'none'`).
+function RigaOrigine({ bandiera, luogo, origine, quandoMs, quandoTesto, lingua = 'it' }) {
+  if (!bandiera && !origine && !quandoTesto) return null;
+  // La data si scrive per esteso e corta insieme: «28 ago» si legge in un
+  // colpo d'occhio, «28/08/2026» va decifrato.
+  let data = '';
+  let ora = '';
+  if (quandoMs) {
+    try {
+      const d = new Date(quandoMs);
+      data = d.toLocaleDateString(lingua, { day: 'numeric', month: 'short' });
+      ora = d.toLocaleTimeString(lingua, { hour: '2-digit', minute: '2-digit' });
+    } catch { /* lingua strana: si resta senza data, non si sbaglia data */ }
+  }
+  // I video non hanno una data vera (YouTube da l'eta a parole): quella
+  // va a destra, dove Luca vuole il tempo.
+  const aDestra = ora || quandoTesto || '';
   return (
     <div style={{
-      // sotto l'header (che e alto 44 + 28 di respiro), non sopra:
-      // due cose di vetro sovrapposte non si leggono piu ne l'una ne
-      // l'altra.
-      position: 'absolute', top: 74, left: 14, zIndex: 2,
-      maxWidth: 'calc(100% - 92px)',
-      display: 'flex', alignItems: 'center', gap: 8,
-      padding: '7px 13px 7px 11px', borderRadius: 999,
-      // b.551 — come la colonnina qui sopra: niente vetro sfocato su un
-      // pezzo che si ripete a ogni slide. E questa targa Luca la vuole
-      // LEGGIBILE («la bandiera e l'origine, che si veda bene»): un fondo
-      // pieno la stacca dalla foto meglio di una sfocatura.
-      background: 'rgba(8,11,22,0.84)', border: '1px solid rgba(255,255,255,0.24)',
-      boxShadow: '0 6px 20px rgba(0,0,0,0.42)',
+      // sotto l'header (44 di barra + respiro), larga tutta: e' una riga,
+      // non una targhetta appiccicata in un angolo.
+      position: 'absolute', top: 70, left: 0, right: 0, zIndex: 2,
+      display: 'flex', alignItems: 'center', gap: 10,
+      padding: '8px 14px',
+      ...VETRO_FASCIA,   // vetro anche qui, ma senza spigoli: e' una fascia, non una targa
       pointerEvents: 'none',
     }}>
       {bandiera ? (
         // grande davvero: sotto i 20 punti una bandiera diventa un
-        // francobollo colorato e non si riconosce piu. Era esattamente
-        // il punto di Luca, «che si veda bene».
+        // francobollo colorato e non si riconosce piu. Era il punto di
+        // Luca, «che si veda bene».
         <span role="img" aria-label={luogo || undefined}
-          style={{ fontSize: 20, lineHeight: 1, flexShrink: 0 }}>{bandiera}</span>
+          style={{ fontSize: 21, lineHeight: 1, flexShrink: 0 }}>{bandiera}</span>
       ) : null}
       {origine ? (
         <span style={{
           // niente grassetto: ordine permanente di Luca, «non voglio
           // grassetto da nessuna parte e neanche dentro i pulsanti».
-          // Si legge lo stesso perche sta su vetro scuro e ha la sua
-          // ombra, non perche pesa.
           fontSize: 13.5, fontWeight: 500, fontFamily: FONT, color: '#fff',
           letterSpacing: 0.2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-          textShadow: '0 1px 3px rgba(0,0,0,0.55)',
+          textShadow: '0 1px 4px rgba(0,0,0,0.8)', minWidth: 0,
         }}>{origine}</span>
+      ) : null}
+      {data ? (
+        <span style={{
+          fontSize: 12.5, fontFamily: FONT, color: 'rgba(255,255,255,0.86)',
+          whiteSpace: 'nowrap', flexShrink: 0, textShadow: '0 1px 4px rgba(0,0,0,0.8)',
+        }}>{data}</span>
+      ) : null}
+      {aDestra ? (
+        <span style={{
+          marginLeft: 'auto', flexShrink: 0,
+          fontSize: 12.5, fontFamily: FONT, color: 'rgba(255,255,255,0.86)',
+          whiteSpace: 'nowrap', textShadow: '0 1px 4px rgba(0,0,0,0.8)',
+        }}>{aDestra}</span>
       ) : null}
     </div>
   );
 }
 
-export default function FeedNotizieMondo({ aperto, onChiudi, C, L, argomenti = [], video = [], filtro, onFiltro, onParlane, onApriArticolo, onStrumenti, onCresci, crescendo = false, onCerca, onCommenta, miaLingua = 'it' }) {
+export default function FeedNotizieMondo({ aperto, onChiudi, C, L, argomenti = [], video = [], filtro, onFiltro, onParlane, onApriArticolo, onStrumenti, onCresci, crescendo = false, onCerca, onCommenta, miaLingua = 'it', caricando = false, prefs = null, onBacheca, onNascondi }) {
   const contenitoreRef = useRef(null);
   // ═══════════════════════════════════════════════════════════════
   // b.546 — L'OSSERVATORE CHE NON NASCEVA MAI. Quinta causa del
@@ -265,6 +310,21 @@ export default function FeedNotizieMondo({ aperto, onChiudi, C, L, argomenti = [
   // Rimedio, che e una regola e non una toppa: le cose si dichiarano
   // SOPRA a chiunque le guardi, sempre. Qui l'elenco viene per primo.
   // ═══════════════════════════════════════════════════════════════
+  // ═══ b.552 — SI MOSTRA QUANDO E' CERTO, NON PRIMA ═══
+  // Collaudo di Luca: «quando apro Mondo mostra la pagina cerca, poi un
+  // video, e a volte salta subito ad altri e si ferma. Deve presentare
+  // il primo contenuto solo quando e' certo e mettere una icona mentre
+  // carica se non e' pronto».
+  // Lo STATO sta qui, sopra: il calcolo dell'elenco lo legge mentre
+  // disegna (`prontoRef`). L'effetto che lo accende sta piu sotto,
+  // perche' quello guarda `elementi` — e le cose si dichiarano sopra a
+  // chi le guarda, sempre (lezione b.546, ripresa oggi da questa prova).
+  const [visto, setVisto] = useState(false);   // una volta mostrato, resta mostrato
+  const prontoRef = useRef(false);
+
+  // b.552 — la memoria dell'ordine gia mostrato. Dichiarata QUI, sopra a
+  // chi la guarda: e' la regola imparata in b.546, e vale sempre.
+  const ordineRef = useRef([]);
   const elementi = useMemo(() => {
     const art = (argomenti || []).map((t) => ({ tipo: 'articolo', dati: t, chiave: `a-${t.id || t.url || t.titolo}` }));
     const vid = (video || []).filter((v) => v?.id).map((v) => ({ tipo: 'video', dati: v, chiave: `v-${v.id}` }));
@@ -272,11 +332,50 @@ export default function FeedNotizieMondo({ aperto, onChiudi, C, L, argomenti = [
     if (filtro === 'articoli') return art;
     // «entrambi»: intercalati, cosi non si scorrono prima tutti gli
     // articoli in blocco e poi tutti i video in blocco.
-    const out = [];
-    const n = Math.max(art.length, vid.length);
-    for (let i = 0; i < n; i++) { if (art[i]) out.push(art[i]); if (vid[i]) out.push(vid[i]); }
+    const intreccia = (a, v) => {
+      const fuori = [];
+      const n = Math.max(a.length, v.length);
+      for (let i = 0; i < n; i++) { if (a[i]) fuori.push(a[i]); if (v[i]) fuori.push(v[i]); }
+      return fuori;
+    };
+    // ═══ b.552 — L'ORDINE GIA VISTO NON SI RIFA' ═══
+    // Ordine di Luca: «quando sto guardando un video non devi
+    // interrompermi per attivare la nuova ricerca». Anche senza una
+    // scritta a schermo, l'intreccio rifatto da capo E' un'interruzione:
+    // con dieci articoli e tre video la sequenza era a1 v1 a2 v2 a3 v3
+    // a4 a5..., e appena arrivavano tre video nuovi diventava
+    // a1 v1 a2 v2 a3 v3 a4 v4 a5 v5... — cioe' tutto quello DOPO la
+    // settima diapositiva si spostava di posto, e il video sotto il dito
+    // diventava un altro.
+    // Adesso la parte gia composta resta identica e si intreccia solo
+    // cio che e' appena arrivato, che finisce in fondo: dove lo trovi
+    // scorrendo, quando vuoi tu.
+    const vive = new Set([...art, ...vid].map((e) => e.chiave));
+    // b.552 — prima di essere «pronti» l'elenco si puo ancora ricomporre
+    // per intero: nessuno lo sta guardando, e cosi i video del primo
+    // giro restano intrecciati agli articoli come devono. Dal momento in
+    // cui si mostra, invece, cio che c'e' non si muove piu.
+    const testa = prontoRef.current ? ordineRef.current.filter((e) => vive.has(e.chiave)) : [];
+    const gia = new Set(testa.map((e) => e.chiave));
+    const out = [
+      ...testa,
+      ...intreccia(art.filter((e) => !gia.has(e.chiave)), vid.filter((e) => !gia.has(e.chiave))),
+    ];
+    ordineRef.current = out;
     return out;
   }, [argomenti, video, filtro]);
+
+
+  // b.552 — e qui si decide quando e' «certo»: il primo giro ha finito
+  // (`caricando` falso) e qualcosa in mano c'e'. Si calcola mentre si
+  // disegna, non con un'attesa a orologio: un ritardo finto sarebbe solo
+  // un altro modo di far aspettare senza motivo.
+  // Una volta mostrato resta mostrato (`visto`): la crescita in
+  // sottofondo non deve MAI rimettere il feed in attesa — sarebbe di
+  // nuovo l'interruzione che Luca non vuole.
+  const pronto = visto || (aperto && !caricando && elementi.length > 0);
+  useEffect(() => { prontoRef.current = pronto; if (pronto && !visto) setVisto(true); }, [pronto, visto]);
+  useEffect(() => { if (!aperto) { setVisto(false); ordineRef.current = []; prontoRef.current = false; } }, [aperto]);
 
   // b.546 — l'indice e l'elenco tenuti anche «a mano». Servono a chi
   // ascolta gli eventi della finestra: un ascoltatore registrato una
@@ -552,14 +651,14 @@ export default function FeedNotizieMondo({ aperto, onChiudi, C, L, argomenti = [
         <button onClick={() => { vibrate(6); onChiudi?.(); }} aria-label={L('backWord')}
           style={{
             width: 44, height: 44, borderRadius: 12, cursor: 'pointer', flexShrink: 0,
-            background: 'rgba(10,14,26,0.7)', border: '1px solid rgba(255,255,255,0.14)',
+            ...VETRO,
             color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
           <Icon name="back" size={16} color="#fff" />
         </button>
         <div role="tablist" aria-label={L('feedFiltroLabel')} style={{
           display: 'flex', gap: 4, flex: 1, overflow: 'hidden', padding: 3,
-          background: 'rgba(10,14,26,0.7)', border: '1px solid rgba(255,255,255,0.14)', borderRadius: 12,
+          ...VETRO, borderRadius: 12,
         }}>
           {FILTRI.map((f) => {
             const acceso = filtro === f.id;
@@ -568,7 +667,8 @@ export default function FeedNotizieMondo({ aperto, onChiudi, C, L, argomenti = [
                 onClick={() => { vibrate(6); onFiltro?.(f.id); }}
                 style={{
                   flex: 1, minHeight: 38, padding: '0 8px', borderRadius: 9, border: 'none', cursor: 'pointer',
-                  background: acceso ? C.accent : 'transparent', color: acceso ? '#fff' : 'rgba(255,255,255,0.72)',
+                  ...(acceso ? VETRO_ACCESO : { background: 'transparent', border: '1px solid transparent' }),
+                  color: acceso ? '#fff' : 'rgba(255,255,255,0.72)',
                   fontSize: 12, fontWeight: 500, fontFamily: FONT, whiteSpace: 'nowrap',
                 }}>
                 {L(f.labelKey)}
@@ -588,8 +688,7 @@ export default function FeedNotizieMondo({ aperto, onChiudi, C, L, argomenti = [
           style={{
             position: 'absolute', left: 0, top: '44%', zIndex: 3,
             width: 34, height: 64, borderRadius: '0 14px 14px 0', cursor: 'pointer',
-            background: 'rgba(10,14,26,0.78)', border: '1px solid rgba(255,255,255,0.16)',
-            borderLeft: 'none', backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)',
+            ...VETRO, borderLeft: 'none',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             WebkitTapHighlightColor: 'transparent',
           }}>
@@ -607,21 +706,39 @@ export default function FeedNotizieMondo({ aperto, onChiudi, C, L, argomenti = [
             a cercare — cioe un compito. Adesso, se non c'e ancora niente,
             il giardino sta gia lavorando e lo si dice; il campo per
             seminare a mano resta in fondo, per chi lo vuole. */}
-        {elementi.length === 0 && (
+        {/* ═══ b.552 — L'ATTESA HA UNA FACCIA, E IL PRIMO CONTENUTO ARRIVA
+            QUANDO E' CERTO ═══
+            Collaudo di Luca: «quando apro Mondo mostra la pagina cerca,
+            poi un video, e a volte salta subito ad altri e si ferma.
+            Deve presentare il primo contenuto solo quando e' certo e
+            mettere una icona mentre carica se non e' pronto».
+            Prima si montava la prima diapositiva arrivata e poi
+            l'elenco continuava a ricomporsi sotto: partiva un video,
+            arrivavano gli altri, la diapositiva in mezzo allo schermo
+            diventava un'altra e il player restava a meta. Adesso finche'
+            non e' pronto non c'e' NIENTE da saltare: solo l'anello. */}
+        {!pronto && (
           <div style={{
             height: '100dvh', display: 'flex', flexDirection: 'column',
             alignItems: 'center', justifyContent: 'center',
-            padding: 24, textAlign: 'center', gap: 10,
+            padding: 24, textAlign: 'center', gap: 14,
           }}>
+            <span aria-hidden="true" style={{
+              width: 34, height: 34, borderRadius: '50%',
+              border: '2.5px solid rgba(150,178,255,0.28)',
+              borderTopColor: 'rgba(170,196,255,0.95)',
+              animation: 'vtGira 0.9s linear infinite',
+            }} />
             <div style={{ fontSize: 15, fontWeight: 500, color: '#fff', fontFamily: FONT }}>
               {L('growingWord')}
             </div>
             <div style={{ fontSize: 12.5, color: 'rgba(255,255,255,0.6)', fontFamily: FONT }}>
               {L('feedVuoto')}
             </div>
+            <style>{'@keyframes vtGira { to { transform: rotate(360deg); } }'}</style>
           </div>
         )}
-        {elementi.map((el, i) => {
+        {pronto && elementi.map((el, i) => {
           // b.546 — l'origine si calcola QUI, una volta sola per slide,
           // e non in mezzo al disegno: cosi si legge, e chi arriva
           // domani vede subito da dove esce la bandiera.
@@ -666,7 +783,9 @@ export default function FeedNotizieMondo({ aperto, onChiudi, C, L, argomenti = [
                     canale YouTube non ha un paese che si possa leggere
                     dal suo indirizzo, e una bandiera indovinata sarebbe
                     peggio di nessuna bandiera. */}
-                <BadgeOrigine origine={el.dati.canale} />
+                <RigaOrigine origine={el.dati.canale}
+                  quandoTesto={el.dati.quandoTesto || ''}
+                  lingua={miaLingua} />
                 {/* ═══ b.551 — L'INTERPRETE DEL VIDEO ═══
                     Ordini di Luca: «possiamo trovare il modo di silenziare
                     l'audio e tradurre direttamente con elevenlabs?»,
@@ -679,7 +798,8 @@ export default function FeedNotizieMondo({ aperto, onChiudi, C, L, argomenti = [
                     testate chiuse, b.535). Tre scelte dette in chiaro:
                     spento, sottotitoli tradotti, voce. */}
                 <InterpreteVideo videoId={el.dati.id} lingua={miaLingua}
-                  attivo={i === indiceAttivo} C={C} L={L} />
+                  attivo={i === indiceAttivo} C={C} L={L}
+                  daFondo={BARRA_YT + PIEDE_VIDEO} />
 
                 {/* b.539 — i tasti che mancavano ai video. */}
                 <Azioni voci={[
@@ -690,7 +810,7 @@ export default function FeedNotizieMondo({ aperto, onChiudi, C, L, argomenti = [
                     const u = `youtube.com/watch?v=${el.dati.id}`;
                     const k = chiaveContenuto(u);
                     const acceso = miei.has(k) || (hoMessoCuore(u) && !miei.size);
-                    return { chiave: 'cuore', icona: 'heart', parola: L('likeWord'), acceso,
+                    return { chiave: 'cuore', icona: 'heart', parola: L('likeWord'), acceso, caldo: true,
                       conto: quantiCuori(conteggi, u, null) || null, onTocca: () => cuore(u) };
                   })(),
                   (() => {
@@ -704,6 +824,18 @@ export default function FeedNotizieMondo({ aperto, onChiudi, C, L, argomenti = [
                     ) };
                   })(),
                   { chiave: 'parlane', icona: 'chat', parola: L('newsTalkAbout'), onTocca: () => { vibrate(10); onParlane?.({ titolo: el.dati.titolo, sintesi: el.dati.canale ? `YouTube \u00b7 ${el.dati.canale}` : '' }); } },
+                  /* ═══ b.552 — I DUE POLLICI, per ordine di Luca ═══
+                     «un tasto preferito, da tenere in una bacheca che devi
+                     mettere nella sidebar» e «un tasto non mostrare piu
+                     contenuto all'utente, perche gia visto e non si
+                     desidera rivederlo». Uno mette da parte, l'altro
+                     butta via: sono le due sole cose che si possono dire
+                     a un feed senza scrivere niente. */
+                  { chiave: 'bacheca', icona: 'star', parola: L('boardSave'),
+                    acceso: inBacheca(prefs, `youtube.com/watch?v=${el.dati.id}`),
+                    onTocca: () => { vibrate(8); onBacheca?.(el.dati); } },
+                  { chiave: 'basta', icona: 'eye', parola: L('hideForever'),
+                    onTocca: () => { vibrate(12); onNascondi?.(el.dati); } },
                   { chiave: 'fuori', icona: 'link', parola: L('newsOpenSite'), onTocca: () => { vibrate(6); try { window.open(`https://www.youtube.com/watch?v=${el.dati.id}`, '_blank', 'noopener,noreferrer'); } catch { /* il browser ha rifiutato la finestra */ } } },
                 ]} />
 
@@ -728,8 +860,17 @@ export default function FeedNotizieMondo({ aperto, onChiudi, C, L, argomenti = [
                   background: 'linear-gradient(180deg, transparent, rgba(5,7,15,0.92) 55%)',
                   pointerEvents: 'none',
                 }}>
-                  <div style={{ fontSize: 15, fontWeight: 500, color: '#fff', lineHeight: 1.3 }}>{el.dati.titolo}</div>
-                  <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.65)', marginTop: 4 }}>{el.dati.canale}</div>
+                  {/* b.552 — QUI RESTA SOLO IL TITOLO, e al massimo due
+                      righe. Il nome del canale e' salito nella riga in
+                      alto (RigaOrigine): tenerlo anche qui era un
+                      doppione, e ogni riga in piu qui sotto e' una riga
+                      che finisce addosso ai sottotitoli. Con il taglio a
+                      due righe il piede ha un'altezza CERTA — PIEDE_VIDEO
+                      — e l'interprete sa esattamente dove fermarsi. */}
+                  <div style={{
+                    fontSize: 15, fontWeight: 500, color: '#fff', lineHeight: 1.3,
+                    display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
+                  }}>{el.dati.titolo}</div>
                 </div>
               </>
             ) : (
@@ -787,10 +928,12 @@ export default function FeedNotizieMondo({ aperto, onChiudi, C, L, argomenti = [
                     «non vedo bandiere negli articoli ne le fonti,
                     mostra la bandiera e l'origine e che si veda
                     bene» (Luca). */}
-                <BadgeOrigine
+                <RigaOrigine
                   bandiera={paese ? bandieraPaese(paese) : ''}
                   luogo={paese ? nomePaese(paese) : ''}
-                  origine={fonteArticolo} />
+                  origine={fonteArticolo}
+                  quandoMs={el.dati.pubblicato || el.dati.fonti?.[0]?.pubblicato || 0}
+                  lingua={miaLingua} />
                 {/* b.539 — le stesse porte dei video, nello stesso posto:
                     il feed non cambia grammatica a meta scorrimento. */}
                 <Azioni voci={[
@@ -798,7 +941,7 @@ export default function FeedNotizieMondo({ aperto, onChiudi, C, L, argomenti = [
                     const u = el.dati.url || '';
                     const k = chiaveContenuto(u);
                     const acceso = miei.has(k) || (hoMessoCuore(u) && !miei.size);
-                    return { chiave: 'cuore', icona: 'heart', parola: L('likeWord'), acceso,
+                    return { chiave: 'cuore', icona: 'heart', parola: L('likeWord'), acceso, caldo: true,
                       conto: quantiCuori(conteggi, u, null) || null, onTocca: () => cuore(u) };
                   })(),
                   (() => {
@@ -813,6 +956,18 @@ export default function FeedNotizieMondo({ aperto, onChiudi, C, L, argomenti = [
                   })(),
                   { chiave: 'commenta', icona: 'chat', parola: L('commentsWord'), onTocca: () => { vibrate(8); onCommenta?.(el.dati); } },
                   { chiave: 'leggi', icona: 'doc', parola: L('newsOpenTranslate'), onTocca: () => { vibrate(8); onApriArticolo?.(el.dati); } },
+                  /* ═══ b.552 — I DUE POLLICI, per ordine di Luca ═══
+                     «un tasto preferito, da tenere in una bacheca che devi
+                     mettere nella sidebar» e «un tasto non mostrare piu
+                     contenuto all'utente, perche gia visto e non si
+                     desidera rivederlo». Uno mette da parte, l'altro
+                     butta via: sono le due sole cose che si possono dire
+                     a un feed senza scrivere niente. */
+                  { chiave: 'bacheca', icona: 'star', parola: L('boardSave'),
+                    acceso: inBacheca(prefs, el.dati.url),
+                    onTocca: () => { vibrate(8); onBacheca?.(el.dati); } },
+                  { chiave: 'basta', icona: 'eye', parola: L('hideForever'),
+                    onTocca: () => { vibrate(12); onNascondi?.(el.dati); } },
                   { chiave: 'parlane', icona: 'chat', parola: L('newsTalkAbout'), onTocca: () => { vibrate(10); onParlane?.(el.dati); } },
                   el.dati.url ? { chiave: 'fuori', icona: 'link', parola: L('newsOpenSite'), onTocca: () => { vibrate(6); try { window.open(el.dati.url, '_blank', 'noopener,noreferrer'); } catch { /* il telefono ha bloccato la finestra nuova: non e' un guasto nostro e non merita un allarme a schermo, chi vuole il sito ha ancora il tasto */ } } } : null,
                 ]} />

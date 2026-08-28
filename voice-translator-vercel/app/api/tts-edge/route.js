@@ -40,6 +40,25 @@ async function handlePost(req) {
     const trimmed = cleanText.substring(0, 5000);
     const voiceName = getEdgeVoice(langCode || 'en', gender || 'female');
 
+    // ═══ b.552 — NIENTE DA DIRE NON E' UN GUASTO ═══
+    // Nei registri di produzione «sintesi riuscita ma audio vuoto» era
+    // l'errore piu frequente dell'applicazione: 65 volte in una settimana,
+    // sei persone. La causa non era Edge TTS: era QUI. `preprocessForTTS`
+    // toglie markdown ed emoji — giustamente, non si legge ad alta voce
+    // una faccina — e un messaggio fatto di sole emoji («👍😂») o di sola
+    // punteggiatura resta la stringa vuota. Si chiedeva a Edge TTS di
+    // pronunciare il nulla, lui restituiva il nulla, e noi lo scrivevamo
+    // nei registri come errore. Non lo e': non c'e' niente da dire.
+    //
+    // Ora si risponde 204 (nessun contenuto): chi ha chiamato sa che non
+    // deve suonare niente e non ripiega su un'altra voce per leggere il
+    // vuoto. Vedi `voceDaSuonare` in hooks/useTTSEngine.js.
+    const qualcosaDaDire = /[\p{L}\p{N}]/u.test(trimmed);
+    if (!qualcosaDaDire) {
+      log.info('niente da pronunciare dopo la pulizia (emoji o punteggiatura sola)', { lingua: lang2, caratteri: text.length });
+      return new NextResponse(null, { status: 204 });
+    }
+
     const { getEdgeRateForLang } = await import('../../lib/voiceDefaults.js');
     const speechRate = getEdgeRateForLang(lang2);
 
@@ -59,15 +78,26 @@ async function handlePost(req) {
     }
 
     // Generate audio
+    // b.552 — un SECONDO tentativo se il primo torna muto. Tolto il caso
+    // «niente da dire» (sopra), un buffer vuoto con del testo vero e' un
+    // singhiozzo del servizio, non una risposta: capita, e riprovare una
+    // volta costa meno che far ripiegare la persona sulla voce robotica.
     let audioBuffer;
-    try {
+    const sintetizza = async () => {
       const tts = new EdgeTTS();
       await tts.synthesize(trimmed, voiceName, {
         rate: speechRate,
         volume: '+0%',
         pitch: '+0Hz',
       });
-      audioBuffer = tts.toBuffer();
+      return tts.toBuffer();
+    };
+    try {
+      audioBuffer = await sintetizza();
+      if (!audioBuffer || audioBuffer.length === 0) {
+        log.warn('primo tentativo muto, riprovo', { voce: voiceName, lingua: lang2 });
+        audioBuffer = await sintetizza();
+      }
     } catch (synthErr) {
       // b.363 — qui si rispediva al client `stack`: le prime cinque righe
       // della traccia dell'errore, cioe i PERCORSI DEI FILE SUL SERVER e i
@@ -82,7 +112,10 @@ async function handlePost(req) {
     if (!audioBuffer || audioBuffer.length === 0) {
       // b.363 — uscita di guasto muta: dal registro sembrava che non
       // fosse successo niente. Un audio vuoto e un guasto silenzioso: nessuno se ne accorge.
-      log.error('Edge TTS: sintesi riuscita ma audio vuoto');
+      // b.552 — il registro dice ANCHE con quale voce e in quale lingua:
+      // senza quei due dati, nel registro di prima, non si poteva capire
+      // se il guasto fosse di una lingua sola o di tutte.
+      log.error('Edge TTS: sintesi riuscita ma audio vuoto', { voce: voiceName, lingua: lang2, caratteri: trimmed.length });
       return NextResponse.json({ error: 'Failed to generate audio' }, { status: 503 });
     }
 

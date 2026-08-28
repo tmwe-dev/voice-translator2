@@ -147,5 +147,9 @@ describe('b.535 — la sidebar a card di vetro e la Home senza doppioni', () => 
         expect(typeof o[k], `${f}:${k}`).toBe('string');
       }
     }
-  });
+    // b.552 — trenta secondi di respiro: questa prova apre a uno a uno
+    // TUTTI e 38 i pacchetti (1736 chiavi l'uno) e sul portatile carico
+    // i cinque secondi di prammatica non bastano. Non e' lentezza del
+    // codice: e' una prova che legge mezzo megabyte di traduzioni.
+  }, 30000);
 });

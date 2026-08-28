@@ -51,7 +51,7 @@ const ORIGINE_YT = 'https://www.youtube-nocookie.com';
 const PASSO_MS = 250;                 // ogni quarto di secondo si guarda l'ora
 const MODI = ['spento', 'sottotitoli', 'voce'];
 
-export default function InterpreteVideo({ videoId, lingua, attivo, onCambia, C, L }) {
+export default function InterpreteVideo({ videoId, lingua, attivo, onCambia, C, L, daFondo = 132 }) {
   // b.551 — il gettone serve alle rotte a pagamento (traduzione e voce).
   // Si legge dal contesto SENZA useApp(), che lancia se il contesto non
   // c'e': questo e' un componente di `ui/`, deve poter vivere anche
@@ -279,7 +279,11 @@ export default function InterpreteVideo({ videoId, lingua, attivo, onCambia, C, 
 
   return (
     <>
-      <div style={{ position: 'absolute', left: 12, top: 96, zIndex: 6, fontFamily: FONT }}>
+      {/* b.552 — sceso di venti punti: sopra, da b.552, c'e' la riga
+          dedicata all'origine (bandiera, chi lo racconta, quando). Due
+          cose nello stesso punto sono la stessa sovrapposizione che Luca
+          ha fotografato in basso, solo in cima. */}
+      <div style={{ position: 'absolute', left: 12, top: 116, zIndex: 6, fontFamily: FONT }}>
         <button
           onClick={() => { vibrate(6); setAperto((v) => !v); }}
           aria-label={parla('interpreteTitolo')}
@@ -343,7 +347,14 @@ export default function InterpreteVideo({ videoId, lingua, attivo, onCambia, C, 
           tocchi: e' pittura, non un bersaglio. */}
       {acceso && battuta && (
         <div aria-live="polite" style={{
-          position: 'absolute', left: 0, right: 0, bottom: 132, zIndex: 5,
+          // b.552 — l'altezza da terra la decide CHI OSPITA, non questo
+          // pezzo: il feed sa quanto e' alto il suo piede (barra di
+          // YouTube + titolo) e lo dice. Prima era un 132 scritto a mano
+          // qui dentro, e quando il titolo andava a due righe i
+          // sottotitoli ci finivano sopra — il difetto che Luca ha
+          // fotografato.
+          position: 'absolute', left: 0, right: 0, zIndex: 5,
+          bottom: `calc(${daFondo}px + env(safe-area-inset-bottom))`,
           padding: '0 18px', pointerEvents: 'none', textAlign: 'center',
         }}>
           <span style={{

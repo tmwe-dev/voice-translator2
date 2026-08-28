@@ -241,6 +241,10 @@ function TaxiTalk({ userToken }) {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text, langCode, gender: 'female' }),
       });
+      // b.552 — 204: dopo la pulizia non restava una parola (sole emoji o
+      // punteggiatura). Non si passa a OpenAI a pagamento per far dire il
+      // nulla: si torna a mani vuote e si sta zitti.
+      if (edge.status === 204) return null;
       if (edge.ok) { const b = await edge.blob(); if (b.size > 0) return b; }
     } catch { /* Edge non disponibile: si passa a OpenAI */ }
     try {

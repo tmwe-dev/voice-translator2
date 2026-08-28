@@ -58,7 +58,12 @@ describe('b.549 — all\'apertura si piantano TUTTI i semi', () => {
   it('e la guardia non scarta piu le ricerche in fila', () => {
     // `cercando` e uno stato: con due await di fila la seconda partiva
     // prima del ridisegno e veniva buttata. Ora si guarda un riferimento.
-    expect(news).toMatch(/if \(!pulita \|\| cercandoRef\.current\) return;/);
+    // b.552 — la guardia si e' sdoppiata: chi cerca in primo piano NON
+    // viene piu scartato se sta girando una ricerca in sottofondo (la
+    // annulla e passa avanti). Il punto di b.549 — che la guardia guardi
+    // un RIFERIMENTO e non uno stato — vale identico.
+    expect(news).toMatch(/if \(!pulita\) return;/);
+    expect(news).toMatch(/if \(cercandoRef\.current\) \{/);
     expect(news).toMatch(/cercandoRef\.current = true;/);
     expect(news).toMatch(/cercandoRef\.current = false;/);
   });
@@ -86,5 +91,9 @@ describe('b.549 — i guru si possono invitare in stanza', () => {
         expect(typeof o[k], `${f}:${k}`).toBe('string');
       }
     }
-  });
+    // b.552 — questa prova apre a uno a uno TUTTI e 38 i pacchetti di
+    // lingua: mezzo megabyte di traduzioni. Sul portatile mentre lavora
+    // i cinque secondi di prammatica non bastano, e un rosso per
+    // stanchezza della macchina e' peggio di nessun rosso.
+  }, 30000);
 });

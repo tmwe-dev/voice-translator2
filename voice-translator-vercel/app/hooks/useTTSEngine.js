@@ -177,6 +177,12 @@ export default function useTTSEngine({
           }),
           signal: controller.signal
         });
+        // b.552 — 204 = «non c'e' niente da pronunciare»: il testo era
+        // fatto di sole emoji o di sola punteggiatura e dopo la pulizia
+        // non resta una parola. Non e' un guasto e non deve far ripiegare
+        // sulla voce del browser, che leggerebbe il vuoto (o peggio, il
+        // nome delle faccine). Si torna null e si sta zitti.
+        if (res.status === 204) return null;
         if (!res.ok) throw new Error(`EdgeTTS ${res.status}`);
         return await res.blob();
       } finally {
@@ -189,10 +195,12 @@ export default function useTTSEngine({
     let blob;
     try {
       blob = await fetchEdgeTTSBlob(text, langCode);
+      if (blob === null) return;   // b.552 — niente da dire: silenzio, non ripiego
     } catch {
       try {
         const alt = (prefsRef.current?.edgeTtsVoiceGender || 'female') === 'female' ? 'male' : 'female';
         blob = await fetchEdgeTTSBlob(text, langCode, alt);
+        if (blob === null) return;
       } catch (e) {
         // b.363 — qui l'utente sente la voce meccanica del browser al
         // posto di quella neurale: era il ripiego piu visibile di tutti

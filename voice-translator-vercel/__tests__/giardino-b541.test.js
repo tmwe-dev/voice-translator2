@@ -126,7 +126,11 @@ describe('b.541 — il feed non finisce piu, e parte dai tuoi semi', () => {
 
   it('cerca() sa ACCODARE invece di sostituire (era questo il bug dei reel)', () => {
     expect(news).toMatch(/const cerca = useCallback\(async \(q, cat = 'notizie', fresca = false, silenziosa = false, accoda = false\)/);
-    expect(news).toMatch(/setArgomenti\(\(prima\) => \(accoda \? \[\.\.\.\(prima \|\| \[\]\), \.\.\.nuovi\] : arrivati\)\)/);
+    // b.552 — «arrivati» e' diventato «puliti»: cio che arriva passa
+    // prima dal setaccio dei contenuti che hai detto di non voler piu
+    // vedere (bacheca.js). Il patto di b.541 e' intatto: accoda somma,
+    // senza accoda sostituisce.
+    expect(news).toMatch(/setArgomenti\(\(prima\) => \(accoda \? \[\.\.\.\(prima \|\| \[\]\), \.\.\.nuovi\] : puliti\)\)/);
     expect(news, 'e non ripete cio che hai gia visto').toMatch(/vistiRef\.current\.has\(chiave\)/);
   });
 
@@ -167,7 +171,11 @@ describe('b.541 — il feed non finisce piu, e parte dai tuoi semi', () => {
         expect(typeof o[k], `${f}:${k}`).toBe('string');
       }
     }
-  });
+    // b.552 — questa prova apre a uno a uno TUTTI e 38 i pacchetti di
+    // lingua: mezzo megabyte di traduzioni. Sul portatile mentre lavora
+    // i cinque secondi di prammatica non bastano, e un rosso per
+    // stanchezza della macchina e' peggio di nessun rosso.
+  }, 30000);
 });
 
 describe('b.541 — i predefiniti che Luca ha eletto', () => {
@@ -177,7 +185,11 @@ describe('b.541 — i predefiniti che Luca ha eletto', () => {
     expect(p).toMatch(/chiave: 'mondoModo',\n\s*predefinito: 'approfondita'/);
     expect(p).toMatch(/chiave: 'mondoRitmo',[\s\S]{0,600}predefinito: '5'/);
     expect(p).toMatch(/chiave: 'mondoAggiorna',\n\s*predefinito: 'apertura'/);
-  });
+    // b.552 — questa prova apre a uno a uno TUTTI e 38 i pacchetti di
+    // lingua: mezzo megabyte di traduzioni. Sul portatile mentre lavora
+    // i cinque secondi di prammatica non bastano, e un rosso per
+    // stanchezza della macchina e' peggio di nessun rosso.
+  }, 30000);
   it('e il codice dice lo stesso del pannello (la lezione di b.535)', () => {
     const news = leggi('app/components/MondoNews.js');
     expect(news).toMatch(/prefs\?\.mondoModo \|\| 'approfondita'/);

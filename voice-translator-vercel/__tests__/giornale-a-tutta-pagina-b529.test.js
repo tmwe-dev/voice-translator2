@@ -19,9 +19,17 @@ describe('b.529 — la colonna va da bordo a bordo e non balla', () => {
 describe('b.529 — il pannello applica UNA volta', () => {
   const f = leggi('app/components/MondoNews.js');
   const v = leggi('app/components/MondoView.js');
-  it('Paese e categoria scrivono la BOZZA, non la query', () => {
+  it('il Paese scrive la BOZZA, non la query', () => {
     expect(f).toMatch(/onCambia=\{\(v\) => setBozzaPaese\(v === 'tutto' \? null : v\)\}/);
-    expect(f).toMatch(/onCambia=\{\(v\) => setBozzaCategoria\(v\)\}/);
+    // b.552 — la tendina della CATEGORIA non esiste piu. Collaudo di
+    // Luca: «non mi e' chiara la utilita di questi filtri, confondono.
+    // Se non sono necessari accontentiamoci dei preferiti, del random,
+    // delle ultime ricerche e dell'albero che cresce». Chiedere in che
+    // categoria cercare e' chiedere alla persona il lavoro che il
+    // giardino (b.541) fa gia da solo. Il patto di b.529 — si scrive una
+    // bozza e si applica UNA volta — resta, e resta provato qui sopra
+    // sull'unica cosa rimasta da applicare.
+    expect(f, 'niente tendina delle categorie').not.toMatch(/onCambia=\{\(v\) => setBozzaCategoria\(v\)\}/);
   });
   it('il tasto Applica esiste nei due pannelli e chiude', () => {
     expect(f).toMatch(/\{L\('applyWord'\)\}/);

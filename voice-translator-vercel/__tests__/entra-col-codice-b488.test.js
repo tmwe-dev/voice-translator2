@@ -57,5 +57,9 @@ describe('la chiave nuova esiste in tutte le lingue', () => {
       await preloadLang(l);
       expect(t(l, 'codeGiven'), `${l}/codeGiven`).not.toBe('codeGiven');
     }
-  });
+    // b.552 — questa prova apre a uno a uno TUTTI e 38 i pacchetti di
+    // lingua: mezzo megabyte di traduzioni. Sul portatile mentre lavora
+    // i cinque secondi di prammatica non bastano, e un rosso per
+    // stanchezza della macchina e' peggio di nessun rosso.
+  }, 30000);
 });

@@ -214,6 +214,8 @@ export default function useStreamingInterpreter({
             // ascoltava non sentiva niente ne capiva perche.
             signal: AbortSignal.timeout(30000),
           });
+          // b.552 — 204 = niente da pronunciare (sole emoji o punteggiatura): non e' un guasto, non si suona e non si cambia motore.
+          if (r.status === 204) return null;
           if (r.ok) return await r.blob();
           // credito esaurito sulla premium: inutile riprovarla, si passa oltre
           if (r.status === 402) break;

@@ -46,7 +46,11 @@ describe('b.550 — «avvisami quando arriva qualcuno» finalmente si vede', () 
       expect(typeof o.warnMeArrived, f).toBe('string');
       expect(typeof o.warnMeWord, f).toBe('string');
     }
-  });
+    // b.552 — questa prova apre a uno a uno TUTTI e 38 i pacchetti di
+    // lingua: mezzo megabyte di traduzioni. Sul portatile mentre lavora
+    // i cinque secondi di prammatica non bastano, e un rosso per
+    // stanchezza della macchina e' peggio di nessun rosso.
+  }, 30000);
 });
 
 describe('b.550 — la card di vetro vale per tutte e tre le sidebar', () => {

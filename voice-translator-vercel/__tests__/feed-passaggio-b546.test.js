@@ -217,7 +217,10 @@ describe('b.546 — «parlane non deve occupare tutto quello spazio»', () => {
 
 describe('b.546 — e niente grassetto in cio che b.546 ha aggiunto', () => {
   it('il badge dell\'origine si ferma a 500', () => {
-    const badge = feed.slice(feed.indexOf('function BadgeOrigine'), feed.indexOf('export default function FeedNotizieMondo'));
+    // b.552 — si chiama RigaOrigine da quando la nota ha una riga sua in
+    // alto (ordine di Luca: «se devi mettere una nota mettila in alto in
+    // una riga dedicata»). Il pezzo e' lo stesso e la regola pure.
+    const badge = feed.slice(feed.indexOf('function RigaOrigine'), feed.indexOf('export default function FeedNotizieMondo'));
     expect(badge).toMatch(/fontWeight: 500/);
     expect(badge, 'Luca: «non voglio grassetto da nessuna parte»').not.toMatch(/fontWeight: (600|700)/);
   });

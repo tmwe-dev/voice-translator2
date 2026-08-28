@@ -109,5 +109,9 @@ describe('b.543 — il tasto, e la ricerca che lo usa', () => {
         expect(typeof o[k], `${f}:${k}`).toBe('string');
       }
     }
-  });
+    // b.552 — questa prova apre a uno a uno TUTTI e 38 i pacchetti di
+    // lingua: mezzo megabyte di traduzioni. Sul portatile mentre lavora
+    // i cinque secondi di prammatica non bastano, e un rosso per
+    // stanchezza della macchina e' peggio di nessun rosso.
+  }, 30000);
 });

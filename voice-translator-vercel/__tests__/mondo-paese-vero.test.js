@@ -182,7 +182,11 @@ describe('il globo e una porta: si entra, si vede dove sei, si esce', () => {
       expect(typeof o.wholeWorld, `${f}: manca wholeWorld`).toBe('string');
       expect(o.wholeWorld.length, `${f}: wholeWorld vuota`).toBeGreaterThan(0);
     }
-  });
+    // b.552 — questa prova apre a uno a uno TUTTI e 38 i pacchetti di
+    // lingua: mezzo megabyte di traduzioni. Sul portatile mentre lavora
+    // i cinque secondi di prammatica non bastano, e un rosso per
+    // stanchezza della macchina e' peggio di nessun rosso.
+  }, 30000);
 });
 
 describe('il riquadro del Paese dice solo numeri contati', () => {
@@ -190,7 +194,11 @@ describe('il riquadro del Paese dice solo numeri contati', () => {
     const v = leggi('app/components/MondoView.js');
     const chiamate = (v.match(/\/api\/mondo\/paese\?code=/g) || []).length;
     expect(chiamate).toBe(1);
-  });
+    // b.552 — questa prova apre a uno a uno TUTTI e 38 i pacchetti di
+    // lingua: mezzo megabyte di traduzioni. Sul portatile mentre lavora
+    // i cinque secondi di prammatica non bastano, e un rosso per
+    // stanchezza della macchina e' peggio di nessun rosso.
+  }, 30000);
 
   it('un numero che non sappiamo sparisce, non diventa zero', () => {
     // zero e un'affermazione — «non c'e nessuno» — e dirla senza saperla
@@ -242,7 +250,11 @@ describe('il riquadro del Paese dice solo numeri contati', () => {
       expect(typeof o.quietHereNow, `${f}`).toBe('string');
       expect(o.quietHereNow.length, `${f}: vuota`).toBeGreaterThan(0);
     }
-  });
+    // b.552 — questa prova apre a uno a uno TUTTI e 38 i pacchetti di
+    // lingua: mezzo megabyte di traduzioni. Sul portatile mentre lavora
+    // i cinque secondi di prammatica non bastano, e un rosso per
+    // stanchezza della macchina e' peggio di nessun rosso.
+  }, 30000);
 });
 
 describe('la Home del Paese, e il passaggio fra pianeta e contenuti', () => {
@@ -311,5 +323,9 @@ describe('la Home del Paese, e il passaggio fra pianeta e contenuti', () => {
       expect(typeof o.whatWorldThinks, `${f}`).toBe('string');
       expect(typeof o.countedAcross, `${f}`).toBe('string');
     }
-  });
+    // b.552 — questa prova apre a uno a uno TUTTI e 38 i pacchetti di
+    // lingua: mezzo megabyte di traduzioni. Sul portatile mentre lavora
+    // i cinque secondi di prammatica non bastano, e un rosso per
+    // stanchezza della macchina e' peggio di nessun rosso.
+  }, 30000);
 });

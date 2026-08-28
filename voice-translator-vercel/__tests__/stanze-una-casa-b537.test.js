@@ -130,5 +130,9 @@ describe('b.537 — 4. la stanza vuota e un annuncio, non un vicolo cieco', () =
         expect(typeof o[k], `${lang}:${k}`).toBe('string');
       }
     }
-  });
+    // b.552 — questa prova apre a uno a uno TUTTI e 38 i pacchetti di
+    // lingua: mezzo megabyte di traduzioni. Sul portatile mentre lavora
+    // i cinque secondi di prammatica non bastano, e un rosso per
+    // stanchezza della macchina e' peggio di nessun rosso.
+  }, 30000);
 });

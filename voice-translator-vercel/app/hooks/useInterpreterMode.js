@@ -320,6 +320,8 @@ export default function useInterpreterMode({
               signal: AbortSignal.timeout(30000),
             })
           );
+          // b.552 — 204 = niente da pronunciare (sole emoji o punteggiatura): non e' un guasto, non si suona e non si cambia motore.
+          if (r?.status === 204) return;
           if (r?.ok) { ttsRes = r; break; }
         } catch { /* questo motore non risponde: si prova l'altro */ }
       }
