@@ -28,6 +28,8 @@ import { giraBacheca, nascondi, senzaNascosti, bachecaDi, spostaInBacheca, togli
 import { soloRecenti, quantiFreschi } from '../lib/topics/freschezza.js'; // b.557 — le notizie sono di oggi; b.559 — da un file PURO, che il browser puo leggere
 import { vistiDiRecente, primaIlNuovo } from '../lib/visti.js'; // b.558 — non si rivede Beethoven ad ogni ingresso
 import { componi, annota } from '../lib/regia.js';              // b.561 — la regia del carosello
+import { daChiedere, semiDaInteressi } from '../lib/accoglienza.js';  // b.562 — la prima domanda
+import SceltaInteressi from './ui/SceltaInteressi.js';
 import { eDiCronaca } from '../lib/topics/enciclopediaUtile.js';        // b.557 — e questa domanda ha una scadenza? // b.552 — la bacheca e il «non mostrarmelo piu»
 import { cercaTopics, chiediRami, chiediFonti } from '../lib/topics/cliente.js';   // b.409 — il lettore a righe, uno per tutti; b.541 — i rami del giardino
 import { semiDi, prossimaQuery, esaurito, sanaRami } from '../lib/giardino.js'; // b.541 — le ricerche sono semi
@@ -162,6 +164,11 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
     // cache del server evita di ripagare le ricerche gia' fatte.
     if (typeof window === 'undefined') return;
     if (argomenti !== null || cercando) return;
+    // b.562 — se la prima domanda e' ancora da fare, non si cerca
+    // niente: partirebbero tre giri di ricerca (e tre chiamate a
+    // pagamento) per un giornale che verra buttato fra dieci secondi,
+    // appena la persona sceglie i suoi interessi.
+    if (daChiedere(prefs)) return;
     try {
       // b.541 — SI PARTE DAI TUOI SEMI. Luca: «se le mie ricerche ultime
       // sono dentro perche nei reel non vedo piu questi contenuti?».
@@ -452,12 +459,16 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
     try {
       const rese = {};
       // le frasi gia tradotte prima non si ripagano
-      const daChiedere = voci.filter((v) => {
+      // b.562 — si chiamava `daChiedere` come la funzione che decide se
+      // fare la prima domanda (interessi.js), e la ombreggiava dentro
+      // questa funzione: due cose diverse con lo stesso nome nello
+      // stesso file sono una trappola che aspetta.
+      const nonTradotte = voci.filter((v) => {
         const gia = tradottiRef.current.get(`${mia}|${v.testo}`);
         if (gia) { rese[`${v.id}|${v.campo}`] = gia; return false; }
         return true;
       });
-      await Promise.all(daChiedere.map(async (v) => {
+      await Promise.all(nonTradotte.map(async (v) => {
         try {
           const r = await fetch('/api/translate', {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -849,6 +860,33 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
     setArgomenti((prima) => senzaNascosti(prima, dopo));
     setVideo((prima) => senzaNascosti(prima, dopo));
   }, [prefs, savePrefs]);
+
+  // ═══ b.562 — LA PRIMA DOMANDA, E COSA SUCCEDE DOPO ═══
+  // Ordine di Luca: «su conferma imposta gia la piattaforma con
+  // contenuti per partire». Quindi non ci si limita a salvare: gli
+  // interessi diventano SEMI (giardino.js li legge da `semiInteressi`)
+  // e il giornale parte subito da li, senza far vedere a nessuno una
+  // pagina vuota.
+  // Le etichette tradotte SONO le domande: «Cinema», «Cinéma», «映画».
+  const suInteressi = useCallback((scelti) => {
+    const dopo = { ...prefsRef.current, interessi: scelti };
+    dopo.semiInteressi = semiDaInteressi(dopo, L);
+    savePrefs?.(dopo);
+    // e si semina subito: la prima e in primo piano (si vede che parte),
+    // le altre due accodate e silenziose.
+    const semi = dopo.semiInteressi;
+    if (semi.length) {
+      (async () => {
+        await cerca(semi[0].query, 'notizie', false, true);
+        for (const altro of semi.slice(1, 3)) await cerca(altro.query, 'notizie', false, true, true);
+      })();
+    }
+  }, [savePrefs, L, cerca]);
+
+  // «Non adesso» non e' un rinvio: e' una risposta. Non si richiede piu.
+  const suSaltaInteressi = useCallback(() => {
+    savePrefs?.({ ...prefsRef.current, interessiSaltati: true });
+  }, [savePrefs]);
 
   const cercaChip = useCallback((c, silenziosa = false) => {
     setChipAttiva(c.id);
@@ -2108,6 +2146,13 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
           si monta su Sovrapposizione (portale su body, zIndex 131) e sta
           SOPRA il feed, che vive a 97 — chi commenta dentro la
           presentazione non perde il segno dove era arrivato. */}
+      {/* b.562 — la prima domanda copre tutto: e' l'unica cosa da fare
+          in questo momento, e mostrarle accanto un giornale a meta
+          sarebbe chiedere e rispondere insieme. */}
+      {daChiedere(prefs) && (
+        <SceltaInteressi C={C} L={L} onConferma={suInteressi} onSalta={suSaltaInteressi} />
+      )}
+
       <FeedNotizieMondo aperto={feedAperto} onChiudi={() => setFeedAperto(false)} C={C} L={L}
         argomenti={argomenti || []} video={video || []} filtro={feedFiltro}
         // b.552 — «deve presentare il primo contenuto solo quando e'

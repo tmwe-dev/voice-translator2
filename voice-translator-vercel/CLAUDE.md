@@ -267,6 +267,37 @@ perche il working tree lo conteneva ancora.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.562** (push #847) — LA PRIMA DOMANDA, e un errore mio
+  ripreso in tempo.
+
+  ① **L'ACCOGLIENZA** (ordine di Luca: «quando entri la prima volta nel
+  Mondo, una pagina di onboarding semplice con scelta di interessi come
+  su Instagram, e su conferma imposta gia la piattaforma con contenuti
+  per partire»). Diciotto interessi in una griglia, minimo tre, «non
+  adesso» sempre disponibile — un'accoglienza obbligatoria e' un
+  pedaggio.
+  LA SCELTA CHE CONTA: **l'etichetta E' la domanda**. «Cinema»,
+  «Cinéma», «映画»: la parola che leggi e' la parola che si va a
+  cercare. Niente seconda tabella di query da tenere allineata a mano in
+  trentotto lingue — una cosa sola, che non puo sfasarsi.
+  Su conferma gli interessi diventano SEMI (`semiInteressi`, che
+  `giardino.js` pianta come le ricerche recenti) e il giornale parte
+  subito: nessuno vede una pagina vuota.
+  E finche' la domanda e' aperta la Gazzetta NON parte: partirebbero tre
+  giri di ricerca a pagamento per un giornale buttato dieci secondi dopo.
+
+  ② **L'ERRORE, e vale piu della funzione.** Ho creato `lib/interessi.js`
+  senza guardare se il nome fosse libero: c'era gia dal b.517 (pesa gli
+  argomenti che apri) e l'ho **sovrascritto**. E' esattamente l'errore di
+  b.545 con `reazioni.js`, quello che tenne morta una rotta per otto
+  versioni. Stavolta lo scandaglio degli import fantasma (b.539) e'
+  diventato rosso in un minuto: il file nuovo si chiama
+  **`lib/accoglienza.js`**, il vecchio e' tornato al suo posto, e c'e'
+  una prova che controlla che tutti e due esistano.
+  REGOLA, scritta anche dentro il file: **prima di creare un file si
+  guarda se il nome e' libero.** `ls` costa un secondo; scoprirlo otto
+  versioni dopo costa una giornata.
+
 - Versione: **b.561** (push #846) — LA REGIA DEL CAROSELLO, e la QUOTA
   DI MONDO.
 

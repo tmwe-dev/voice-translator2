@@ -54,6 +54,11 @@ export function semiDi(prefs, predefinite = []) {
   };
   for (const r of (Array.isArray(prefs?.ricerchePreferite) ? prefs.ricerchePreferite : [])) aggiungi(r?.q, 'preferita', 3);
   for (const r of (Array.isArray(prefs?.ricercheRecenti) ? prefs.ricercheRecenti : [])) aggiungi(r?.q, 'recente', 2);
+  // b.562 — GLI INTERESSI SCELTI ALL'INGRESSO sono semi a tutti gli
+  // effetti: e' il motivo per cui li chiediamo. Stanno accanto alle
+  // ricerche recenti (stesso peso) e prima delle predefinite, che sono
+  // il ripiego per chi non ha scelto niente.
+  for (const s of (Array.isArray(prefs?.semiInteressi) ? prefs.semiInteressi : [])) aggiungi(s?.query, 'interesse', 2);
   for (const g of predefinite) aggiungi(g?.query, 'predefinita', 1);
   return fuori;
 }
