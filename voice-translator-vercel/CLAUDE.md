@@ -267,6 +267,37 @@ perche il working tree lo conteneva ancora.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.565** (push #850) — LE FONTI VIVE: 116 testate scritte a
+  mano, e un guardiano che le accende.
+
+  Verso i 90.000, il capitolo che sta sotto tutti gli altri. Misurato
+  prima di scrivere una riga: **71 fonti nel registro, 9 con un flusso,
+  49 mai nemmeno interrogate, 2 soli Paesi.** Il motore c'era e girava
+  al minimo.
+
+  ① **`lib/topics/testate.js`** — 116 testate vere: 52 Paesi, 30 lingue,
+  nessun doppione, nessun Paese oltre le dieci voci. Agenzie, quotidiani
+  nazionali, radiotelevisioni pubbliche. NIENTE aggregatori (ci
+  ridarebbero i contenuti altrui) e niente siti che vivono di riassunti.
+  **E' l'unica parte del progetto che non si programma**: riconoscere
+  una testata seria e' un giudizio, e il registro impara SOPRA queste —
+  una fonte sbagliata in cima insegna male per mesi.
+  L'equilibrio e' voluto: arabo, giapponese, hindi, cinese, coreano,
+  thai, vietnamita, indonesiano, ebraico e turco ci sono tutti. Se
+  l'elenco fosse occidentale, la «quota di mondo» (b.561) pescherebbe da
+  un secchio finto.
+  Entrano con DUE apparizioni: la stessa soglia di una fonte scoperta da
+  sola. Il merito se lo guadagnano facendosi leggere, come tutte.
+
+  ② **`/api/mondo/registro`**, che gira ogni ora alla mezza: semina le
+  testate (nell'elenco generale e ognuna nel suo Paese) e **va a caccia
+  di venti flussi mancanti per volta** — quasi cinquecento al giorno.
+  Trovare un flusso costa una visita alla home piu cinque tentativi:
+  troppo mentre qualcuno aspetta il giornale, giusto per un lavoro
+  notturno. E' la stessa idea del giornale di ieri gia in mano (b.564)
+  un piano piu sotto: **seguire vuol dire essere pronti PRIMA che
+  qualcuno chieda.**
+
 - Versione: **b.564** (push #849) — LA VELOCITA', primo passo verso i
   90.000.
 

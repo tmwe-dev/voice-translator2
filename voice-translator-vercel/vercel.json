@@ -11,6 +11,10 @@
     {
       "path": "/api/wallet/cron-rilascia-riserve",
       "schedule": "15 * * * *"
+    },
+    {
+      "path": "/api/mondo/registro",
+      "schedule": "30 * * * *"
     }
   ]
 }
