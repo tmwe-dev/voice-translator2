@@ -64,8 +64,18 @@ export function giornaleSalvato(adesso = Date.now()) {
     if (!grezzo) return null;
     const dentro = JSON.parse(grezzo);
     if (!dentro || adesso - (dentro.quando || 0) > VITA_GIORNALE) return null;
-    const argomenti = Array.isArray(dentro.argomenti) ? dentro.argomenti : [];
-    const video = Array.isArray(dentro.video) ? dentro.video : [];
+    // ═══ b.572 — SI RIMETTE IN FORMA ANCHE QUELLO GIA SCRITTO ═══
+    // b.570 ha aggiustato la forma di cio che si SCRIVE. Ma nei telefoni
+    // era gia posato il giornale di prima, scritto con la forma vecchia:
+    // JSON.stringify non salva le chiavi `undefined`, quindi quelle
+    // schede tornano su senza `fonti` del tutto. Il Mondo e' esploso di
+    // nuovo, sulla stessa riga di prima, con lo stesso errore.
+    // La lezione: aggiustare chi scrive non guarisce cio che e' gia
+    // scritto. Chi legge da un deposito legge sempre roba di ieri, e
+    // deve rimetterla in forma lui, all'ingresso — una volta sola, per
+    // tutti quelli che vengono dopo.
+    const argomenti = (Array.isArray(dentro.argomenti) ? dentro.argomenti : []).map(magra).filter(Boolean);
+    const video = (Array.isArray(dentro.video) ? dentro.video : []).map(magra).filter(Boolean);
     if (!argomenti.length && !video.length) return null;
     return { argomenti, video, quando: dentro.quando };
   } catch { return null; }

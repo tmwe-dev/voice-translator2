@@ -62,16 +62,16 @@ describe('① una scheda non deve mai uscire monca', () => {
 
 describe('② «non lo so ancora» non e «non ha scelto»', () => {
   it('finche le preferenze non sono arrivate, non si chiede niente', () => {
-    expect(news).toMatch(/const prefsPronte = !!prefs && Object\.keys\(prefs\)\.length > 0;/);
-    expect(news).toMatch(/\{prefsPronte && daChiedere\(prefs\) && \(/);
+    expect(news).toMatch(/const \[primoIncontro, setPrimoIncontro\] = useState\(null\);/);
+    expect(news).toMatch(/\{primoIncontro === true && daChiedere\(prefs\) && \(/);
   });
 });
 
 describe('③ il giornale deve poter partire anche DOPO la domanda', () => {
   it('l attesa non e definitiva: l effetto puo ripartire', () => {
-    expect(news).toMatch(/if \(!prefsPronte \|\| daChiedere\(prefs\)\) return;/);
+    expect(news).toMatch(/if \(primoIncontro === null\) return;/);
     expect(news, 'le dipendenze non sono piu vuote')
-      .toMatch(/\}, \[prefsPronte, prefs\?\.interessi, prefs\?\.interessiSaltati\]\);/);
+      .toMatch(/\}, \[primoIncontro, prefs\?\.interessi, prefs\?\.interessiSaltati, prefs\?\.ricercheRecenti\?\.length\]\);/);
   });
 
   it('ma la guardia contro la doppia ricerca resta', () => {
@@ -110,5 +110,81 @@ describe('b.571 — nessun suono senza immagine', () => {
   it('e un player che non risponde non ferma la pagina', () => {
     const i = feed.indexOf('NESSUN SUONO SENZA IMMAGINE');
     expect(feed.slice(i, i + 1600)).toMatch(/catch \{ \/\* un player che non risponde/);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════
+// b.572 — LO STESSO SCHIANTO, DUE DITA PIU IN BASSO
+//
+// Collaudo di Luca, mezz'ora dopo: «hai rotto il codice di nuovo».
+// Stesso errore di ieri, «Cannot read properties of undefined», su una
+// scheda senza `fonti`. Due colpe distinte, e vanno dette separate:
+//
+// ① In b.570 ho protetto UNA riga (`t.fonti?.[0]`) e ho lasciato la
+//    gemella a due dita di distanza (`t.fonti.slice(0,3)`), sulla
+//    stessa scheda, sullo stesso campo. Un difetto non e' una riga: e'
+//    un'abitudine, e va cercata dappertutto invece che tappata dove fa
+//    male.
+//
+// ② Peggio: avevo aggiustato solo chi SCRIVE il giornale. Nei telefoni
+//    era gia posato quello vecchio, e JSON non salva le chiavi
+//    `undefined`: quelle schede tornavano su senza `fonti` del tutto.
+//    Aggiustare chi scrive non guarisce cio che e' gia scritto — chi
+//    legge da un deposito rimette in forma all'ingresso.
+// ═══════════════════════════════════════════════════════════════
+describe('b.572 — nessuna scheda puo far cadere il Mondo', () => {
+  it('il giornale rimette in forma anche le schede vecchie, senza fonti', () => {
+    const vecchio = { quando: Date.now(), argomenti: [{ id: 'a', titolo: 'x', url: 'u' }], video: [] };
+    localStorage.setItem('vt-giornale', JSON.stringify(vecchio));
+    const letto = giornaleSalvato();
+    expect(Array.isArray(letto.argomenti[0].fonti)).toBe(true);
+    expect(letto.argomenti[0].fonti).toEqual([]);
+  });
+
+  it('e anche la riga gemella che avevo mancato non da niente per scontato', () => {
+    const news = leggi('app/components/MondoNews.js');
+    expect(news).not.toMatch(/\{t\.fonti\.slice\(/);
+    expect(news).not.toMatch(/\{t\.fonti\.length\}/);
+    expect(news).toMatch(/\(t\.fonti \|\| \[\]\)\.slice\(0, 3\)/);
+  });
+
+  it('la Vita ha la stessa protezione, cercata e non aspettata', () => {
+    const life = leggi('app/components/Life/LifeView.js');
+    expect(life).not.toMatch(/aperta\.fonti\.length/);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════
+// b.572 — UN GUARDIANO CHE DICE SEMPRE SI NON E' UN GUARDIANO
+//
+// «onboarding appare ancora per un istante» (Luca). Il guardiano di
+// b.570 contava le chiavi delle preferenze — ma le preferenze NASCONO
+// gia piene di valori predefiniti, quindi rispondeva «lo so» dal primo
+// istante, per chiunque. L'avevo dedotto invece di verificarlo.
+// Ora la domanda si decide all'ingresso guardando le preferenze POSATE,
+// e ha tre risposte: non lo so (e allora si tace), ci conosciamo, sei
+// nuovo. Il silenzio non si vede; una domanda sbagliata si vede eccome.
+// ═══════════════════════════════════════════════════════════════
+describe('b.572 — la domanda si decide da cio che e posato', () => {
+  it('finche non lo so, non si chiede niente', () => {
+    const news = leggi('app/components/MondoNews.js');
+    expect(news).toMatch(/const \[primoIncontro, setPrimoIncontro\] = useState\(null\);/);
+    expect(news).toMatch(/\{primoIncontro === true && daChiedere\(prefs\) && \(/);
+  });
+
+  it('la decisione guarda le preferenze posate sull apparecchio', () => {
+    const news = leggi('app/components/MondoNews.js');
+    expect(news).toMatch(/JSON\.parse\(memGet\('vt-prefs'\) \|\| 'null'\)/);
+  });
+
+  it('rispondere o saltare chiude la porta subito, senza aspettare il giro lungo', () => {
+    const news = leggi('app/components/MondoNews.js');
+    expect((news.match(/setPrimoIncontro\(false\)/g) || []).length).toBe(2);
+  });
+
+  it('e il giornale non resta ostaggio della domanda', () => {
+    const news = leggi('app/components/MondoNews.js');
+    expect(news).toMatch(/if \(primoIncontro === null\) return;/);
+    expect(news).toMatch(/prefs\?\.ricercheRecenti\?\.length\]\);/);
   });
 });

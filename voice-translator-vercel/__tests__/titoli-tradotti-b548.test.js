@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { daTradurre, sembraLingua } from '../app/lib/topics/titoliTradotti.js';
 const leggi = (p) => readFileSync(join(process.cwd(), p), 'utf8');
 
 // ═══ b.548 — «i testi non vengono tradotti anche se il setting dice di
@@ -70,5 +71,51 @@ describe('b.548 — e adesso il giornale la usa davvero', () => {
   it('e il predefinito e allineato ovunque (la lezione del ritmo del globo)', () => {
     expect(leggi('app/components/MondoDiscussioni.js')).toMatch(/prefs\?\.mondoTitoli \|\| 'tradotti'/);
     expect(leggi('app/components/ui/PreferenzeMondo.js')).toMatch(/chiave: 'mondoTitoli',[\s\S]{0,700}predefinito: 'tradotti'/);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════
+// b.572 — «LA TRADUZIONE CREA UN PROBLEMA» (Luca)
+//
+// Vero, e la causa era netta: si saltava la traduzione solo se la
+// scheda DICHIARAVA la propria lingua. Feed e video quasi mai la
+// dichiarano, quindi un titolo italiano andava a farsi tradurre in
+// italiano — e il modello non rifiuta, RISCRIVE. Il titolo cambiava da
+// solo sotto gli occhi di chi legge, con altre parole, a pagamento.
+//
+// La cura non e' un riconoscitore di lingue: e' rispondere a una sola
+// domanda, «e' gia la mia lingua?», con le parole piu comuni. Un si
+// sbagliato costa un titolo lasciato in pace; un no sbagliato costa
+// quello che costava prima. L'errore, se capita, capita dalla parte
+// giusta.
+// ═══════════════════════════════════════════════════════════════
+describe('b.572 — mai dall italiano all italiano', () => {
+  it('un titolo italiano senza lingua dichiarata non si traduce in italiano', () => {
+    expect(daTradurre('Il maltempo cambia il fine settimana in tutta la penisola', undefined, 'it')).toBe(false);
+  });
+
+  it('ma un titolo inglese senza lingua dichiarata si traduce eccome', () => {
+    expect(daTradurre('The weather changes across the country this weekend', undefined, 'it')).toBe(true);
+  });
+
+  it('e per chi guarda in inglese vale al contrario', () => {
+    expect(daTradurre('The government said the new rules will start in June', undefined, 'en')).toBe(false);
+    expect(daTradurre('Il governo ha detto che le nuove regole partiranno a giugno', undefined, 'en')).toBe(true);
+  });
+
+  it('gli accenti non ingannano il riconoscimento', () => {
+    expect(sembraLingua('Non è più possibile per il pubblico', 'it')).toBe(true);
+  });
+
+  it('una sigla o due parole non bastano per dichiarare una lingua', () => {
+    expect(sembraLingua('Milan Inter', 'it')).toBe(false);
+  });
+
+  it('nel dubbio si traduce, come prima: il difetto era la certezza sbagliata', () => {
+    expect(daTradurre('Zeitenwende Wolkenkratzer Fernsehturm heute', undefined, 'it')).toBe(true);
+  });
+
+  it('e la lingua dichiarata comanda sempre sul sospetto', () => {
+    expect(daTradurre('The weather changes across the country', 'it', 'it')).toBe(false);
   });
 });

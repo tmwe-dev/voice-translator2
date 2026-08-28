@@ -1718,14 +1718,14 @@ function Impara({ compagni, L, C, lingua, userToken, testoP, muto, accent, card,
             qui in fondo non serve piu. */}
         {/* b.363 — se le fonti non si sono trovate lo si DICE: prima una
             lezione senza un solo documento era identica a una fondata. */}
-        {aperta.fontiNonTrovate && aperta.fonti.length === 0 && (
+        {aperta.fontiNonTrovate && (aperta.fonti || []).length === 0 && (
           <div style={{ marginTop: 14, fontSize: 12, color: muto }}>
             {L('lifeNoSourcesFound')}
           </div>
         )}
-        {aperta.fonti.length > 0 && (
+        {(aperta.fonti || []).length > 0 && (
           <div style={{ marginTop: 14, fontSize: 12, color: muto }}>
-            <b style={{ fontWeight: 500 }}>{L('lifeSources')}:</b> {aperta.fonti.map((f, i) => <span key={i}>{f.titolo}{i < aperta.fonti.length - 1 ? ' · ' : ''}</span>)}
+            <b style={{ fontWeight: 500 }}>{L('lifeSources')}:</b> {(aperta.fonti || []).map((f, i) => <span key={i}>{f.titolo}{i < (aperta.fonti || []).length - 1 ? ' · ' : ''}</span>)}
           </div>
         )}
         {/* b.304 — dopo la lezione: APPROFONDISCI o PROSEGUI. Approfondisci

@@ -154,7 +154,7 @@ describe('e nel Mondo si collega dove serve', () => {
     // b.570 — si aspetta anche che le preferenze siano ARRIVATE: un
     // oggetto vuoto non vuol dire «non ha scelto», vuol dire «non lo so
     // ancora». E l'attesa non e' piu definitiva (vedi b.570).
-    expect(news).toMatch(/if \(!prefsPronte \|\| daChiedere\(prefs\)\) return;/);
+    expect(news).toMatch(/if \(primoIncontro === null\) return;/);
   });
 
   it('su conferma si semina subito, senza far vedere una pagina vuota', () => {
@@ -197,6 +197,6 @@ describe('b.571 — chi ha gia una storia non e nuovo', () => {
 
   it('e il Mondo aspetta di sapere chi sei prima di chiedere', () => {
     const news = leggi('app/components/MondoNews.js');
-    expect(news).toMatch(/\{prefsPronte && daChiedere\(prefs\) && \(/);
+    expect(news).toMatch(/\{primoIncontro === true && daChiedere\(prefs\) && \(/);
   });
 });

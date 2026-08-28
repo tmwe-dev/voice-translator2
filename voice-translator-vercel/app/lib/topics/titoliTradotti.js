@@ -25,6 +25,50 @@ export function radice(l) {
  * nella lingua di chi guarda — tradurre dall'italiano all'italiano e
  * solo una chiamata pagata per niente (la lezione di b.363).
  */
+// ═══ b.572 — LE PAROLINE CHE TRADISCONO UNA LINGUA ═══
+// Collaudo di Luca: «la traduzione crea un problema». Ed era vero, con
+// una causa precisa: la regola qui sotto saltava la traduzione solo se
+// la scheda DICHIARAVA la propria lingua. Ma i feed e i video quasi mai
+// la dichiarano — e allora un titolo italiano finiva a farsi tradurre
+// in italiano. Il modello non rifiuta: RISCRIVE. Chi guarda vede il
+// titolo cambiare da solo sotto gli occhi, con altre parole, e noi
+// paghiamo una chiamata per rovinarlo.
+//
+// Non serve un riconoscitore di lingue: serve rispondere a UNA domanda
+// — «questo e' gia nella mia lingua?». Le parole piu comuni bastano:
+// nessuna frase italiana di dodici lettere sta in piedi senza «il»,
+// «di», «che», «per». Due spie e siamo sicuri abbastanza per TACERE, e
+// tacere e' la mossa gratis: nel dubbio si lascia il titolo com'e.
+const SPIE = {
+  it: ['il', 'lo', 'la', 'gli', 'le', 'di', 'del', 'della', 'che', 'per', 'con', 'non', 'una', 'nel', 'sono', 'anche', 'piu', 'dopo'],
+  en: ['the', 'of', 'and', 'to', 'in', 'for', 'with', 'that', 'is', 'are', 'on', 'from', 'after', 'says', 'has', 'was'],
+  es: ['el', 'la', 'los', 'las', 'de', 'del', 'que', 'para', 'con', 'una', 'por', 'en', 'como', 'mas', 'este'],
+  fr: ['le', 'la', 'les', 'des', 'du', 'que', 'pour', 'avec', 'une', 'dans', 'sur', 'est', 'plus', 'apres'],
+  de: ['der', 'die', 'das', 'und', 'von', 'mit', 'fur', 'ist', 'im', 'auf', 'nicht', 'nach', 'eine', 'sich'],
+  pt: ['o', 'os', 'as', 'de', 'do', 'da', 'que', 'para', 'com', 'uma', 'em', 'mais', 'nao'],
+  nl: ['de', 'het', 'een', 'van', 'en', 'in', 'op', 'met', 'voor', 'niet', 'dat', 'is'],
+};
+
+/**
+ * Questo testo sembra scritto nella lingua data? Conta le parole piu
+ * comuni di quella lingua. Due bastano: si risponde di si solo per
+ * decidere di NON tradurre, quindi un si sbagliato costa un titolo
+ * lasciato in pace, non un titolo rovinato.
+ */
+export function sembraLingua(testo, lingua) {
+  const spie = SPIE[radice(lingua)];
+  if (!spie) return false;
+  const parole = String(testo || '')
+    .toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')   // «piu» prende anche «più»
+    .split(/[^a-z]+/)
+    .filter(Boolean);
+  if (parole.length < 3) return false;
+  let colpi = 0;
+  for (const w of parole) if (spie.includes(w)) { colpi += 1; if (colpi >= 2) return true; }
+  return false;
+}
+
 export function daTradurre(testo, linguaTesto, miaLingua) {
   const t = String(testo || '').trim();
   if (t.length < 12) return false;
@@ -32,6 +76,10 @@ export function daTradurre(testo, linguaTesto, miaLingua) {
   const mia = radice(miaLingua);
   if (!mia) return false;
   if (sua && sua === mia) return false;
+  // b.572 — la scheda non dice da dove viene: lo si chiede al testo.
+  // Se e' gia la mia lingua non si tocca. Nel dubbio si traduce, come
+  // prima: il difetto era tradurre CON la certezza contraria.
+  if (!sua && sembraLingua(t, mia)) return false;
   return true;
 }
 

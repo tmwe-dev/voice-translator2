@@ -44,7 +44,7 @@ import { bandieraPaese, nomePaese, quando, tipoContenuto, fonteDi, viva, stileEt
 import PannelloLaterale from './ui/PannelloLaterale.js';
 import CardSezione from './ui/CardSezione.js';   // b.550 — la card di vetro, una per tutte e tre le sidebar
 import ParlaneCon from './ui/ParlaneCon.js';     // b.551 — il ponte fra una notizia e Vita
-import { sesSet } from '../lib/memoria.js';
+import { sesSet, memGet } from '../lib/memoria.js';
 import PreferenzeMondo from './ui/PreferenzeMondo.js';
 import PreferitiTemi from './ui/PreferitiTemi.js';
 import { PAESI } from '../lib/paesi.js';
@@ -135,11 +135,31 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
   // il filtro (solo video di default — ordine di Luca) e una preferenza
   // persistita, cosi resta com'era l'ultima volta che l'ha scelto.
   const [feedAperto, setFeedAperto] = useState(false);
-  // b.570 — «so gia chi sei?». Le preferenze arrivano dal server dopo il
-  // primo disegno: finche' non ci sono, un oggetto vuoto non vuol dire
-  // «non ha scelto niente», vuol dire «non lo so ancora». Confondere le
-  // due cose faceva lampeggiare l'accoglienza a chi l'aveva gia fatta.
-  const prefsPronte = !!prefs && Object.keys(prefs).length > 0;
+  // ═══ b.572 — «SO GIA CHI SEI?», STAVOLTA DAVVERO ═══
+  // b.570 rispondeva a questa domanda contando le chiavi delle
+  // preferenze: se ce n'era almeno una, «lo so». Non valeva niente, e
+  // Luca l'ha visto subito: «onboarding appare ancora per un istante».
+  // Il motivo, che avrei dovuto verificare invece di dedurlo: le
+  // preferenze NASCONO GIA PIENE di valori predefiniti (app/page.js:
+  // name, lang, uiLang, avatar, voice...). Quindi «almeno una chiave»
+  // era vero dal primo istante, sempre, per chiunque. Un guardiano che
+  // dice sempre di si non e' un guardiano.
+  //
+  // La domanda si decide una volta sola, all'ingresso, guardando l'UNICO
+  // posto che sa la verita su questo apparecchio: le preferenze POSATE.
+  // Tre risposte, non due — e la terza e' quella che conta:
+  //   null  = non lo so ancora → NON SI CHIEDE NIENTE. Il silenzio non
+  //           si vede; una domanda sbagliata si vede eccome.
+  //   false = ci siamo gia conosciuti → non si chiede mai piu.
+  //   true  = non c'e nulla di posato → questa persona e' nuova davvero.
+  const [primoIncontro, setPrimoIncontro] = useState(null);
+  useEffect(() => {
+    let posate = null;
+    try { posate = JSON.parse(memGet('vt-prefs') || 'null'); } catch { posate = null; }
+    setPrimoIncontro(posate ? daChiedere(posate) : daChiedere(prefs));
+    // una volta sola, all'ingresso: dopo comanda cio che la persona fa
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   // b.529 — Luca: «non vedo la visualizzazione default video di cui
   // abbiamo parlato». L'ordine originale (b.515) diceva «se uno ENTRA e
   // scorre attiva l'autoplay»: la vista continua a tutta pagina si apre
@@ -192,7 +212,14 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
     // (dipendenze vuote), quindi chi vedeva la domanda restava senza
     // giornale PER SEMPRE, anche dopo aver risposto. Ecco perche' «poi
     // si e' rotto tutto»: il feed non ripartiva piu.
-    if (!prefsPronte || daChiedere(prefs)) return;
+    // b.572 — l'attesa e' legata a CHI ASPETTIAMO, non a cosa contiene
+    // l'oggetto in questo istante. Se aspettassimo `daChiedere(prefs)`
+    // rinascerebbe il guasto di b.570: per chi ha ricerche ma nessun
+    // interesse dichiarato, le dipendenze qui sotto non cambiano mai e
+    // il giornale non partirebbe piu. Si aspetta solo chi ha davvero
+    // una domanda aperta davanti.
+    if (primoIncontro === null) return;                       // non so ancora chi sei
+    if (primoIncontro === true && daChiedere(prefs)) return;  // ti sto chiedendo qualcosa
     try {
       // b.541 — SI PARTE DAI TUOI SEMI. Luca: «se le mie ricerche ultime
       // sono dentro perche nei reel non vedo piu questi contenuti?».
@@ -250,7 +277,7 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
     // chiude. La guardia vera resta `argomenti !== null`, che impedisce
     // di cercare due volte.
     // eslint-disable-next-line react-hooks/exhaustive-deps -- la guardia e `argomenti`, non le dipendenze
-  }, [prefsPronte, prefs?.interessi, prefs?.interessiSaltati]);
+  }, [primoIncontro, prefs?.interessi, prefs?.interessiSaltati, prefs?.ricercheRecenti?.length]);
   const feedFiltro = prefs?.mondoFeedFiltro || 'video'; // { tipo: 'articolo'|'video', dati }
   const [video, setVideo] = useState(null);   // null = mai cercati
   const [videoAttivi, setVideoAttivi] = useState(false);
@@ -934,6 +961,7 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
   // pagina vuota.
   // Le etichette tradotte SONO le domande: «Cinema», «Cinéma», «映画».
   const suInteressi = useCallback((scelti) => {
+    setPrimoIncontro(false);   // b.572 — ci siamo conosciuti: non si richiede piu
     const dopo = { ...prefsRef.current, interessi: scelti };
     dopo.semiInteressi = semiDaInteressi(dopo, L);
     savePrefs?.(dopo);
@@ -950,6 +978,7 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
 
   // «Non adesso» non e' un rinvio: e' una risposta. Non si richiede piu.
   const suSaltaInteressi = useCallback(() => {
+    setPrimoIncontro(false);   // b.572 — «non adesso» e' una risposta, e vale subito
     savePrefs?.({ ...prefsRef.current, interessiSaltati: true });
   }, [savePrefs]);
 
@@ -2088,10 +2117,15 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
             )}
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 9, flexWrap: 'wrap' }}>
               <span style={{ fontSize: 11, color: C.textMuted }}>
-                {t.fonti.slice(0, 3).map(f => f.fonte || f.dominio).join(' · ')}
+                {/* b.572 — il gemello dimenticato. In b.570 ho protetto la
+                    riga sopra (`t.fonti?.[0]`) e ho lasciato questa a due
+                    dita di distanza: stessa scheda, stesso campo, stesso
+                    schianto. Un difetto non e' una riga, e' un'ABITUDINE
+                    — e va cercata dappertutto, non corretta dove fa male. */}
+                {(t.fonti || []).slice(0, 3).map(f => f.fonte || f.dominio).join(' · ')}
               </span>
               <span style={{ fontSize: 11, color: C.textMuted }}>
-                — {t.fonti.length} {t.fonti.length === 1 ? L('newsSourceOne') : L('newsSources')}
+                — {(t.fonti || []).length} {(t.fonti || []).length === 1 ? L('newsSourceOne') : L('newsSources')}
                 {t.pubblicato ? ` · ${quando(t.pubblicato, L)}` : ''}
               </span>
             </div>
@@ -2227,7 +2261,7 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
           ha mai scelto niente. Cosi la domanda compariva a TUTTI per un
           lampo. Adesso si aspetta di sapere chi sei: senza preferenze
           caricate non si chiede niente. */}
-      {prefsPronte && daChiedere(prefs) && (
+      {primoIncontro === true && daChiedere(prefs) && (
         <SceltaInteressi C={C} L={L} onConferma={suInteressi} onSalta={suSaltaInteressi} />
       )}
 

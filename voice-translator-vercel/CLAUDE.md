@@ -267,6 +267,34 @@ perche il working tree lo conteneva ancora.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.572** (push #857) — TRE COSE ROTTE, E UNA LEZIONE SOLA:
+  aggiustare dove fa male non e' aggiustare.
+
+  ① **«Hai rotto il codice di nuovo»** — stesso schianto di ieri, «reading
+  'slice'», su una scheda senza `fonti`. Due colpe mie, distinte:
+  in b.570 ho protetto UNA riga (`t.fonti?.[0]`) lasciando la gemella a
+  due dita di distanza (`t.fonti.slice(0,3)`); e soprattutto avevo
+  aggiustato solo chi SCRIVE il giornale salvato — ma nei telefoni era
+  gia posato quello vecchio, e JSON non salva le chiavi `undefined`.
+  **Chi legge da un deposito legge sempre roba di ieri, e deve
+  rimetterla in forma lui, all'ingresso.**
+
+  ② **«Onboarding appare ancora per un istante»** — il guardiano di b.570
+  contava le chiavi delle preferenze, ma le preferenze **nascono gia
+  piene** di valori predefiniti (`app/page.js`): rispondeva «lo so» dal
+  primo istante, per chiunque. Un guardiano che dice sempre di si non e'
+  un guardiano — e l'avevo dedotto invece di verificarlo.
+  Adesso `primoIncontro` ha **tre** risposte: non lo so (e allora si
+  tace), ci conosciamo, sei nuovo davvero.
+
+  ③ **«La traduzione crea un problema»** — si saltava la traduzione solo
+  se la scheda DICHIARAVA la sua lingua, e feed e video non la
+  dichiarano quasi mai. Risultato: titoli italiani mandati a tradurre in
+  italiano. Il modello non rifiuta, **riscrive**: il titolo cambiava da
+  solo sotto gli occhi di chi legge, a pagamento. Ora si chiede al testo
+  («sembraLingua»): due parole comuni bastano per **tacere**, che e' la
+  mossa gratis.
+
 - Versione: **b.571** (push #856) — L'ACCOGLIENZA A CHI NON SERVE, e il
   suono senza immagine.
 
