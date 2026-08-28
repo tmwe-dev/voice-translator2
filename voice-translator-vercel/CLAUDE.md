@@ -267,6 +267,41 @@ perche il working tree lo conteneva ancora.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.547** (push #833) — PERCHE' LUCA VEDEVA VERSIONI
+  MESCOLATE. «Hai rotto il cazzo», con la schermata rossa e l'indirizzo
+  che diceva **?v=819** mentre in produzione girava il numero 832.
+  Aveva ragione a stufarsi, e la colpa NON era del codice che stava
+  guardando.
+
+  LA CAUSA VERA, e ha 460 rilasci: `CACHE_VERSION` in public/sw.js era
+  ferma a **19**, dal b.372. Quel numero decide il NOME della cache, e
+  il ramo `activate` butta soltanto le cache con nome DIVERSO da quello
+  corrente: col numero fermo, il nome non cambiava mai e nessuna cache
+  veniva mai buttata. Dentro restava il guscio HTML del b.372 e i pezzi
+  di programma di allora. Bastava un singhiozzo di rete perche' il ramo
+  di riserva («se la rete non risponde, prendi dalla cache») servisse
+  quel guscio: da li in poi, programma di ieri dentro una pagina di
+  oggi — e l'errore «Cannot access 'T' before initialization», che
+  sembrava del codice e invece era della cache.
+  Questo spiega anche perche' tante mie riparazioni «non si vedevano»:
+  arrivavano in produzione e non arrivavano allo schermo.
+
+  IL RIMEDIO: CACHE_VERSION ora SEGUE il numero di rilascio (PUSH), e
+  va alzata insieme a lui. Non e' un vezzo: e' l'unico modo perche' non
+  resti indietro un'altra volta.
+
+  E LA GUARDIA, perche' non basta ricordarselo: sw-cache-viva-b547
+  confronta CACHE_VERSION con PUSH e diventa ROSSA se si allontanano di
+  piu di 40 rilasci. Se dimentico di alzarla, lo scopro io alla prossima
+  batteria — non Luca dopo un mese di schermate rotte.
+  La stessa prova difende due cose che non vanno toccate: che le cache
+  vecchie vengano davvero buttate, e che i pezzi di programma si
+  prendano PRIMA dalla rete (b.363).
+
+  DA FARE A OGNI VERSIONE, da adesso: quando alzo PUSH in
+  lib/constants.js, alzo anche CACHE_VERSION in public/sw.js allo
+  stesso numero.
+
 - Versione: **b.546** (push #832) — LA SCHERMATA ROSSA, E LA PROVA CHE
   NON L'AVEVA PRESA. Luca: «ReferenceError: Cannot access 'T' before
   initialization... non va piu un cazzo, hai rotto molte cose».

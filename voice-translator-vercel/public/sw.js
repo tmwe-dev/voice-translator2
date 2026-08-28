@@ -1,5 +1,26 @@
 // Service Worker for BarTalk — Offline + Push + Badge + Background Sync
-const CACHE_VERSION = 19; // b.372 — carosello della chat e tolleranza viva
+// ═══ b.547 — LA CACHE ERA FERMA DA QUATTROCENTOSESSANTA PUSH ═══
+// Collaudo di Luca, con la schermata rossa e l'indirizzo che diceva
+// «?v=819» mentre il programma in produzione era il numero 832:
+// «ReferenceError: Cannot access 'T' before initialization ... hai
+// rotto il cazzo». Aveva ragione a stufarsi, e la colpa non era del
+// codice che stava guardando: era di QUESTA riga.
+//
+// Il numero qui sotto decide il NOME della cache. Finche' non cambia,
+// la cache non viene mai buttata: il ramo `activate` cancella solo le
+// cache che hanno un nome DIVERSO da quello corrente. Ferma a 19 dal
+// b.372, si portava dietro il guscio HTML di allora — e quel guscio
+// chiede i pezzi di programma di allora, che erano li accanto, nella
+// stessa cache. Bastava un singhiozzo di rete perche' il ramo di
+// riserva («se la rete non risponde, prendi dalla cache») servisse il
+// guscio vecchio: da li in poi, programma di ieri dentro una pagina di
+// oggi, e l'errore incomprensibile in faccia a chi guarda.
+//
+// Adesso il numero SEGUE il numero di rilascio (PUSH in lib/constants.js).
+// Non e' un vezzo: e' l'unico modo perche' non resti indietro un'altra
+// volta — e la prova sw-cache-viva-b547 diventa rossa se i due si
+// allontanano troppo.
+const CACHE_VERSION = 833; // = PUSH di lib/constants.js (b.547)
 const CACHE_NAME = `vt-cache-v${CACHE_VERSION}`;
 const TTS_CACHE_NAME = `vt-tts-v${CACHE_VERSION}`;
 const TRANSLATE_CACHE_NAME = `vt-translate-v${CACHE_VERSION}`;
