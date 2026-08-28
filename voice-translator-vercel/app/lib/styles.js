@@ -455,12 +455,12 @@ export default function getStyles(theme = 'deep') {
       padding:'22px 20px', backdropFilter:'blur(40px) saturate(1.1)', WebkitBackdropFilter:'blur(40px) saturate(1.1)',
       border:`1px solid ${colors.cardBorder}`,
       boxShadow: colors.cardShadow },
-    cardTitle: { fontSize:13, fontWeight:600, textAlign:'center', marginBottom:14,
+    cardTitle: { fontSize:13, fontWeight: 500, textAlign:'center', marginBottom:14,
       color: colors.textSecondary, letterSpacing:0.8, textTransform:'uppercase' },
 
     // === FORM ===
     field: { marginBottom:14 },
-    label: { fontSize:9, fontWeight:600, letterSpacing:1.8, color: colors.accent1, marginBottom:6,
+    label: { fontSize:9, fontWeight: 500, letterSpacing:1.8, color: colors.accent1, marginBottom:6,
       textTransform:'uppercase', opacity: isDark ? 0.9 : 0.95 },
     input: { width:'100%', padding:'12px 16px', borderRadius:14, background: colors.inputBg,
       border: `1px solid ${colors.inputBorder}`, color: colors.textPrimary, fontSize:14, outline:'none',
@@ -472,7 +472,7 @@ export default function getStyles(theme = 'deep') {
 
     // === BUTTONS ===
     btn: { width:'100%', padding:'14px', borderRadius:14, border:'none',
-      background: colors.btnGradient, color:'#fff', fontSize:14, fontWeight:600,
+      background: colors.btnGradient, color:'#fff', fontSize:14, fontWeight: 500,
       cursor:'pointer', textAlign:'center', fontFamily:FONT, letterSpacing:0.3,
       boxShadow: colors.btnGlow,
       transition:'transform 0.2s cubic-bezier(0.2,0.8,0.2,1), box-shadow 0.3s',
@@ -527,7 +527,7 @@ export default function getStyles(theme = 'deep') {
     shareBtn: { minHeight:44, padding:'8px 20px', borderRadius:12, border: `1px solid ${colors.cardBorder}`,
       background: colors.buttonOverlay, color: colors.textSecondary, fontSize:12, cursor:'pointer',
       fontFamily:FONT, WebkitTapHighlightColor:'transparent', backdropFilter:'blur(16px)', fontWeight:500 },
-    statusMsg: { marginTop:8, fontSize:11, color: colors.accent3, textAlign:'center', fontWeight:600 },
+    statusMsg: { marginTop:8, fontSize:11, color: colors.accent3, textAlign:'center', fontWeight: 500 },
 
     // === MODE BUTTONS ===
     modeBtn: { flex:1, display:'flex', flexDirection:'column', alignItems:'center', gap:3,

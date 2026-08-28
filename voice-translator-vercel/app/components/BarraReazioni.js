@@ -63,9 +63,9 @@ function BarraReazioni({ msgId, conte, mie, onReagisci, onRispondi, C, compatta 
       {onRispondi && (
         <button onClick={() => { vibrate(10); onRispondi(msgId); }}
           aria-label={L('replyToMessage')}
-          style={{ ...bottone(false), fontWeight: 600 }}>
+          style={{ ...bottone(false), fontWeight: 500 }}>
           Rispondi
-          {conte?.risposte > 0 && <span style={{ fontWeight: 600 }}>{conte.risposte}</span>}
+          {conte?.risposte > 0 && <span style={{ fontWeight: 500 }}>{conte.risposte}</span>}
         </button>
       )}
     </div>

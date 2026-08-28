@@ -101,7 +101,7 @@ function ContenutiChat({ messages, S, L, onApri }) {
                   style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
               )}
             </div>
-            <div style={{ padding: '6px 8px', fontSize: 11, fontWeight: 600, color: C.textPrimary,
+            <div style={{ padding: '6px 8px', fontSize: 11, fontWeight: 500, color: C.textPrimary,
               lineHeight: 1.35, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
               {titolo}
             </div>

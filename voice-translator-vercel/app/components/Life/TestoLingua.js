@@ -66,7 +66,7 @@ export default function TestoLingua({
               cursor: 'pointer', WebkitTapHighlightColor: 'transparent',
               background: attivo ? `${accent}2A` : `${accent}12`,
               border: `1px solid ${attivo ? accent : `${accent}3A`}`,
-              color: accent, fontWeight: 600,
+              color: accent, fontWeight: 500,
               transition: 'background .15s, border-color .15s',
             }}>
             <Icon name="speaker" size={12} color={accent} />

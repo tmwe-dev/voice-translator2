@@ -241,7 +241,7 @@ function MondoDiscussioni({ discussionId, onClose, onOpenPersona }) {
           display: 'flex', alignItems: 'center', justifyContent: 'center', color: muto, fontSize: 18,
         }}><Icon name="back" size={18} color={muto} /></button>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 15, fontWeight: 600, color: testoP, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          <div style={{ fontSize: 15, fontWeight: 500, color: testoP, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {tradotti.title || disc?.title || (caricando ? '…' : L('worldNowTitle'))}
           </div>
           {disc && (
@@ -249,7 +249,7 @@ function MondoDiscussioni({ discussionId, onClose, onOpenPersona }) {
               {disc.comment_count} · {disc.author_name || ''}
               {disc.title && (
                 <button onClick={() => traduci('title', disc.title, disc.title_lang)} style={{
-                  marginLeft: 8, background: 'none', border: 'none', color: accent, cursor: 'pointer', fontSize: 10, fontWeight: 600, padding: 0,
+                  marginLeft: 8, background: 'none', border: 'none', color: accent, cursor: 'pointer', fontSize: 10, fontWeight: 500, padding: 0,
                   minHeight: 44, display: 'inline-flex', alignItems: 'center',
                 }}>{tradotti.title ? (L('original')) : (L('seeTranslation'))}</button>
               )}
@@ -261,7 +261,7 @@ function MondoDiscussioni({ discussionId, onClose, onOpenPersona }) {
           title={L('textBigger')} aria-label={L('textBigger')}
           style={{ width: 44, height: 44, borderRadius: 12, flexShrink: 0, cursor: 'pointer',
             background: zoomTesto ? `${accent}22` : card, border: bordo, color: muto,
-            fontFamily: FONT, fontSize: 15, fontWeight: 600 }}>
+            fontFamily: FONT, fontSize: 15, fontWeight: 500 }}>
           Aa
         </button>
         {/* b.510 — Luca cercava un modo di condividere il post e non
@@ -292,7 +292,7 @@ function MondoDiscussioni({ discussionId, onClose, onOpenPersona }) {
             style={{
               flexShrink: 0, background: 'none', border: 'none', padding: 6, minHeight: 44,
               cursor: discSegnalata ? 'default' : 'pointer', color: muto,
-              fontSize: 11, fontWeight: 600, fontFamily: FONT, opacity: discSegnalata ? 0.45 : 1,
+              fontSize: 11, fontWeight: 500, fontFamily: FONT, opacity: discSegnalata ? 0.45 : 1,
             }}>
             {discSegnalata ? L('reportCopied') : L('reportWord')}
           </button>
@@ -311,7 +311,7 @@ function MondoDiscussioni({ discussionId, onClose, onOpenPersona }) {
               {disc.title_lang && <span aria-hidden="true">{getLang(disc.title_lang).flag}</span>}
               {disc.author_name && <span>{disc.author_name}</span>}
             </div>
-            <div style={{ fontSize: 17 * ingr, fontWeight: 600, lineHeight: 1.35, color: testoP, marginTop: 5 }}>
+            <div style={{ fontSize: 17 * ingr, fontWeight: 500, lineHeight: 1.35, color: testoP, marginTop: 5 }}>
               {tradotti.title || disc.title}
             </div>
             {tradotti.title && tradotti.title !== disc.title && (
@@ -338,7 +338,7 @@ function MondoDiscussioni({ discussionId, onClose, onOpenPersona }) {
 
         {/* b.495 — tavola 21: l'etichetta di sezione, come sulla tavola. */}
         {!caricando && commenti.length > 0 && (
-          <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: 1, color: muto, margin: '2px 0 8px', textTransform: 'uppercase' }}>
+          <div style={{ fontSize: 11, fontWeight: 500, letterSpacing: 1, color: muto, margin: '2px 0 8px', textTransform: 'uppercase' }}>
             {commenti.length} {L('commentsWord')}
           </div>
         )}
@@ -357,7 +357,7 @@ function MondoDiscussioni({ discussionId, onClose, onOpenPersona }) {
                   sempre. Ora ognuno e alto 44, la misura del template. */}
               <button onClick={() => onOpenPersona?.(c.author_user_id)} style={{
                 background: 'none', border: 'none', padding: 0, cursor: 'pointer',
-                fontSize: 12, fontWeight: 600, color: testoP, fontFamily: FONT,
+                fontSize: 12, fontWeight: 500, color: testoP, fontFamily: FONT,
                 minHeight: 44, display: 'inline-flex', alignItems: 'center', gap: 5,
               }}>{/* b.495 — tavola 21: la bandiera accanto al nome — e cio
                     che dice subito da che mondo arriva il commento. */}
@@ -366,7 +366,7 @@ function MondoDiscussioni({ discussionId, onClose, onOpenPersona }) {
               {c.like_count > 0 && <span style={{ fontSize: 10, color: muto }}>· {c.like_count} ♥</span>}
               <button onClick={() => toggleSegui(c.author_user_id)} style={{
                 marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', padding: 0,
-                fontSize: 10, fontWeight: 600, color: seguiti.has(c.author_user_id) ? muto : accent,
+                fontSize: 10, fontWeight: 500, color: seguiti.has(c.author_user_id) ? muto : accent,
                 minHeight: 44, display: 'inline-flex', alignItems: 'center',
               }}>{seguiti.has(c.author_user_id) ? L('following') : L('follow')}</button>
             </div>
@@ -379,10 +379,10 @@ function MondoDiscussioni({ discussionId, onClose, onOpenPersona }) {
               <div style={{ fontSize: 11 * ingr, color: muto, marginTop: 3, whiteSpace: 'pre-wrap' }}>{c.text}</div>
             )}
             <div style={{ display: 'flex', gap: 14, marginTop: 6 }}>
-              <button onClick={() => traduci(c.id, c.text, c.lang)} style={{ background: 'none', border: 'none', color: accent, cursor: 'pointer', fontSize: 11, fontWeight: 600, padding: 0, minHeight: 44, display: 'inline-flex', alignItems: 'center' }}>
+              <button onClick={() => traduci(c.id, c.text, c.lang)} style={{ background: 'none', border: 'none', color: accent, cursor: 'pointer', fontSize: 11, fontWeight: 500, padding: 0, minHeight: 44, display: 'inline-flex', alignItems: 'center' }}>
                 {tradotti[c.id] ? (L('original')) : (L('seeTranslation'))}
               </button>
-              <button onClick={() => metti(c.id)} style={{ background: 'none', border: 'none', color: muto, cursor: 'pointer', fontSize: 11, fontWeight: 600, padding: 0, minHeight: 44, display: 'inline-flex', alignItems: 'center' }}>
+              <button onClick={() => metti(c.id)} style={{ background: 'none', border: 'none', color: muto, cursor: 'pointer', fontSize: 11, fontWeight: 500, padding: 0, minHeight: 44, display: 'inline-flex', alignItems: 'center' }}>
                 ♥ {L('like')}
               </button>
               {/* b.363 — la segnalazione ESISTEVA solo sul server: nessuno
@@ -395,13 +395,13 @@ function MondoDiscussioni({ discussionId, onClose, onOpenPersona }) {
                 aria-label={L('blockPerson')} title={L('blockPerson')}
                 style={{
                   background: 'none', border: 'none', cursor: 'pointer', padding: '2px 6px',
-                  fontSize: 10, fontWeight: 600, color: muto, fontFamily: FONT,
+                  fontSize: 10, fontWeight: 500, color: muto, fontFamily: FONT,
                   minHeight: 44, display: 'inline-flex', alignItems: 'center',
                 }}>
                 {L('blockPerson')}
               </button>
               <button onClick={() => segnalaCommento(c.id)} disabled={segnalati.has(c.id)}
-                style={{ marginLeft: 'auto', background: 'none', border: 'none', color: muto, cursor: segnalati.has(c.id) ? 'default' : 'pointer', fontSize: 11, fontWeight: 600, padding: 0, opacity: segnalati.has(c.id) ? 0.45 : 1, minHeight: 44, display: 'inline-flex', alignItems: 'center' }}>
+                style={{ marginLeft: 'auto', background: 'none', border: 'none', color: muto, cursor: segnalati.has(c.id) ? 'default' : 'pointer', fontSize: 11, fontWeight: 500, padding: 0, opacity: segnalati.has(c.id) ? 0.45 : 1, minHeight: 44, display: 'inline-flex', alignItems: 'center' }}>
                 {segnalati.has(c.id) ? L('reportCopied') : L('reportWord')}
               </button>
             </div>
@@ -439,7 +439,7 @@ function MondoDiscussioni({ discussionId, onClose, onOpenPersona }) {
           <button onClick={invia} disabled={inviando || !testo.trim()} style={{
             padding: '10px 16px', minHeight: 44, borderRadius: 12, cursor: inviando || !testo.trim() ? 'default' : 'pointer',
             background: `linear-gradient(135deg, ${accent}, ${C.accent2})`, border: 'none', color: '#fff',
-            fontSize: 13, fontWeight: 600, fontFamily: FONT, opacity: inviando || !testo.trim() ? 0.5 : 1,
+            fontSize: 13, fontWeight: 500, fontFamily: FONT, opacity: inviando || !testo.trim() ? 0.5 : 1,
           }}>{L('sendWord')}</button>
         </div>
       </div>
@@ -468,7 +468,7 @@ function MondoDiscussioni({ discussionId, onClose, onOpenPersona }) {
             </span>
             <a href={lettoreUrl} target="_blank" rel="noreferrer" style={{
               display: 'flex', alignItems: 'center', gap: 6, padding: '0 14px', minHeight: 44, borderRadius: 12,
-              background: card, border: bordo, color: accent, fontSize: 12, fontWeight: 600, textDecoration: 'none', fontFamily: FONT, flexShrink: 0,
+              background: card, border: bordo, color: accent, fontSize: 12, fontWeight: 500, textDecoration: 'none', fontFamily: FONT, flexShrink: 0,
             }}><Icon name="link" size={14} color={accent} /> {L('openOutside')}</a>
           </header>
           <iframe src={lettoreUrl} title={media?.source || 'articolo'} style={{ flex: 1, border: 'none', width: '100%', background: '#fff' }} />

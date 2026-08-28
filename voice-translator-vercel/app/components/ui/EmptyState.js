@@ -19,7 +19,7 @@ const EmptyState = ({ icon, title, desc, actionLabel, onAction, S }) => {
         <div style={{ fontSize: 48, marginBottom: 16, opacity: 0.6 }}>{icon}</div>
       )}
       <div style={{
-        fontSize: 16, fontWeight: 600, color: C.textPrimary || '#fafafa',
+        fontSize: 16, fontWeight: 500, color: C.textPrimary || '#fafafa',
         fontFamily: FONT, marginBottom: 6,
       }}>
         {title}
@@ -38,7 +38,7 @@ const EmptyState = ({ icon, title, desc, actionLabel, onAction, S }) => {
           style={{
             marginTop: 16, padding: '10px 24px', borderRadius: 12,
             background: C.accent1 || '#8b5cf6', border: 'none',
-            color: '#fff', fontSize: 14, fontWeight: 600,
+            color: '#fff', fontSize: 14, fontWeight: 500,
             cursor: 'pointer', fontFamily: FONT,
           }}
         >

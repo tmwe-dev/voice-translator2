@@ -90,7 +90,7 @@ const AIView = memo(function AIView({
       {/* ── FINE b.89 ── */}
       <div style={{ marginTop: 8 }}>
         <h2 style={{
-          color: S.colors.textPrimary, fontSize: 22, fontWeight: 600, margin: 0,
+          color: S.colors.textPrimary, fontSize: 22, fontWeight: 500, margin: 0,
         }}>
           AI e Automazioni
         </h2>
@@ -114,7 +114,7 @@ const AIView = memo(function AIView({
             }}>
             <Icon name={qa.icona} size={26} color={qa.color} />
             <div>
-              <div style={{ fontSize: 14, fontWeight: 600, color: S.colors.textPrimary }}>{qa.label}</div>
+              <div style={{ fontSize: 14, fontWeight: 500, color: S.colors.textPrimary }}>{qa.label}</div>
               <div style={{ fontSize: 11, color: S.colors.textMuted, marginTop: 2 }}>{qa.desc}</div>
             </div>
           </button>
@@ -130,10 +130,10 @@ const AIView = memo(function AIView({
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
             <span style={{ fontSize: 18 }}></span>
-            <span style={{ fontSize: 15, fontWeight: 600, color: S.colors.textPrimary }}>{L('personalGlossary')}</span>
+            <span style={{ fontSize: 15, fontWeight: 500, color: S.colors.textPrimary }}>{L('personalGlossary')}</span>
             <span style={{
               marginLeft: 'auto', fontSize: 11, padding: '3px 8px', borderRadius: 8,
-              background: S.colors.accent2Bg, color: S.colors.accent2, fontWeight: 600,
+              background: S.colors.accent2Bg, color: S.colors.accent2, fontWeight: 500,
             }}>
               {glossaryTerms.length} {L('termsCount')}
             </span>
@@ -159,7 +159,7 @@ const AIView = memo(function AIView({
             <button onClick={addGlossaryTerm}
               style={{
                 padding: '8px 14px', borderRadius: 10, border: 'none', cursor: 'pointer',
-                background: S.colors.btnGradient, color: '#000', fontSize: 16, fontWeight: 600,
+                background: S.colors.btnGradient, color: '#000', fontSize: 16, fontWeight: 500,
               }}>
               +
             </button>
@@ -173,9 +173,9 @@ const AIView = memo(function AIView({
                 borderRadius: 12, background: S.colors.overlayBg,
                 border: `1px solid ${S.colors.overlayBorder}`,
               }}>
-                <span style={{ fontSize: 13, color: S.colors.textPrimary, fontWeight: 600, flex: 1 }}>{term.from}</span>
+                <span style={{ fontSize: 13, color: S.colors.textPrimary, fontWeight: 500, flex: 1 }}>{term.from}</span>
                 <span style={{ color: S.colors.textMuted, fontSize: 14 }}>→</span>
-                <span style={{ fontSize: 13, color: S.colors.accent2, fontWeight: 600, flex: 1 }}>{term.to}</span>
+                <span style={{ fontSize: 13, color: S.colors.accent2, fontWeight: 500, flex: 1 }}>{term.to}</span>
                 <button onClick={() => setGlossaryTerms(prev => prev.filter((_, j) => j !== i))}
                   style={{
                     background: 'none', border: 'none', cursor: 'pointer',
@@ -196,7 +196,7 @@ const AIView = memo(function AIView({
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
             <span style={{ fontSize: 18 }}></span>
-            <span style={{ fontSize: 15, fontWeight: 600, color: S.colors.textPrimary }}>{L('aiAutomationsTitle')}</span>
+            <span style={{ fontSize: 15, fontWeight: 500, color: S.colors.textPrimary }}>{L('aiAutomationsTitle')}</span>
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -208,7 +208,7 @@ const AIView = memo(function AIView({
                 transition: 'all 0.2s',
               }}>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 14, fontWeight: 600, color: S.colors.textPrimary }}>{L(auto.name)}</div>
+                  <div style={{ fontSize: 14, fontWeight: 500, color: S.colors.textPrimary }}>{L(auto.name)}</div>
                   <div style={{ fontSize: 11, color: S.colors.textMuted, marginTop: 2 }}>{L(auto.desc)}</div>
                 </div>
                 {/* b.482 — IL BERSAGLIO SALE A 44, IL DISEGNO RESTA. La levetta
@@ -249,7 +249,7 @@ const AIView = memo(function AIView({
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
             <span style={{ fontSize: 18 }}></span>
-            <span style={{ fontSize: 15, fontWeight: 600, color: S.colors.textPrimary }}>{L('translationStyleTitle')}</span>
+            <span style={{ fontSize: 15, fontWeight: 500, color: S.colors.textPrimary }}>{L('translationStyleTitle')}</span>
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -264,7 +264,7 @@ const AIView = memo(function AIView({
                 }}>
                 <span style={{ fontSize: 22 }}>{style.icon}</span>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 14, fontWeight: 600, color: S.colors.textPrimary }}>{style.label}</div>
+                  <div style={{ fontSize: 14, fontWeight: 500, color: S.colors.textPrimary }}>{style.label}</div>
                   <div style={{ fontSize: 11, color: S.colors.textMuted, marginTop: 1 }}>{style.desc}</div>
                 </div>
                 {selectedStyle === style.id && (
@@ -272,7 +272,7 @@ const AIView = memo(function AIView({
                     width: 20, height: 20, borderRadius: '50%',
                     background: S.colors.btnGradient,
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    color: '#fff', fontSize: 12, fontWeight: 600,
+                    color: '#fff', fontSize: 12, fontWeight: 500,
                   }}>✓</div>
                 )}
               </button>
@@ -289,7 +289,7 @@ const AIView = memo(function AIView({
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
           <span style={{ fontSize: 14 }}></span>
-          <span style={{ fontSize: 12, fontWeight: 600, color: S.colors.accent1 }}>{L('aiSuggestionLabel')}</span>
+          <span style={{ fontSize: 12, fontWeight: 500, color: S.colors.accent1 }}>{L('aiSuggestionLabel')}</span>
         </div>
         <p style={{ color: S.colors.textSecondary, fontSize: 13, lineHeight: 1.5, margin: 0 }}>
           {L('aiTipBody')}

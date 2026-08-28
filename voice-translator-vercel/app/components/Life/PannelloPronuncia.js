@@ -238,7 +238,7 @@ export default function PannelloPronuncia({ frase, lingua, userToken, onEsito, v
   return (
     <div style={{ marginTop: 12, padding: '14px 20px', borderRadius: 14, background: card, border: `1px solid ${accent}` }}>
       <div style={{ fontSize: 12, color: muto, marginBottom: 6 }}>{L('lifeSayAloud')}</div>
-      <div style={{ fontSize: 17, fontWeight: 600, color: testoP, marginBottom: 10 }}>{frase}</div>
+      <div style={{ fontSize: 17, fontWeight: 500, color: testoP, marginBottom: 10 }}>{frase}</div>
 
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
         {/* b.404 — il triangolo era scritto a mano nel testo (`▶ Lenta`),
@@ -257,7 +257,7 @@ export default function PannelloPronuncia({ frase, lingua, userToken, onEsito, v
         {/* b.482 — il tasto della registrazione aveva solo il riempimento e
             restava sotto la misura di un dito: adesso ha i suoi 44. */}
         <button onClick={registra} disabled={stato === 'valuto'}
-          style={{ padding: '10px 16px', minHeight: 44, borderRadius: 12, border: 'none', fontFamily: FONT, fontWeight: 600, cursor: stato === 'valuto' ? 'default' : 'pointer',
+          style={{ padding: '10px 16px', minHeight: 44, borderRadius: 12, border: 'none', fontFamily: FONT, fontWeight: 500, cursor: stato === 'valuto' ? 'default' : 'pointer',
             background: stato === 'registro' ? '#f87171' : accent, color: '#04121c', opacity: stato === 'valuto' ? 0.6 : 1 }}>
           {stato === 'registro' ? L('lifeImDone') : stato === 'valuto' ? L('listeningDots') : stato === 'fatto' ? L('retryWord') : L('lifeRecord')}
         </button>
@@ -270,7 +270,7 @@ export default function PannelloPronuncia({ frase, lingua, userToken, onEsito, v
       {confronto && <GraficoFonia confronto={confronto} precedente={confrontoPrec} muto={muto} card="rgba(255,255,255,0.04)" />}
       {confronto && (
         <div style={{ fontSize: 12, color: muto, marginTop: 4 }}>
-          {L('lifePhonics')}: <span style={{ fontWeight: 600, color: confronto.somiglianza >= 70 ? accent : confronto.somiglianza >= 45 ? '#f59e0b' : '#f87171' }}>{confronto.somiglianza}%</span>
+          {L('lifePhonics')}: <span style={{ fontWeight: 500, color: confronto.somiglianza >= 70 ? accent : confronto.somiglianza >= 45 ? '#f59e0b' : '#f87171' }}>{confronto.somiglianza}%</span>
           {confronto.rapportoDurata > 1.35 ? ` — ${L('lifeSlowerThanRef')}` : confronto.rapportoDurata < 0.7 ? ` — ${L('lifeFasterThanRef')}` : ''}
         </div>
       )}
@@ -279,7 +279,7 @@ export default function PannelloPronuncia({ frase, lingua, userToken, onEsito, v
         <div style={{ marginTop: 12 }}>
           {/* b.482 — il punteggio era in nerissimo (900): il piu pesante
               che si ammette a schermo e 600, e vale anche per i numeri. */}
-          <div style={{ fontSize: 22, fontWeight: 600, color: colorePunteggio }}>{esito.punteggio}%</div>
+          <div style={{ fontSize: 22, fontWeight: 500, color: colorePunteggio }}>{esito.punteggio}%</div>
           {/* Parola per parola: si vede DOVE è andata storta, non solo quanto. */}
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
             {esito.parole.map((p, i) => (
@@ -301,7 +301,7 @@ export default function PannelloPronuncia({ frase, lingua, userToken, onEsito, v
                     restavano bassi: ora arrivano ai 44 che serve al dito. */}
                 {rosse.map((w) => (
                   <button key={w} onClick={() => allena(w)} disabled={drillCarico}
-                    style={{ padding: '6px 11px', minHeight: 44, borderRadius: 9, border: `1px solid ${accent}`, background: 'transparent', color: accent, fontWeight: 600, fontSize: 12, cursor: 'pointer', fontFamily: FONT, opacity: drillCarico ? 0.6 : 1 }}>
+                    style={{ padding: '6px 11px', minHeight: 44, borderRadius: 9, border: `1px solid ${accent}`, background: 'transparent', color: accent, fontWeight: 500, fontSize: 12, cursor: 'pointer', fontFamily: FONT, opacity: drillCarico ? 0.6 : 1 }}>
                     {drillCarico ? '…' : L('lifeTrainWord').replace('{x}', w)}
                   </button>
                 ))}
@@ -310,7 +310,7 @@ export default function PannelloPronuncia({ frase, lingua, userToken, onEsito, v
           })()}
           {drill && (
             <div style={{ marginTop: 10, padding: '12px 20px', borderRadius: 12, background: 'rgba(255,255,255,0.04)', border: bordo }}>
-              <div style={{ fontSize: 12, fontWeight: 600, color: testoP, marginBottom: 8 }}>
+              <div style={{ fontSize: 12, fontWeight: 500, color: testoP, marginBottom: 8 }}>
                 {L('lifeMinimalPairs')} — {drill.suono || L('lifeSoundOf').replace('{x}', drill.parola)}
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>

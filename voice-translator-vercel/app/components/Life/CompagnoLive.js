@@ -481,7 +481,7 @@ function CompagnoLive({ compagno, lingua, userToken, contesto, onChiudi, onFine,
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
         {compagno?.avatar && <img src={compagno.avatar} alt="" width={38} height={38} style={{ borderRadius: 10, objectFit: 'cover' }} />}
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontWeight: 600, color: testoP, fontSize: 14 }}>{compagno?.nome}</div>
+          <div style={{ fontWeight: 500, color: testoP, fontSize: 14 }}>{compagno?.nome}</div>
           <div style={{ fontSize: 11, color: inErrore ? '#f87171' : muto }}>
             {stato === 'vivo' && (
               <span aria-hidden style={{ display: 'inline-block', width: 7, height: 7, borderRadius: 4, marginRight: 5,
@@ -500,7 +500,7 @@ function CompagnoLive({ compagno, lingua, userToken, contesto, onChiudi, onFine,
         {riprovabile && (
           <button onClick={apriLinea} aria-label={tt('retryWord', 'Riprova')}
             style={{ background: accent, border: 'none', borderRadius: 8, minHeight: 44, padding: '6px 12px',
-              cursor: 'pointer', color: '#04121c', fontFamily: FONT, fontSize: 13, fontWeight: 600 }}>
+              cursor: 'pointer', color: '#04121c', fontFamily: FONT, fontSize: 13, fontWeight: 500 }}>
             {tt('retryWord', 'Riprova')}
           </button>
         )}
@@ -521,7 +521,7 @@ function CompagnoLive({ compagno, lingua, userToken, contesto, onChiudi, onFine,
         <div style={{ maxHeight: 180, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 4, paddingTop: 6, borderTop: bordo }}>
           {righe.map((r, i) => (
             <div key={i} style={{ fontSize: 12, lineHeight: 1.4, color: r.chi === 'tu' ? muto : testoP, fontFamily: FONT }}>
-              <span style={{ fontWeight: 600 }}>{r.chi === 'tu' ? tt('youWord', 'Tu') : compagno?.nome || tt('liveHim', 'Lui')}: </span>{r.testo}
+              <span style={{ fontWeight: 500 }}>{r.chi === 'tu' ? tt('youWord', 'Tu') : compagno?.nome || tt('liveHim', 'Lui')}: </span>{r.testo}
             </div>
           ))}
           <div ref={fondoRef} />

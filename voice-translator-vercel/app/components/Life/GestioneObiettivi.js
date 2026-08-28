@@ -113,7 +113,7 @@ function GestioneObiettivi({ L, userToken, testoP, muto, accent, card, bordo, ca
         <div style={{ display: 'flex', gap: 8 }}>
           {[1, 2, 3].map((p) => (
             <button key={p} onClick={() => setBozza((b) => ({ ...b, priorita: p }))}
-              style={{ flex: 1, padding: 10, minHeight: 44, borderRadius: 10, cursor: 'pointer', fontFamily: FONT, fontWeight: 600,
+              style={{ flex: 1, padding: 10, minHeight: 44, borderRadius: 10, cursor: 'pointer', fontFamily: FONT, fontWeight: 500,
                 border: bordo, background: bozza.priorita === p ? accent : 'transparent', color: bozza.priorita === p ? '#04121c' : testoP }}>
               {p === 1 ? L('lifeGoalLow') : p === 2 ? L('lifeGoalMed') : L('lifeGoalHigh')}
             </button>
@@ -136,7 +136,7 @@ function GestioneObiettivi({ L, userToken, testoP, muto, accent, card, bordo, ca
             stile={{ ...input, width: '100%' }} />
         </>}
 
-        <button onClick={salva} disabled={!bozza.titolo.trim()} style={{ width: '100%', marginTop: 16, padding: 14, minHeight: 44, borderRadius: 14, border: 'none', cursor: 'pointer', background: accent, color: '#04121c', fontWeight: 600, fontSize: 15, fontFamily: FONT, opacity: bozza.titolo.trim() ? 1 : 0.6, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+        <button onClick={salva} disabled={!bozza.titolo.trim()} style={{ width: '100%', marginTop: 16, padding: 14, minHeight: 44, borderRadius: 14, border: 'none', cursor: 'pointer', background: accent, color: '#04121c', fontWeight: 500, fontSize: 15, fontFamily: FONT, opacity: bozza.titolo.trim() ? 1 : 0.6, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
           <Icon name="check" size={18} color="#04121c" /> {L('lifeGoalSave')}
         </button>
       </div>
@@ -165,7 +165,7 @@ function GestioneObiettivi({ L, userToken, testoP, muto, accent, card, bordo, ca
                     ? <Icon name="trophy" size={20} color="#f1c40f" />
                     : <Icon name={iconaCat(o.categoria)} size={20} color={accent} />}
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontWeight: 600, color: vinto ? '#f1c40f' : testoP, fontSize: 14 }}>{o.titolo}</div>
+                    <div style={{ fontWeight: 500, color: vinto ? '#f1c40f' : testoP, fontSize: 14 }}>{o.titolo}</div>
                     {o.descrizione && <div style={{ fontSize: 12, color: muto, overflow: 'hidden', textOverflow: 'ellipsis' }}>{o.descrizione}</div>}
                   </div>
                   <button onClick={() => setBozza({ ...o })} aria-label={L('lifeGoalEdit')} style={{ background: 'none', border: bordo, borderRadius: 8, padding: 7, minHeight: 44, cursor: 'pointer' }}><Icon name="settings" size={14} color={testoP} /></button>
@@ -185,7 +185,7 @@ function GestioneObiettivi({ L, userToken, testoP, muto, accent, card, bordo, ca
       {/* b.494 — tavola 10: «PER OGGI», i compiti come righe. Toccarne
           una porta ai Compiti veri: qui non si gestisce, si vede. */}
       {perOggi.length > 0 && <>
-        <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: 1, color: muto, margin: '18px 0 4px', textTransform: 'uppercase' }}>
+        <div style={{ fontSize: 11, fontWeight: 500, letterSpacing: 1, color: muto, margin: '18px 0 4px', textTransform: 'uppercase' }}>
           {L('forTodayWord')}
         </div>
         {perOggi.map((j) => (
@@ -206,7 +206,7 @@ function GestioneObiettivi({ L, userToken, testoP, muto, accent, card, bordo, ca
           pillola grande sta IN FONDO, dopo cio che c'e gia. */}
       <button onClick={() => { vibrate(8); setBozza(vuoto()); }}
         style={{ width: '100%', padding: 14, minHeight: 54, borderRadius: 16, border: 'none', cursor: 'pointer',
-          background: accent, color: '#04121c', fontWeight: 600, fontSize: 15, fontFamily: FONT,
+          background: accent, color: '#04121c', fontWeight: 500, fontSize: 15, fontFamily: FONT,
           marginTop: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
         <Icon name="plus" size={18} color="#04121c" /> {L('lifeGoalNew')}
       </button>

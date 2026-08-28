@@ -98,7 +98,7 @@ const ConnectionQuality = memo(function ConnectionQuality({ webrtcState, partner
         // otto pixel erano troppo pochi perche la scritta stesse in
         // riga dentro il menu: si spezzava in due e finiva addosso a
         // quella accanto.
-        fontSize: 10, fontWeight: 600, color, whiteSpace: 'nowrap',
+        fontSize: 10, fontWeight: 500, color, whiteSpace: 'nowrap',
         marginLeft: 4, letterSpacing: 0.3,
         transition: 'color 0.3s ease',
         textShadow: level > 0 ? `0 0 8px ${color}40` : 'none',

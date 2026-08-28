@@ -17,7 +17,7 @@ const CARD = { background: '#18181b', borderRadius: 12, padding: 20, marginBotto
 const TH = { padding: 8, textAlign: 'left', color: '#71717a', fontWeight: 500, fontSize: 11, textTransform: 'uppercase' };
 const TD = { padding: 8, fontSize: 13, borderBottom: '1px solid #1a1a1e' };
 const INPUT = { background: '#09090b', border: '1px solid #27272a', borderRadius: 8, padding: '8px 12px', color: '#e4e4e7', fontSize: 14, fontFamily: 'inherit' };
-const BTN = { background: '#f97316', color: '#000', border: 'none', borderRadius: 8, padding: '8px 16px', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', fontSize: 14 };
+const BTN = { background: '#f97316', color: '#000', border: 'none', borderRadius: 8, padding: '8px 16px', fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit', fontSize: 14 };
 
 const fmtEuro = (n) => '€' + Number(n || 0).toFixed(2).replace('.', ',');
 const APP_URL = 'https://voice-translator2.vercel.app';
@@ -116,7 +116,7 @@ export default function AdminWallet() {
         ].map(k => (
           <div key={k.label} style={{ background: '#18181b', borderRadius: 12, padding: 16, borderLeft: `3px solid ${k.color}` }}>
             <div style={{ fontSize: 12, color: '#71717a', marginBottom: 4 }}>{k.label}</div>
-            <div style={{ fontSize: 22, fontWeight: 600, color: k.color }}>{k.value}</div>
+            <div style={{ fontSize: 22, fontWeight: 500, color: k.color }}>{k.value}</div>
           </div>
         ))}
       </div>
@@ -148,7 +148,7 @@ export default function AdminWallet() {
         <h3 style={{ margin: '0 0 12px', fontSize: 16 }}><Icon name="settings" size={15} /> Servizi AI</h3>
         {(dati.servizi || []).map(s => (
           <div key={s.chiave} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '8px 0', borderBottom: '1px solid #1a1a1e' }}>
-            <span style={{ flex: 1, fontSize: 14, fontWeight: 600 }}>{s.chiave}</span>
+            <span style={{ flex: 1, fontSize: 14, fontWeight: 500 }}>{s.chiave}</span>
             <span style={{ fontSize: 13, color: '#a1a1aa' }}>{s.valore}</span>
             <button onClick={() => comanda({ chiave: s.chiave, valore: s.valore, attivo: !s.attivo })}
               aria-label={`${s.attivo ? 'Spegni' : 'Accendi'} ${s.chiave}`}
@@ -176,7 +176,7 @@ export default function AdminWallet() {
         </div>
         {regalato && (
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 12, flexWrap: 'wrap' }}>
-            <span style={{ color: '#22c55e', fontSize: 13, fontWeight: 600 }}>
+            <span style={{ color: '#22c55e', fontSize: 13, fontWeight: 500 }}>
               Fatto: +{regalato.minuti} min a {regalato.utente}. Avvisalo:
             </span>
             <a href={linkWhatsApp(testoOmaggio(regalato.minuti))} target="_blank" rel="noreferrer"
@@ -232,7 +232,7 @@ export default function AdminWallet() {
           </tr></thead>
           <tbody>{(dati.voucher || []).map(v => (
             <tr key={v.codice}>
-              <td style={{ ...TD, fontWeight: 600 }}>{v.codice}</td>
+              <td style={{ ...TD, fontWeight: 500 }}>{v.codice}</td>
               <td style={TD}>{formattaDurata(v.secondi)}</td>
               <td style={TD}>{v.usi_fatti} / {v.usi_massimi}</td>
               <td style={{ ...TD, color: '#71717a' }}>{v.scade_il ? String(v.scade_il).slice(0, 10) : 'mai'}</td>

@@ -54,7 +54,7 @@ const CTAButton = ({ D, onClick, disabled, children, secondary }) => (
         : `linear-gradient(135deg, ${D.neon1}, ${D.neon2})`,
       border: secondary ? `1.5px solid ${D.glassBorder}` : 'none',
       color: disabled ? D.textMuted : secondary ? D.textSoft : PALETTE.white,
-      fontFamily: FONT, fontSize: secondary ? 14 : 16, fontWeight: 600,
+      fontFamily: FONT, fontSize: secondary ? 14 : 16, fontWeight: 500,
       opacity: disabled ? 0.5 : 1,
       transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
       WebkitTapHighlightColor: 'transparent',
@@ -286,7 +286,7 @@ export default function WelcomeView({ joinCode, userToken, setAuthStep,
             style={{ width: 44, height: 44, borderRadius: 12, flexShrink: 0, cursor: 'pointer',
               background: zoomTesto ? 'rgba(255,255,255,0.10)' : 'none',
               border: `1.5px solid ${D.glassBorder}`, color: D.textSoft,
-              fontFamily: FONT, fontSize: 15, fontWeight: 600, marginBottom: 20 }}>
+              fontFamily: FONT, fontSize: 15, fontWeight: 500, marginBottom: 20 }}>
             Aa
           </button>
         </div>
@@ -304,7 +304,7 @@ export default function WelcomeView({ joinCode, userToken, setAuthStep,
 
             {/* Logo / App Name */}
             <div style={{
-              fontSize: 14, fontWeight: 600, letterSpacing: 3, textTransform: 'uppercase',
+              fontSize: 14, fontWeight: 500, letterSpacing: 3, textTransform: 'uppercase',
               color: D.neon1, marginBottom: 16,
               ...stagger(0),
             }}>
@@ -315,7 +315,7 @@ export default function WelcomeView({ joinCode, userToken, setAuthStep,
             {/* b.482 — era l'ultimo grassetto pesante rimasto nelle porte
                 d'ingresso: il titolo scende al massimo consentito, 600. */}
             <div style={{
-              fontSize: 32, fontWeight: 600, textAlign: 'center', lineHeight: 1.15,
+              fontSize: 32, fontWeight: 500, textAlign: 'center', lineHeight: 1.15,
               letterSpacing: -0.5, marginBottom: 12,
               background: `linear-gradient(135deg, ${D.text} 0%, ${D.neon1} 50%, ${D.neon2} 100%)`,
               WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
@@ -344,7 +344,7 @@ export default function WelcomeView({ joinCode, userToken, setAuthStep,
                   ...stagger(3 + i),
                 }}>
                   <span style={{ lineHeight: 0, color: f.color, display: 'flex' }}>{f.icon}</span>
-                  <span style={{ fontSize: 14, fontWeight: 600, color: D.textSoft }}>{f.text}</span>
+                  <span style={{ fontSize: 14, fontWeight: 500, color: D.textSoft }}>{f.text}</span>
                 </div>
               ))}
             </div>
@@ -383,11 +383,11 @@ export default function WelcomeView({ joinCode, userToken, setAuthStep,
             }}>
               {NOMI_LINGUE_IN_VETRINA.map((nome, i) => (
                 <span key={i} style={{
-                  fontSize: 11.5, fontWeight: 600, color: D.textDim, letterSpacing: 0.2,
+                  fontSize: 11.5, fontWeight: 500, color: D.textDim, letterSpacing: 0.2,
                   opacity: 0.55,
                 }}>{nome}</span>
               ))}
-              <span style={{ fontSize: 11.5, fontWeight: 600, color: D.neon2, opacity: 0.8 }}>
+              <span style={{ fontSize: 11.5, fontWeight: 500, color: D.neon2, opacity: 0.8 }}>
                 {L('moreLangsCount').replace('{x}', String(LANGS.length - NOMI_LINGUE_IN_VETRINA.length))}
               </span>
             </div>
@@ -411,7 +411,7 @@ export default function WelcomeView({ joinCode, userToken, setAuthStep,
             </button>
 
             {/* Title */}
-            <div style={{ fontSize: 26, fontWeight: 600, marginBottom: 6, textAlign: 'center', ...stagger(0) }}>
+            <div style={{ fontSize: 26, fontWeight: 500, marginBottom: 6, textAlign: 'center', ...stagger(0) }}>
               {L('setupTitle')}
             </div>
             <div style={{ fontSize: 13, color: D.textMuted, marginBottom: 24, textAlign: 'center', ...stagger(1) }}>
@@ -433,11 +433,11 @@ export default function WelcomeView({ joinCode, userToken, setAuthStep,
                 fontFamily: FONT, WebkitTapHighlightColor: 'transparent', ...stagger(2) }}>
               <span style={{ fontSize: 27, lineHeight: 1 }}>{paese?.bandiera || linguaParlata.flag}</span>
               <span style={{ flex: 1, minWidth: 0 }}>
-                <span style={{ display: 'block', fontSize: 10.5, fontWeight: 600, letterSpacing: 1.2,
+                <span style={{ display: 'block', fontSize: 10.5, fontWeight: 500, letterSpacing: 1.2,
                   textTransform: 'uppercase', color: D.textMuted }}>
                   {L('countryLabel')}
                 </span>
-                <span style={{ display: 'block', fontSize: 15, fontWeight: 600, color: D.text, marginTop: 2 }}>
+                <span style={{ display: 'block', fontSize: 15, fontWeight: 500, color: D.text, marginTop: 2 }}>
                   {paese?.nome || linguaParlata.name}
                 </span>
                 <span style={{ display: 'block', fontSize: 11.5, color: D.textMuted, marginTop: 2 }}>
@@ -447,14 +447,14 @@ export default function WelcomeView({ joinCode, userToken, setAuthStep,
               {/* Una freccia e non una parola: qui non c'e una chiave
                   "cambia" in quindici lingue, e inventarne una a meta
                   sarebbe tornare al problema di partenza. */}
-              <span aria-hidden="true" style={{ fontSize: 20, fontWeight: 600, color: D.neon1, flexShrink: 0, lineHeight: 1 }}>
+              <span aria-hidden="true" style={{ fontSize: 20, fontWeight: 500, color: D.neon1, flexShrink: 0, lineHeight: 1 }}>
                 {'›'}
               </span>
             </button>
 
             {/* Name Input */}
             <div style={{ width: '100%', marginBottom: 24, ...stagger(3) }}>
-              <div style={{ fontSize: 11, fontWeight: 600, color: D.textMuted, marginBottom: 10, textTransform: 'uppercase', letterSpacing: 1.2 }}>
+              <div style={{ fontSize: 11, fontWeight: 500, color: D.textMuted, marginBottom: 10, textTransform: 'uppercase', letterSpacing: 1.2 }}>
                 {L('yourName')}
               </div>
               <input type="text" value={prefs.name}
@@ -505,7 +505,7 @@ export default function WelcomeView({ joinCode, userToken, setAuthStep,
             </button>
 
             {/* Greeting */}
-            <div style={{ fontSize: 26, fontWeight: 600, marginBottom: 6, textAlign: 'center', ...stagger(0) }}>
+            <div style={{ fontSize: 26, fontWeight: 500, marginBottom: 6, textAlign: 'center', ...stagger(0) }}>
               {L('heyName').replace('{x}', prefs.name)}
             </div>
             <div style={{ fontSize: 13, color: D.textMuted, marginBottom: 24, textAlign: 'center', ...stagger(1) }}>
@@ -533,7 +533,7 @@ export default function WelcomeView({ joinCode, userToken, setAuthStep,
                       WebkitTapHighlightColor: 'transparent', padding: 8,
                     }}>
                     <AvatarImg avatar={avatar} size={48} />
-                    <span style={{ fontSize: 9, color: isSel ? D.neon1 : D.textDim, fontWeight: 600, marginTop: 2 }}>
+                    <span style={{ fontSize: 9, color: isSel ? D.neon1 : D.textDim, fontWeight: 500, marginTop: 2 }}>
                       {AVATAR_NAMES[idx]}
                     </span>
                   </button>
@@ -550,7 +550,7 @@ export default function WelcomeView({ joinCode, userToken, setAuthStep,
             }}>
               <AvatarImg avatar={prefs.avatar} size={44} />
               <div>
-                <div style={{ fontSize: 16, fontWeight: 600 }}>{prefs.name}</div>
+                <div style={{ fontSize: 16, fontWeight: 500 }}>{prefs.name}</div>
                 <div style={{ fontSize: 12, color: D.textMuted }}>
                   {paese?.bandiera || linguaParlata.flag} {paese?.nome || linguaParlata.name}
                 </div>
@@ -559,7 +559,7 @@ export default function WelcomeView({ joinCode, userToken, setAuthStep,
 
             {/* Hai un codice regalo? (voucher — riscattato appena entri) */}
             <div style={{ width: '100%', marginBottom: 18, ...stagger(4) }}>
-              <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: 1.5, color: D.textMuted, marginBottom: 6 }}>
+              <div style={{ fontSize: 10, fontWeight: 500, letterSpacing: 1.5, color: D.textMuted, marginBottom: 6 }}>
                 {L('haveCode')}
               </div>
               <input
@@ -576,7 +576,7 @@ export default function WelcomeView({ joinCode, userToken, setAuthStep,
                 aria-label={L('giftCodeAria')}
                 style={{
                   width: '100%', boxSizing: 'border-box', padding: '12px 14px', borderRadius: 14,
-                  fontFamily: 'inherit', fontSize: 14, fontWeight: 600, letterSpacing: 1,
+                  fontFamily: 'inherit', fontSize: 14, fontWeight: 500, letterSpacing: 1,
                   background: 'rgba(255,255,255,0.03)', border: `1px solid ${D.glassBorder}`,
                   color: D.text, outline: 'none',
                 }} />

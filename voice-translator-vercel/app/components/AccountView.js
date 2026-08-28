@@ -242,7 +242,7 @@ export default function AccountView({ authStep, authEmail, setAuthEmail, authCod
               <div style={{fontSize:13, color:S.colors.accent3, textAlign:'center', marginBottom:12,
                 padding:'8px 12px', background:S.colors.accent3Bg, borderRadius:12}}>
                 {/* niente grassetto: 600 basta a staccare il codice dal resto della riga */}
-              {L('testCode')}: <span style={{fontWeight:600}}>{authTestCode}</span>
+              {L('testCode')}: <span style={{fontWeight: 500}}>{authTestCode}</span>
               </div>
             )}
             <div style={S.field}>
@@ -279,7 +279,7 @@ export default function AccountView({ authStep, authEmail, setAuthEmail, authCod
 
               <div style={{position:'absolute', top:-11, left:18, padding:'3px 14px', borderRadius:8,
                 background:`linear-gradient(135deg, ${S.colors.accent4}, ${S.colors.accent2})`,
-                color:S.colors.bg, fontSize:10, fontWeight:600, letterSpacing:0.5, textTransform:'uppercase'}}>
+                color:S.colors.bg, fontSize:10, fontWeight: 500, letterSpacing:0.5, textTransform:'uppercase'}}>
                 {L('recommended')}
               </div>
 
@@ -321,7 +321,7 @@ export default function AccountView({ authStep, authEmail, setAuthEmail, authCod
 
               {/* CTA */}
               <div style={{textAlign:'center', padding:'10px 0 4px', borderTop:`1px solid ${S.colors.accent4Border}`}}>
-                <span style={{fontSize:13, fontWeight:600, color:S.colors.accent4, letterSpacing:0.3}}>
+                <span style={{fontSize:13, fontWeight: 500, color:S.colors.accent4, letterSpacing:0.3}}>
                   {L('startFree')} {'\u2192'}
                 </span>
               </div>
@@ -330,7 +330,7 @@ export default function AccountView({ authStep, authEmail, setAuthEmail, authCod
             {/* ══════ Divider ══════ */}
             <div style={{display:'flex', alignItems:'center', gap:12, marginBottom:16}}>
               <div style={{flex:1, height:1, background:S.colors.dividerColor}} />
-              <div style={{fontSize:10, color:S.colors.textSecondary, fontWeight:600, textTransform:'uppercase', letterSpacing:1.5}}>
+              <div style={{fontSize:10, color:S.colors.textSecondary, fontWeight: 500, textTransform:'uppercase', letterSpacing:1.5}}>
                 {L('orGoPro')}
               </div>
               <div style={{flex:1, height:1, background:S.colors.dividerColor}} />
@@ -373,7 +373,7 @@ export default function AccountView({ authStep, authEmail, setAuthEmail, authCod
                     <div key={i} style={{display:'flex', alignItems:'baseline', gap:4,
                       padding:'4px 10px', borderRadius:8, background:S.colors.accent1Bg,
                       border:`1px solid ${S.colors.accent1Border}`}}>
-                      <span style={{fontSize:15, fontWeight:600, color:s.color}}>{s.val}</span>
+                      <span style={{fontSize:15, fontWeight: 500, color:s.color}}>{s.val}</span>
                       <span style={{fontSize:9, color:S.colors.textMuted, fontWeight:500}}>{s.label}</span>
                     </div>
                   ))}
@@ -412,7 +412,7 @@ export default function AccountView({ authStep, authEmail, setAuthEmail, authCod
                     <div key={i} style={{display:'flex', alignItems:'baseline', gap:4,
                       padding:'4px 10px', borderRadius:8, background:S.colors.inputBg,
                       border:`1px solid ${S.colors.inputBorder}`}}>
-                      <span style={{fontSize:12, fontWeight:600, color:s.color}}>{s.val}</span>
+                      <span style={{fontSize:12, fontWeight: 500, color:s.color}}>{s.val}</span>
                       <span style={{fontSize:9, color:S.colors.textSecondary, fontWeight:500}}>{s.label}</span>
                     </div>
                   ))}

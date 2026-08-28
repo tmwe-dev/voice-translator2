@@ -645,7 +645,7 @@ function SpeakerView({ userToken }) {
     const scheda = (id, etichetta) => (
       <button key={id} onClick={() => { vibrate(10); setSchedaTassista(id); }} style={{
         flex: 1, padding: '13px 10px', borderRadius: 13, border: 'none', cursor: 'pointer',
-        fontFamily: FONT, fontSize: 15, fontWeight: 600,
+        fontFamily: FONT, fontSize: 15, fontWeight: 500,
         background: schedaTassista === id ? `linear-gradient(135deg, ${C.accent}, ${C.purple})` : 'rgba(255,255,255,0.06)',
         color: schedaTassista === id ? '#fff' : 'rgba(255,255,255,0.55)',
         WebkitTapHighlightColor: 'transparent',
@@ -693,11 +693,11 @@ function SpeakerView({ userToken }) {
             {/* L'indirizzo sotto la mappa, leggibile */}
             {destCoords && (
               <div style={{ padding: '14px 20px 96px', textAlign: 'center' }}>
-                <div style={{ fontSize: 22, fontWeight: 600, color: '#fff', lineHeight: 1.35 }}>
+                <div style={{ fontSize: 22, fontWeight: 500, color: '#fff', lineHeight: 1.35 }}>
                   {indirizzo}
                 </div>
                 {routeInfo && (
-                  <div style={{ fontSize: 17, fontWeight: 600, color: C.accent, marginTop: 6 }}>
+                  <div style={{ fontSize: 17, fontWeight: 500, color: C.accent, marginTop: 6 }}>
                     {routeInfo.distKm} {L('unitKm')} &middot; ~{routeInfo.durationMin} {L('unitMin')}
                   </div>
                 )}
@@ -708,7 +708,7 @@ function SpeakerView({ userToken }) {
           <>
             {/* Lingua dell'autista: scelta in un tocco */}
             <div style={{ padding: '0 12px 8px' }}>
-              <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: 1.2, color: 'rgba(255,255,255,0.4)', marginBottom: 7 }}>
+              <div style={{ fontSize: 11, fontWeight: 500, letterSpacing: 1.2, color: 'rgba(255,255,255,0.4)', marginBottom: 7 }}>
                 {L('driverLanguage')}
               </div>
               <div style={{ display: 'flex', gap: 7, overflowX: 'auto', paddingBottom: 4, WebkitOverflowScrolling: 'touch' }}>
@@ -738,7 +738,7 @@ function SpeakerView({ userToken }) {
             }}>
               <div style={{
                 transform: 'rotate(180deg)',
-                fontSize: corpo, fontWeight: 600, color: '#fff',
+                fontSize: corpo, fontWeight: 500, color: '#fff',
                 textAlign: 'center', lineHeight: 1.25, letterSpacing: -0.5,
                 maxHeight: '100%', overflowY: 'auto', wordBreak: 'break-word',
                 textShadow: `0 0 34px ${C.accent}35`,
@@ -753,7 +753,7 @@ function SpeakerView({ userToken }) {
                 <button onClick={() => { vibrate(); playTTS(testoAutista, targetLang); }} disabled={playing} style={{
                   padding: '15px 30px', borderRadius: 16, cursor: playing ? 'default' : 'pointer',
                   background: playing ? 'rgba(255,255,255,0.10)' : `linear-gradient(135deg, ${C.accent}, ${C.purple})`,
-                  border: 'none', color: '#fff', fontSize: 17, fontWeight: 600, fontFamily: FONT,
+                  border: 'none', color: '#fff', fontSize: 17, fontWeight: 500, fontFamily: FONT,
                   display: 'flex', alignItems: 'center', gap: 10,
                   boxShadow: playing ? 'none' : `0 10px 30px -8px ${C.accent}70`,
                   WebkitTapHighlightColor: 'transparent',
@@ -840,12 +840,12 @@ function SpeakerView({ userToken }) {
 
         <div style={{ flex: 1 }}>
           <div style={{
-            fontSize: 17, fontWeight: 600, color: C.textPrimary, letterSpacing: -0.5,
+            fontSize: 17, fontWeight: 500, color: C.textPrimary, letterSpacing: -0.5,
             display: 'flex', alignItems: 'center', gap: 8,
           }}>
             TaxiTalk
             <span style={{
-              fontSize: 9, fontWeight: 600, padding: '2px 8px', borderRadius: 6,
+              fontSize: 9, fontWeight: 500, padding: '2px 8px', borderRadius: 6,
               background: mode === 'live' ? `${C.red}20` : `${C.accent}15`,
               color: mode === 'live' ? C.red : C.accent,
               textTransform: 'uppercase', letterSpacing: 0.5,
@@ -861,7 +861,7 @@ function SpeakerView({ userToken }) {
             padding: '6px 12px', borderRadius: 10, cursor: 'pointer',
             background: C.card, border: `1px solid ${C.cardBorder}`,
             backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
-            fontFamily: FONT, fontSize: 10, fontWeight: 600,
+            fontFamily: FONT, fontSize: 10, fontWeight: 500,
             color: C.textMuted, WebkitTapHighlightColor: 'transparent',
             display: 'flex', alignItems: 'center', gap: 5,
           }}>
@@ -903,7 +903,7 @@ function SpeakerView({ userToken }) {
           }}>
           <span style={{ fontSize: 22 }}>{srcInfo?.flag || ''}</span>
           <div style={{ textAlign: 'left' }}>
-            <div style={{ fontSize: 13, fontWeight: 600, color: C.textPrimary }}>{srcInfo?.name || sourceLang}</div>
+            <div style={{ fontSize: 13, fontWeight: 500, color: C.textPrimary }}>{srcInfo?.name || sourceLang}</div>
             <div style={{ fontSize: 9, color: C.textMuted }}>{L('iSpeakIn')}</div>
           </div>
         </button>
@@ -929,7 +929,7 @@ function SpeakerView({ userToken }) {
             WebkitTapHighlightColor: 'transparent',
           }}>
           <div style={{ textAlign: 'right' }}>
-            <div style={{ fontSize: 13, fontWeight: 600, color: C.textPrimary }}>{tgtInfo?.name || targetLang}</div>
+            <div style={{ fontSize: 13, fontWeight: 500, color: C.textPrimary }}>{tgtInfo?.name || targetLang}</div>
             <div style={{ fontSize: 9, color: C.textMuted }}>{L('translateIntoLabel')}</div>
           </div>
           <span style={{ fontSize: 22 }}>{tgtInfo?.flag || ''}</span>
@@ -976,7 +976,7 @@ function SpeakerView({ userToken }) {
         <div style={{
           margin: '0 16px 8px', padding: '9px 14px', borderRadius: 12,
           display: 'flex', alignItems: 'center', gap: 9,
-          fontFamily: FONT, fontSize: 12.5, fontWeight: 600,
+          fontFamily: FONT, fontSize: 12.5, fontWeight: 500,
           background: statoParlante.tono === 'errore' ? `${C.red}14` : `${C.accent}12`,
           border: `1px solid ${statoParlante.tono === 'errore' ? `${C.red}30` : `${C.accent}25`}`,
           color: statoParlante.tono === 'errore' ? C.red : C.accent,
@@ -1021,15 +1021,15 @@ function SpeakerView({ userToken }) {
           </div>
 
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 9, fontWeight: 600, letterSpacing: 1.2, color: C.textMuted, marginBottom: 3, textTransform: 'uppercase' }}>
+            <div style={{ fontSize: 9, fontWeight: 500, letterSpacing: 1.2, color: C.textMuted, marginBottom: 3, textTransform: 'uppercase' }}>
               {L('destinationWord')}
             </div>
-            <div style={{ fontSize: 13, fontWeight: 600, color: C.textPrimary, lineHeight: 1.3,
+            <div style={{ fontSize: 13, fontWeight: 500, color: C.textPrimary, lineHeight: 1.3,
               display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
               {destCoords.displayName?.split(',').slice(0, 3).join(',')}
             </div>
             {routeInfo && (
-              <div style={{ fontSize: 11, color: C.accent, fontWeight: 600, marginTop: 3 }}>
+              <div style={{ fontSize: 11, color: C.accent, fontWeight: 500, marginTop: 3 }}>
                 {routeInfo.distKm} {L('unitKm')} &middot; ~{routeInfo.durationMin} {L('unitMin')}
               </div>
             )}
@@ -1039,7 +1039,7 @@ function SpeakerView({ userToken }) {
             <button onClick={() => { vibrate(); setMirrorMode(true); }} style={{
               padding: '8px 14px', borderRadius: 11,
               background: `linear-gradient(135deg, ${C.accent}, ${C.purple})`,
-              border: 'none', cursor: 'pointer', fontSize: 12, color: '#fff', fontWeight: 600, fontFamily: FONT,
+              border: 'none', cursor: 'pointer', fontSize: 12, color: '#fff', fontWeight: 500, fontFamily: FONT,
             }}>
               {L('showWord')}
             </button>
@@ -1079,7 +1079,7 @@ function SpeakerView({ userToken }) {
             WebkitTapHighlightColor: 'transparent',
           }}>
             <Icon name="doorCreate" size={14} color={C.accent} />
-            <span style={{ fontSize: 11, color: C.accent, fontWeight: 600 }}>{L('qrTaxiBtn')}</span>
+            <span style={{ fontSize: 11, color: C.accent, fontWeight: 500 }}>{L('qrTaxiBtn')}</span>
           </button>
         </div>
       )}
@@ -1109,7 +1109,7 @@ function SpeakerView({ userToken }) {
                 padding: '10px 16px', borderRadius: 12,
                 background: destination.trim() ? `linear-gradient(135deg, ${C.accent}, ${C.purple})` : C.card,
                 border: 'none', cursor: destination.trim() ? 'pointer' : 'default',
-                color: '#fff', fontSize: 13, fontWeight: 600, fontFamily: FONT,
+                color: '#fff', fontSize: 13, fontWeight: 500, fontFamily: FONT,
                 opacity: destLoading || !destination.trim() ? 0.4 : 1,
               }}>
               {destLoading ? '...' : 'Cerca'}
@@ -1164,7 +1164,7 @@ function SpeakerView({ userToken }) {
               </div>
             )}
             {translatedText && (
-              <div style={{ fontSize: 17, fontWeight: 600, color: C.textPrimary, lineHeight: 1.5 }}>
+              <div style={{ fontSize: 17, fontWeight: 500, color: C.textPrimary, lineHeight: 1.5 }}>
                 <span style={{ fontSize: 20, marginRight: 6 }}>{tgtInfo?.flag}</span>
                 {translatedText}
               </div>
@@ -1176,7 +1176,7 @@ function SpeakerView({ userToken }) {
                     padding: '6px 14px', borderRadius: 10,
                     background: playing ? C.card : `linear-gradient(135deg, ${C.accent}, ${C.purple})`,
                     border: 'none', cursor: playing ? 'default' : 'pointer',
-                    color: '#fff', fontFamily: FONT, fontSize: 11, fontWeight: 600,
+                    color: '#fff', fontFamily: FONT, fontSize: 11, fontWeight: 500,
                     opacity: playing ? 0.5 : 1,
                     boxShadow: playing ? 'none' : `0 2px 12px ${C.accent}25`,
                   }}>
@@ -1190,7 +1190,7 @@ function SpeakerView({ userToken }) {
                   style={{
                     padding: '6px 14px', borderRadius: 10,
                     background: `${C.accent}12`, border: `1px solid ${C.accent}25`,
-                    cursor: 'pointer', color: C.accent, fontFamily: FONT, fontSize: 11, fontWeight: 600,
+                    cursor: 'pointer', color: C.accent, fontFamily: FONT, fontSize: 11, fontWeight: 500,
                   }}>
                   <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
                     <Icon name="swap" size={13} color={C.accent} /> {L('showWord')}
@@ -1212,12 +1212,12 @@ function SpeakerView({ userToken }) {
               cursor: 'pointer', transition: 'transform 0.1s',
             }}>
             {item.destination && (
-              <div style={{ fontSize: 9, color: C.accent, fontWeight: 600, marginBottom: 3 }}>
+              <div style={{ fontSize: 9, color: C.accent, fontWeight: 500, marginBottom: 3 }}>
                 {item.destination}
               </div>
             )}
             <div style={{ fontSize: 12, color: C.textMuted }}>{getLang(item.sourceLang)?.flag} {item.original}</div>
-            <div style={{ fontSize: 14, fontWeight: 600, color: C.textPrimary, marginTop: 3 }}>
+            <div style={{ fontSize: 14, fontWeight: 500, color: C.textPrimary, marginTop: 3 }}>
               {getLang(item.targetLang)?.flag} {item.translated}
             </div>
             <div style={{ fontSize: 8, color: C.textMuted, marginTop: 3, opacity: 0.4 }}>
@@ -1238,7 +1238,7 @@ function SpeakerView({ userToken }) {
               {/* b.94 — il riquadro era rimasto vuoto dopo la pulizia delle emoji */}
               <Icon name="mic" size={34} color={C.accent} />
             </div>
-            <div style={{ fontSize: 15, fontWeight: 600, color: C.textPrimary, marginBottom: 6 }}>
+            <div style={{ fontSize: 15, fontWeight: 500, color: C.textPrimary, marginBottom: 6 }}>
               {L('speakOrType')}
             </div>
             <div style={{ fontSize: 12, color: C.textMuted, lineHeight: 1.6, maxWidth: 260, margin: '0 auto' }}>
@@ -1263,7 +1263,7 @@ function SpeakerView({ userToken }) {
                 <button key={i} onClick={tasto.azione} style={{
                   padding: '9px 15px', borderRadius: 11, cursor: 'pointer', fontFamily: FONT,
                   background: `${C.accent}12`, border: `1px solid ${C.accent}28`,
-                  fontSize: 12, fontWeight: 600, color: C.accent,
+                  fontSize: 12, fontWeight: 500, color: C.accent,
                   display: 'flex', alignItems: 'center', gap: 7,
                   WebkitTapHighlightColor: 'transparent',
                 }}>
@@ -1338,7 +1338,7 @@ function SpeakerView({ userToken }) {
         {recording && (
           <div style={{
             textAlign: 'center', paddingTop: 6,
-            fontSize: 10, color: C.red, fontWeight: 600,
+            fontSize: 10, color: C.red, fontWeight: 500,
             animation: 'vtPulse 1.5s ease-in-out infinite',
           }}>
             {mode === 'batch' ? `● ${L('releaseToTranslate')}` : `● ${L('liveTranslationOn')}`}

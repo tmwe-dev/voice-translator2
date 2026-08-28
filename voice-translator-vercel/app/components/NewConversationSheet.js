@@ -99,7 +99,7 @@ const NewConversationSheet = ({ open, onClose, onSelect }) => {
         {/* testata: titolo e chiudi */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0, padding: '4px 20px 8px' }}>
           <h2 style={{
-            flex: 1, minWidth: 0, margin: 0, fontSize: '20px', fontWeight: 600,
+            flex: 1, minWidth: 0, margin: 0, fontSize: '20px', fontWeight: 500,
             color: C.textPrimary || '#fff',
             fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
           }}>
@@ -137,7 +137,7 @@ const NewConversationSheet = ({ open, onClose, onSelect }) => {
           {/* eslint-disable-next-line @next/next/no-img-element -- immagine locale */}
           <img src="/qr-faccia-a-faccia.webp" alt="" aria-hidden width={1200} height={619}
             style={{ width: '82%', maxWidth: 320, height: 'auto', display: 'block' }} />
-          <span style={{ fontSize: 18, fontWeight: 600, color: C.textPrimary || '#fff',
+          <span style={{ fontSize: 18, fontWeight: 500, color: C.textPrimary || '#fff',
             fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", textAlign: 'center' }}>
             {L('actFaceTitle')}
           </span>
@@ -178,7 +178,7 @@ const NewConversationSheet = ({ open, onClose, onSelect }) => {
               </span>
               <div>
                 <div style={{
-                  fontSize: '15px', fontWeight: '600',
+                  fontSize: '15px', fontWeight: 500,
                   color: C.text || '#fff', marginBottom: '2px',
                   fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
                 }}>

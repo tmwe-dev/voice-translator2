@@ -267,13 +267,13 @@ export default function FinestraSulMondo({ C, L, lingua, prefs, attiva, paese, n
             <button onClick={() => { vibrate(8); setAperta(cartello); }}
               style={{ flex: 1, minWidth: 0, textAlign: 'left', background: 'none', border: 'none',
                 cursor: 'pointer', fontFamily: FONT, padding: 0, minHeight: 44 }}>
-              <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 10, fontWeight: 600,
+              <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 10, fontWeight: 500,
                 letterSpacing: 1, textTransform: 'uppercase', color: C.accent }}>
                 {bandiera && <span aria-hidden="true" style={{ fontSize: 12 }}>{bandiera}</span>}
                 {L('breakingWord')}
               </span>
               <span style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
-                overflow: 'hidden', fontSize: 13.5, fontWeight: 600, lineHeight: 1.3,
+                overflow: 'hidden', fontSize: 13.5, fontWeight: 500, lineHeight: 1.3,
                 color: C.textPrimary, marginTop: 2 }}>
                 {cartello.titolo}
               </span>
@@ -299,7 +299,7 @@ export default function FinestraSulMondo({ C, L, lingua, prefs, attiva, paese, n
                 display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <Icon name="back" size={18} color={C.textMuted} />
             </button>
-            <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, fontWeight: 600,
+            <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, fontWeight: 500,
               letterSpacing: 1.2, textTransform: 'uppercase', color: C.accent }}>
               {bandiera && <span aria-hidden="true">{bandiera}</span>}
               {L('breakingWord')}
@@ -323,7 +323,7 @@ export default function FinestraSulMondo({ C, L, lingua, prefs, attiva, paese, n
               <AnteprimaCoperta src={aperta.immagine} L={L} contenuto={{ url: aperta.url }}
                 stile={{ width: '100%', aspectRatio: '16/9', borderRadius: 16, objectFit: 'cover', marginBottom: 14 }} />
             )}
-            <h2 style={{ margin: 0, fontSize: 21, fontWeight: 600, lineHeight: 1.3, color: C.textPrimary }}>
+            <h2 style={{ margin: 0, fontSize: 21, fontWeight: 500, lineHeight: 1.3, color: C.textPrimary }}>
               {aperta.titolo}
             </h2>
             {aperta.sintesi && (
@@ -336,7 +336,7 @@ export default function FinestraSulMondo({ C, L, lingua, prefs, attiva, paese, n
                 style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
                   marginTop: 18, minHeight: 54, borderRadius: 16, textDecoration: 'none',
                   background: `${C.accent}14`, border: `1px solid ${C.accent}44`,
-                  color: C.accent, fontSize: 14.5, fontWeight: 600 }}>
+                  color: C.accent, fontSize: 14.5, fontWeight: 500 }}>
                 <Icon name="link" size={16} color={C.accent} />
                 {L('schedaLeggiSu').replace('{x}', aperta.fonti[0].fonte || aperta.fonti[0].dominio || '')}
               </a>

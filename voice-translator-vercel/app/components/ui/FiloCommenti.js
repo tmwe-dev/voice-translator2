@@ -137,7 +137,7 @@ export default function FiloCommenti({ aperto, url, titolo, C = {}, L, nome, onC
               display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}><Icon name="back" size={18} color={muto} /></button>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 15, fontWeight: 600, color: testoP, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <div style={{ fontSize: 15, fontWeight: 500, color: testoP, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {titolo || tt('commentsWord', 'commenti')}
             </div>
             <div style={{ fontSize: 11, color: muto }}>
@@ -162,14 +162,14 @@ export default function FiloCommenti({ aperto, url, titolo, C = {}, L, nome, onC
               }}>
               <Icon name="doorOpen" size={18} color={accent} />
               <span style={{ flex: 1, minWidth: 0 }}>
-                <span style={{ display: 'block', fontSize: 13, fontWeight: 600 }}>
+                <span style={{ display: 'block', fontSize: 13, fontWeight: 500 }}>
                   {tt('commentsRoomInvite', 'Se ne sta parlando: apri la stanza')}
                 </span>
                 <span style={{ display: 'block', fontSize: 11, color: muto, marginTop: 2 }}>
                   {tt('commentsRoomHint', 'Da due commenti in poi la conversazione entra nell’elenco chat.')}
                 </span>
               </span>
-              <span style={{ fontSize: 12, fontWeight: 600, color: accent, flexShrink: 0 }}>
+              <span style={{ fontSize: 12, fontWeight: 500, color: accent, flexShrink: 0 }}>
                 {tt('commentsOpenRoom', 'Apri la stanza')}
               </span>
             </button>
@@ -184,7 +184,7 @@ export default function FiloCommenti({ aperto, url, titolo, C = {}, L, nome, onC
           ) : commenti.map((c) => (
             <div key={c.id || `${c.quando}-${c.testo.slice(0, 12)}`}
               style={{ marginBottom: 10, padding: '10px 14px', borderRadius: 12, background: vetro, border: bordo }}>
-              <div style={{ fontSize: 12, fontWeight: 600, color: muto, marginBottom: 4 }}>{c.nome || '—'}</div>
+              <div style={{ fontSize: 12, fontWeight: 500, color: muto, marginBottom: 4 }}>{c.nome || '—'}</div>
               <div style={{ fontSize: 14, color: testoP, lineHeight: 1.45, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{c.testo}</div>
             </div>
           ))}
@@ -210,7 +210,7 @@ export default function FiloCommenti({ aperto, url, titolo, C = {}, L, nome, onC
                 padding: '10px 16px', minHeight: 44, borderRadius: 12,
                 cursor: inviando || !sanaCommento(testo) ? 'default' : 'pointer',
                 background: `linear-gradient(135deg, ${accent}, ${C.accent2 || accent})`,
-                border: 'none', color: '#fff', fontSize: 13, fontWeight: 600, fontFamily: FONT,
+                border: 'none', color: '#fff', fontSize: 13, fontWeight: 500, fontFamily: FONT,
                 opacity: inviando || !sanaCommento(testo) ? 0.5 : 1,
               }}>{tt('sendWord', 'Invia')}</button>
           </div>

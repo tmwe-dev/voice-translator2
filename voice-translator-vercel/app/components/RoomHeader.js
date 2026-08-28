@@ -139,7 +139,7 @@ const RoomHeader = memo(function RoomHeader({
                 04b la vuole con la faccia, ed e la faccia che si riconosce
                 al volo, prima ancora di leggere. */}
             <AvatarImg src={partner.avatar || 'av1'} size={30} alt="" />
-            <span style={{fontSize:16, fontWeight:600, color:S.colors.textPrimary, fontFamily:FONT,
+            <span style={{fontSize:16, fontWeight: 500, color:S.colors.textPrimary, fontFamily:FONT,
               whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis', minWidth:0}}>
               {partner.name}
             </span>
@@ -233,7 +233,7 @@ const RoomHeader = memo(function RoomHeader({
           <button onClick={() => setZoomTesto((v) => (v >= 3 ? -2 : v + 1))}
             title={L('textBigger')} aria-label={L('textBigger')}
             style={{...veste(S, false), width:44, height:44, borderRadius:12, flexShrink:0,
-              fontFamily:FONT, fontSize:15, fontWeight:600, color:S.colors.textSecondary}}>
+              fontFamily:FONT, fontSize:15, fontWeight: 500, color:S.colors.textSecondary}}>
             Aa
           </button>
         )}
@@ -299,7 +299,7 @@ const RoomHeader = memo(function RoomHeader({
                     se e lungo si tronca invece di mandare la riga a capo.
                     (via anche 'Partner', che era una parola fissa dentro un
                     menu tradotto in trentotto lingue) */}
-                <span style={{fontSize:11, color:S.colors.statusOk, fontWeight:600,
+                <span style={{fontSize:11, color:S.colors.statusOk, fontWeight: 500,
                   minWidth:0, flex:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>
                   {partnerConnected ? (partner?.name || '') : ''}
                 </span>
@@ -413,7 +413,7 @@ const RoomHeader = memo(function RoomHeader({
                       <span style={{fontSize:13, fontWeight:500, color:S.colors.textPrimary}}>
                         {freeLimitExceeded ? L('freeDailyLimitHit') : L('freePlan')}
                       </span>
-                      <span style={{marginLeft:'auto', fontSize:12, fontWeight: 600, color:battColor, fontFamily:'monospace'}}>
+                      <span style={{marginLeft:'auto', fontSize:12, fontWeight: 500, color:battColor, fontFamily:'monospace'}}>
                         {freeLimitExceeded ? '0%' : `${Math.round(remaining)}%`}
                       </span>
                     </div>
@@ -443,7 +443,18 @@ const RoomHeader = memo(function RoomHeader({
       {/* Selettore lingua */}
       {showLangPicker && (
         <div style={{position:'absolute', top:52, left:'50%', transform:'translateX(-50%)', zIndex:100,
-          background:S.colors.glassCard,
+          /* b.518 — TERZA VOLTA LA STESSA TENDINA DI VETRO, IN QUESTO STESSO FILE.
+             b.175 e b.464 l'hanno chiusa per il menu «···», b.261 per il
+             pannello delle voci («i messaggi si leggevano ATTRAVERSO
+             l'elenco»); il selettore della lingua era rimasto indietro,
+             ancora su `glassCard` — che nel tema vale rgba(...,0.06),
+             cioe il 6% di opacita. RIPRODOTTO dal vivo in stanza (#805):
+             con un messaggio dietro, la riga «English (US)» risulta
+             illeggibile perche il testo della bolla si vede attraverso.
+             Stesso rimedio gia adottato due volte qui accanto: fondo
+             pieno del tema + sfocatura, nessun'altra modifica. */
+          background:S.colors.menuBg || S.colors.bg,
+          backdropFilter:'blur(24px) saturate(1.1)',
           border:`1px solid ${S.colors.cardBorder}`,
           borderRadius:14, padding:'6px 0', maxHeight:280, overflowY:'auto', width:200,
           boxShadow:'0 8px 32px rgba(0,0,0,0.5)'}}>

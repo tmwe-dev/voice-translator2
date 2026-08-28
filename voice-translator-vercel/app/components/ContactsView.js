@@ -202,7 +202,7 @@ export default function ContactsView({
             style={{ width: TASTO, height: TASTO, borderRadius: 12, cursor: 'pointer',
               background: zoomTesto ? `${C.accent}15` : C.card,
               border: `1px solid ${C.cardBorder}`, color: C.textMuted,
-              fontSize: 15, fontWeight: 600, marginRight: 8 }}>
+              fontSize: 15, fontWeight: 500, marginRight: 8 }}>
             Aa
           </button>
           <button onClick={() => setShowAddSection(!showAddSection)} aria-label={showAddSection ? L('closeWord') : L('addContactAria')} style={{
@@ -269,7 +269,7 @@ export default function ContactsView({
           animation: 'vtSlideUp 0.2s ease-out',
         }}>
           {/* Il 700 non esiste in questo standard: se tutto pesa, niente pesa. */}
-          <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 8, color: C.textSecondary }}>
+          <div style={{ fontSize: 12, fontWeight: 500, marginBottom: 8, color: C.textSecondary }}>
             {L('addByEmail')}
           </div>
           <div style={{ display: 'flex', gap: 8, marginBottom: 6 }}>
@@ -283,7 +283,7 @@ export default function ContactsView({
               // Era alto quanto il testo che conteneva: ora tiene la misura del dito.
               minWidth: TASTO, minHeight: TASTO, padding: '10px 16px', borderRadius: 12, cursor: 'pointer',
               background: `linear-gradient(135deg, ${C.accent}, ${C.purple})`,
-              border: 'none', color: '#fff', fontSize: 14, fontWeight: 600, fontFamily: FONT,
+              border: 'none', color: '#fff', fontSize: 14, fontWeight: 500, fontFamily: FONT,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}>
               <Icon name="plus" size={18} color="#fff" />
@@ -338,7 +338,7 @@ export default function ContactsView({
           animation: 'vtSlideUp 0.2s ease-out',
         }}>
           {/* Il 700 non esiste in questo standard: il massimo e 600. */}
-          <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 4, color: C.textSecondary }}>{L('shareInvite')}</div>
+          <div style={{ fontSize: 12, fontWeight: 500, marginBottom: 4, color: C.textSecondary }}>{L('shareInvite')}</div>
           <div style={{ fontSize: 10, color: C.textMuted, marginBottom: 10 }}>{L('shareInviteDesc')}</div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginBottom: 8 }}>
             {[
@@ -412,7 +412,7 @@ export default function ContactsView({
                   gia stata tolta e restava un quadrato colorato senza senso. */}
               <Icon name="users" size={36} color={C.accent} />
             </div>
-            <div style={{ fontSize: 16, fontWeight: 600, color: C.textPrimary, marginBottom: 6 }}>{L('noContacts')}</div>
+            <div style={{ fontSize: 16, fontWeight: 500, color: C.textPrimary, marginBottom: 6 }}>{L('noContacts')}</div>
             <div style={{ fontSize: 12, color: C.textMuted, lineHeight: 1.6, maxWidth: 260, margin: '0 auto 20px' }}>
               {L('noContactsDesc')}
             </div>
@@ -421,7 +421,7 @@ export default function ContactsView({
                 // Altezza minima del dito, e il peso scende da 700 a 600.
                 minHeight: TASTO, padding: '10px 22px', borderRadius: 14, cursor: 'pointer',
                 background: `linear-gradient(135deg, ${C.accent}, ${C.purple})`,
-                border: 'none', color: '#fff', fontSize: 12, fontWeight: 600, fontFamily: FONT,
+                border: 'none', color: '#fff', fontSize: 12, fontWeight: 500, fontFamily: FONT,
                 boxShadow: `0 4px 16px ${C.accent}30`,
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
               }}>
@@ -433,7 +433,7 @@ export default function ContactsView({
                 // Altezza minima del dito, e il peso scende da 700 a 600.
                 minHeight: TASTO, padding: '10px 22px', borderRadius: 14, cursor: 'pointer',
                 background: `${C.purple}12`, border: `1px solid ${C.purple}20`,
-                color: C.textPrimary, fontSize: 12, fontWeight: 600, fontFamily: FONT,
+                color: C.textPrimary, fontSize: 12, fontWeight: 500, fontFamily: FONT,
               }}>{L('inviteShort')}</button>
             </div>
           </div>

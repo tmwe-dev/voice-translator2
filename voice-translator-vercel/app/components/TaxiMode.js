@@ -123,7 +123,7 @@ const TaxiMode = memo(function TaxiMode({
           zIndex: 451,
         }}
       >
-        <div style={{ fontSize: '16px', fontWeight: '600', color: textPrimary, textTransform: 'uppercase' }}>
+        <div style={{ fontSize: '16px', fontWeight: 500, color: textPrimary, textTransform: 'uppercase' }}>
           {L('taxiModeTitle')}
         </div>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
@@ -233,7 +233,7 @@ const TaxiMode = memo(function TaxiMode({
         <div
           style={{
             fontSize: '28px',
-            fontWeight: '600',
+            fontWeight: 500,
             background: accentGradient,
             backgroundClip: 'text',
             WebkitBackgroundClip: 'text',

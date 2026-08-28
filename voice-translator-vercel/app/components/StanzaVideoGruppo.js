@@ -71,7 +71,7 @@ function Riquadro({ nome, stream, stato, lingua, battuta, C, mio, volume = 1, mu
           position: 'absolute', left: 6, bottom: 6,
           padding: '2px 8px', borderRadius: 999,
           background: 'rgba(0,0,0,0.55)',
-          fontSize: 11, fontWeight: 600, color: '#fff', fontFamily: FONT,
+          fontSize: 11, fontWeight: 500, color: '#fff', fontFamily: FONT,
           display: 'flex', alignItems: 'center', gap: 4,
         }}>
           {l?.flag} {mio ? L('youWord') : nome}
@@ -225,7 +225,7 @@ export default function StanzaVideoGruppo({ roomId, roomSessionToken, mioNome, o
         {/* b.491 — tavola 17: la testata dice DOVE SEI — il codice della
             stanza, come sul telefono della tavola — non una parola
             generica. Il codice e cio che si legge a voce a chi entra. */}
-        <div style={{ fontSize: 16, fontWeight: 600, color: C.textPrimary, letterSpacing: 1 }}>
+        <div style={{ fontSize: 16, fontWeight: 500, color: C.textPrimary, letterSpacing: 1 }}>
           {roomId || L('videoRoom')}
         </div>
         <div style={{ marginLeft: 'auto', fontSize: 11.5, color: C.textMuted }}>
@@ -236,7 +236,7 @@ export default function StanzaVideoGruppo({ roomId, roomSessionToken, mioNome, o
           style={{ width: 44, height: 44, borderRadius: 12, flexShrink: 0, cursor: 'pointer',
             background: zoomBattute ? `${C.accent1 || '#5b8cff'}22` : 'transparent',
             border: `1px solid ${C.cardBorder}`, color: C.textSecondary,
-            fontFamily: FONT, fontSize: 15, fontWeight: 600 }}>
+            fontFamily: FONT, fontSize: 15, fontWeight: 500 }}>
           Aa
         </button>
       </div>
@@ -253,7 +253,7 @@ export default function StanzaVideoGruppo({ roomId, roomSessionToken, mioNome, o
           <button onClick={() => { vibrate(); stanza.entra(); }} style={{
             padding: '13px 22px', borderRadius: 13, border: 'none', cursor: 'pointer',
             background: C.btnGradient || `linear-gradient(90deg, ${C.accent1}, ${C.accent2})`,
-            color: '#fff', fontSize: 14.5, fontWeight: 600, fontFamily: FONT,
+            color: '#fff', fontSize: 14.5, fontWeight: 500, fontFamily: FONT,
           }}>
             Entra in video
           </button>
@@ -306,7 +306,7 @@ export default function StanzaVideoGruppo({ roomId, roomSessionToken, mioNome, o
                 <button onClick={() => { vibrate(); stanza.mossaPalco('prendo'); }}
                   style={{ width: '100%', padding: '16px 14px', borderRadius: 16, cursor: 'pointer',
                     background: 'linear-gradient(90deg, #16a34a, #3ddc84)', border: 'none',
-                    color: '#fff', fontSize: 17, fontWeight: 900, fontFamily: FONT,
+                    color: '#fff', fontSize: 17, fontWeight: 500, fontFamily: FONT,
                     boxShadow: '0 6px 24px rgba(61,220,132,0.4)' }}>
                   {L('floorYourTurn')} · {Math.max(0, Math.ceil((offertaAMe.scade - Date.now()) / 1000))}s
                 </button>
@@ -314,21 +314,21 @@ export default function StanzaVideoGruppo({ roomId, roomSessionToken, mioNome, o
                 <button onClick={() => { vibrate(); stanza.mossaPalco('chiudo'); }}
                   style={{ width: '100%', padding: '14px 14px', borderRadius: 16, cursor: 'pointer',
                     background: 'rgba(56,225,255,0.14)', border: '2px solid #38e1ff',
-                    color: C.textPrimary, fontSize: 15, fontWeight: 600, fontFamily: FONT }}>
+                    color: C.textPrimary, fontSize: 15, fontWeight: 500, fontFamily: FONT }}>
                   <Icon name="check" size={16} /> {L('floorDone')}
                 </button>
               ) : miaPosizioneInCoda >= 0 ? (
                 <button onClick={() => { vibrate(); stanza.mossaPalco('rinuncia'); }}
                   style={{ width: '100%', padding: '14px 14px', borderRadius: 16, cursor: 'pointer',
                     background: C.overlayBg, border: `2px solid ${C.cardBorder}`,
-                    color: C.textPrimary, fontSize: 14, fontWeight: 600, fontFamily: FONT }}>
+                    color: C.textPrimary, fontSize: 14, fontWeight: 500, fontFamily: FONT }}>
                   <Icon name="history" size={16} /> {L('floorInQueue')} · {miaPosizioneInCoda + 1}\u00B0 — {L('floorLeave')}
                 </button>
               ) : (
                 <button onClick={() => { vibrate(); stanza.mossaPalco('chiedi'); }}
                   style={{ width: '100%', padding: '16px 14px', borderRadius: 16, cursor: 'pointer',
                     background: 'rgba(61,220,132,0.14)', border: '2px solid #3ddc84',
-                    color: C.textPrimary, fontSize: 16, fontWeight: 600, fontFamily: FONT }}>
+                    color: C.textPrimary, fontSize: 16, fontWeight: 500, fontFamily: FONT }}>
                   <IconHandRaise size={18} /> {L('floorAsk')}
                 </button>
               )}
@@ -350,7 +350,7 @@ export default function StanzaVideoGruppo({ roomId, roomSessionToken, mioNome, o
                   border: `2px solid ${b.acceso ? '#3ddc84' : '#ef4444'}`, color: C.textPrimary,
                   display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
                 <span style={{ lineHeight: 0 }}><Icon name={b.icona} size={22} /></span>
-                <span style={{ fontSize: 10.5, fontWeight: 600 }}>{b.parola}</span>
+                <span style={{ fontSize: 10.5, fontWeight: 500 }}>{b.parola}</span>
               </button>
             ))}
             {[['off','x'],['testo','doc'],['voce','speaker']].map(([id, icona]) => (
@@ -361,7 +361,7 @@ export default function StanzaVideoGruppo({ roomId, roomSessionToken, mioNome, o
                   border: `2px solid ${sceltaTraduzione === id ? '#38e1ff' : C.cardBorder}`, color: C.textPrimary,
                   display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
                 <span style={{ lineHeight: 0 }}><Icon name={icona} size={22} /></span>
-                <span style={{ fontSize: 10.5, fontWeight: 600 }}>
+                <span style={{ fontSize: 10.5, fontWeight: 500 }}>
                   {id === 'off' ? L('autoTransOff').split(':')[0] : id === 'testo' ? L('autoTransTextOnly') : L('autoTransVoiceText')}
                 </span>
               </button>

@@ -45,7 +45,7 @@ function PannelloLettura({ frasi, lingua, voceAssistente, nomeAssistente, userTo
   // 14 e la lettura guidata stava piu stretta di tutto il resto.
   return (
     <div style={{ marginTop: 14, padding: '14px 20px', borderRadius: 14, background: card, border: bordo }}>
-      <div style={{ fontSize: 12, fontWeight: 600, color: muto, marginBottom: 4 }}>
+      <div style={{ fontSize: 12, fontWeight: 500, color: muto, marginBottom: 4 }}>
         {nomeAssistente ? L('lifeReadingWith').replace('{x}', nomeAssistente) : L('lifeReadingGuided')}
       </div>
       <div style={{ fontSize: 11, color: muto, marginBottom: 10 }}>
@@ -55,7 +55,7 @@ function PannelloLettura({ frasi, lingua, voceAssistente, nomeAssistente, userTo
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         {frasi.map((f, i) => (
           <div key={i} style={{ padding: '10px 20px', borderRadius: 12, background: 'rgba(255,255,255,0.04)', border: attiva === i ? `1px solid ${accent}` : bordo }}>
-            <div style={{ fontSize: 15, fontWeight: 600, color: testoP, lineHeight: 1.4 }}>{f}</div>
+            <div style={{ fontSize: 15, fontWeight: 500, color: testoP, lineHeight: 1.4 }}>{f}</div>
             <div style={{ display: 'flex', gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
               {/* b.404 — grafica comune, e il triangolo non e piu una lettera */}
               <Ascolta onAscolta={() => diLaFrase(i)}
@@ -68,7 +68,7 @@ function PannelloLettura({ frasi, lingua, voceAssistente, nomeAssistente, userTo
               {/* b.482 — il tasto aveva solo il riempimento e restava alto
                   una trentina: adesso il dito trova sempre i suoi 44. */}
               <button onClick={() => setAttiva(attiva === i ? -1 : i)}
-                style={{ padding: '6px 11px', minHeight: 44, borderRadius: 9, border: 'none', background: attiva === i ? `${accent}22` : accent, color: attiva === i ? accent : '#04121c', fontWeight: 600, fontSize: 12, cursor: 'pointer', fontFamily: FONT }}>
+                style={{ padding: '6px 11px', minHeight: 44, borderRadius: 9, border: 'none', background: attiva === i ? `${accent}22` : accent, color: attiva === i ? accent : '#04121c', fontWeight: 500, fontSize: 12, cursor: 'pointer', fontFamily: FONT }}>
                 {attiva === i ? L('closeWord') : L('lifeReadItYou')}
               </button>
             </div>

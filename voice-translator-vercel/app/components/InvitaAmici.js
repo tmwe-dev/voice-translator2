@@ -98,7 +98,7 @@ function InvitaAmici({ aperta, onClose }) {
           }}>
             <Icon name="user" size={24} color="#fff" />
           </div>
-          <h2 style={{ margin: 0, fontSize: 19, fontWeight: 600, color: C.textPrimary, letterSpacing: -0.4 }}>
+          <h2 style={{ margin: 0, fontSize: 19, fontWeight: 500, color: C.textPrimary, letterSpacing: -0.4 }}>
             {L('invitaTitolo')}
           </h2>
           <p style={{ margin: '8px 0 0', fontSize: 13, lineHeight: 1.55, color: C.textSecondary }}>
@@ -118,7 +118,7 @@ function InvitaAmici({ aperta, onClose }) {
                   display: 'flex', alignItems: 'center', gap: 10,
                   padding: '10px 12px', marginBottom: 6, borderRadius: 12,
                   background: `${C.accent1 || '#5b8cff'}0E`, border: bordo,
-                  color: C.textPrimary, fontSize: 13, fontWeight: 600, textDecoration: 'none',
+                  color: C.textPrimary, fontSize: 13, fontWeight: 500, textDecoration: 'none',
                 }}>
                 <Icon name="send" size={14} color={C.accent1 || '#5b8cff'} />
                 <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -134,7 +134,7 @@ function InvitaAmici({ aperta, onClose }) {
             <button onClick={scegliDaRubrica} style={{
               padding: '12px 0', borderRadius: 13, cursor: 'pointer',
               background: `linear-gradient(135deg, ${C.accent1 || '#5b8cff'}, ${C.accent2 || '#8b6aff'})`,
-              border: 'none', color: '#fff', fontSize: 14, fontWeight: 600, fontFamily: FONT,
+              border: 'none', color: '#fff', fontSize: 14, fontWeight: 500, fontFamily: FONT,
             }}>
               {L('invitaScegli')}
             </button>
@@ -144,7 +144,7 @@ function InvitaAmici({ aperta, onClose }) {
             background: pickerDisponibile() ? 'transparent' : `linear-gradient(135deg, ${C.accent1 || '#5b8cff'}, ${C.accent2 || '#8b6aff'})`,
             border: pickerDisponibile() ? bordo : 'none',
             color: pickerDisponibile() ? C.textSecondary : '#fff',
-            fontSize: 14, fontWeight: 600, fontFamily: FONT,
+            fontSize: 14, fontWeight: 500, fontFamily: FONT,
           }}>
             {L('invitaCondividi')}
           </button>

@@ -267,6 +267,47 @@ perche il working tree lo conteneva ancora.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.549** (push #835) — CINQUE ORDINI CHIUSI IN UN COLPO.
+
+  ① NIENTE GRASSETTO. Ordine tassativo di Luca: «non voglio grassetto da
+  nessuna parte e neanche dentro i pulsanti». Erano **666 occorrenze in
+  94 file**: tutte portate a 500, compresi quattro 800 che il primo giro
+  non aveva preso. La prova niente-grassetto-b549 scandaglia app/ intera
+  e diventa rossa se ne rientra anche uno solo.
+
+  ② IL PIANETA NON PARTE PIU AL BUIO. «Hai rimesso un filtro scuro
+  davanti al mondo»: non era un filtro, era il cielo NOTTURNO, primo
+  dell'elenco e quindi predefinito. Su uno schermo gia scuro un pianeta
+  al buio e' un disco nero che sembra rotto. Si parte dal GIORNO; la
+  notte resta a un tocco.
+
+  ③ LE STANZE HANNO UNA FACCIA. «Non vedo immagini nelle chat elenco»:
+  ogni riga ora porta l'avatar di chi ospita, o la sua iniziale su vetro
+  colorato. Una riga di solo testo non si distingue dalla successiva.
+
+  ④ SI PIANTANO TUTTI I SEMI, NON UNO. «Mostra solo i preferiti, e
+  limita le pagine da vedere, non fa l'autoricerca»: all'apertura si
+  cercava UN giro solo — con tre preferiti se ne vedeva uno. Ora il
+  primo apre il giornale e altri due si accodano.
+  E con esso un difetto vero: la guardia di `cerca` guardava lo STATO
+  `cercando`, che con due await di fila non ha ancora finito il
+  ridisegno — la seconda ricerca veniva scartata in silenzio. Adesso
+  guarda un riferimento, e la catena regge.
+
+  ⑤ I GURU IN STANZA. «Non vedo alcun comando ne icona dei guru da
+  invitare alla chat (archimede albert pitagora newton etc)». Vero: i
+  Compagni vivevano SOLO dentro Vita, e in una stanza fra persone non
+  c'era nessuna porta per chiamarli — proprio dove servono di piu.
+  Nasce ui/InvitaGuru: le facce dei predefiniti, si sceglie con l'occhio,
+  il guru legge gli ultimi otto messaggi ed entra sapendo di cosa si
+  parla. La sua battuta finisce nel CAMPO DI SCRITTURA, non direttamente
+  in chat: chi ospita la legge, la corregge se vuole, e la manda lui —
+  la stanza resta delle persone.
+
+  PROVE: niente-grassetto-b549 (8, fra cui lo scandaglio dei 94 file) +
+  1200 verdi su tutte le suite girate a blocchi. eslint 0 errori.
+  CACHE_VERSION alzata con PUSH, come impone b.547.
+
 - Versione: **b.548** (push #834) — LA TRADUZIONE CHE NON TRADUCEVA.
   Luca: «i testi non vengono tradotti anche se il setting dice di farlo».
   Verificato: la preferenza «Titoli in altre lingue → Tradotti» era una

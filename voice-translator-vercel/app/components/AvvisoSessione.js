@@ -47,7 +47,7 @@ export default function AvvisoSessione() {
       boxShadow: '0 8px 30px rgba(0,0,0,0.5)', fontFamily: FONT,
       maxWidth: 'min(420px, calc(100vw - 24px))',
     }}>
-      <span style={{ fontSize: 13, fontWeight: 600, color: '#e08a5e' }}>
+      <span style={{ fontSize: 13, fontWeight: 500, color: '#e08a5e' }}>
         {t(lingua, 'sessionExpired')}
       </span>
       {/* b.536 — «RIENTRA» FACEVA SOLO UNA RICARICA, e la ricarica non
@@ -62,7 +62,7 @@ export default function AvvisoSessione() {
       }}
         style={{
           padding: '7px 14px', borderRadius: 999, border: 'none', cursor: 'pointer',
-          background: '#e08a5e', color: '#1a0d06', fontSize: 12.5, fontWeight: 600,
+          background: '#e08a5e', color: '#1a0d06', fontSize: 12.5, fontWeight: 500,
           fontFamily: FONT, flexShrink: 0,
         }}>
         {t(lingua, 'signInAgain')}

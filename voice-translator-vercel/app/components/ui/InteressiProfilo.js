@@ -56,7 +56,7 @@ export default function InteressiProfilo({ C }) {
               style={{
                 display: 'flex', alignItems: 'center', gap: 6,
                 padding: '8px 13px', borderRadius: 999, cursor: 'pointer', fontFamily: FONT,
-                fontSize: 12.5, fontWeight: 600, minHeight: 44,
+                fontSize: 12.5, fontWeight: 500, minHeight: 44,
                 background: on ? `${accento}1E` : 'rgba(255,255,255,0.045)',
                 border: `1px solid ${on ? `${accento}55` : 'rgba(255,255,255,0.09)'}`,
                 color: on ? accento : 'rgba(214,226,245,0.85)',

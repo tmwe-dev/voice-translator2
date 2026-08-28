@@ -69,7 +69,7 @@ function SezioneNuova({ L, accent, suAccento, input, muto, onAggiungi }) {
             onAggiungi({ tipo, titolo: titolo.trim(), testo: testo.trim(), tag: tag.split(',').map(x => x.trim()).filter(Boolean), priorita: 5, attiva: true });
             setTitolo(''); setTesto(''); setTag('');
           }}
-          style={{ padding: '0 14px', minHeight: 44, borderRadius: 10, border: 'none', background: accent, color: suAccento, fontWeight: 600, cursor: 'pointer', fontFamily: FONT }}>
+          style={{ padding: '0 14px', minHeight: 44, borderRadius: 10, border: 'none', background: accent, color: suAccento, fontWeight: 500, cursor: 'pointer', fontFamily: FONT }}>
           +
         </button>
       </div>
@@ -365,11 +365,11 @@ function GestioneCompagni({ miei, onCambiato, L, C = {}, lingua, userToken, test
 
         {/* b.212 — carattere a barre (stile ElevenLabs): regoli a vista */}
         <div style={{ marginTop: 10, padding: '12px 20px', borderRadius: 12, background: card, border: bordo }}>
-          <div style={{ fontSize: 11, color: muto, marginBottom: 6, fontWeight: 600 }}>{L('lifeCharacter')}</div>
+          <div style={{ fontSize: 11, color: muto, marginBottom: 6, fontWeight: 500 }}>{L('lifeCharacter')}</div>
           {BARRE.map((s) => (
             <div key={s.k} style={{ margin: '9px 0' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: testoP, marginBottom: 3 }}>
-                <span style={{ fontWeight: 600 }}>{s.nome}</span>
+                <span style={{ fontWeight: 500 }}>{s.nome}</span>
               </div>
               <input type="range" min={0} max={100} value={barre[s.k]} onChange={cambiaBarra(s.k)}
                 style={{ width: '100%', accentColor: accent, cursor: 'pointer' }} />
@@ -397,15 +397,15 @@ function GestioneCompagni({ miei, onCambiato, L, C = {}, lingua, userToken, test
           <img src={bozza.avatar} alt="" width={48} height={48}
             style={{ borderRadius: 10, display: 'block', flexShrink: 0, objectFit: 'cover', border: `2px solid ${bozza.avatar?.startsWith('data:') ? accent : bordo}` }} />
           <button onClick={() => creaAvatar(null)} disabled={genImg || nGenImg >= MAX_GEN_IMG}
-            style={{ padding: '0 14px', height: 44, borderRadius: 10, border: 'none', background: accent, color: suAccento, fontWeight: 600, cursor: 'pointer', fontFamily: FONT, opacity: (genImg || nGenImg >= MAX_GEN_IMG) ? 0.55 : 1, display: 'flex', alignItems: 'center', gap: 6 }}>
+            style={{ padding: '0 14px', height: 44, borderRadius: 10, border: 'none', background: accent, color: suAccento, fontWeight: 500, cursor: 'pointer', fontFamily: FONT, opacity: (genImg || nGenImg >= MAX_GEN_IMG) ? 0.55 : 1, display: 'flex', alignItems: 'center', gap: 6 }}>
             {genImg ? '…' : <><Icon name="star" size={16} color={suAccento} />{L('lifeAvatarGen')}</>}
           </button>
           <button onClick={() => creaAvatar(bozza.avatar)} disabled={genImg || nGenImg >= MAX_GEN_IMG}
-            style={{ padding: '0 12px', height: 44, borderRadius: 10, border: bordo, background: 'transparent', color: testoP, fontWeight: 600, cursor: 'pointer', fontFamily: FONT, opacity: (genImg || nGenImg >= MAX_GEN_IMG) ? 0.55 : 1, display: 'flex', alignItems: 'center', gap: 6 }}>
+            style={{ padding: '0 12px', height: 44, borderRadius: 10, border: bordo, background: 'transparent', color: testoP, fontWeight: 500, cursor: 'pointer', fontFamily: FONT, opacity: (genImg || nGenImg >= MAX_GEN_IMG) ? 0.55 : 1, display: 'flex', alignItems: 'center', gap: 6 }}>
             <Icon name="refresh" size={16} color={testoP} />{L('lifeAvatarRestyle')}
           </button>
           <button onClick={() => fileRef.current?.click()} disabled={genImg}
-            style={{ padding: '0 12px', height: 44, borderRadius: 10, border: bordo, background: 'transparent', color: testoP, fontWeight: 600, cursor: 'pointer', fontFamily: FONT, display: 'flex', alignItems: 'center', gap: 6 }}>
+            style={{ padding: '0 12px', height: 44, borderRadius: 10, border: bordo, background: 'transparent', color: testoP, fontWeight: 500, cursor: 'pointer', fontFamily: FONT, display: 'flex', alignItems: 'center', gap: 6 }}>
             <Icon name="share" size={16} color={testoP} />{L('lifeAvatarUpload')}
           </button>
           <input ref={fileRef} type="file" accept="image/*" onChange={caricaImmagine} style={{ display: 'none' }} />
@@ -470,7 +470,7 @@ function GestioneCompagni({ miei, onCambiato, L, C = {}, lingua, userToken, test
               <div style={{ marginTop: 8, padding: '9px 20px', borderRadius: 10, background: `${accent}12`, border: `1px solid ${accent}44`, fontSize: 12, color: testoP, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
                 <span>{L('lifeVoceConsiglio')}{nomeCons ? ` (${nomeCons})` : ''}.</span>
                 <button onClick={() => setBozza((b) => ({ ...b, voce: { id: comp.consiglio.id, nome: nomeCons || b.voce?.nome || '' } }))}
-                  style={{ padding: '5px 10px', minHeight: 44, borderRadius: 8, border: 'none', background: accent, color: suAccento, fontWeight: 600, cursor: 'pointer', fontFamily: FONT, fontSize: 12 }}>
+                  style={{ padding: '5px 10px', minHeight: 44, borderRadius: 8, border: 'none', background: accent, color: suAccento, fontWeight: 500, cursor: 'pointer', fontFamily: FONT, fontSize: 12 }}>
                   {L('lifeVoceUsala')}
                 </button>
               </div>
@@ -490,7 +490,7 @@ function GestioneCompagni({ miei, onCambiato, L, C = {}, lingua, userToken, test
           <span style={{ width: 42, height: 24, borderRadius: 999, background: bozza.memoria ? accent : card, border: bordo, position: 'relative', flexShrink: 0, transition: 'background 0.15s' }}>
             <span style={{ position: 'absolute', top: 2, left: bozza.memoria ? 20 : 2, width: 18, height: 18, borderRadius: '50%', background: '#fff', transition: 'left 0.15s' }} />
           </span>
-          <span><span style={{ color: testoP, fontWeight: 600 }}>{L('lifeMemory')}</span> — {L('lifeMemoryHint')}</span>
+          <span><span style={{ color: testoP, fontWeight: 500 }}>{L('lifeMemory')}</span> — {L('lifeMemoryHint')}</span>
         </label>
 
         {/* b.237 — DEEP SETTING: identità stabile, comportamento per superficie.
@@ -523,7 +523,7 @@ function GestioneCompagni({ miei, onCambiato, L, C = {}, lingua, userToken, test
 
         {errore && <div style={{ color: rosso, fontSize: 13, margin: '10px 0' }}>{errore}</div>}
 
-        <button onClick={salva} disabled={salvando} style={{ width: '100%', marginTop: 16, padding: 14, minHeight: 44, borderRadius: 14, border: 'none', cursor: 'pointer', background: accent, color: suAccento, fontWeight: 600, fontSize: 15, fontFamily: FONT, opacity: salvando ? 0.6 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+        <button onClick={salva} disabled={salvando} style={{ width: '100%', marginTop: 16, padding: 14, minHeight: 44, borderRadius: 14, border: 'none', cursor: 'pointer', background: accent, color: suAccento, fontWeight: 500, fontSize: 15, fontFamily: FONT, opacity: salvando ? 0.6 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
           {salvando ? L('lifeGenerating') : <><Icon name="star" size={18} color={suAccento} />{L('lifeSave')}</>}
         </button>
       </div>
@@ -542,7 +542,7 @@ function GestioneCompagni({ miei, onCambiato, L, C = {}, lingua, userToken, test
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 20px' }}>
         <img src={c.avatar} alt="" width={44} height={44} style={{ borderRadius: 10 }} />
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontWeight: 600, color: testoP, fontSize: 15 }}>{c.nome}</div>
+          <div style={{ fontWeight: 500, color: testoP, fontSize: 15 }}>{c.nome}</div>
           <div style={{ fontSize: 11.5, color: muto, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.ruolo}</div>
           {/* b.528 — Luca: «l'utente e in grado attraverso la sidebar di
               vedere e modificare il setting??». VEDERE: la mente di ogni
@@ -560,7 +560,7 @@ function GestioneCompagni({ miei, onCambiato, L, C = {}, lingua, userToken, test
               <button onClick={() => modifica(c)} aria-label={L('lifeEdit')} style={{ background: 'none', border: bordo, borderRadius: 8, padding: 7, minHeight: 44, cursor: 'pointer' }}><Icon name="settings" size={14} color={testoP} /></button>
               <button onClick={() => elimina(c.id)} aria-label={L('lifeDelete')} style={{ background: 'none', border: bordo, borderRadius: 8, padding: 7, minHeight: 44, cursor: 'pointer' }}><Icon name="x" size={14} color={rosso} /></button>
             </>
-          : <button onClick={() => daBase(c)} style={{ background: 'none', border: bordo, borderRadius: 8, padding: '7px 10px', minHeight: 44, cursor: 'pointer', color: accent, fontSize: 12, fontWeight: 600, fontFamily: FONT }}>{L('lifeDuplicate')}</button>}
+          : <button onClick={() => daBase(c)} style={{ background: 'none', border: bordo, borderRadius: 8, padding: '7px 10px', minHeight: 44, cursor: 'pointer', color: accent, fontSize: 12, fontWeight: 500, fontFamily: FONT }}>{L('lifeDuplicate')}</button>}
       </div>
       {mio && (
         <button onClick={() => toggleMemoria(c)} aria-pressed={!!c.memoria}
@@ -579,7 +579,7 @@ function GestioneCompagni({ miei, onCambiato, L, C = {}, lingua, userToken, test
         title={tt('lifeForget', 'Dimentica cio che ricorda di me')}
         style={{ display: 'block', width: '100%', textAlign: 'left', padding: '9px 20px', minHeight: 44,
           background: 'none', border: 'none', borderTop: bordo, cursor: 'pointer',
-          color: dimenticato === c.id ? accent : rosso, fontSize: 11.5, fontWeight: 600, fontFamily: FONT }}>
+          color: dimenticato === c.id ? accent : rosso, fontSize: 11.5, fontWeight: 500, fontFamily: FONT }}>
         {dimenticato === c.id ? tt('lifeForgotten', 'fatto') : tt('lifeForget', 'Dimentica cio che ricorda di me')}
       </button>
     </div>
@@ -589,19 +589,19 @@ function GestioneCompagni({ miei, onCambiato, L, C = {}, lingua, userToken, test
     <div>
       {/* b.212 — costruzione automatica: scrivi un personaggio e l'AI crea tutto */}
       <div style={{ padding: '14px 20px', ...clayCard(card), marginBottom: 12 }}>
-        <div style={{ fontSize: 13, fontWeight: 600, color: testoP, marginBottom: 8 }}>{L('lifeCreateFrom')}</div>
+        <div style={{ fontSize: 13, fontWeight: 500, color: testoP, marginBottom: 8 }}>{L('lifeCreateFrom')}</div>
         <div style={{ display: 'flex', gap: 8 }}>
           <input value={descAg} onChange={(e) => setDescAg(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter' && !generando) crea(false); }}
             placeholder={L('lifeCreateFromPh')}
             style={{ ...input, flex: 1 }} />
           <button onClick={() => crea(false)} disabled={generando}
-            style={{ padding: '0 16px', minHeight: 44, borderRadius: 10, border: 'none', background: accent, color: suAccento, fontWeight: 600, cursor: 'pointer', fontFamily: FONT, opacity: generando ? 0.6 : 1, display: 'flex', alignItems: 'center', gap: 6 }}>
+            style={{ padding: '0 16px', minHeight: 44, borderRadius: 10, border: 'none', background: accent, color: suAccento, fontWeight: 500, cursor: 'pointer', fontFamily: FONT, opacity: generando ? 0.6 : 1, display: 'flex', alignItems: 'center', gap: 6 }}>
             {generando ? '…' : <><Icon name="star" size={16} color={suAccento} />{L('lifeCreate')}</>}
           </button>
         </div>
         <button onClick={() => crea(true)} disabled={generando}
-          style={{ marginTop: 8, background: 'none', border: 'none', color: accent, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: FONT, padding: 4, minHeight: 44, display: 'flex', alignItems: 'center', gap: 6 }}>
+          style={{ marginTop: 8, background: 'none', border: 'none', color: accent, fontSize: 12, fontWeight: 500, cursor: 'pointer', fontFamily: FONT, padding: 4, minHeight: 44, display: 'flex', alignItems: 'center', gap: 6 }}>
           <Icon name="zap" size={15} color={accent} />{L('lifeSurprise')}
         </button>
         {/* b.215 — la lista non rendeva mai `errore`: un fallimento di
@@ -622,7 +622,7 @@ function GestioneCompagni({ miei, onCambiato, L, C = {}, lingua, userToken, test
           contesto (sfondo). Valgono su Tavolo, Podcast e Amico: le
           rotte le iniettano nel system a ogni turno. ═══ */}
       <div style={{ padding: '14px 20px', ...clayCard(card), marginTop: 18 }}>
-        <div style={{ fontSize: 13, fontWeight: 600, color: testoP, marginBottom: 4 }}>{L('kbSectionsTitle')}</div>
+        <div style={{ fontSize: 13, fontWeight: 500, color: testoP, marginBottom: 4 }}>{L('kbSectionsTitle')}</div>
         <div style={{ fontSize: 11.5, color: muto, marginBottom: 10 }}>{L('kbSectionsDesc')}</div>
         {(prefs?.sezioniPrompt || []).map((sz, i) => (
           <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '8px 0', borderTop: i ? bordo : 'none' }}>
@@ -633,7 +633,7 @@ function GestioneCompagni({ miei, onCambiato, L, C = {}, lingua, userToken, test
               <span style={{ position: 'absolute', top: 3, left: sz.attiva !== false ? 16 : 3, width: 16, height: 16, borderRadius: 8, background: '#fff', transition: 'left 0.15s' }} />
             </button>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 12.5, fontWeight: 600, color: testoP }}>
+              <div style={{ fontSize: 12.5, fontWeight: 500, color: testoP }}>
                 {sz.titolo || L('kbTipo_' + (sz.tipo || 'regole'))}
                 <span style={{ fontWeight: 400, color: muto }}> · {L('kbTipo_' + (sz.tipo || 'regole'))}{sz.tipo === 'argomento' && sz.tag?.length ? ` (${sz.tag.join(', ')})` : ''}</span>
               </div>
@@ -654,7 +654,7 @@ function GestioneCompagni({ miei, onCambiato, L, C = {}, lingua, userToken, test
           fondo, dopo cio che c'e gia. */}
       <button onClick={() => { vibrate(8); nuovo(); }}
         style={{ width: '100%', padding: 14, minHeight: 54, borderRadius: 16, border: 'none', cursor: 'pointer',
-          background: accent, color: suAccento, fontWeight: 600, fontSize: 15, fontFamily: FONT,
+          background: accent, color: suAccento, fontWeight: 500, fontSize: 15, fontFamily: FONT,
           marginTop: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
         <Icon name="plus" size={18} color={suAccento} /> {L('lifeCreateManual')}
       </button>

@@ -650,7 +650,7 @@ export default function PrimaProva({ onChiudi }) {
       aria-expanded={scegliLingua}
       aria-label={`${getLang(miaLingua)?.name || miaLingua} → ${getLang(meta)?.name || meta}`}
       style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '0 16px', height: TASTO,
-        borderRadius: 999, cursor: 'pointer', fontFamily: FONT, fontSize: 17, fontWeight: 600,
+        borderRadius: 999, cursor: 'pointer', fontFamily: FONT, fontSize: 17, fontWeight: 500,
         border: scegliLingua ? `1.5px solid ${C.accent || '#5b8cff'}` : bordo,
         background: scegliLingua ? `${C.accent || '#5b8cff'}22` : 'rgba(255,255,255,0.04)',
         color: C.textPrimary }}>
@@ -706,7 +706,7 @@ export default function PrimaProva({ onChiudi }) {
             border: dove.trim() ? `1px solid rgba(91,140,255,0.34)` : bordo,
             background: dove.trim() ? 'rgba(91,140,255,0.13)' : 'rgba(255,255,255,0.05)',
             color: dove.trim() ? (C.accent || '#5b8cff') : C.textMuted,
-            fontFamily: FONT, fontSize: 14, fontWeight: 600, opacity: dove.trim() ? 1 : 0.5 }}>
+            fontFamily: FONT, fontSize: 14, fontWeight: 500, opacity: dove.trim() ? 1 : 0.5 }}>
           {cercando ? '…' : L('search')}
         </button>
       </div>
@@ -747,7 +747,7 @@ export default function PrimaProva({ onChiudi }) {
               {L('taxiScanOpensMap')}
             </div>
             <button onClick={condividiMappa}
-              style={{ fontSize: 12, fontWeight: 600, color: C.accent || '#5b8cff', background: 'none',
+              style={{ fontSize: 12, fontWeight: 500, color: C.accent || '#5b8cff', background: 'none',
                 border: 'none', cursor: 'pointer', fontFamily: FONT, padding: 6 }}>
               {L('taxiShareLink')}
             </button>
@@ -802,7 +802,7 @@ export default function PrimaProva({ onChiudi }) {
           // le precedenti restano leggibili ma si fanno da parte.
           // b.422 — la misura ora la decide chi guarda, e resta decisa.
           fontSize: i === storia.length - 1 ? misuraTestone : misuraVecchie,
-          fontWeight: 600, lineHeight: 1.25,
+          fontWeight: 500, lineHeight: 1.25,
           // b.445 — le frasi dell'OSPITE in un colore diverso (ordine di
           // Luca). Non e decorazione: senza, chi legge non sa piu chi ha
           // detto cosa, e in una conversazione a due sensi e l'unica
@@ -964,11 +964,11 @@ export default function PrimaProva({ onChiudi }) {
           <button onClick={() => cambiaMisura(-1)} disabled={passo <= PASSO_MIN}
             aria-label={L('textSmaller')} title={L('textSmaller')}
             style={{ ...tondino(false), opacity: passo <= PASSO_MIN ? 0.35 : 1,
-              color: C.textSecondary, fontSize: 15, fontWeight: 600 }}>A−</button>
+              color: C.textSecondary, fontSize: 15, fontWeight: 500 }}>A−</button>
           <button onClick={() => cambiaMisura(1)} disabled={passo >= PASSO_MAX}
             aria-label={L('textBigger')} title={L('textBigger')}
             style={{ ...tondino(false), opacity: passo >= PASSO_MAX ? 0.35 : 1,
-              color: C.textSecondary, fontSize: 19, fontWeight: 600 }}>A+</button>
+              color: C.textSecondary, fontSize: 19, fontWeight: 500 }}>A+</button>
         </>)}
         {/* b.430 — DOVE VAI: il tasto che mancava. Apre campo, mappa e QR. */}
         <button onClick={() => { vibrate(6); setScegliDove((v) => !v); setScegliLingua(false); }}
@@ -1013,7 +1013,7 @@ export default function PrimaProva({ onChiudi }) {
           style={{
             display: 'flex', alignItems: 'center', gap: 10,
             minHeight: TASTO, padding: '0 18px', borderRadius: 999,
-            cursor: 'pointer', fontFamily: FONT, fontSize: 15, fontWeight: 600,
+            cursor: 'pointer', fontFamily: FONT, fontSize: 15, fontWeight: 500,
             border: ospiteParla
               ? `1.5px solid ${C.accent2 || '#38e1ff'}`
               : `1px solid ${(C.accent2 || '#38e1ff')}55`,

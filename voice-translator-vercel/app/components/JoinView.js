@@ -63,7 +63,7 @@ function PrimaryBtn({ onClick, disabled, children, style = {}, C, FONT }) {
     <button onClick={onClick} disabled={disabled} style={{
       width: '100%', minHeight: 44, padding: '14px 20px', borderRadius: 14, border: 'none',
       background: disabled ? C.card : `linear-gradient(135deg, ${C.accent}, ${C.purple})`,
-      color: PALETTE.white, fontSize: 15, fontWeight: 600, fontFamily: FONT,
+      color: PALETTE.white, fontSize: 15, fontWeight: 500, fontFamily: FONT,
       cursor: disabled ? 'default' : 'pointer',
       opacity: disabled ? 0.4 : 1,
       boxShadow: disabled ? 'none' : `0 4px 20px ${C.accent}35`,
@@ -254,12 +254,12 @@ export default function JoinView({ joinCode,
               }}>
               ‹
             </button>
-            <div style={{ fontSize: 17, fontWeight: 600, color: C.textPrimary }}>{L('joinRoom')}</div>
+            <div style={{ fontSize: 17, fontWeight: 500, color: C.textPrimary }}>{L('joinRoom')}</div>
           </div>
 
           {/* Name */}
           <div style={{ marginBottom: 14 }}>
-            <div style={{ fontSize: 12, fontWeight: 600, color: C.textMuted, marginBottom: 6 }}>{L('name')}</div>
+            <div style={{ fontSize: 12, fontWeight: 500, color: C.textMuted, marginBottom: 6 }}>{L('name')}</div>
             <input style={{
               width: '100%', padding: '12px 14px', borderRadius: 12,
               background: C.input, border: `1px solid ${C.inputBorder}`,
@@ -297,7 +297,7 @@ export default function JoinView({ joinCode,
                     <span key={i} style={{
                       width: 36, height: 50, borderRadius: 12, flexShrink: 0,
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontSize: 22, fontWeight: 600, color: C.textPrimary, fontFamily: FONT,
+                      fontSize: 22, fontWeight: 500, color: C.textPrimary, fontFamily: FONT,
                       background: attiva ? `${C.accent}1A` : C.input,
                       border: attiva ? `1px solid ${C.accent}` : `1px solid ${C.inputBorder}`,
                       transition: 'border-color 0.15s, background 0.15s',
@@ -318,7 +318,7 @@ export default function JoinView({ joinCode,
 
           {/* Language */}
           <div style={{ marginBottom: 16 }}>
-            <div style={{ fontSize: 12, fontWeight: 600, color: C.textMuted, marginBottom: 6 }}>{L('yourLang')}</div>
+            <div style={{ fontSize: 12, fontWeight: 500, color: C.textMuted, marginBottom: 6 }}>{L('yourLang')}</div>
             {/* b.535 — TendinaVetro al posto della select di sistema.
                 L'ordine alfabetico di b.146 resta. */}
             <TendinaVetro
@@ -365,7 +365,7 @@ export default function JoinView({ joinCode,
           border: `2px solid ${C.accent}30`, borderTopColor: C.accent,
           animation: 'vtGira 0.9s linear infinite',
         }} />
-        <div style={{ fontSize: 18, fontWeight: 600, color: C.textPrimary, marginBottom: 6 }}>
+        <div style={{ fontSize: 18, fontWeight: 500, color: C.textPrimary, marginBottom: 6 }}>
           {bandiera} {prefs.name}
         </div>
         <div style={{ fontSize: 14, color: C.textSecondary, textAlign: 'center', maxWidth: 300 }}>
@@ -415,7 +415,7 @@ export default function JoinView({ joinCode,
 
           {/* Minimal welcome — just name and big Chat button */}
           <div style={{
-            fontSize: 20, fontWeight: 600, color: C.textPrimary, marginBottom: 8,
+            fontSize: 20, fontWeight: 500, color: C.textPrimary, marginBottom: 8,
           }}>
             {guestLangInfo?.flag} {prefs.name}
           </div>
@@ -432,7 +432,7 @@ export default function JoinView({ joinCode,
           }} style={{
             width: '100%', minHeight: 44, padding: '20px 24px', borderRadius: 20, border: 'none',
             background: `linear-gradient(135deg, ${C.accent} 0%, #1EB898 50%, ${C.purple} 100%)`,
-            color: PALETTE.white, fontSize: 22, fontWeight: 600, fontFamily: FONT,
+            color: PALETTE.white, fontSize: 22, fontWeight: 500, fontFamily: FONT,
             cursor: 'pointer', letterSpacing: -0.3,
             boxShadow: `0 8px 32px ${C.accent}30, 0 4px 12px rgba(0,0,0,0.3)`,
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12,
@@ -509,7 +509,7 @@ export default function JoinView({ joinCode,
               border: `1px solid ${C.accent}15`,
               display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 30,
             }}><Icon name="doorOpen" size={34} color={C.accent || 'rgba(255,255,255,0.4)'} /></div>
-            <div style={{ fontSize: 19, fontWeight: 600, color: C.textPrimary, marginBottom: 4 }}>
+            <div style={{ fontSize: 19, fontWeight: 500, color: C.textPrimary, marginBottom: 4 }}>
               {tI('inviteWelcome')}
             </div>
             <div style={{ fontSize: 13, color: C.textSecondary, lineHeight: 1.5 }}>
@@ -519,9 +519,9 @@ export default function JoinView({ joinCode,
 
           {/* Name input */}
           <div style={{ marginBottom: 18 }}>
-            <div style={{ fontSize: 12, fontWeight: 600, color: C.textMuted, marginBottom: 6 }}>{tI('name')} *</div>
+            <div style={{ fontSize: 12, fontWeight: 500, color: C.textMuted, marginBottom: 6 }}>{tI('name')} *</div>
             <input ref={nameInputRef} style={{
-              width: '100%', fontSize: 18, fontWeight: 600, padding: '14px 16px',
+              width: '100%', fontSize: 18, fontWeight: 500, padding: '14px 16px',
               textAlign: 'center', borderRadius: 14, boxSizing: 'border-box',
               border: `2px solid ${prefs.name.trim() ? C.accent : C.inputBorder}`,
               background: C.input, color: C.textPrimary, fontFamily: FONT, outline: 'none',
@@ -532,7 +532,7 @@ export default function JoinView({ joinCode,
 
           {/* Gender */}
           <div style={{ marginBottom: 8 }}>
-            <div style={{ fontSize: 12, fontWeight: 600, color: C.textMuted, marginBottom: 8 }}>{tI('genderWord')}</div>
+            <div style={{ fontSize: 12, fontWeight: 500, color: C.textMuted, marginBottom: 8 }}>{tI('genderWord')}</div>
             <div style={{ display: 'flex', gap: 8 }}>
               {[
                 { key: 'male', icon: '♂', label: tI('maleWord') },
@@ -565,7 +565,7 @@ export default function JoinView({ joinCode,
       {guestStep === 1 && (
         <GlassCard C={C}>
           <div style={{ textAlign: 'center', marginBottom: 14 }}>
-            <div style={{ fontSize: 17, fontWeight: 600, color: C.textPrimary }}>{tI('yourLang')}</div>
+            <div style={{ fontSize: 17, fontWeight: 500, color: C.textPrimary }}>{tI('yourLang')}</div>
             <div style={{ fontSize: 12, color: C.textSecondary, marginTop: 4 }}>{tI('yourLangDesc')}</div>
           </div>
 
@@ -591,7 +591,7 @@ export default function JoinView({ joinCode,
 
           {/* Avatar */}
           <div style={{ marginBottom: 8 }}>
-            <div style={{ fontSize: 12, fontWeight: 600, color: C.textMuted, marginBottom: 8 }}>{tI('avatarWord')}</div>
+            <div style={{ fontSize: 12, fontWeight: 500, color: C.textMuted, marginBottom: 8 }}>{tI('avatarWord')}</div>
             <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4, scrollbarWidth: 'none' }}>
               {AVATARS.map((av, i) => (
                 <div key={i} onClick={() => setPrefs(p => ({...p, avatar: av}))}
@@ -632,7 +632,7 @@ export default function JoinView({ joinCode,
       {guestStep === 2 && (
         <GlassCard C={C}>
           <div style={{ textAlign: 'center', marginBottom: 14 }}>
-            <div style={{ fontSize: 17, fontWeight: 600, color: C.textPrimary }}>{tI('audioPrefs')}</div>
+            <div style={{ fontSize: 17, fontWeight: 500, color: C.textPrimary }}>{tI('audioPrefs')}</div>
           </div>
 
           {/* Auto-play toggle */}
@@ -646,7 +646,7 @@ export default function JoinView({ joinCode,
             border: `1px solid ${C.cardBorder}`,
           }}>
             <div>
-              <div style={{ fontSize: 13, fontWeight: 600, color: C.textPrimary }}>{tI('autoPlayLabel')}</div>
+              <div style={{ fontSize: 13, fontWeight: 500, color: C.textPrimary }}>{tI('autoPlayLabel')}</div>
               <div style={{ fontSize: 10, color: C.textMuted, marginTop: 2 }}>{tI('autoPlayDesc')}</div>
             </div>
             <button onClick={() => setAudioAutoPlay(!audioAutoPlay)} style={{
@@ -667,7 +667,7 @@ export default function JoinView({ joinCode,
 
           {/* Voice grid */}
           <div style={{ marginBottom: 12 }}>
-            <div style={{ fontSize: 12, fontWeight: 600, color: C.textMuted, marginBottom: 8 }}>{tI('transVoice')}</div>
+            <div style={{ fontSize: 12, fontWeight: 500, color: C.textMuted, marginBottom: 8 }}>{tI('transVoice')}</div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6 }}>
               {VOICES.map(v => (
                 <button key={v} onClick={() => setSelectedVoicePref(v)} style={{
@@ -720,13 +720,13 @@ export default function JoinView({ joinCode,
                 <AvatarImg src={prefs.avatar} size={40} />
               </div>
               <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 14, fontWeight: 600, color: C.textPrimary }}>{prefs.name || '...'}</div>
+                <div style={{ fontSize: 14, fontWeight: 500, color: C.textPrimary }}>{prefs.name || '...'}</div>
                 <div style={{ fontSize: 11, color: C.textSecondary }}>
                   {LANGS.find(l => l.code === myLang)?.flag} {LANGS.find(l => l.code === myLang)?.name}
                   {gender && ` · ${gender === 'male' ? '♂' : gender === 'female' ? '♀' : '⚧'}`}
                 </div>
               </div>
-              <div style={{ fontSize: 10, color: C.accent, fontWeight: 600 }}>
+              <div style={{ fontSize: 10, color: C.accent, fontWeight: 500 }}>
                 {AVATAR_NAMES[AVATARS.indexOf(prefs.avatar)] || ''}
               </div>
             </div>
@@ -780,7 +780,7 @@ export default function JoinView({ joinCode,
             }}>
               <Icon name="user" size={26} color={C.accent} />
             </div>
-            <div style={{ fontSize: 17, fontWeight: 600, color: C.textPrimary, textAlign: 'center', marginBottom: 10 }}>
+            <div style={{ fontSize: 17, fontWeight: 500, color: C.textPrimary, textAlign: 'center', marginBottom: 10 }}>
               {tI('invitePopupTitle')}
             </div>
             <div style={{ fontSize: 13, color: C.textSecondary, lineHeight: 1.6, marginBottom: 14 }}>

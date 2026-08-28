@@ -139,7 +139,7 @@ function SchedaArgomento({ aperta, tipo, dati, C, onClose, onParlane, autoGenera
             miniatura e il corpo stavano a quattordici e a sedici, cioe due
             rientri diversi incolonnati nella stessa scheda. */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 20px 0' }}>
-          <span style={{ flex: 1, fontSize: 12, fontWeight: 600, color: C.textMuted }}>
+          <span style={{ flex: 1, fontSize: 12, fontWeight: 500, color: C.textMuted }}>
             {fontePrima}
           </span>
           {/* b.482 — il tasto chiudi era trentadue: sotto la soglia del
@@ -181,7 +181,7 @@ function SchedaArgomento({ aperta, tipo, dati, C, onClose, onParlane, autoGenera
         )}
 
         <div style={{ padding: '12px 20px 16px' }}>
-          <h2 style={{ margin: 0, fontSize: 17, fontWeight: 600, lineHeight: 1.3, color: C.textPrimary, letterSpacing: -0.3 }}>
+          <h2 style={{ margin: 0, fontSize: 17, fontWeight: 500, lineHeight: 1.3, color: C.textPrimary, letterSpacing: -0.3 }}>
             {dati.titolo}
           </h2>
           <div style={{ fontSize: 11.5, color: C.textMuted, marginTop: 6 }}>
@@ -193,7 +193,7 @@ function SchedaArgomento({ aperta, tipo, dati, C, onClose, onParlane, autoGenera
           {/* ─── La Sintesi di BarTalk (solo articoli) ─── */}
           {tipo === 'articolo' && (
             <div style={{ marginTop: 14, padding: '12px 20px', borderRadius: 14, background: C.card, border: bordo }}>
-              <div style={{ fontSize: 10.5, fontWeight: 600, letterSpacing: 1.2, color: C.accent, marginBottom: 6 }}>
+              <div style={{ fontSize: 10.5, fontWeight: 500, letterSpacing: 1.2, color: C.accent, marginBottom: 6 }}>
                 {L('schedaSintesi')}
               </div>
               {sintesiAI ? (
@@ -205,7 +205,7 @@ function SchedaArgomento({ aperta, tipo, dati, C, onClose, onParlane, autoGenera
                   <button onClick={genera} disabled={generando} style={{
                     padding: '9px 16px', borderRadius: 11, minHeight: 44, cursor: 'pointer',
                     background: `linear-gradient(135deg, ${C.accent}, ${C.purple})`,
-                    border: 'none', color: '#fff', fontSize: 12.5, fontWeight: 600,
+                    border: 'none', color: '#fff', fontSize: 12.5, fontWeight: 500,
                     fontFamily: FONT, opacity: generando ? 0.6 : 1,
                   }}>
                     {generando ? L('schedaScrivo') : L('schedaGenera')}
@@ -248,7 +248,7 @@ function SchedaArgomento({ aperta, tipo, dati, C, onClose, onParlane, autoGenera
                   flex: 1.4, padding: '11px 0', borderRadius: 12, textAlign: 'center',
                   minHeight: 44, display: 'flex', alignItems: 'center', justifyContent: 'center',
                   background: `linear-gradient(135deg, ${C.accent}, ${C.purple})`,
-                  color: '#fff', fontSize: 13, fontWeight: 600, textDecoration: 'none',
+                  color: '#fff', fontSize: 13, fontWeight: 500, textDecoration: 'none',
                 }}>
                 {L('schedaLeggiSu').replace('{x}', fontePrima)}
               </a>
@@ -258,7 +258,7 @@ function SchedaArgomento({ aperta, tipo, dati, C, onClose, onParlane, autoGenera
               background: tipo === 'video' ? `linear-gradient(135deg, ${C.accent}, ${C.purple})` : 'transparent',
               border: tipo === 'video' ? 'none' : bordo,
               color: tipo === 'video' ? '#fff' : C.textSecondary,
-              fontSize: 13, fontWeight: 600, fontFamily: FONT,
+              fontSize: 13, fontWeight: 500, fontFamily: FONT,
             }}>
               {L('newsTalkAbout')}
             </button>

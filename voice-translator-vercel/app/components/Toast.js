@@ -67,7 +67,7 @@ const ToastContainer = memo(function ToastContainer() {
           }}>
             <span style={{
               flexShrink: 0, width: 20, height: 20, borderRadius: 999,
-              display: 'grid', placeItems: 'center', fontSize: 12, fontWeight: 600,
+              display: 'grid', placeItems: 'center', fontSize: 12, fontWeight: 500,
               color: c.text, border: `1px solid ${c.border}`,
             }}>{c.icon}</span>
             <span style={{ flex: 1, fontSize: 13, color: c.text, lineHeight: 1.4 }}>
@@ -77,7 +77,7 @@ const ToastContainer = memo(function ToastContainer() {
               <button
                 onClick={() => { avviso.action.onClick(); dismissToast(avviso.id); }}
                 style={{
-                  padding: '4px 10px', borderRadius: 8, fontSize: 12, fontWeight: 600,
+                  padding: '4px 10px', borderRadius: 8, fontSize: 12, fontWeight: 500,
                   background: 'rgba(255,255,255,0.1)', border: `1px solid ${c.border}`,
                   color: c.text, cursor: 'pointer', flexShrink: 0,
                   WebkitTapHighlightColor: 'transparent',

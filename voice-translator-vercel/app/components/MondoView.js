@@ -481,7 +481,7 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
                 display: 'flex', alignItems: 'center', gap: 10, padding: '8px 14px',
                 borderRadius: 999, background: 'rgba(6,9,18,0.62)',
                 border: `1px solid ${C.cardBorder}`, backdropFilter: 'blur(10px)',
-                fontFamily: FONT, fontSize: 12.5, fontWeight: 600, color: C.textSecondary,
+                fontFamily: FONT, fontSize: 12.5, fontWeight: 500, color: C.textSecondary,
                 maxWidth: '92%', flexWrap: 'wrap', justifyContent: 'center',
               }}>
                 {/* Il separatore si mette FRA i pezzi che ci sono, non
@@ -683,7 +683,7 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
               <span style={{ fontSize: 20, lineHeight: 1 }}>{bandieraPaese(paeseScelto)}</span>
             </button>
           ) : (
-            <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5, fontWeight: 600, color: C.textMuted, whiteSpace: 'nowrap' }}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5, fontWeight: 500, color: C.textMuted, whiteSpace: 'nowrap' }}>
               <Icon name="globe" size={14} color={C.textMuted} />
               {L('wholeWorld')}
             </span>
@@ -804,7 +804,7 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
         style={{
           width: '100%', minHeight: 46, borderRadius: 12, cursor: 'pointer', margin: '2px 0 14px',
           background: `linear-gradient(135deg, ${C.accent}, ${C.purple})`, border: 'none',
-          color: '#fff', fontSize: 13.5, fontWeight: 600, fontFamily: FONT,
+          color: '#fff', fontSize: 13.5, fontWeight: 500, fontFamily: FONT,
           WebkitTapHighlightColor: 'transparent',
         }}>
         {L('applyWord')}
@@ -822,16 +822,16 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
           <div style={{ width: '100%', maxWidth: 420, maxHeight: '68vh', overflowY: 'auto', scrollbarWidth: 'none', pointerEvents: 'auto', background: C.card, backdropFilter: 'blur(28px)', WebkitBackdropFilter: 'blur(28px)', border: `1px solid ${C.cardBorder}`, borderRadius: 18, padding: '14px 20px', boxShadow: '0 24px 60px -14px rgba(0,0,0,0.65)' }}>
 
             {risultati.paesi.length > 0 && (<>
-              <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: 1, color: C.textMuted, margin: '4px 0 8px' }}>{L('searchCountriesLangs')}</div>
+              <div style={{ fontSize: 11, fontWeight: 500, letterSpacing: 1, color: C.textMuted, margin: '4px 0 8px' }}>{L('searchCountriesLangs')}</div>
               {/* b.363 — scegliendo di qui, il PIANETA ci va sopra: il codice
                   viaggia al globo e parte lo zoom che sa gia fare da se */}
               {risultati.paesi.map((l) => (
                 <button key={l.code} onClick={() => { setLangFilter(l.code); setPaeseScelto(paeseDaLingua(l.code)); setSearch(''); setTab('stanze'); }}
                   style={{ width: '100%', minHeight: 44, textAlign: 'left', padding: 12, borderRadius: 14, background: C.card, border: `1px solid ${C.cardBorder}`, cursor: 'pointer', fontFamily: FONT, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 10 }}>
                   <span style={{ fontSize: 22 }}>{l.flag}</span>
-                  <span style={{ flex: 1, fontSize: 13.5, fontWeight: 600, color: C.textPrimary }}>{l.name}</span>
+                  <span style={{ flex: 1, fontSize: 13.5, fontWeight: 500, color: C.textPrimary }}>{l.name}</span>
                   {l.vive > 0 && (
-                    <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, fontWeight: 600, color: C.accent }}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, fontWeight: 500, color: C.accent }}>
                       <span style={{ width: 7, height: 7, borderRadius: 4, background: C.accent, boxShadow: `0 0 8px ${C.accent}` }} />
                       {l.vive}
                     </span>
@@ -842,22 +842,22 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
             </>)}
 
             {risultati.stanze.length > 0 && (<>
-              <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: 1, color: C.textMuted, margin: '14px 0 8px' }}>{L('liveRoomsNow')}</div>
+              <div style={{ fontSize: 11, fontWeight: 500, letterSpacing: 1, color: C.textMuted, margin: '14px 0 8px' }}>{L('liveRoomsNow')}</div>
               {risultati.stanze.map((r) => (
                 <button key={r.roomId} onClick={() => onJoinRoom?.(r.roomId)}
                   style={{ width: '100%', minHeight: 44, textAlign: 'left', padding: 12, borderRadius: 14, background: C.card, border: `1px solid ${C.cardBorder}`, cursor: 'pointer', fontFamily: FONT, marginBottom: 8 }}>
-                  <div style={{ fontSize: 13.5, fontWeight: 600, color: C.textPrimary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.nome}</div>
+                  <div style={{ fontSize: 13.5, fontWeight: 500, color: C.textPrimary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.nome}</div>
                   <div style={{ fontSize: 11, color: C.textMuted }}>{r.membri} {L('inRoomWord')}{r.lang ? ` · ${getLangFlag(r.lang)} ${getLangName(r.lang)}` : ''}</div>
                 </button>
               ))}
             </>)}
 
             {risultati.discussioni.length > 0 && (<>
-              <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: 1, color: C.textMuted, margin: '14px 0 8px' }}>{L('trendNow')}</div>
+              <div style={{ fontSize: 11, fontWeight: 500, letterSpacing: 1, color: C.textMuted, margin: '14px 0 8px' }}>{L('trendNow')}</div>
               {risultati.discussioni.map((d, i) => (
                 <button key={d.id || i} onClick={() => { setSearch(''); setTab('news'); setApriDiscussione(d.id || null); }}
                   style={{ width: '100%', minHeight: 44, textAlign: 'left', padding: 12, borderRadius: 14, background: C.card, border: `1px solid ${C.cardBorder}`, cursor: 'pointer', fontFamily: FONT, marginBottom: 8 }}>
-                  <div style={{ fontSize: 13.5, fontWeight: 600, color: C.textPrimary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.titolo}</div>
+                  <div style={{ fontSize: 13.5, fontWeight: 500, color: C.textPrimary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.titolo}</div>
                   <div style={{ fontSize: 11, color: C.textMuted }}>{d.commenti} {L('commentsWord')}{d.topic ? ` · ${d.topic}` : ''}</div>
                 </button>
               ))}
@@ -868,7 +868,7 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
             {feedCaldoGuasto && (
               <button onClick={() => { setFeedCaldoGuasto(false); setRiprovaCaldo((n) => n + 1); }}
                 style={{ width: '100%', minHeight: 44, margin: '10px 0', padding: '10px 12px', borderRadius: 12, background: 'none',
-                  border: `1px solid ${C.cardBorder}`, color: C.textMuted, fontSize: 12, fontWeight: 600, fontFamily: FONT, cursor: 'pointer' }}>
+                  border: `1px solid ${C.cardBorder}`, color: C.textMuted, fontSize: 12, fontWeight: 500, fontFamily: FONT, cursor: 'pointer' }}>
                 {L('newsError')} · {L('retryWord')}
               </button>
             )}
@@ -1012,7 +1012,7 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
             <button onClick={handleRefresh} style={{
               minHeight: 44, padding: '8px 20px', borderRadius: 12,
               background: `${C.accent}15`, border: `1px solid ${C.accent}25`,
-              color: C.accent, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: FONT,
+              color: C.accent, fontSize: 12, fontWeight: 500, cursor: 'pointer', fontFamily: FONT,
             }}>
               {L('retryWord')}
             </button>
@@ -1028,7 +1028,7 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
               border: `1px solid ${C.accent}15`,
               display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 36,
             }}><Icon name="globe" size={34} color={C.accent || 'rgba(255,255,255,0.4)'} /></div>
-            <div style={{ fontSize: 16, fontWeight: 600, color: C.textPrimary, marginBottom: 6 }}>
+            <div style={{ fontSize: 16, fontWeight: 500, color: C.textPrimary, marginBottom: 6 }}>
               {L('noRoomsYet')}
             </div>
             <div style={{ fontSize: 12, color: C.textMuted, lineHeight: 1.6, maxWidth: 260, margin: '0 auto 20px' }}>
@@ -1037,7 +1037,7 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
             <button onClick={onCreateRoom || (() => setView('home'))} style={{
               minHeight: 44, padding: '12px 28px', borderRadius: 14, cursor: 'pointer',
               background: `linear-gradient(135deg, ${C.accent}, ${C.purple})`,
-              border: 'none', color: '#fff', fontSize: 13, fontWeight: 600, fontFamily: FONT,
+              border: 'none', color: '#fff', fontSize: 13, fontWeight: 500, fontFamily: FONT,
               boxShadow: `0 4px 20px ${C.accent}35`,
             }}>
               {L('createBarTalk')}
@@ -1074,7 +1074,7 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
         {/* b.504 — M1: «Aperte adesso» — le stanze VIVE hanno la loro
             etichetta, come sulla tavola. */}
         {filteredRooms.length > 0 && (
-          <div style={{ fontSize: 10.5, fontWeight: 600, letterSpacing: 1.1, textTransform: 'uppercase', color: C.textMuted, margin: '2px 0 6px' }}>
+          <div style={{ fontSize: 10.5, fontWeight: 500, letterSpacing: 1.1, textTransform: 'uppercase', color: C.textMuted, margin: '2px 0 6px' }}>
             {L('openNowWord')}
           </div>
         )}
@@ -1157,7 +1157,7 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
                 {/* 2. IL NOME: e cio che si sceglie */}
                 <div style={{
                   display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
-                  overflow: 'hidden', fontSize: 14, fontWeight: 600, lineHeight: 1.35, color: C.textPrimary,
+                  overflow: 'hidden', fontSize: 14, fontWeight: 500, lineHeight: 1.35, color: C.textPrimary,
                 }}>
                   {room.nome || room.host}
                 </div>
@@ -1169,7 +1169,7 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
                   {/* b.482 — la stanza piena si distingue dal COLORE, non
                       dal peso: qui c'erano un 800 e un 700, cioe due
                       grassetti in una riga di etichette. */}
-                  <span style={{ ...eti, color: dentro.accesa ? C.accent : C.textMuted, fontWeight: 600 }}>
+                  <span style={{ ...eti, color: dentro.accesa ? C.accent : C.textMuted, fontWeight: 500 }}>
                     {dentro.n}{room.maxPartecipanti ? `/${room.maxPartecipanti}` : ''} {L('insideWord')}
                   </span>
                   {room.myRole && ROLE_BADGES[room.myRole] && (
@@ -1185,7 +1185,7 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
                 width: 34, height: 34, borderRadius: 10, flexShrink: 0, alignSelf: 'center',
                 background: `${modeInfo.color}12`, border: `1px solid ${modeInfo.color}20`,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                color: modeInfo.color, fontSize: 14, fontWeight: 600,
+                color: modeInfo.color, fontSize: 14, fontWeight: 500,
               }}>
                 →
               </div>

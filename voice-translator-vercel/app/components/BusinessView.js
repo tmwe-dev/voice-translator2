@@ -79,7 +79,7 @@ function BusinessView({ onBack }) {
         </button>
         {/* b.479 — il nome della sezione era scritto a mano: la chiave esiste gia. */}
         <div style={{ fontFamily: FONT, color: S.colors.textPrimary, flex: 1, minWidth: 0 }}>
-          <div style={{ fontWeight: 600, fontSize: 15 }}>{L('businessEntry')}{aperto ? ` — ${aperto.titolo || nomeDi(aperto)}` : ''}</div>
+          <div style={{ fontWeight: 500, fontSize: 15 }}>{L('businessEntry')}{aperto ? ` — ${aperto.titolo || nomeDi(aperto)}` : ''}</div>
           <div style={{ fontSize: 11, color: S.colors.textMuted }}>
             {aperto ? L(aperto.descKey) : L('businessSubtitle')}
           </div>
@@ -91,7 +91,7 @@ function BusinessView({ onBack }) {
             style={{ width: 44, height: 44, borderRadius: 12, flexShrink: 0, cursor: 'pointer',
               background: zoomTesto ? `${S.colors.accent1 || '#5b8cff'}22` : 'none',
               border: `1px solid ${S.colors.cardBorder}`, color: S.colors.textSecondary,
-              fontFamily: FONT, fontSize: 15, fontWeight: 600 }}>
+              fontFamily: FONT, fontSize: 15, fontWeight: 500 }}>
             Aa
           </button>
         )}
@@ -109,7 +109,7 @@ function BusinessView({ onBack }) {
               <Icon name="credit" size={26} color={S.colors.bg} />
             </span>
             <span style={{ flex: 1, minWidth: 0 }}>
-              <span style={{ display: 'block', fontWeight: 600, color: S.colors.textPrimary, fontSize: 17 * ingr }}>{L('scanCardTitle')}</span>
+              <span style={{ display: 'block', fontWeight: 500, color: S.colors.textPrimary, fontSize: 17 * ingr }}>{L('scanCardTitle')}</span>
               <span style={{ display: 'block', fontSize: 12.5 * ingr, color: S.colors.textMuted, marginTop: 2 }}>{L('scanCardDesc')}</span>
             </span>
             <Icon name="chevRight" size={16} color={S.colors.textMuted} />

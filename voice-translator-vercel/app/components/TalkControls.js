@@ -115,7 +115,7 @@ const TalkControls = memo(function TalkControls({
               niente e pensa che sia rotto. Ora c'e scritto quello che
               succede davvero. */}
         {!recording && (
-          <div style={{fontSize:11, color:S.colors.textMuted, fontWeight:600, marginTop:7, textAlign:'center'}}>
+          <div style={{fontSize:11, color:S.colors.textMuted, fontWeight: 500, marginTop:7, textAlign:'center'}}>
             {L('conversationDesc')}
           </div>
         )}
@@ -191,7 +191,7 @@ const TalkControls = memo(function TalkControls({
               background: myHandRaised ? 'rgba(34,197,94,0.15)' : 'rgba(255,165,0,0.15)',
               border: myHandRaised ? '1px solid rgba(34,197,94,0.3)' : '1px solid rgba(255,165,0,0.3)',
               color: myHandRaised ? PALETTE.green : '#FFA500',
-              fontSize: 14, fontWeight: 600, cursor: myHandRaised ? 'default' : 'pointer',
+              fontSize: 14, fontWeight: 500, cursor: myHandRaised ? 'default' : 'pointer',
               fontFamily: FONT, transition: 'all 0.2s',
               opacity: handRaising ? 0.6 : 1,
             }}
@@ -209,7 +209,7 @@ const TalkControls = memo(function TalkControls({
           display: 'flex', flexWrap: 'wrap', gap: 6, padding: '6px 14px',
           background: 'rgba(255,165,0,0.08)', borderRadius: 12, margin: '0 10px 6px',
         }}>
-          <span style={{ fontSize: 12, color: '#FFA500', fontWeight: 600 }}>{'\u270B'} Mani alzate:</span>
+          <span style={{ fontSize: 12, color: '#FFA500', fontWeight: 500 }}>{'\u270B'} Mani alzate:</span>
           {membriDi(roomInfo).filter(m => m.handRaised).map(m => (
             <button key={m.name}
               disabled={grantingSpeak === m.name}
@@ -234,7 +234,7 @@ const TalkControls = memo(function TalkControls({
               style={{
                 padding: '3px 10px', borderRadius: 8,
                 background: 'rgba(34,197,94,0.15)', border: '1px solid rgba(34,197,94,0.3)',
-                color: PALETTE.green, fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                color: PALETTE.green, fontSize: 12, fontWeight: 500, cursor: 'pointer',
                 fontFamily: FONT,
               }}
             >
@@ -266,7 +266,7 @@ const TalkControls = memo(function TalkControls({
                   non ridisegna la stanza sessanta volte al secondo. */}
               <BarraLivelloMicrofono livelloRef={vadLivelloRef} attiva={isListening} C={S.colors} />
               {vadSilenceCountdown !== null && vadSilenceCountdown > 0 && (
-                <span style={{fontSize:9, color:S.colors.accent3, fontWeight: 600, fontVariantNumeric:'tabular-nums'}}>
+                <span style={{fontSize:9, color:S.colors.accent3, fontWeight: 500, fontVariantNumeric:'tabular-nums'}}>
                   {vadSilenceCountdown}s
                 </span>
               )}
@@ -309,7 +309,7 @@ const TalkControls = memo(function TalkControls({
               { id: 'street', short: 'Strada' },
             ].map(p => (
               <button key={p.id} onClick={() => setVadSensitivity(p.id)}
-                style={{padding:'2px 8px', borderRadius:8, fontSize:9, fontWeight:600,
+                style={{padding:'2px 8px', borderRadius:8, fontSize:9, fontWeight: 500,
                   border: vadSensitivity === p.id ? `1px solid ${S.colors.accent3Border}` : `1px solid ${S.colors.overlayBorder}`,
                   background: vadSensitivity === p.id ? S.colors.accent3Bg : 'transparent',
                   color: vadSensitivity === p.id ? S.colors.accent3 : S.colors.textMuted,

@@ -75,7 +75,7 @@ const DetailView = memo(function DetailView({
         </button>
         <AvatarImg src={partner?.avatar} size={40} />
         <div style={{ flex: 1 }}>
-          <div style={{ color: S.colors.textPrimary, fontSize: 16, fontWeight: 600 }}>
+          <div style={{ color: S.colors.textPrimary, fontSize: 16, fontWeight: 500 }}>
             {partner?.name || conversation.partnerName || L('conversation')}
           </div>
           <div style={{ color: S.colors.textMuted, fontSize: 12, display: 'flex', gap: 8, alignItems: 'center' }}>
@@ -113,7 +113,7 @@ const DetailView = memo(function DetailView({
             background: S.colors.cardBg, border: `1px solid ${S.colors.cardBorder}`,
             minWidth: 90, textAlign: 'center',
           }}>
-            <div style={{ fontSize: 14, fontWeight: 600, color: S.colors.textPrimary }}>{card.value}</div>
+            <div style={{ fontSize: 14, fontWeight: 500, color: S.colors.textPrimary }}>{card.value}</div>
             <div style={{ fontSize: 10, color: S.colors.textMuted, marginTop: 2 }}>{card.label}</div>
           </div>
         ))}
@@ -224,7 +224,7 @@ const DetailView = memo(function DetailView({
             background: S.colors.cardBg, border: `1px solid ${S.colors.cardBorder}`,
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-              <span style={{ fontSize: 14, fontWeight: 600, color: S.colors.textPrimary }}>
+              <span style={{ fontSize: 14, fontWeight: 500, color: S.colors.textPrimary }}>
                 {L('aiSummary')}
               </span>
             </div>
@@ -256,7 +256,7 @@ const DetailView = memo(function DetailView({
                 borderRadius: 14, background: S.colors.cardBg, border: `1px solid ${S.colors.cardBorder}`,
               }}>
                 <span style={{ flex: 1, color: S.colors.textSecondary, fontSize: 13, fontWeight: 500 }}>{stat.label}</span>
-                <span style={{ color: S.colors.textPrimary, fontSize: 14, fontWeight: 600 }}>{stat.value}</span>
+                <span style={{ color: S.colors.textPrimary, fontSize: 14, fontWeight: 500 }}>{stat.value}</span>
               </div>
             ))}
           </div>
@@ -274,7 +274,7 @@ const DetailView = memo(function DetailView({
             flex: 1, minHeight: 44, padding: '12px', borderRadius: 14, cursor: 'pointer',
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
             background: S.colors.overlayBg, border: `1px solid ${S.colors.overlayBorder}`,
-            color: S.colors.textPrimary, fontSize: 13, fontWeight: 600,
+            color: S.colors.textPrimary, fontSize: 13, fontWeight: 500,
           }}>
           <IconExport size={15} />
           {L('exportConversation')}
@@ -284,7 +284,7 @@ const DetailView = memo(function DetailView({
             flex: 1, minHeight: 44, padding: '12px', borderRadius: 14, cursor: 'pointer',
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
             background: S.colors.accent2Bg, border: `1px solid ${S.colors.accent2Border}`,
-            color: S.colors.accent2, fontSize: 13, fontWeight: 600,
+            color: S.colors.accent2, fontSize: 13, fontWeight: 500,
           }}>
           <svg width={15} height={15} viewBox="0 0 24 24" fill="none" stroke="currentColor"
             strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
@@ -298,7 +298,7 @@ const DetailView = memo(function DetailView({
             minWidth: 44, minHeight: 44, padding: '12px 16px', borderRadius: 14, cursor: 'pointer',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             background: S.colors.accent3Bg, border: `1px solid ${S.colors.accent3Border}`,
-            color: S.colors.statusError, fontSize: 13, fontWeight: 600,
+            color: S.colors.statusError, fontSize: 13, fontWeight: 500,
           }}>
           <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor"
             strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">

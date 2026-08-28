@@ -151,7 +151,7 @@ export default function TutorialOverlay({ tutorialStep, setTutorialStep, setShow
         >
           {/* Step counter */}
           <div style={{
-            fontSize: 11, fontWeight: 600, color: current.accent,
+            fontSize: 11, fontWeight: 500, color: current.accent,
             letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 24,
             opacity: 0.8,
           }}>
@@ -235,7 +235,7 @@ export default function TutorialOverlay({ tutorialStep, setTutorialStep, setShow
                 padding: '12px 32px', borderRadius: 12,
                 border: 'none',
                 background: `linear-gradient(135deg, ${current.accent}, ${current.accent}cc)`,
-                color: '#000', fontSize: 14, fontWeight: 600, cursor: 'pointer',
+                color: '#000', fontSize: 14, fontWeight: 500, cursor: 'pointer',
                 fontFamily: FONT,
                 boxShadow: `0 8px 24px ${current.accent}35`,
                 transition: 'all 0.3s',

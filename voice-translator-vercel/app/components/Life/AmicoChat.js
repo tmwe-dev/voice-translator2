@@ -214,7 +214,7 @@ function AmicoChat({ compagni, L, lingua, userToken, testoP, muto, accent, card,
               style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 20px', borderRadius: 12, background: card, border: bordo, cursor: 'pointer', textAlign: 'left', fontFamily: FONT }}>
               <img src={c.avatar} alt="" width={42} height={42} style={{ borderRadius: 10, display: 'block', flexShrink: 0, objectFit: 'cover' }} />
               <span style={{ flex: 1, minWidth: 0 }}>
-                <span style={{ display: 'block', fontWeight: 600, color: testoP, fontSize: 14 }}>
+                <span style={{ display: 'block', fontWeight: 500, color: testoP, fontSize: 14 }}>
                   {c.nome}
                   {c.memoria && (
                     <span title={L('lifeMemoryOn')} style={{ display: 'inline-flex', verticalAlign: 'middle', marginLeft: 6 }}>
@@ -254,7 +254,7 @@ function AmicoChat({ compagni, L, lingua, userToken, testoP, muto, accent, card,
           <Icon name="back" size={16} color={testoP} />
         </button>
         <img src={scelto.avatar} alt={scelto.nome} width={32} height={32} style={{ borderRadius: 8, display: 'block', objectFit: 'cover' }} />
-        <span style={{ fontWeight: 600, color: testoP, flex: 1 }}>
+        <span style={{ fontWeight: 500, color: testoP, flex: 1 }}>
           {scelto.nome}
           {scelto.memoria && (
             <span title={L('lifeMemoryOn')} style={{ display: 'inline-flex', verticalAlign: 'middle', marginLeft: 6 }}>
@@ -264,7 +264,7 @@ function AmicoChat({ compagni, L, lingua, userToken, testoP, muto, accent, card,
         </span>
         {scelto.lingua && scelto.lingua !== lingua && (
           <button onClick={valutaAssi} disabled={assiLavoro} title={L('lifeAxesTip')}
-            style={{ padding: '8px 10px', minHeight: 44, borderRadius: 12, cursor: 'pointer', fontFamily: FONT, fontSize: 12, fontWeight: 600,
+            style={{ padding: '8px 10px', minHeight: 44, borderRadius: 12, cursor: 'pointer', fontFamily: FONT, fontSize: 12, fontWeight: 500,
               border: `1px solid ${accent}`, background: 'transparent', color: accent, opacity: assiLavoro ? 0.6 : 1 }}>
             {assiLavoro ? '…' : L('lifeAxesBtn')}
           </button>
@@ -273,7 +273,7 @@ function AmicoChat({ compagni, L, lingua, userToken, testoP, muto, accent, card,
         {/* b.482 — toccato solo l'aspetto (misura del bersaglio e parole dal
             pacchetto lingua): cosa fa il tasto resta esattamente com'era. */}
         <button onClick={() => { vibrate(8); setDalVivo((v) => !v); }} aria-pressed={dalVivo}
-          style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 12px', minHeight: 44, borderRadius: 12, cursor: 'pointer', fontFamily: FONT, fontSize: 13, fontWeight: 600,
+          style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 12px', minHeight: 44, borderRadius: 12, cursor: 'pointer', fontFamily: FONT, fontSize: 13, fontWeight: 500,
             background: dalVivo ? `${accent}22` : accent, color: dalVivo ? accent : '#04121c', border: dalVivo ? `1px solid ${accent}` : 'none' }}>
           <Icon name="mic" size={14} color={dalVivo ? accent : '#04121c'} /> {dalVivo ? L('closeWord') : L('lifeLiveBtn')}
         </button>
@@ -303,7 +303,7 @@ function AmicoChat({ compagni, L, lingua, userToken, testoP, muto, accent, card,
       {assi && (
         <div style={{ padding: '12px 20px', borderRadius: 12, background: card, border: `1px solid ${accent}44`, marginBottom: 10 }}>
           <div style={{ display: 'flex', alignItems: 'center', marginBottom: 8 }}>
-            <span style={{ flex: 1, fontSize: 12, fontWeight: 600, color: testoP }}>{L('lifeAxesTitle')}</span>
+            <span style={{ flex: 1, fontSize: 12, fontWeight: 500, color: testoP }}>{L('lifeAxesTitle')}</span>
             <button onClick={() => setAssi(null)} aria-label={L('closeWord')} title={L('closeWord')}
               style={{ background: 'none', border: 'none', color: muto, cursor: 'pointer',
                 width: 44, height: 44, flexShrink: 0, padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -316,7 +316,7 @@ function AmicoChat({ compagni, L, lingua, userToken, testoP, muto, accent, card,
             return (
               <div key={k} style={{ marginBottom: 7 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: testoP }}>
-                  <span style={{ fontWeight: 600 }}>{et}</span><span style={{ fontWeight: 600, color: col }}>{a.voto}</span>
+                  <span style={{ fontWeight: 500 }}>{et}</span><span style={{ fontWeight: 500, color: col }}>{a.voto}</span>
                 </div>
                 <div style={{ height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.08)', overflow: 'hidden', margin: '3px 0' }}>
                   <div style={{ width: `${a.voto}%`, height: '100%', background: col }} />

@@ -56,7 +56,7 @@ const MOTORI_VOCE = [
 // era l'unica cosa presa dalla chiusura, ora arriva come proprieta.
 const Gruppo = ({ c, titolo, children }) => (
   <div style={{ width: '100%', maxWidth: 440, marginBottom: 16 }}>
-    <div style={{ fontSize: 9.5, fontWeight: 600, color: c.textMuted, letterSpacing: '0.35em',
+    <div style={{ fontSize: 9.5, fontWeight: 500, color: c.textMuted, letterSpacing: '0.35em',
       textTransform: 'uppercase', padding: '0 4px 9px', fontFamily: FONT }}>{titolo}</div>
     <div style={{ background: c.cardBg, border: `1px solid ${c.cardBorder}`,
       borderRadius: 18, padding: '2px 14px' }}>{children}</div>
@@ -82,7 +82,7 @@ const Riga = ({ c, icona, titolo, sotto, valore, onClick, ultima, aperto, childr
         <span style={{ display: 'block', fontSize: 14, fontWeight: 650, color: c.textPrimary }}>{titolo}</span>
         {sotto && <span style={{ display: 'block', fontSize: 11.5, color: c.textMuted, marginTop: 2 }}>{sotto}</span>}
       </span>
-      {valore && <span style={{ fontSize: 12.5, fontWeight: 600, color: c.textSecondary, flexShrink: 0 }}>{valore}</span>}
+      {valore && <span style={{ fontSize: 12.5, fontWeight: 500, color: c.textSecondary, flexShrink: 0 }}>{valore}</span>}
       {onClick && <span style={{ color: c.textMuted, flexShrink: 0, lineHeight: 0,
         transform: aperto ? 'rotate(180deg)' : 'none', transition: 'transform 0.3s' }}>
         <IconChevronDown size={15} /></span>}
@@ -97,7 +97,7 @@ const Scelta = ({ c, attiva, titolo, sotto, onClick }) => (
     fontFamily: FONT, background: attiva ? c.accent1Bg : 'transparent',
     border: `1px solid ${attiva ? c.accent1Border : 'transparent'}`, transition: 'all 0.2s' }}>
     <span style={{ flex: 1, minWidth: 0 }}>
-      <span style={{ display: 'block', fontSize: 13.5, fontWeight: 600,
+      <span style={{ display: 'block', fontSize: 13.5, fontWeight: 500,
         color: attiva ? c.accent1 : c.textPrimary }}>{titolo}</span>
       {sotto && <span style={{ display: 'block', fontSize: 11, color: c.textMuted, marginTop: 1 }}>{sotto}</span>}
     </span>
@@ -165,7 +165,7 @@ const SettingsView = memo(function SettingsView({ apiKeyInputs, userAccount, log
                 style={{ width: 44, height: 44, borderRadius: 12, flexShrink: 0, cursor: 'pointer',
                   background: zoomTesto ? `${c.accent1}22` : 'none',
                   border: `1px solid ${c.cardBorder}`, color: c.textSecondary,
-                  fontFamily: FONT, fontSize: 15, fontWeight: 600 }}>
+                  fontFamily: FONT, fontSize: 15, fontWeight: 500 }}>
                 Aa
               </button>
             } />
@@ -183,7 +183,7 @@ const SettingsView = memo(function SettingsView({ apiKeyInputs, userAccount, log
               background: c.cardBg, border: `1px solid ${c.cardBorder}` }}>
             <AvatarImg src={prefs.avatar} size={52} />
             <span style={{ flex: 1, minWidth: 0 }}>
-              <span style={{ display: 'block', fontSize: 17, fontWeight: 600, color: c.textPrimary }}>
+              <span style={{ display: 'block', fontSize: 17, fontWeight: 500, color: c.textPrimary }}>
                 {prefs.name || userAccount?.email?.split('@')[0] || L('guestName')}
               </span>
               <span style={{ display: 'block', fontSize: 11.5, color: c.textMuted, marginTop: 2,
@@ -191,7 +191,7 @@ const SettingsView = memo(function SettingsView({ apiKeyInputs, userAccount, log
                 {userAccount?.email || L('noAccountLinked')}
               </span>
             </span>
-            <span style={{ fontSize: 12, fontWeight: 600, color: c.accent1 }}>{L('settingsEdit')}</span>
+            <span style={{ fontSize: 12, fontWeight: 500, color: c.accent1 }}>{L('settingsEdit')}</span>
           </button>
         </div>
 
@@ -317,7 +317,7 @@ const SettingsView = memo(function SettingsView({ apiKeyInputs, userAccount, log
 
         {/* ═══ 3 · ASPETTO ═══ */}
         <div style={{ width: '100%', maxWidth: 440, marginBottom: 16 }}>
-          <div style={{ fontSize: 9.5, fontWeight: 600, color: c.textMuted, letterSpacing: '0.35em',
+          <div style={{ fontSize: 9.5, fontWeight: 500, color: c.textMuted, letterSpacing: '0.35em',
             textTransform: 'uppercase', padding: '0 4px 9px', fontFamily: FONT }}>{L('appearance')}</div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8,
             background: c.cardBg, border: `1px solid ${c.cardBorder}`, borderRadius: 18, padding: 12 }}>
@@ -470,7 +470,7 @@ const SettingsView = memo(function SettingsView({ apiKeyInputs, userAccount, log
             style={{ ...S.btn, flex: 1 }}>{L('saveAndBack')}</button>
           <button onClick={() => { logout?.({ clearPrefs: true }); setView('welcome'); }}
             style={{ padding: '13px 20px', borderRadius: 14, cursor: 'pointer', fontFamily: FONT,
-              fontSize: 13.5, fontWeight: 600, background: 'transparent',
+              fontSize: 13.5, fontWeight: 500, background: 'transparent',
               border: `1px solid ${c.cardBorder}`, color: c.textMuted }}>{L('exitWord')}</button>
         </div>
 

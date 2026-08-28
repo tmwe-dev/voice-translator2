@@ -50,7 +50,7 @@ export default function Scelta({ etichetta, valore, opzioni, onCambia, C, icona 
       {(etichetta || icona) && (
         <div style={{
           display: 'flex', alignItems: 'center', gap: 7,
-          fontSize: 12, fontWeight: 600, color: COLORE_TITOLO, fontFamily: FONT,
+          fontSize: 12, fontWeight: 500, color: COLORE_TITOLO, fontFamily: FONT,
           marginBottom: 6, letterSpacing: 0.2,
         }}>
           {icona && <Icon name={icona} size={13} color={COLORE_TITOLO} />}
@@ -75,12 +75,12 @@ export default function Scelta({ etichetta, valore, opzioni, onCambia, C, icona 
         {scelta?.icona && <Icon name={scelta.icona} size={14} color={COLORE_VALORE} />}
         {scelta?.bandiera && <span style={{ fontSize: 15, lineHeight: 1, flexShrink: 0 }}>{scelta.bandiera}</span>}
         <span style={{
-          flex: 1, minWidth: 0, fontSize: 13.5, fontWeight: 600, color: COLORE_VALORE,
+          flex: 1, minWidth: 0, fontSize: 13.5, fontWeight: 500, color: COLORE_VALORE,
           overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
         }}>
           {scelta?.etichetta}
           {scelta?.conto != null && (
-            <span style={{ color: C.accent, fontWeight: 600 }}> {scelta.conto}</span>
+            <span style={{ color: C.accent, fontWeight: 500 }}> {scelta.conto}</span>
           )}
         </span>
         {/* b.482 — IL TRIANGOLINO E LA SPUNTA DIVENTANO ICONE. Erano due
@@ -122,12 +122,12 @@ export default function Scelta({ etichetta, valore, opzioni, onCambia, C, icona 
                 {o.icona && <Icon name={o.icona} size={14} color={scelto ? C.accent : 'rgba(214,226,245,0.88)'} />}
                 {o.bandiera && <span style={{ fontSize: 15, lineHeight: 1, flexShrink: 0 }}>{o.bandiera}</span>}
                 <span style={{
-                  flex: 1, minWidth: 0, fontSize: 13, fontWeight: 600,
+                  flex: 1, minWidth: 0, fontSize: 13, fontWeight: 500,
                   color: scelto ? C.accent : 'rgba(214,226,245,0.88)',
                   overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                 }}>
                   {o.etichetta}
-                  {o.conto != null && <span style={{ color: scelto ? C.accent : 'rgba(150,168,196,0.85)', fontWeight: 600 }}> {o.conto}</span>}
+                  {o.conto != null && <span style={{ color: scelto ? C.accent : 'rgba(150,168,196,0.85)', fontWeight: 500 }}> {o.conto}</span>}
                 </span>
                 {scelto && (
                   <span style={{ color: C.accent, flexShrink: 0, display: 'flex', alignItems: 'center' }}>

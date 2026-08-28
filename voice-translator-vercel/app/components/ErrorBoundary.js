@@ -93,7 +93,7 @@ export default class ErrorBoundary extends Component {
               l'ha, la schermata di guasto si apriva con un rettangolo
               vuoto sopra la scritta. */}
           <div style={{ marginBottom: 16, lineHeight: 0, color: '#ffc44d' }}><IconWarning size={48} /></div>
-          <h2 style={{ fontSize: 22, fontWeight: 600, margin: '0 0 8px', color: '#fff' }}>
+          <h2 style={{ fontSize: 22, fontWeight: 500, margin: '0 0 8px', color: '#fff' }}>
             {this.getErrorText('errorTitle')}
           </h2>
           <p style={{ fontSize: 14, color: '#aaa', maxWidth: 400, lineHeight: 1.5, margin: '0 0 24px' }}>
@@ -112,14 +112,14 @@ export default class ErrorBoundary extends Component {
             <button onClick={this.handleReset} style={{
               padding: '10px 24px', borderRadius: 12, border: '1px solid rgba(255,255,255,0.15)',
               background: 'rgba(255,255,255,0.08)', color: '#fff', fontSize: 14,
-              fontWeight: 600, cursor: 'pointer',
+              fontWeight: 500, cursor: 'pointer',
             }}>
               {this.getErrorText('retryWord')}
             </button>
             <button onClick={this.handleReload} style={{
               padding: '10px 24px', borderRadius: 12, border: 'none',
               background: 'linear-gradient(135deg, #8b5cf6, #06b6d4)', color: '#fff',
-              fontSize: 14, fontWeight: 600, cursor: 'pointer',
+              fontSize: 14, fontWeight: 500, cursor: 'pointer',
             }}>
               {this.getErrorText('reloadPage')}
             </button>

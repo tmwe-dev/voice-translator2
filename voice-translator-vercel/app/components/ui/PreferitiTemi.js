@@ -73,7 +73,7 @@ export default function PreferitiTemi({ temi = [], prefs, savePrefs, C, L, onSce
         {/* b.535 — contrasto: era C.textMuted 10.5, il grigio smorto che
             Luca ha bocciato («non puoi usare il grigio scuro su sfondo
             scuro»). Bianco al 78%, corpo 11.5. */}
-        <span style={{ flex: 1, textAlign: 'left', fontSize: 11.5, fontWeight: 600, letterSpacing: 1, color: 'rgba(255,255,255,0.78)' }}>
+        <span style={{ flex: 1, textAlign: 'left', fontSize: 11.5, fontWeight: 500, letterSpacing: 1, color: 'rgba(255,255,255,0.78)' }}>
           {L('favouritesWord')} ({visibili.length + (aggiunte?.length || 0)})
         </span>
         <span style={{ transform: aperti ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s', display: 'flex' }}>
@@ -99,7 +99,7 @@ export default function PreferitiTemi({ temi = [], prefs, savePrefs, C, L, onSce
               style={{
                 display: 'inline-flex', alignItems: 'center', gap: 6, minHeight: 26,
                 background: 'none', border: 'none', cursor: 'pointer', padding: 0,
-                fontFamily: FONT, color: '#fff', fontSize: 11.5, fontWeight: 600,
+                fontFamily: FONT, color: '#fff', fontSize: 11.5, fontWeight: 500,
                 maxWidth: 200, WebkitTapHighlightColor: 'transparent',
               }}>
               <span aria-hidden="true" style={{ fontSize: 11, lineHeight: 1 }}>{'\u2605'}</span>
@@ -143,7 +143,7 @@ export default function PreferitiTemi({ temi = [], prefs, savePrefs, C, L, onSce
                 style={{
                   display: 'inline-flex', alignItems: 'center', gap: 6, minHeight: 26,
                   background: 'none', border: 'none', cursor: 'pointer', padding: 0,
-                  fontFamily: FONT, color: '#fff', fontSize: 11.5, fontWeight: 600,
+                  fontFamily: FONT, color: '#fff', fontSize: 11.5, fontWeight: 500,
                   maxWidth: 200, WebkitTapHighlightColor: 'transparent',
                 }}>
                 <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.topic}</span>
@@ -152,7 +152,7 @@ export default function PreferitiTemi({ temi = [], prefs, savePrefs, C, L, onSce
                 <span style={{
                   minWidth: 18, height: 18, padding: '0 5px', borderRadius: 5,
                   background: 'rgba(255,255,255,0.24)', color: '#fff',
-                  fontSize: 10.5, fontWeight: 700, lineHeight: '18px', textAlign: 'center',
+                  fontSize: 10.5, fontWeight: 500, lineHeight: '18px', textAlign: 'center',
                 }}>
                   {t.discussioni}
                 </span>

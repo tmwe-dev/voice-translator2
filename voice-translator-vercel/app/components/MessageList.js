@@ -201,7 +201,7 @@ const MessageList = memo(function MessageList({
         <div style={{textAlign:'center', color:S.colors.textMuted, marginTop:60, fontSize:13, lineHeight:1.6}}>
           {solo && (
             <div style={{ marginBottom: 14 }}>
-              <div style={{ fontSize: 15, fontWeight: 600, color: S.colors.textPrimary, marginBottom: 4 }}>
+              <div style={{ fontSize: 15, fontWeight: 500, color: S.colors.textPrimary, marginBottom: 4 }}>
                 {L('firstHereTitle')}
               </div>
               <div style={{ fontSize: 12.5, color: S.colors.textSecondary || S.colors.textMuted, maxWidth: 300, margin: '0 auto' }}>
@@ -296,7 +296,7 @@ const MessageList = memo(function MessageList({
                       );
                       return (
                         <button onClick={() => traduciQui(m)} disabled={locale === '…'}
-                          style={{marginTop:4, padding:'3px 10px', borderRadius:8, cursor:'pointer', border:`1px solid ${S.colors.cardBorder}`, background:'transparent', color:S.colors.accent1 || S.colors.textSecondary, fontSize:11, fontWeight: 600, fontFamily:'inherit'}}>
+                          style={{marginTop:4, padding:'3px 10px', borderRadius:8, cursor:'pointer', border:`1px solid ${S.colors.cardBorder}`, background:'transparent', color:S.colors.accent1 || S.colors.textSecondary, fontSize:11, fontWeight: 500, fontFamily:'inherit'}}>
                           {locale === '…' ? '…' : (L('showTranslation') !== 'showTranslation' ? L('showTranslation') : 'Traduci')}
                         </button>
                       );
@@ -389,7 +389,7 @@ const MessageList = memo(function MessageList({
                       opacity: m._status === 'in-coda' ? 0.55 : 1,
                     }}>
                     {m._status === 'fallito'
-                      ? <span style={{fontSize:12, fontWeight: 600}}>!</span>
+                      ? <span style={{fontSize:12, fontWeight: 500}}>!</span>
                       : m._status === 'in-coda'
                         ? <span style={{fontSize:12, lineHeight:1}}>·</span>
                         : (m._status === 'letto' || m._status === 'consegnato')
@@ -438,7 +438,7 @@ const MessageList = memo(function MessageList({
                 background: streamingMsg._whisperProcessing ? S.colors.accent4 : S.colors.accent3,
                 animation:'vtPulse 1.2s infinite ease-in-out'}} />
               <span style={{color: streamingMsg._whisperProcessing ? S.colors.accent4 : S.colors.accent3,
-                fontSize:9, fontWeight:600}}>
+                fontSize:9, fontWeight: 500}}>
                 {streamingMsg._whisperProcessing ? L('processingUpper') : streamingMsg._whisperListening ? L('listeningUpper') : L('liveUpper')}
               </span>
             </div>

@@ -36,7 +36,7 @@ const ControlBtn = ({ onClick, active, icon, label, color, activeColor, size = 5
     transition: 'all 0.2s ease', WebkitTapHighlightColor: 'transparent',
   }}>
     <span style={{ lineHeight: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{typeof icon === 'string' ? icon : icon}</span>
-    <span style={{ fontSize: 9, fontWeight: 600, letterSpacing: 0.3, textTransform: 'uppercase' }}>{label}</span>
+    <span style={{ fontSize: 9, fontWeight: 500, letterSpacing: 0.3, textTransform: 'uppercase' }}>{label}</span>
   </button>
 );
 
@@ -53,7 +53,7 @@ const PartnerActivityBadge = ({ L, partner, partnerSpeaking, partnerTyping }) =>
       animation: 'vtPulse 2s infinite ease-in-out',
     }}>
       {isSpeaking ? <IconMic size={14}/> : <IconKeyboard size={14}/>}
-      <span style={{ fontSize: 11, color: '#fff', fontWeight: 600 }}>
+      <span style={{ fontSize: 11, color: '#fff', fontWeight: 500 }}>
         {partner?.name || 'Partner'} {isSpeaking ? L('isSpeakingNow') : L('isTypingNow')}
       </span>
     </div>
@@ -75,7 +75,7 @@ const RecordingIndicator = ({ L, recording, isListening }) => {
         background: '#fff',
         animation: 'vtPulse 1s infinite ease-in-out',
       }} />
-      <span style={{ fontSize: 10, color: '#fff', fontWeight: 600 }}>
+      <span style={{ fontSize: 10, color: '#fff', fontWeight: 500 }}>
         {recording ? 'REC' : L('listeningUpper')}
       </span>
     </div>
@@ -240,7 +240,7 @@ const VideoCallOverlay = memo(function VideoCallOverlay({
               background: 'linear-gradient(145deg, #0f172a, #1e293b)',
             }}>
               <AvatarImg src={partner ? getSenderAvatar(partner.name) : null} size={110} />
-              <span style={{ color: '#cbd5e1', fontSize: 18, fontWeight: 600 }}>
+              <span style={{ color: '#cbd5e1', fontSize: 18, fontWeight: 500 }}>
                 {!webrtc.webrtcConnected ? L('connectingLabel') : (partner?.name || 'Partner')}
               </span>
               {!webrtc.webrtcConnected && (
@@ -309,19 +309,19 @@ const VideoCallOverlay = memo(function VideoCallOverlay({
                 display: 'flex', alignItems: 'center', gap: 7, minHeight: 44, padding: '0 14px',
                 borderRadius: 12, cursor: 'pointer', flexShrink: 0,
                 background: 'rgba(255,255,255,0.06)', border: `1px solid ${S?.colors?.overlayBorder || 'rgba(160,190,255,0.18)'}`,
-                color: '#eef2ff', fontSize: 13, fontWeight: 600, fontFamily: 'inherit',
+                color: '#eef2ff', fontSize: 13, fontWeight: 500, fontFamily: 'inherit',
               }}>
               {'←'} {L('chatWord')}
             </button>
             <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
               {partner?.name && (
-                <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13.5, fontWeight: 600, color: '#eef2ff',
+                <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13.5, fontWeight: 500, color: '#eef2ff',
                   maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {partner.lang ? <span aria-hidden="true">{getLang(partner.lang).flag}</span> : null}
                   {partner.name}
                 </span>
               )}
-              <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 10.5, fontWeight: 600,
+              <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 10.5, fontWeight: 500,
                 color: webrtc.webrtcConnected ? '#4ade80' : PALETTE.amber }}>
                 <i style={{ width: 6, height: 6, borderRadius: 3, background: 'currentColor', display: 'block',
                   animation: webrtc.webrtcConnected ? 'none' : 'vtBattPulse 1.5s infinite' }} />
@@ -412,7 +412,7 @@ const VideoCallOverlay = memo(function VideoCallOverlay({
                           ))}
                         </span>
                       )}
-                      <span style={{ fontSize: 9.5, fontWeight: 600, letterSpacing: 1.6, color: 'rgba(238,242,255,0.5)' }}>
+                      <span style={{ fontSize: 9.5, fontWeight: 500, letterSpacing: 1.6, color: 'rgba(238,242,255,0.5)' }}>
                         {String(partner?.name || partner || 'PARTNER').toUpperCase()}{partnerSpeaking ? ` \u00b7 ${String(L('isSpeakingNow')).toUpperCase()}` : ''}
                       </span>
                     </div>
@@ -423,7 +423,7 @@ const VideoCallOverlay = memo(function VideoCallOverlay({
                             "{latest.original}"
                           </div>
                         )}
-                        <div style={{ fontSize: 16.5, fontWeight: 600, color: '#eef2ff', lineHeight: 1.3, marginTop: 3, letterSpacing: -0.2 }}>
+                        <div style={{ fontSize: 16.5, fontWeight: 500, color: '#eef2ff', lineHeight: 1.3, marginTop: 3, letterSpacing: -0.2 }}>
                           {latest.text}
                         </div>
                       </>
@@ -437,7 +437,7 @@ const VideoCallOverlay = memo(function VideoCallOverlay({
                           display: 'flex', alignItems: 'center', gap: 8, minHeight: 40, padding: '0 12px',
                           borderRadius: 10, cursor: 'pointer', fontFamily: 'inherit',
                           background: `${acc1}1f`, border: `1px solid ${acc1}55`,
-                          color: '#eef2ff', fontSize: 12.5, fontWeight: 600,
+                          color: '#eef2ff', fontSize: 12.5, fontWeight: 500,
                         }}>
                         <IconGlobe size={14}/> {L('translationOffTap')}
                       </button>
@@ -474,7 +474,7 @@ const VideoCallOverlay = memo(function VideoCallOverlay({
               <button onClick={() => webrtc.toggleVideo()}
                 style={{ pointerEvents: 'auto', display: 'flex', alignItems: 'center', gap: 8,
                   padding: '9px 16px', borderRadius: 999, border: '1px solid rgba(255,196,77,0.5)',
-                  background: 'rgba(120,72,0,0.85)', color: '#ffe9c2', fontSize: 13, fontWeight: 600,
+                  background: 'rgba(120,72,0,0.85)', color: '#ffe9c2', fontSize: 13, fontWeight: 500,
                   cursor: 'pointer', fontFamily: 'inherit', backdropFilter: 'blur(10px)' }}>
                 <IconCameraOff size={16}/> {L('cameraOffTap')}
               </button>
@@ -483,7 +483,7 @@ const VideoCallOverlay = memo(function VideoCallOverlay({
               <button onClick={() => webrtc.toggleAudio()}
                 style={{ pointerEvents: 'auto', display: 'flex', alignItems: 'center', gap: 8,
                   padding: '9px 16px', borderRadius: 999, border: '1px solid rgba(239,68,68,0.55)',
-                  background: 'rgba(110,15,15,0.88)', color: '#ffd9d9', fontSize: 13, fontWeight: 600,
+                  background: 'rgba(110,15,15,0.88)', color: '#ffd9d9', fontSize: 13, fontWeight: 500,
                   cursor: 'pointer', fontFamily: 'inherit', backdropFilter: 'blur(10px)' }}>
                 <IconVolumeOff size={16}/> {L('micOffWarn')}
               </button>
@@ -515,12 +515,12 @@ const VideoCallOverlay = memo(function VideoCallOverlay({
             boxShadow: '0 14px 48px rgba(0,0,0,0.55)',
           }}>
             <div style={{ display: 'flex', alignItems: 'center', marginBottom: 10 }}>
-              <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: '#eef2ff' }}>{L('volumesWord')}</span>
+              <span style={{ flex: 1, fontSize: 13, fontWeight: 500, color: '#eef2ff' }}>{L('volumesWord')}</span>
               <button onClick={() => setVolumiAperti(false)} aria-label={L('close')}
                 style={{ background: 'none', border: 'none', color: 'rgba(238,242,255,0.6)', fontSize: 16, cursor: 'pointer', padding: 4 }}>{'\u2715'}</button>
             </div>
             <div style={{ marginBottom: 12 }}>
-              <div style={{ fontSize: 12, fontWeight: 600, color: 'rgba(238,242,255,0.75)', marginBottom: 5 }}>
+              <div style={{ fontSize: 12, fontWeight: 500, color: 'rgba(238,242,255,0.75)', marginBottom: 5 }}>
                 {L('partnerVolume')}
               </div>
               <input type="range" min="0" max="1" step="0.05" value={partnerVolume ?? 1}
@@ -534,7 +534,7 @@ const VideoCallOverlay = memo(function VideoCallOverlay({
                 madrelingua. La scelta vale DALLA FRASE DOPO: si legge a
                 ogni sintesi, non alla partenza. */}
             <div style={{ marginBottom: 12 }}>
-              <div style={{ fontSize: 12, fontWeight: 600, color: 'rgba(238,242,255,0.75)', marginBottom: 5 }}>
+              <div style={{ fontSize: 12, fontWeight: 500, color: 'rgba(238,242,255,0.75)', marginBottom: 5 }}>
                 {L('ttsVoicePick')}
               </div>
               {/* INIZIO b.535 — via la <select> di sistema: TendinaVetro,
@@ -551,7 +551,7 @@ const VideoCallOverlay = memo(function VideoCallOverlay({
               />
             </div>
             <div style={{ marginBottom: 12 }}>
-              <div style={{ fontSize: 12, fontWeight: 600, color: 'rgba(238,242,255,0.75)', marginBottom: 5 }}>
+              <div style={{ fontSize: 12, fontWeight: 500, color: 'rgba(238,242,255,0.75)', marginBottom: 5 }}>
                 {L('translatedVolume')}
               </div>
               <input type="range" min="0" max="1" step="0.05" value={volTTS}
@@ -563,7 +563,7 @@ const VideoCallOverlay = memo(function VideoCallOverlay({
                 }}
                 aria-label={L('translatedVolume')} style={{ width: '100%', accentColor: S?.colors?.accent1 || '#5b8cff', height: 4 }} />
             </div>
-            <div style={{ fontSize: 12, fontWeight: 600, color: 'rgba(238,242,255,0.75)', marginBottom: 6 }}>
+            <div style={{ fontSize: 12, fontWeight: 500, color: 'rgba(238,242,255,0.75)', marginBottom: 6 }}>
               {L('whileTranslationSpeaks')}
             </div>
             {PRESET_ATTENUAZIONE.map(pz => {
@@ -577,7 +577,7 @@ const VideoCallOverlay = memo(function VideoCallOverlay({
                     padding: '10px 12px', marginBottom: 5, borderRadius: 12, cursor: 'pointer', fontFamily: 'inherit',
                     background: on ? 'rgba(91,140,255,0.16)' : 'rgba(255,255,255,0.04)',
                     border: `1.5px solid ${on ? (S?.colors?.accent1 || '#5b8cff') : 'rgba(160,190,255,0.14)'}`,
-                    color: '#eef2ff', fontSize: 13.5, fontWeight: 600,
+                    color: '#eef2ff', fontSize: 13.5, fontWeight: 500,
                   }}>
                   <span aria-hidden="true" style={{ width: 16, textAlign: 'center', color: on ? (S?.colors?.accent1 || '#5b8cff') : 'rgba(238,242,255,0.35)' }}>{on ? '\u2713' : '\u25CB'}</span>
                   {L(pz.chiave)}
@@ -603,7 +603,7 @@ const VideoCallOverlay = memo(function VideoCallOverlay({
             boxShadow: '0 14px 48px rgba(0,0,0,0.55)',
           }}>
             <div style={{ display: 'flex', alignItems: 'center', marginBottom: 6, padding: '2px 4px' }}>
-              <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: '#eef2ff' }}>{L('otherWord')}</span>
+              <span style={{ flex: 1, fontSize: 13, fontWeight: 500, color: '#eef2ff' }}>{L('otherWord')}</span>
               <button onClick={() => setAltroAperto(false)} aria-label={L('close')}
                 style={{ background: 'none', border: 'none', color: 'rgba(238,242,255,0.6)', fontSize: 16, cursor: 'pointer', padding: 4 }}>{'\u2715'}</button>
             </div>
@@ -618,7 +618,7 @@ const VideoCallOverlay = memo(function VideoCallOverlay({
                   if (stanzaConPiuDiDue) { toast.info(L('interpreterTwoOnly')); return; }
                   setInterpreterActive(!interpreterActive);
                 } }] : []),
-              { chiave: 'cc', icona: <span style={{ fontSize: 12, fontWeight: 900, letterSpacing: 0.5 }}>CC</span>,
+              { chiave: 'cc', icona: <span style={{ fontSize: 12, fontWeight: 500, letterSpacing: 0.5 }}>CC</span>,
                 parola: L('subtitlesWord'), acceso: mostraTesto, fa: () => setMostraTesto(v => !v) },
               { chiave: 'voce', icona: volTTS > 0.01 ? <IconVolume size={17}/> : <IconVolumeOff size={17}/>,
                 parola: L('voiceWord'), acceso: volTTS > 0.01,
@@ -638,7 +638,7 @@ const VideoCallOverlay = memo(function VideoCallOverlay({
                   padding: '11px 12px', marginBottom: 4, borderRadius: 12, cursor: 'pointer', fontFamily: 'inherit',
                   background: vo.acceso ? 'rgba(91,140,255,0.16)' : 'rgba(255,255,255,0.04)',
                   border: `1.5px solid ${vo.acceso ? (S?.colors?.accent1 || '#5b8cff') : 'rgba(160,190,255,0.14)'}`,
-                  color: '#eef2ff', fontSize: 13.5, fontWeight: 600,
+                  color: '#eef2ff', fontSize: 13.5, fontWeight: 500,
                 }}>
                 <span style={{ width: 20, display: 'flex', justifyContent: 'center', color: vo.acceso ? (S?.colors?.accent2 || '#38e1ff') : 'rgba(238,242,255,0.6)' }}>{vo.icona}</span>
                 {vo.parola}
@@ -698,7 +698,7 @@ const VideoCallOverlay = memo(function VideoCallOverlay({
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               background: altroAperto ? 'rgba(91,140,255,0.25)' : 'rgba(5,7,15,0.6)',
               border: '1px solid rgba(160,190,255,0.2)', color: '#fff',
-              fontSize: 18, fontWeight: 700, letterSpacing: 1,
+              fontSize: 18, fontWeight: 500, letterSpacing: 1,
               WebkitTapHighlightColor: 'transparent' }}>
             {'\u22EF'}
           </button>
@@ -771,7 +771,7 @@ const VideoCallOverlay = memo(function VideoCallOverlay({
             background: webrtc.webrtcConnected ? '#4ade80'
               : webrtc.webrtcState === 'connecting' ? PALETTE.amber : PALETTE.red,
           }} />
-          <span style={{ fontSize: 10, color: '#fff', fontWeight: 600 }}>
+          <span style={{ fontSize: 10, color: '#fff', fontWeight: 500 }}>
             {webrtc.webrtcConnected ? 'P2P' : webrtc.webrtcState === 'connecting' ? '...' : 'OFF'}
           </span>
         </div>
@@ -803,7 +803,7 @@ const VideoCallOverlay = memo(function VideoCallOverlay({
             style={{ flex: 1, accentColor: PALETTE.blue, height: 6 }} />
           <span style={{
             fontSize: 11, color: '#94a3b8', fontFamily: 'monospace',
-            minWidth: 32, textAlign: 'right', fontWeight: 600,
+            minWidth: 32, textAlign: 'right', fontWeight: 500,
           }}>
             {Math.round(partnerVolume * 100)}%
           </span>

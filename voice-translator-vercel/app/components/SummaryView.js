@@ -27,7 +27,7 @@ export default function SummaryView({ currentConv, summaryLoading, shareSummary,
       <div style={S.scrollCenter}>
         <div style={S.topBar}>
           <button style={{...S.backBtn, width:44, height:44}} onClick={() => { setCurrentConv(null); setView('history'); }}>{'←'}</button>
-          <span style={{fontWeight:600, fontSize:17, flex:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>
+          <span style={{fontWeight: 500, fontSize:17, flex:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>
             {[membri.map(m => m.name).join(' & '), quando].filter(Boolean).join(' · ') || L('reportWord')}
           </span>
           <button onClick={() => setZoomTesto((z) => (z >= 3 ? 0 : z + 1))}
@@ -35,7 +35,7 @@ export default function SummaryView({ currentConv, summaryLoading, shareSummary,
             style={{ width:44, height:44, borderRadius:12, flexShrink:0, cursor:'pointer',
               background: zoomTesto ? `${colors.accent1}22` : 'none',
               border:`1px solid ${colors.overlayBorder}`, color:colors.textSecondary,
-              fontSize:15, fontWeight:600 }}>
+              fontSize:15, fontWeight: 500 }}>
             Aa
           </button>
         </div>
@@ -59,18 +59,18 @@ export default function SummaryView({ currentConv, summaryLoading, shareSummary,
           </div>
         ) : s ? (
           <div style={{...S.card, width:'100%', maxWidth:380}}>
-            <div style={{fontSize:18, fontWeight:600, marginBottom:8, color:colors.textPrimary,
+            <div style={{fontSize:18, fontWeight: 500, marginBottom:8, color:colors.textPrimary,
               lineHeight:1.3}}>{s.title || L('reportWord')}</div>
 
             {s.topics?.length > 0 && (
               <div style={{display:'flex', gap:5, flexWrap:'wrap', marginBottom:12}}>
                 {s.topics.map((topic,i) => (
-                  <span key={i} style={{padding:'3px 10px', borderRadius:12, fontSize:10, fontWeight:600,
+                  <span key={i} style={{padding:'3px 10px', borderRadius:12, fontSize:10, fontWeight: 500,
                     background:colors.accent3Bg, color:colors.accent3, textTransform:'uppercase',
                     letterSpacing:0.5}}>{topic}</span>
                 ))}
                 {s.sentiment && (
-                  <span style={{padding:'3px 10px', borderRadius:12, fontSize:10, fontWeight:600,
+                  <span style={{padding:'3px 10px', borderRadius:12, fontSize:10, fontWeight: 500,
                     background:colors.accent2Bg, color:colors.accent2, letterSpacing:0.5}}>
                     {s.sentiment}
                   </span>
@@ -113,7 +113,7 @@ export default function SummaryView({ currentConv, summaryLoading, shareSummary,
           </div>
         ) : (
           <div style={{...S.card, width:'100%', maxWidth:380}}>
-            <div style={{fontSize:15, fontWeight:600, marginBottom:12, color:colors.textSecondary}}>
+            <div style={{fontSize:15, fontWeight: 500, marginBottom:12, color:colors.textSecondary}}>
               {L('savedConversation')}
             </div>
             <div style={{fontSize:13, color:colors.textTertiary, marginBottom:8}}>

@@ -95,7 +95,7 @@ function Azioni({ voci }) {
           </button>
           {v.conto ? (
             <span style={{
-              fontSize: 11, fontWeight: 600, fontFamily: FONT,
+              fontSize: 11, fontWeight: 500, fontFamily: FONT,
               color: v.acceso ? '#ff5470' : 'rgba(255,255,255,0.82)',
               textShadow: '0 1px 3px rgba(0,0,0,0.6)',
             }}>{v.conto}</span>
@@ -516,7 +516,7 @@ export default function FeedNotizieMondo({ aperto, onChiudi, C, L, argomenti = [
                 style={{
                   flex: 1, minHeight: 38, padding: '0 8px', borderRadius: 9, border: 'none', cursor: 'pointer',
                   background: acceso ? C.accent : 'transparent', color: acceso ? '#fff' : 'rgba(255,255,255,0.72)',
-                  fontSize: 12, fontWeight: 600, fontFamily: FONT, whiteSpace: 'nowrap',
+                  fontSize: 12, fontWeight: 500, fontFamily: FONT, whiteSpace: 'nowrap',
                 }}>
                 {L(f.labelKey)}
               </button>
@@ -560,7 +560,7 @@ export default function FeedNotizieMondo({ aperto, onChiudi, C, L, argomenti = [
             alignItems: 'center', justifyContent: 'center',
             padding: 24, textAlign: 'center', gap: 10,
           }}>
-            <div style={{ fontSize: 15, fontWeight: 600, color: '#fff', fontFamily: FONT }}>
+            <div style={{ fontSize: 15, fontWeight: 500, color: '#fff', fontFamily: FONT }}>
               {L('growingWord')}
             </div>
             <div style={{ fontSize: 12.5, color: 'rgba(255,255,255,0.6)', fontFamily: FONT }}>
@@ -649,7 +649,7 @@ export default function FeedNotizieMondo({ aperto, onChiudi, C, L, argomenti = [
                   background: 'linear-gradient(180deg, transparent, rgba(5,7,15,0.92) 55%)',
                   pointerEvents: 'none',
                 }}>
-                  <div style={{ fontSize: 15, fontWeight: 600, color: '#fff', lineHeight: 1.3 }}>{el.dati.titolo}</div>
+                  <div style={{ fontSize: 15, fontWeight: 500, color: '#fff', lineHeight: 1.3 }}>{el.dati.titolo}</div>
                   <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.65)', marginTop: 4 }}>{el.dati.canale}</div>
                 </div>
               </>
@@ -728,7 +728,7 @@ export default function FeedNotizieMondo({ aperto, onChiudi, C, L, argomenti = [
                 ]} />
 
                 <div style={{ position: 'relative', zIndex: 1, padding: '16px 20px calc(28px + env(safe-area-inset-bottom))' }}>
-                  <h3 style={{ margin: 0, fontSize: 17, fontWeight: 600, color: '#fff', lineHeight: 1.3 }}>{el.dati.titolo}</h3>
+                  <h3 style={{ margin: 0, fontSize: 17, fontWeight: 500, color: '#fff', lineHeight: 1.3 }}>{el.dati.titolo}</h3>
                   {el.dati.sintesi && (
                     <p style={{
                       margin: '8px 0 0', fontSize: 13, lineHeight: 1.5, color: 'rgba(255,255,255,0.82)',

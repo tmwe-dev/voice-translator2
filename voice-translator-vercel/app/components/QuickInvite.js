@@ -131,7 +131,7 @@ function QuickInvite({ handleCreateRoom, roomId, setViewAfterCreate }) {
               pagina. Il gradiente sul titolo era un colore scritto a mano
               (regola 06 del template) e rendeva questa testata diversa da
               tutte le altre senza dire niente in cambio. */}
-          <div style={{ fontSize: 17, fontWeight: 600, color: glass.text.primary }}>
+          <div style={{ fontSize: 17, fontWeight: 500, color: glass.text.primary }}>
             {L('inviteShort')}
           </div>
         </div>
@@ -163,7 +163,7 @@ function QuickInvite({ handleCreateRoom, roomId, setViewAfterCreate }) {
               style={{
                 padding: '14px 32px', minHeight: 44, borderRadius: 14, cursor: 'pointer', border: 'none',
                 background: `linear-gradient(135deg, ${accento1} 0%, ${accento2} 100%)`,
-                color: '#000', fontFamily: FONT, fontSize: 15, fontWeight: 600,
+                color: '#000', fontFamily: FONT, fontSize: 15, fontWeight: 500,
               }}>
               {L('retryWord')}
             </button>
@@ -211,7 +211,7 @@ function QuickInvite({ handleCreateRoom, roomId, setViewAfterCreate }) {
                 <button key={nome} onClick={() => { vibrate(); via(); }}
                   style={{ flex: 1, minHeight: 44, borderRadius: 14, cursor: 'pointer',
                     ...glass.btn, color: glass.text.primary, fontFamily: FONT,
-                    fontSize: 13.5, fontWeight: 600 }}>
+                    fontSize: 13.5, fontWeight: 500 }}>
                   {nome}
                 </button>
               ))}
@@ -222,7 +222,7 @@ function QuickInvite({ handleCreateRoom, roomId, setViewAfterCreate }) {
                 le lingue sono quarantaquattro e stanno in una tendina, che
                 e la forma del kit per una scelta lunga. */}
             <div style={{ width: '100%', marginBottom: 16 }}>
-              <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: 1, textTransform: 'uppercase',
+              <div style={{ fontSize: 11, fontWeight: 500, letterSpacing: 1, textTransform: 'uppercase',
                 color: glass.text.muted, marginBottom: 6, textAlign: 'center' }}>
                 {L('inviteReadLang')}
               </div>
@@ -260,7 +260,7 @@ function QuickInvite({ handleCreateRoom, roomId, setViewAfterCreate }) {
             {/* b.489 — il codice in testo pieno, cifre tabulari: come nella
                 sala d'attesa (tavola 14). Il gradiente era decorazione. */}
             <div style={{
-              fontSize: 26, fontWeight: 600, letterSpacing: 5, textAlign: 'center',
+              fontSize: 26, fontWeight: 500, letterSpacing: 5, textAlign: 'center',
               color: glass.text.primary, fontVariantNumeric: 'tabular-nums', marginBottom: 16,
             }}>
               {createdRoomId}
@@ -274,7 +274,7 @@ function QuickInvite({ handleCreateRoom, roomId, setViewAfterCreate }) {
                   background: copied ? `linear-gradient(135deg, ${accento1}, ${accento2})` : glass.btn.background,
                   border: copied ? 'none' : glass.btn.border,
                   color: copied ? '#000' : glass.text.primary,
-                  fontFamily: FONT, fontSize: 14, fontWeight: 600,
+                  fontFamily: FONT, fontSize: 14, fontWeight: 500,
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
                 }}>
                 {copied ? `✓ ${L('copiedShort')}` : <><Icon name="link" size={14} color="currentColor" /> {L('copyLink')}</>}
@@ -297,7 +297,7 @@ function QuickInvite({ handleCreateRoom, roomId, setViewAfterCreate }) {
               style={{
                 width: '100%', padding: '16px 0', minHeight: 44, borderRadius: 16, cursor: 'pointer', border: 'none',
                 background: `linear-gradient(135deg, ${accento1} 0%, ${accento2} 100%)`,
-                color: '#000', fontFamily: FONT, fontSize: 16, fontWeight: 600,
+                color: '#000', fontFamily: FONT, fontSize: 16, fontWeight: 500,
                 boxShadow: `0 8px 32px ${accento1}40`,
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
               }}>

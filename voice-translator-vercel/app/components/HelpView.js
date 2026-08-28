@@ -87,7 +87,7 @@ function HelpView() {
         <div style={{ flex: 1 }}>
           {/* b.482 — l'emoji del punto interrogativo se ne va: il titolo
               basta da solo, e sotto c'e gia il sottotitolo che spiega. */}
-          <div style={{ fontSize: 17, fontWeight: 600, color: C.textPrimary, letterSpacing: -0.5 }}>
+          <div style={{ fontSize: 17, fontWeight: 500, color: C.textPrimary, letterSpacing: -0.5 }}>
             {L('helpTitle')}
           </div>
           <div style={{ fontSize: 11, color: C.textMuted, marginTop: 1 }}>{L('helpSubtitle')}</div>
@@ -101,7 +101,7 @@ function HelpView() {
         {/* Feature cards grid */}
         <div style={{ marginBottom: 20 }}>
           <div style={{
-            fontSize: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 1.5,
+            fontSize: 10, fontWeight: 500, textTransform: 'uppercase', letterSpacing: 1.5,
             color: C.textMuted, marginBottom: 10, padding: '0 2px',
           }}>
             {L('helpFeaturesTitle')}
@@ -115,7 +115,7 @@ function HelpView() {
                 animation: `vtSlideUp 0.3s ease-out ${i * 0.05}s both`,
               }}>
                 {f.icon && <div style={{ fontSize: 24, marginBottom: 6 }}>{f.icon}</div>}
-                <div style={{ fontSize: 12, fontWeight: 600, color: C.textPrimary, marginBottom: 2 }}>{f.title || L(f.titleKey)}</div>
+                <div style={{ fontSize: 12, fontWeight: 500, color: C.textPrimary, marginBottom: 2 }}>{f.title || L(f.titleKey)}</div>
                 <div style={{ fontSize: 10, color: C.textMuted, lineHeight: 1.4 }}>{L(f.descKey)}</div>
               </div>
             ))}
@@ -125,7 +125,7 @@ function HelpView() {
         {/* FAQ Accordion */}
         <div style={{ marginBottom: 20 }}>
           <div style={{
-            fontSize: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 1.5,
+            fontSize: 10, fontWeight: 500, textTransform: 'uppercase', letterSpacing: 1.5,
             color: C.textMuted, marginBottom: 10, padding: '0 2px',
           }}>
             {L('landingFaqTitle')}
@@ -148,7 +148,7 @@ function HelpView() {
                     WebkitTapHighlightColor: 'transparent',
                   }}>
                     {faq.icon && <span style={{ fontSize: 20, flexShrink: 0 }}>{faq.icon}</span>}
-                    <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: C.textPrimary, lineHeight: 1.3 }}>
+                    <span style={{ flex: 1, fontSize: 13, fontWeight: 500, color: C.textPrimary, lineHeight: 1.3 }}>
                       {L(faq.qKey)}
                     </span>
                     <span style={{

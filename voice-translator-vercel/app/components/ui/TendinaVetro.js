@@ -156,7 +156,7 @@ export default function TendinaVetro({
                   }}>
                   {o.icona != null && <span aria-hidden="true" style={{ fontSize: 16, lineHeight: 1, flexShrink: 0 }}>{o.icona}</span>}
                   <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{o.label}</span>
-                  {attiva && <span aria-hidden="true" style={{ color: acc, fontWeight: 700, flexShrink: 0 }}>{'✓'}</span>}
+                  {attiva && <span aria-hidden="true" style={{ color: acc, fontWeight: 500, flexShrink: 0 }}>{'✓'}</span>}
                 </div>
               );
             })}

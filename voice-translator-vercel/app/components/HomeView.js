@@ -427,7 +427,7 @@ const HomeView = memo(function HomeView({ selectedMode, setSelectedMode,
         {activeRooms.length > 0 && (
           <div style={{ marginBottom: 20, width: '100%', boxSizing: 'border-box' }}>
             <div style={{
-              fontSize: 10, fontWeight: 600, color: C.textMuted,
+              fontSize: 10, fontWeight: 500, color: C.textMuted,
               letterSpacing: 1.5, textTransform: 'uppercase', fontFamily: FONT, marginBottom: 10,
             }}>
               {L('activeChats')}
@@ -453,7 +453,7 @@ const HomeView = memo(function HomeView({ selectedMode, setSelectedMode,
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{
-                      fontSize: 13, fontWeight: 600, color: C.textPrimary,
+                      fontSize: 13, fontWeight: 500, color: C.textPrimary,
                       overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                     }}>
                       {membriDi(room).map(m => m.name).join(', ') || room.roomId}

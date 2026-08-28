@@ -92,7 +92,7 @@ export default function CompagnoDiSventura({
             overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
           }}>{battuta}</span>
         ) : (
-          <span style={{ display: 'block', fontSize: 13, fontWeight: 600, color: testoP }}>
+          <span style={{ display: 'block', fontSize: 13, fontWeight: 500, color: testoP }}>
             {compagno.nome}
           </span>
         )}

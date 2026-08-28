@@ -344,7 +344,7 @@ function TaxiTalk({ userToken }) {
   const inputStyle = { flex: 1, background: C.input, border: `1px solid ${C.border}`, borderRadius: 13, padding: '12px 14px', color: C.text, fontSize: 14, fontFamily: FONT, outline: 'none', minWidth: 0 };
   // b.482 — QUARANTAQUATTRO di altezza utile: sotto questa misura, su un
   // telefono, il dito sbaglia bersaglio. L'aspetto del tasto non cambia.
-  const miniBtn = (on) => ({ minHeight: 44, padding: '0 16px', borderRadius: 13, border: 'none', cursor: on ? 'pointer' : 'default', background: on ? `linear-gradient(135deg, ${C.accent}, ${C.purple})` : C.card2, color: on ? C.inchiostro : C.muted, fontWeight: 600, fontFamily: FONT, fontSize: 13, opacity: on ? 1 : 0.6 });
+  const miniBtn = (on) => ({ minHeight: 44, padding: '0 16px', borderRadius: 13, border: 'none', cursor: on ? 'pointer' : 'default', background: on ? `linear-gradient(135deg, ${C.accent}, ${C.purple})` : C.card2, color: on ? C.inchiostro : C.muted, fontWeight: 500, fontFamily: FONT, fontSize: 13, opacity: on ? 1 : 0.6 });
 
   return (
     // b.482 — margini laterali a 20, la misura comune di tutte le schermate.
@@ -358,13 +358,13 @@ function TaxiTalk({ userToken }) {
           style={{ width: 44, height: 44, borderRadius: 12, background: C.card, border: `1px solid ${C.border}`, color: C.muted, cursor: 'pointer', fontSize: 18, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           {'‹'}
         </button>
-        <div style={{ fontSize: 18, fontWeight: 600, letterSpacing: '-0.3px' }}>Taxi<span style={{ color: C.accent }}>Talk</span></div>
+        <div style={{ fontSize: 18, fontWeight: 500, letterSpacing: '-0.3px' }}>Taxi<span style={{ color: C.accent }}>Talk</span></div>
         {/* b.482 — bersaglio da 44 anche per la targhetta della lingua: il
             disegno resta identico, sale solo l'altezza utile. */}
         <button onClick={() => { vibrate(8); setPickerLingua(true); }}
           style={{ marginLeft: 'auto', minHeight: 44, display: 'flex', alignItems: 'center', gap: 7, background: C.card, border: `1px solid ${C.border}`, padding: '7px 12px', borderRadius: 12, cursor: 'pointer', color: C.text }}>
           <span style={{ fontSize: 16 }}>{driverInfo?.flag || ''}</span>
-          <span style={{ fontSize: 12, fontWeight: 600 }}>{driverInfo?.name || driverLang.toUpperCase()}</span>
+          <span style={{ fontSize: 12, fontWeight: 500 }}>{driverInfo?.name || driverLang.toUpperCase()}</span>
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={C.faint} strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9l6 6 6-6" /></svg>
         </button>
       </div>
@@ -373,8 +373,8 @@ function TaxiTalk({ userToken }) {
       {/* 1 · DOVE VAI */}
       <div style={cardStyle}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 12 }}>
-          <span style={{ width: 22, height: 22, borderRadius: 7, background: `linear-gradient(135deg, ${C.accent}, ${C.purple})`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 600, color: C.inchiostro }}>1</span>
-          <span style={{ fontSize: 14, fontWeight: 600 }}>{L('taxiWhereTo')}</span>
+          <span style={{ width: 22, height: 22, borderRadius: 7, background: `linear-gradient(135deg, ${C.accent}, ${C.purple})`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 500, color: C.inchiostro }}>1</span>
+          <span style={{ fontSize: 14, fontWeight: 500 }}>{L('taxiWhereTo')}</span>
           <span style={{ fontSize: 11, color: C.muted, marginLeft: 'auto' }}>{L('taxiShowOrScan')}</span>
         </div>
 
@@ -417,7 +417,7 @@ function TaxiTalk({ userToken }) {
               <div style={{ fontSize: 10, color: C.muted, textAlign: 'center', lineHeight: 1.35 }}>{L('taxiScanOpensMap')}</div>
               {/* b.482 — "condividi il link" era un testo nudo senza altezza:
                   bersaglio da 44 come tutti gli altri tasti. */}
-              <button onClick={condividiMappa} style={{ minHeight: 44, fontSize: 11, fontWeight: 600, color: C.accent, background: 'none', border: 'none', cursor: 'pointer', fontFamily: FONT }}>{L('taxiShareLink')}</button>
+              <button onClick={condividiMappa} style={{ minHeight: 44, fontSize: 11, fontWeight: 500, color: C.accent, background: 'none', border: 'none', cursor: 'pointer', fontFamily: FONT }}>{L('taxiShareLink')}</button>
             </div>
           </div>
         )}
@@ -426,8 +426,8 @@ function TaxiTalk({ userToken }) {
       {/* 2 · PARLA / SCRIVI */}
       <div style={cardStyle}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 12 }}>
-          <span style={{ width: 22, height: 22, borderRadius: 7, background: `linear-gradient(135deg, ${C.accent}, ${C.purple})`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 600, color: C.inchiostro }}>2</span>
-          <span style={{ fontSize: 14, fontWeight: 600 }}>{L('taxiSpeakOrType')}</span>
+          <span style={{ width: 22, height: 22, borderRadius: 7, background: `linear-gradient(135deg, ${C.accent}, ${C.purple})`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 500, color: C.inchiostro }}>2</span>
+          <span style={{ fontSize: 14, fontWeight: 500 }}>{L('taxiSpeakOrType')}</span>
           <span style={{ fontSize: 11, color: C.muted, marginLeft: 'auto' }}>{driverInfo?.name}</span>
         </div>
 
@@ -444,8 +444,8 @@ function TaxiTalk({ userToken }) {
 
         {tradottoValido && (
           <div style={{ marginTop: 14, background: `linear-gradient(145deg, ${C.accent}14, ${C.purple}0e)`, border: `1px solid ${C.accent}38`, borderRadius: 16, padding: 16 }}>
-            <div style={{ fontSize: 10, fontWeight: 600, color: C.accent, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>{driverInfo?.flag} {driverInfo?.name}</div>
-            <div style={{ fontSize: 21, fontWeight: 600, lineHeight: 1.32 }}>{tradottoValido}</div>
+            <div style={{ fontSize: 10, fontWeight: 500, color: C.accent, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>{driverInfo?.flag} {driverInfo?.name}</div>
+            <div style={{ fontSize: 21, fontWeight: 500, lineHeight: 1.32 }}>{tradottoValido}</div>
             {testo && <div style={{ fontSize: 12, color: C.muted, fontStyle: 'italic', marginTop: 8 }}>{testo}</div>}
           </div>
         )}
@@ -454,12 +454,12 @@ function TaxiTalk({ userToken }) {
             utile: erano quarantadue, appena sotto la soglia. */}
         <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
           <button onClick={() => { if (tradottoValido) { vibrate(10); setFlip(true); } }} disabled={!tradottoValido}
-            style={{ flex: 1, minHeight: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, padding: 12, borderRadius: 14, border: 'none', cursor: tradottoValido ? 'pointer' : 'default', background: tradottoValido ? `linear-gradient(135deg, ${C.accent}, ${C.purple})` : C.card2, color: tradottoValido ? C.inchiostro : C.muted, fontWeight: 600, fontSize: 13, fontFamily: FONT, opacity: tradottoValido ? 1 : 0.6 }}>
+            style={{ flex: 1, minHeight: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, padding: 12, borderRadius: 14, border: 'none', cursor: tradottoValido ? 'pointer' : 'default', background: tradottoValido ? `linear-gradient(135deg, ${C.accent}, ${C.purple})` : C.card2, color: tradottoValido ? C.inchiostro : C.muted, fontWeight: 500, fontSize: 13, fontFamily: FONT, opacity: tradottoValido ? 1 : 0.6 }}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 2l4 4-4 4" /><path d="M3 11v-1a4 4 0 0 1 4-4h14" /><path d="M7 22l-4-4 4-4" /><path d="M21 13v1a4 4 0 0 1-4 4H3" /></svg>
             {L('taxiShowFlipped')}
           </button>
           <button onClick={() => tradottoValido && ascolta(tradottoValido)} disabled={!tradottoValido || suonando}
-            style={{ flex: 1, minHeight: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, padding: 12, borderRadius: 14, border: `1px solid ${C.border}`, cursor: tradottoValido ? 'pointer' : 'default', background: C.card2, color: C.text, fontWeight: 600, fontSize: 13, fontFamily: FONT, opacity: tradottoValido ? 1 : 0.6 }}>
+            style={{ flex: 1, minHeight: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, padding: 12, borderRadius: 14, border: `1px solid ${C.border}`, cursor: tradottoValido ? 'pointer' : 'default', background: C.card2, color: C.text, fontWeight: 500, fontSize: 13, fontFamily: FONT, opacity: tradottoValido ? 1 : 0.6 }}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" /><path d="M15.5 8.5a5 5 0 0 1 0 7" /></svg>
             {suonando ? '…' : L('taxiListen')}
           </button>
@@ -489,7 +489,7 @@ function TaxiTalk({ userToken }) {
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" /></svg>
         </span>
         <span style={{ flex: 1 }}>
-          <b style={{ fontSize: 13, fontWeight: 600, display: 'block', color: C.text }}>{L('taxiChatOptional')}</b>
+          <b style={{ fontSize: 13, fontWeight: 500, display: 'block', color: C.text }}>{L('taxiChatOptional')}</b>
           <span style={{ fontSize: 11, color: C.muted }}>{L('taxiChatHint')}</span>
         </span>
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={C.faint} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6" /></svg>
@@ -502,7 +502,7 @@ function TaxiTalk({ userToken }) {
           {/* b.482 — rientro laterale a 20 anche nel foglio delle lingue. */}
           <div style={{ width: '100%', background: C.bg, borderRadius: '20px 20px 0 0', maxHeight: '80dvh', overflowY: 'auto', padding: '16px 20px 24px' }}>
             <div style={{ display: 'flex', alignItems: 'center', marginBottom: 12 }}>
-              <div style={{ fontSize: 16, fontWeight: 600 }}>{L('taxiDriverLangHint')}</div>
+              <div style={{ fontSize: 16, fontWeight: 500 }}>{L('taxiDriverLangHint')}</div>
               {/* b.482 — la crocetta per chiudere sale a 44×44. */}
               <button onClick={() => setPickerLingua(false)} aria-label={L('close')} style={{ marginLeft: 'auto', width: 44, height: 44, borderRadius: 10, background: C.card, border: `1px solid ${C.border}`, color: C.muted, cursor: 'pointer' }}>✕</button>
             </div>
@@ -513,7 +513,7 @@ function TaxiTalk({ userToken }) {
                   <button key={code} onClick={() => { vibrate(10); setDriverLang(code); setPickerLingua(false); }}
                     style={{ padding: '12px 8px', borderRadius: 14, cursor: 'pointer', background: on ? `${C.accent}20` : C.card, border: `1px solid ${on ? C.accent : C.border}`, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, fontFamily: FONT }}>
                     <span style={{ fontSize: 24 }}>{li?.flag || ''}</span>
-                    <span style={{ fontSize: 11, fontWeight: 600, color: on ? C.accent : C.text }}>{li?.name || code}</span>
+                    <span style={{ fontSize: 11, fontWeight: 500, color: on ? C.accent : C.text }}>{li?.name || code}</span>
                   </button>
                 );
               })}
@@ -527,13 +527,13 @@ function TaxiTalk({ userToken }) {
         <div style={{ position: 'fixed', inset: 0, zIndex: 100, background: col.bgGradient || C.bg, display: 'flex', flexDirection: 'column', animation: 'ttUp 0.28s ease-out' }}>
           {/* b.482 — testata del ribaltamento: rientro 20 e crocetta da 44. */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 20px', borderBottom: `1px solid ${C.border}` }}>
-            <div style={{ fontSize: 12, color: C.muted, fontWeight: 600 }}>{L('taxiTurnedToDriver')}</div>
+            <div style={{ fontSize: 12, color: C.muted, fontWeight: 500 }}>{L('taxiTurnedToDriver')}</div>
             <button onClick={() => setFlip(false)} aria-label={L('close')} style={{ width: 44, height: 44, borderRadius: '50%', border: `1px solid ${C.border}`, background: 'transparent', color: C.muted, cursor: 'pointer', fontSize: 16 }}>✕</button>
           </div>
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '34px 26px', transform: 'rotate(180deg)' }}>
             <div style={{ fontSize: 34, marginBottom: 6 }}>{driverInfo?.flag}</div>
             <div style={{ fontSize: 13, color: C.muted, marginBottom: 22 }}>{driverInfo?.name}</div>
-            <div style={{ fontSize: 30, fontWeight: 600, textAlign: 'center', lineHeight: 1.35, color: C.text, maxWidth: '90%', wordBreak: 'break-word' }}>{tradottoValido}</div>
+            <div style={{ fontSize: 30, fontWeight: 500, textAlign: 'center', lineHeight: 1.35, color: C.text, maxWidth: '90%', wordBreak: 'break-word' }}>{tradottoValido}</div>
             {testo && <div style={{ fontSize: 14, color: C.muted, fontStyle: 'italic', marginTop: 20, textAlign: 'center' }}>{testo}</div>}
           </div>
           {/* b.482 — rientro laterale a 20 anche nella fascia dell'ascolto. */}

@@ -50,7 +50,7 @@ function VoiceCallOverlay({
       }}>
         <Icon name="phone" size={16} color="rgba(255,255,255,0.5)" />
         <span>{L('voiceCall')}</span>
-        <span style={{ marginLeft: 8, color: PALETTE.teal, fontWeight: 600 }}>
+        <span style={{ marginLeft: 8, color: PALETTE.teal, fontWeight: 500 }}>
           {formatTime(duration)}
         </span>
       </div>
@@ -87,7 +87,7 @@ function VoiceCallOverlay({
               <img src={avatarUrl} alt={partnerName}
                 style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
             ) : (
-              <span style={{ fontSize: 48, color: '#fff', fontWeight: 600 }}>
+              <span style={{ fontSize: 48, color: '#fff', fontWeight: 500 }}>
                 {partnerName.charAt(0).toUpperCase()}
               </span>
             )}
@@ -95,7 +95,7 @@ function VoiceCallOverlay({
         </div>
 
         <div style={{ textAlign: 'center' }}>
-          <div style={{ color: '#fff', fontSize: 22, fontWeight: 600 }}>{partnerName}</div>
+          <div style={{ color: '#fff', fontSize: 22, fontWeight: 500 }}>{partnerName}</div>
           <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13, marginTop: 4 }}>
             {partnerSpeaking ? 'Sta parlando...' : partnerTyping ? 'Sta scrivendo...' : 'In chiamata'}
           </div>

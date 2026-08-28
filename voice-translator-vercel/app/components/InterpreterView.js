@@ -132,7 +132,7 @@ function InterpreterView({
           background: 'rgba(38,217,176,0.3)',
           backdropFilter: 'blur(8px)',
           border: '1px solid rgba(38,217,176,0.4)',
-          color: '#B0A8FF', fontSize: 11, fontWeight: 600,
+          color: '#B0A8FF', fontSize: 11, fontWeight: 500,
           display: 'flex', alignItems: 'center', gap: 6,
         }}>
           <span style={{

@@ -121,7 +121,7 @@ function ChatActionsPanel({
       >
         {/* Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-          <h3 style={{ color: s.textPrimary, fontSize: 18, fontWeight: 600, margin: 0 }}>
+          <h3 style={{ color: s.textPrimary, fontSize: 18, fontWeight: 500, margin: 0 }}>
             {result ? actionName : t('chatActionsTitle')}
           </h3>
           <button

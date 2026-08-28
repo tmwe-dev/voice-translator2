@@ -243,7 +243,7 @@ export default function LettoreArticolo({ url, titolo, fonte, dati, prefs, userT
 
         <span style={{ flex: 1, minWidth: 0 }}>
           <span style={{
-            display: 'block', fontSize: 13, fontWeight: 600, color: C.textPrimary, fontFamily: FONT,
+            display: 'block', fontSize: 13, fontWeight: 500, color: C.textPrimary, fontFamily: FONT,
             overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
           }}>{titolo || dominio}</span>
           <span style={{ display: 'block', fontSize: 10.5, color: C.textMuted, fontFamily: FONT }}>
@@ -307,7 +307,7 @@ export default function LettoreArticolo({ url, titolo, fonte, dati, prefs, userT
                   flex: 1, minHeight: 36, borderRadius: 9, border: 'none', cursor: 'pointer',
                   background: acceso ? C.accent : 'transparent',
                   color: acceso ? '#fff' : C.textSecondary,
-                  fontSize: 12, fontWeight: 600, fontFamily: FONT,
+                  fontSize: 12, fontWeight: 500, fontFamily: FONT,
                   WebkitTapHighlightColor: 'transparent',
                 }}>
                 {f.testo}
@@ -325,7 +325,7 @@ export default function LettoreArticolo({ url, titolo, fonte, dati, prefs, userT
             padding: '14px 16px', borderRadius: 14,
             background: 'rgba(255,255,255,0.04)', border: bordo,
           }}>
-            <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: 1, color: C.accent, marginBottom: 8 }}>
+            <div style={{ fontSize: 10, fontWeight: 500, letterSpacing: 1, color: C.accent, marginBottom: 8 }}>
               {L('schedaSintesi')}
             </div>
             {sintesiAI && (
@@ -340,7 +340,7 @@ export default function LettoreArticolo({ url, titolo, fonte, dati, prefs, userT
                   display: 'flex', alignItems: 'center', gap: 6, minHeight: 40, padding: '0 14px',
                   borderRadius: 11, cursor: 'pointer', border: 'none',
                   background: `linear-gradient(135deg, ${C.accent}, ${C.purple || C.accent})`,
-                  color: '#fff', fontSize: 12.5, fontWeight: 600, fontFamily: FONT,
+                  color: '#fff', fontSize: 12.5, fontWeight: 500, fontFamily: FONT,
                 }}>
                 <Icon name="wand" size={13} color="#fff" />
                 {L('schedaGenera')}
@@ -404,7 +404,7 @@ export default function LettoreArticolo({ url, titolo, fonte, dati, prefs, userT
                 display: 'flex', alignItems: 'center', gap: 8, textDecoration: 'none',
                 padding: '11px 18px', borderRadius: 13, fontFamily: FONT,
                 background: `${C.accent}1E`, border: `1px solid ${C.accent}55`,
-                color: C.accent, fontSize: 13, fontWeight: 600,
+                color: C.accent, fontSize: 13, fontWeight: 500,
               }}>
               <Icon name="link" size={14} color={C.accent} />
               {L('openOutside')} · {dominio}

@@ -269,7 +269,7 @@ function CarouselLingue({ selezionata, onScegli, onLinguaMenu, escludi, C, L }) 
         alignItems: 'center', justifyContent: 'center',
       }}>
         {alCentro.code === selezionata ? (
-          <span style={{ fontFamily: FONT, fontSize: 13, fontWeight: 600, color: C.accent,
+          <span style={{ fontFamily: FONT, fontSize: 13, fontWeight: 500, color: C.accent,
             display: 'flex', alignItems: 'center', gap: 6 }}>
             {alCentro.name}
             <span style={{ color: C.accent, fontSize: 12 }}>✓</span>
@@ -278,7 +278,7 @@ function CarouselLingue({ selezionata, onScegli, onLinguaMenu, escludi, C, L }) 
           <button onClick={() => scegli(alCentro)}
             style={{ padding: '5px 16px', borderRadius: 999, cursor: 'pointer',
               border: `1px solid ${C.accent}55`, background: 'transparent', color: C.accent,
-              fontFamily: FONT, fontSize: 12.5, fontWeight: 600, lineHeight: 1.4,
+              fontFamily: FONT, fontSize: 12.5, fontWeight: 500, lineHeight: 1.4,
               whiteSpace: 'nowrap', maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis',
               WebkitTapHighlightColor: 'transparent' }}>
             {L('useWord')} {alCentro.name}

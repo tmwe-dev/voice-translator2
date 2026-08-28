@@ -113,7 +113,7 @@ export default function StanzeView({ onJoinRoom, onCreateRoom }) {
   const Titolo = ({ testo, conto }) => (
     <div style={{
       display: 'flex', alignItems: 'center', gap: 8, margin: '18px 0 8px',
-      fontSize: 11, fontWeight: 600, letterSpacing: 1.1, textTransform: 'uppercase',
+      fontSize: 11, fontWeight: 500, letterSpacing: 1.1, textTransform: 'uppercase',
       color: 'rgba(255,255,255,0.72)', fontFamily: FONT,
     }}>
       {testo}
@@ -136,7 +136,7 @@ export default function StanzeView({ onJoinRoom, onCreateRoom }) {
           display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12,
           paddingRight: riservaADestra(1),
         }}>
-          <div style={{ flex: 1, minWidth: 0, fontSize: 20, fontWeight: 600, color: C.textPrimary, fontFamily: FONT }}>
+          <div style={{ flex: 1, minWidth: 0, fontSize: 20, fontWeight: 500, color: C.textPrimary, fontFamily: FONT }}>
             {L('navChat')}
           </div>
           {/* l'archivio non sparisce: cambia posto. Era LUI il padrone del
@@ -191,7 +191,7 @@ export default function StanzeView({ onJoinRoom, onCreateRoom }) {
                   style={{ flex: 1, minWidth: 0, textAlign: 'left', background: 'none', border: 'none',
                     padding: 0, cursor: v.viva ? 'pointer' : 'default', fontFamily: FONT,
                     opacity: v.viva ? 1 : 0.55, WebkitTapHighlightColor: 'transparent' }}>
-                  <div style={{ fontSize: 14, fontWeight: 600, color: C.textPrimary,
+                  <div style={{ fontSize: 14, fontWeight: 500, color: C.textPrimary,
                     overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {v.viva?.nome || v.nome || v.roomId}
                   </div>
@@ -228,7 +228,7 @@ export default function StanzeView({ onJoinRoom, onCreateRoom }) {
 
         {!errore && stanze && filtrate.length === 0 && (
           <div style={{ textAlign: 'center', padding: '36px 20px' }}>
-            <div style={{ fontSize: 14, fontWeight: 600, color: C.textPrimary, fontFamily: FONT, marginBottom: 6 }}>
+            <div style={{ fontSize: 14, fontWeight: 500, color: C.textPrimary, fontFamily: FONT, marginBottom: 6 }}>
               {cerca.trim() ? L('noRoomsFilters') : L('noRoomsYet')}
             </div>
             <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.62)', fontFamily: FONT,
@@ -238,7 +238,7 @@ export default function StanzeView({ onJoinRoom, onCreateRoom }) {
             <button onClick={() => { vibrate(10); onCreateRoom?.(); }}
               style={{ padding: '12px 22px', minHeight: 44, borderRadius: 14, border: 'none', cursor: 'pointer',
                 background: `linear-gradient(135deg, ${C.accent}, ${C.purple})`, color: '#fff',
-                fontSize: 13.5, fontWeight: 600, fontFamily: FONT }}>
+                fontSize: 13.5, fontWeight: 500, fontFamily: FONT }}>
               {L('createBarTalk')}
             </button>
           </div>
@@ -252,12 +252,32 @@ export default function StanzeView({ onJoinRoom, onCreateRoom }) {
           const bandiera = getLang(s.hostLang || s.lang)?.flag || '';
           return (
             <button key={s.roomId} onClick={() => entra(s.roomId)}
-              style={{ display: 'block', width: '100%', textAlign: 'left', marginBottom: 8,
+              style={{ display: 'flex', gap: 12, alignItems: 'flex-start', width: '100%', textAlign: 'left', marginBottom: 8,
                 padding: 14, borderRadius: 14, background: C.card, border: bordo,
                 cursor: 'pointer', fontFamily: FONT, WebkitTapHighlightColor: 'transparent' }}>
+              {/* b.549, collaudo di Luca: «non vedo immagini nelle chat
+                  elenco». Una riga di solo testo non si distingue dalla
+                  successiva: la faccia di chi ospita (o l'iniziale, se
+                  non ha avatar) da un appiglio all'occhio e dice a colpo
+                  d'occhio che le stanze sono diverse fra loro. */}
+              <span style={{
+                width: 46, height: 46, borderRadius: 12, flexShrink: 0, overflow: 'hidden',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: `linear-gradient(140deg, ${C.accent}22, ${C.purple}1a)`,
+                border: `1px solid ${C.cardBorder}`,
+              }}>
+                {s.avatar
+                  // eslint-disable-next-line @next/next/no-img-element -- avatar esterno, dominio libero
+                  ? <img src={s.avatar} alt="" width={46} height={46}
+                      style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                  : <span aria-hidden="true" style={{ fontSize: 19, color: C.accent }}>
+                      {String(s.host || s.nome || '·').slice(0, 1).toUpperCase()}
+                    </span>}
+              </span>
+              <span style={{ flex: 1, minWidth: 0 }}>
               {/* 1. DI COSA SI PARLA — il motivo per cui si entra */}
               <div style={{
-                fontSize: 15, fontWeight: 600, lineHeight: 1.35, color: C.textPrimary,
+                fontSize: 15, fontWeight: 500, lineHeight: 1.35, color: C.textPrimary,
                 display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
               }}>
                 {argomento || s.nome || s.roomId}
@@ -295,6 +315,7 @@ export default function StanzeView({ onJoinRoom, onCreateRoom }) {
                   </span>
                 )}
               </div>
+              </span>
             </button>
           );
         })}

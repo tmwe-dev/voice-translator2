@@ -153,23 +153,23 @@ export default function BatteryPill({ utente, verticale = false }) {
                 restando la stessa riga: stesso posto, stessa altezza,
                 niente che scivola in basso. E la frase e quella giusta —
                 gliel'abbiamo anticipato noi, non ha sbagliato niente. */}
-            <div style={{ fontSize: 17, fontWeight: 600, marginBottom: 2 }}>
+            <div style={{ fontSize: 17, fontWeight: 500, marginBottom: 2 }}>
               {dati.inRosso ? L('creditCovered') : L('yourCreditTitle')}
             </div>
-            <div style={{ fontSize: 30, fontWeight: 600, color: colore }}>{dati.testo}</div>
+            <div style={{ fontSize: 30, fontWeight: 500, color: colore }}>{dati.testo}</div>
 
             <div style={{ display: 'flex', gap: 8, margin: '12px 0' }}>
               <div style={{ flex: 1, padding: '9px 11px', borderRadius: 14, background: tc.cardBg, border: `1px solid ${tc.cardBorder}` }}>
-                <div style={{ fontSize: 9, fontWeight: 600, letterSpacing: 1.5, color: tc.textMuted, textTransform: 'uppercase' }}>{L('todayWord')}</div>
-                <div style={{ fontSize: 15, fontWeight: 600 }}>{dati.oggi}</div>
+                <div style={{ fontSize: 9, fontWeight: 500, letterSpacing: 1.5, color: tc.textMuted, textTransform: 'uppercase' }}>{L('todayWord')}</div>
+                <div style={{ fontSize: 15, fontWeight: 500 }}>{dati.oggi}</div>
               </div>
               <div style={{ flex: 1, padding: '9px 11px', borderRadius: 14, background: tc.cardBg, border: `1px solid ${tc.cardBorder}` }}>
-                <div style={{ fontSize: 9, fontWeight: 600, letterSpacing: 1.5, color: tc.textMuted, textTransform: 'uppercase' }}>{L('thisMonth')}</div>
-                <div style={{ fontSize: 15, fontWeight: 600 }}>{dati.mese}</div>
+                <div style={{ fontSize: 9, fontWeight: 500, letterSpacing: 1.5, color: tc.textMuted, textTransform: 'uppercase' }}>{L('thisMonth')}</div>
+                <div style={{ fontSize: 15, fontWeight: 500 }}>{dati.mese}</div>
               </div>
             </div>
 
-            <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: 1.5, color: tc.textMuted, margin: '10px 0 6px', textTransform: 'uppercase' }}>{L('landingRecharge')}</div>
+            <div style={{ fontSize: 10, fontWeight: 500, letterSpacing: 1.5, color: tc.textMuted, margin: '10px 0 6px', textTransform: 'uppercase' }}>{L('landingRecharge')}</div>
             {PACCHETTI.map(p => {
               const ore = oreIncluse(p);
               return (
@@ -183,19 +183,19 @@ export default function BatteryPill({ utente, verticale = false }) {
                     <div style={{ fontSize: 13.5, fontWeight: 500 }}>{p.nome} · {ore.standard}</div>
                     <div style={{ fontSize: 10.5, color: tc.textMuted }}>{L('withPremiumVoice')} {ore.premium}{p.consigliato ? ` · ${L('recommended')}` : ''}</div>
                   </div>
-                  <div style={{ fontSize: 14, fontWeight: 600, color: tc.accent2 }}>€{p.euro}</div>
+                  <div style={{ fontSize: 14, fontWeight: 500, color: tc.accent2 }}>€{p.euro}</div>
                 </button>
               );
             })}
 
-            <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: 1.5, color: tc.textMuted, margin: '12px 0 6px', textTransform: 'uppercase' }}>{L('creditHaveCode')}</div>
+            <div style={{ fontSize: 10, fontWeight: 500, letterSpacing: 1.5, color: tc.textMuted, margin: '12px 0 6px', textTransform: 'uppercase' }}>{L('creditHaveCode')}</div>
             <div style={{ display: 'flex', gap: 7 }}>
               <input value={codice} onChange={(e) => setCodice(e.target.value)} placeholder={L('codeWord')}
                 style={{ flex: 1, padding: '10px 12px', borderRadius: 12, fontFamily: 'inherit', fontSize: 13,
                   background: tc.inputBg, border: `1px solid ${tc.inputBorder}`, color: tc.textPrimary }} />
               <button onClick={usaVoucher} disabled={!codice} style={{
                 padding: '10px 16px', minHeight: 44, borderRadius: 12, border: 'none', cursor: 'pointer', fontFamily: 'inherit',
-                fontSize: 13, fontWeight: 600, color: '#000',
+                fontSize: 13, fontWeight: 500, color: '#000',
                 background: tc.btnGradient,
               }}>{L('useWord')}</button>
             </div>
@@ -210,7 +210,7 @@ export default function BatteryPill({ utente, verticale = false }) {
             {/* ── Storico ricariche ── */}
             {dati.storico?.length > 0 && (
               <>
-                <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: 1.5, color: tc.textMuted, margin: '12px 0 6px', textTransform: 'uppercase' }}>{L('creditYourTopups')}</div>
+                <div style={{ fontSize: 10, fontWeight: 500, letterSpacing: 1.5, color: tc.textMuted, margin: '12px 0 6px', textTransform: 'uppercase' }}>{L('creditYourTopups')}</div>
                 <div style={{ maxHeight: 120, overflowY: 'auto' }}>
                   {dati.storico.map((r, i) => (
                     <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 2px',
@@ -219,7 +219,7 @@ export default function BatteryPill({ utente, verticale = false }) {
                       <span style={{ flex: 1, color: tc.textSecondary, textTransform: 'capitalize' }}>
                         {r.tipo === 'acquisto' ? L('landingRecharge') : r.tipo === 'benvenuto' ? L('histWelcome') : r.tipo === 'omaggio' ? L('histFree') : r.tipo === 'regalo_in' ? L('histGift') : 'Voucher'}
                       </span>
-                      <span style={{ fontWeight: 600, color: COLORI.verde }}>{r.testo}</span>
+                      <span style={{ fontWeight: 500, color: COLORI.verde }}>{r.testo}</span>
                       {r.euro && <span style={{ color: tc.textMuted }}>{r.euro}</span>}
                     </div>
                   ))}
@@ -229,7 +229,7 @@ export default function BatteryPill({ utente, verticale = false }) {
 
             <button onClick={() => setAperto(false)} style={{
               width: '100%', marginTop: 14, padding: 11, minHeight: 44, borderRadius: 14, cursor: 'pointer', fontFamily: 'inherit',
-              fontSize: 13, fontWeight: 600, background: 'transparent',
+              fontSize: 13, fontWeight: 500, background: 'transparent',
               border: `1px solid ${tc.cardBorder}`, color: tc.textSecondary,
             }}>{L('closeWord')}</button>
           </div>
@@ -264,7 +264,7 @@ export default function BatteryPill({ utente, verticale = false }) {
           <svg width="20" height="26" viewBox="0 0 24 24" fill={ORO} stroke="none" aria-hidden>
             <path d="M13 2L4.5 13.2h5.6L10.4 22l9-11.6h-5.7z" />
           </svg>
-          <span style={{ fontSize: 8, fontWeight: 600, color: colore, lineHeight: 1.05, textAlign: 'center' }}>{dati.testo}</span>
+          <span style={{ fontSize: 8, fontWeight: 500, color: colore, lineHeight: 1.05, textAlign: 'center' }}>{dati.testo}</span>
         </button>
         {aperto && popup}
       </>
@@ -289,7 +289,7 @@ export default function BatteryPill({ utente, verticale = false }) {
           <span style={{ position: 'absolute', right: -4.5, top: 3, width: 3, height: 6,
             background: colore, borderRadius: 1 }} />
         </span>
-        <span style={{ fontSize: 12, fontWeight: 600, color: tc.textPrimary }}>{dati.testo}</span>
+        <span style={{ fontSize: 12, fontWeight: 500, color: tc.textPrimary }}>{dati.testo}</span>
       </button>
 
       {/* ── Popup ── */}

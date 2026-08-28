@@ -9,6 +9,9 @@ import AvatarImg from './AvatarImg.js';
 import VideoCallOverlay from './VideoCallOverlay.js';
 import VoiceCallOverlay from './VoiceCallOverlay.js';
 import MessageList from './MessageList.js';
+import InvitaGuru from './ui/InvitaGuru.js';           // b.549 — i guru in stanza
+import { parlaAmico } from '../lib/compagni/cliente.js'; // b.549 — la voce del guru
+import { trovaCompagno } from '../lib/compagni/catalogo.js';
 // b.372 — IL CAROSELLO DI RADIOCHAT, portato qui come SECONDO MODO di
 // leggere la stessa chat (ordine di Luca). Si carica solo se lo si
 // apre: si porta dietro three.js, e chi non lo usa non deve scaricarlo.
@@ -18,6 +21,7 @@ import ComandoZoom from './ui/ComandoZoom.js';
 import PannelloLaterale, { LinguettaPannello } from './ui/PannelloLaterale.js';
 import { vesteMicrofono } from './ui/Microfono.js';
 import { IconCamera, IconArchive } from './Icons.js';
+import Icon from './Icon.js';   // b.549 — l'icona dei guru
 import InterpreterView from './InterpreterView.js';
 import ChatActionsPanel from './ChatActionsPanel.js';
 import RoomHeader from './RoomHeader.js';
@@ -70,6 +74,42 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
   const { L, S, prefs, myLang, setView, setMyLang, savePrefs, status, theme, setTheme } = useApp();
   // b.468 — il pannello laterale della chat: dentro ci sono le voci.
   const [pannelloVoci, setPannelloVoci] = useState(false);
+  // ═══ b.549 — I GURU IN STANZA ═══
+  // Luca: «non vedo alcun comando ne icona dei guru da invitare alla chat
+  // (archimede albert pitagora newton etc)». I Compagni vivevano solo
+  // dentro Vita; qui, dove servono di piu — una stanza che si e' fermata,
+  // un fatto da verificare, una conversazione da aprire — non c'era
+  // nessuna porta. Adesso c'e: il guru legge gli ultimi scambi e dice la
+  // sua nella conversazione, con la sua vocazione.
+  const [guruAperto, setGuruAperto] = useState(false);
+  const [guruInCorso, setGuruInCorso] = useState(false);
+  const invitaGuru = useCallback(async (compagnoId) => {
+    if (guruInCorso) return;
+    setGuruInCorso(true);
+    try {
+      const chi = trovaCompagno(compagnoId);
+      // gli ultimi scambi, cosi entra sapendo di cosa si parla
+      const ultimi = (messages || []).slice(-8).map((m) => ({
+        ruolo: m.sender === myName ? 'persona' : 'persona',
+        testo: String(m.original || m.translated || '').slice(0, 400),
+        nome: m.sender || '',
+      })).filter((m) => m.testo);
+      const esito = await parlaAmico({
+        compagnoId,
+        messaggi: ultimi.length ? ultimi : [{ ruolo: 'persona', testo: L('inviteGuruOpen'), nome: myName }],
+        lingua: myLang || 'it',
+        userToken,
+        superficie: 'amico',
+      });
+      const detto = String(esito?.risposta || esito?.testo || '').trim();
+      if (!detto) return;
+      // il guru parla NELLA conversazione: il messaggio parte come gli
+      // altri e viene tradotto per tutti, come quello di una persona.
+      setTextInput(`${chi?.nome || 'Compagno'}: ${detto}`);
+      setGuruAperto(false);
+    } catch { /* il guru non risponde: la stanza resta come prima */ }
+    finally { setGuruInCorso(false); }
+  }, [guruInCorso, messages, myName, myLang, userToken, L, setTextInput]);
 
   // b.379 — CHI SONO IO, DICHIARATO SUBITO. Stava piu di cento righe piu
   // in basso, e da b.372 due punti sopra lo leggevano gia: l'elenco di
@@ -625,7 +665,7 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
             <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
             <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/>
           </svg>
-          <span style={{ color: '#fff', fontSize: 14, fontWeight: 600 }}>
+          <span style={{ color: '#fff', fontSize: 14, fontWeight: 500 }}>
             Tocca per attivare l'audio / Tap to enable audio
           </span>
         </div>
@@ -645,6 +685,13 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
         <LinguettaPannello onApri={() => setPannelloVoci(true)} C={S.colors}
           etichetta={L('voiceEngine') || L('settings')} />
       )}
+      {/* b.549 — IL PANNELLO DEI GURU. Luca: «non vedo alcun comando ne
+          icona dei guru da invitare alla chat». Vive qui, accanto agli
+          altri pannelli della stanza: si apre dal tasto vicino al campo
+          di scrittura e si chiude da solo dopo aver chiamato il guru. */}
+      <InvitaGuru aperto={guruAperto} onChiudi={() => setGuruAperto(false)}
+        onInvita={invitaGuru} inCorso={guruInCorso} C={S.colors} L={L} />
+
       <PannelloLaterale aperto={pannelloVoci} onChiudi={() => setPannelloVoci(false)}
         titolo={L('settings')} C={S.colors}>
 
@@ -777,7 +824,7 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
             <div style={{display:'flex', alignItems:'center', gap:12}}>
               <div style={{width:12, height:12, borderRadius:'50%', background:'#4ade80', animation:'vtBattPulse 1.5s infinite'}} />
               <div>
-                <div style={{color:'#fff', fontSize:14, fontWeight:600}}>
+                <div style={{color:'#fff', fontSize:14, fontWeight: 500}}>
                   {isVideo ? <IconCamera size={16} /> : <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>}
                   {' '}{webrtc.incomingCall.from} {L('callIncoming')}
                 </div>
@@ -789,7 +836,7 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
             <div style={{display:'flex', gap:10}}>
               <button onClick={() => webrtc.declineIncomingCall()}
                 style={{padding:'8px 16px', borderRadius:20, border:'none', cursor:'pointer',
-                  background:PALETTE.red, color:'#fff', fontSize:13, fontWeight:600}}>
+                  background:PALETTE.red, color:'#fff', fontSize:13, fontWeight: 500}}>
                 {L('callDecline')}
               </button>
               <button onClick={() => {
@@ -797,7 +844,7 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
                 if (isVideo) { setShowVideoCall(true); setVideoFullscreen(true); }
               }}
                 style={{padding:'8px 16px', borderRadius:20, border:'none', cursor:'pointer',
-                  background:PALETTE.green, color:'#fff', fontSize:13, fontWeight:600}}>
+                  background:PALETTE.green, color:'#fff', fontSize:13, fontWeight: 500}}>
                 {L('callAccept')}
               </button>
             </div>
@@ -930,7 +977,7 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
           animation:'vtCaptionFade 0.2s ease-out'}}>
           <div style={{display:'flex', alignItems:'center', gap:6, marginBottom:4}}>
             <AvatarImg src={partner ? getSenderAvatar(partner.name) : null} size={20} />
-            <span style={{fontSize:10, color:S.colors.accent3, fontWeight:600}}>
+            <span style={{fontSize:10, color:S.colors.accent3, fontWeight: 500}}>
               {partner?.name} {partnerSpeaking ? L('speakingWord') : L('typingWord')}
             </span>
             <span style={{display:'inline-block', width:5, height:5, borderRadius:'50%',
@@ -980,7 +1027,7 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
             background: S.colors.overlayBg, borderLeft: `3px solid ${S.colors.accent1}`,
             display: 'flex', alignItems: 'center', gap: 10, fontFamily: FONT }}>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 10.5, fontWeight: 600, color: S.colors.accent1, marginBottom: 1 }}>
+              <div style={{ fontSize: 10.5, fontWeight: 500, color: S.colors.accent1, marginBottom: 1 }}>
                 {L('replyToWord')} {rispostaA.nome}
               </div>
               <div style={{ fontSize: 12, color: S.colors.textMuted,
@@ -1015,6 +1062,18 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
                 WebkitTapHighlightColor: 'transparent' }}>
               <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor"
                 strokeWidth={1.6} strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
+            </button>
+            {/* b.549 — LA PORTA DEI GURU, accanto al campo: e' li che
+                serve, nel momento in cui stai per scrivere e ti manca un
+                fatto o una spinta. */}
+            <button onClick={() => { vibrate(); setGuruAperto(true); }}
+              aria-label={L('inviteGuruTitle')} title={L('inviteGuruTitle')}
+              style={{ width: 44, height: 44, borderRadius: 12, flexShrink: 0, padding: 0,
+                border: `1px solid ${S.colors.cardBorder}`, background: 'transparent',
+                color: S.colors.textSecondary, cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                WebkitTapHighlightColor: 'transparent' }}>
+              <Icon name="users" size={17} color={S.colors.textSecondary} />
             </button>
             <input
               ref={campoTestoRef}

@@ -14,7 +14,7 @@ const RigaStato = ({ L, userAccount, id, sblocca }) => {
   const attiva = !!maschera;
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11.5, marginTop: 4 }}>
-      <span style={{ color: attiva ? PALETTE.green : 'rgba(255,255,255,0.45)', fontWeight: 600 }}>
+      <span style={{ color: attiva ? PALETTE.green : 'rgba(255,255,255,0.45)', fontWeight: 500 }}>
         {attiva ? `\u25CF ${L('keyActiveWord')}` : L('notConfigured')}
       </span>
       {attiva && <span style={{ fontFamily: 'monospace', color: 'rgba(255,255,255,0.45)' }}>{'\u2022\u2022\u2022\u2022'}{String(maschera).slice(-8)}</span>}
@@ -54,12 +54,12 @@ export default function ApiKeysView({ apiKeyInputs, setApiKeyInputs, saveUserApi
         <div style={S.scrollCenter}>
           <div style={S.topBar}>
             <button style={S.backBtn} onClick={() => setView('settings')} aria-label={L('backWord')}><Icon name="back" size={16} /></button>
-            <span style={{fontWeight:600, fontSize:17}}>{L('yourApiKeys')}</span>
+            <span style={{fontWeight: 500, fontSize:17}}>{L('yourApiKeys')}</span>
           </div>
           <div style={S.card}>
             <div style={{textAlign:'center', padding:'24px 0'}}>
               <div style={{fontSize:40, marginBottom:12}}>{''}</div>
-              <div style={{fontSize:15, fontWeight:600, marginBottom:8}}>{L('loginRequired')}</div>
+              <div style={{fontSize:15, fontWeight: 500, marginBottom:8}}>{L('loginRequired')}</div>
               <div style={{fontSize:13, color:'rgba(255,255,255,0.6)', marginBottom:20, lineHeight:1.5}}>
                 {L('loginBeforeKeysDesc')}
               </div>
@@ -78,14 +78,14 @@ export default function ApiKeysView({ apiKeyInputs, setApiKeyInputs, saveUserApi
       <div style={S.scrollCenter}>
         <div style={S.topBar}>
           <button style={S.backBtn} onClick={() => setView('settings')} aria-label={L('backWord')}><Icon name="back" size={16} /></button>
-          <span style={{fontWeight:600, fontSize:17, flex:1}}>{L('yourApiKeys')}</span>
+          <span style={{fontWeight: 500, fontSize:17, flex:1}}>{L('yourApiKeys')}</span>
           {/* b.502 — tavola 29: Aa in testata, come ovunque. */}
           <button onClick={() => setZoomTesto((z) => (z >= 3 ? 0 : z + 1))}
             title={L('textBigger')} aria-label={L('textBigger')}
             style={{ width:44, height:44, borderRadius:12, flexShrink:0, cursor:'pointer',
               background: zoomTesto ? 'rgba(255,255,255,0.10)' : 'none',
               border:'1px solid rgba(255,255,255,0.14)', color:'rgba(255,255,255,0.8)',
-              fontSize:15, fontWeight:600 }}>
+              fontSize:15, fontWeight: 500 }}>
             Aa
           </button>
         </div>
@@ -113,7 +113,7 @@ export default function ApiKeysView({ apiKeyInputs, setApiKeyInputs, saveUserApi
             <RigaStato L={L} userAccount={userAccount} id="gemini" sblocca={L('unlocksAltTranslate')} />
           </div>
           <div style={{marginTop:16, paddingTop:16, borderTop:'1px solid rgba(255,215,0,0.1)'}}>
-            <div style={{fontSize:13, fontWeight:600, color:'#ffd700', marginBottom:8, display:'flex', alignItems:'center', gap:6}}>
+            <div style={{fontSize:13, fontWeight: 500, color:'#ffd700', marginBottom:8, display:'flex', alignItems:'center', gap:6}}>
               {/* b.482 — la stellina era un'emoji: a colori, disegnata dal
                   telefono, in mezzo a icone monocrome. */}
               <Icon name="star" size={13} /> TOP PRO - ElevenLabs

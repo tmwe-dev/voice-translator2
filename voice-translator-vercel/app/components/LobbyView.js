@@ -37,7 +37,7 @@ const LobbyView = memo(function LobbyView({ roomId, roomInfo, partnerConnected, 
       <div style={S.scrollCenter}>
         <div style={S.topBar}>
           <button style={S.backBtn} onClick={leaveRoom}>{'\u2190'}</button>
-          <span style={{fontWeight:600, fontSize:17}}>{L('yourRoom')}</span>
+          <span style={{fontWeight: 500, fontSize:17}}>{L('yourRoom')}</span>
         </div>
         <div style={S.card}>
           {/* b.487 — tavola 14 del template: IL CODICE E' LA COSA PIU
@@ -47,7 +47,7 @@ const LobbyView = memo(function LobbyView({ roomId, roomInfo, partnerConnected, 
               pieno, cifre tabulari cosi non ballano. Sotto, la riga che
               dice COSA farci — che prima non c'era da nessuna parte. */}
           <div style={{textAlign:'center', marginBottom:16}}>
-            <div style={{fontSize:48, fontWeight:600, letterSpacing:6, color:S.colors.textPrimary,
+            <div style={{fontSize:48, fontWeight: 500, letterSpacing:6, color:S.colors.textPrimary,
               fontVariantNumeric:'tabular-nums', lineHeight:1.1}}>{roomId}</div>
             <div style={{fontSize:13, color:S.colors.textMuted, marginTop:2}}>{L('readCodeAloud')}</div>
           </div>
@@ -142,7 +142,7 @@ const LobbyView = memo(function LobbyView({ roomId, roomInfo, partnerConnected, 
               semplicemente aspettare DENTRO restava chiuso fuori dalla sua
               stessa stanza. Da soli dice «Entra tu per primo», in due
               «Iniziamo» — stesso gesto, la scritta dice la verita. */}
-          <button style={{...S.btn, minHeight:54, fontSize:15, fontWeight:600}}
+          <button style={{...S.btn, minHeight:54, fontSize:15, fontWeight: 500}}
             onClick={() => { unlockAudio(); setView('room'); }}>
             {partnerConnected ? L('letsStart') : L('enterFirst')}
           </button>

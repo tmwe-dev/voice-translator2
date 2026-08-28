@@ -259,7 +259,7 @@ const VoiceTestView = memo(function VoiceTestView({ isTrial, isTopPro,
             style={{ width: 44, height: 44, borderRadius: 14, flexShrink: 0, cursor: 'pointer',
               background: zoomTesto ? `${colors.accent1}22` : colors.cardBg,
               border: `1px solid ${colors.cardBorder}`, color: colors.textSecondary,
-              fontFamily: FONT, fontSize: 15, fontWeight: 600 }}>
+              fontFamily: FONT, fontSize: 15, fontWeight: 500 }}>
             Aa
           </button>
         </div>
@@ -430,7 +430,7 @@ const VoiceTestView = memo(function VoiceTestView({ isTrial, isTopPro,
               marginTop: 16, padding: '10px 24px', minHeight: 44, borderRadius: 14, cursor: 'pointer',
               background: `linear-gradient(135deg, ${gold}20, ${gold}08)`,
               border: `1px solid ${gold}30`,
-              color: gold, fontSize: 13, fontWeight: 600, fontFamily: FONT,
+              color: gold, fontSize: 13, fontWeight: 500, fontFamily: FONT,
               WebkitTapHighlightColor: 'transparent',
             }}>
               <Icon name="settings" size={14} color={gold} /> {L('settings')}
@@ -639,7 +639,7 @@ const VoiceTestView = memo(function VoiceTestView({ isTrial, isTopPro,
                           padding: '1px 6px', borderRadius: 5,
                           background: `${voiceAccent}12`,
                           color: voiceAccent,
-                          fontSize: 9, fontWeight: 600, letterSpacing: 0.5,
+                          fontSize: 9, fontWeight: 500, letterSpacing: 0.5,
                           textTransform: 'uppercase',
                         }}>{category}</span>
                       )}
@@ -670,7 +670,7 @@ const VoiceTestView = memo(function VoiceTestView({ isTrial, isTopPro,
                         background: `${voiceAccent}18`,
                         border: `1px solid ${voiceAccent}30`,
                         color: voiceAccent,
-                        fontSize: 9, fontWeight: 600, letterSpacing: 0.5,
+                        fontSize: 9, fontWeight: 500, letterSpacing: 0.5,
                       }}>{L('voiceActive')}</div>
                     )}
                   </div>
@@ -727,7 +727,7 @@ const VoiceTestView = memo(function VoiceTestView({ isTrial, isTopPro,
           border: `1px solid ${colors.cardBorder}`,
         }}>
           <div style={{
-            fontSize: 10, fontWeight: 600, color: colors.textMuted,
+            fontSize: 10, fontWeight: 500, color: colors.textMuted,
             textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8,
           }}>
             {L('activeVoiceEngines')}

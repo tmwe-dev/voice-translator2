@@ -194,7 +194,7 @@ function TaxiDestinationPanel({ onDestinationReady, onClose, targetLang, S }) {
         {/* Header */}
         <div style={{ padding: '0 20px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
-            <div style={{ fontSize: 18, fontWeight: 600, color: textPrimary, fontFamily: FONT }}>
+            <div style={{ fontSize: 18, fontWeight: 500, color: textPrimary, fontFamily: FONT }}>
               {L('whereTo')}
             </div>
             <div style={{ fontSize: 11, color: textMuted, marginTop: 2 }}>
@@ -215,7 +215,7 @@ function TaxiDestinationPanel({ onDestinationReady, onClose, targetLang, S }) {
 
           {/* Address search */}
           <div style={{ marginBottom: 12 }}>
-            <label style={{ fontSize: 11, fontWeight: 600, color: textMuted, marginBottom: 4, display: 'block' }}>
+            <label style={{ fontSize: 11, fontWeight: 500, color: textMuted, marginBottom: 4, display: 'block' }}>
               {L('destAddressLabel')}
             </label>
             <div style={{ position: 'relative' }}>
@@ -247,7 +247,7 @@ function TaxiDestinationPanel({ onDestinationReady, onClose, targetLang, S }) {
                     color: textPrimary, fontSize: 12, fontFamily: FONT,
                     textAlign: 'left', lineHeight: 1.4,
                   }}>
-                    <div style={{ fontWeight: 600 }}>{r.displayName.split(',').slice(0, 2).join(',')}</div>
+                    <div style={{ fontWeight: 500 }}>{r.displayName.split(',').slice(0, 2).join(',')}</div>
                     <div style={{ fontSize: 10, color: textMuted, marginTop: 2 }}>
                       {r.displayName.split(',').slice(2, 5).join(',')}
                     </div>
@@ -275,7 +275,7 @@ function TaxiDestinationPanel({ onDestinationReady, onClose, targetLang, S }) {
                   il posto scelto. */}
               <Icon name="target" size={20} color={accent} />
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 13, fontWeight: 600, color: textPrimary }}>
+                <div style={{ fontSize: 13, fontWeight: 500, color: textPrimary }}>
                   {selectedPlace.displayName.split(',').slice(0, 2).join(',')}
                 </div>
                 <div style={{ fontSize: 10, color: textMuted, marginTop: 1 }}>
@@ -295,7 +295,7 @@ function TaxiDestinationPanel({ onDestinationReady, onClose, targetLang, S }) {
           <button onClick={() => setShowDetails(!showDetails)} style={{
             width: '100%', minHeight: 44, padding: '10px 14px', borderRadius: 12, cursor: 'pointer',
             background: cardBg, border: `1px solid ${cardBorder}`,
-            color: textPrimary, fontSize: 12, fontWeight: 600, fontFamily: FONT,
+            color: textPrimary, fontSize: 12, fontWeight: 500, fontFamily: FONT,
             textAlign: 'left', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
             marginBottom: showDetails ? 12 : 0,
           }}>
@@ -308,7 +308,7 @@ function TaxiDestinationPanel({ onDestinationReady, onClose, targetLang, S }) {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {FIELD_CONFIG.map(f => (
                 <div key={f.key}>
-                  <label style={{ fontSize: 11, fontWeight: 600, color: textMuted, marginBottom: 3, display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <label style={{ fontSize: 11, fontWeight: 500, color: textMuted, marginBottom: 3, display: 'flex', alignItems: 'center', gap: 4 }}>
                     <Icon name={f.icon} size={12} color={textMuted} /> {L(f.label)}
                   </label>
                   <input type="text" value={details[f.key]} onChange={e => setDetails(prev => ({ ...prev, [f.key]: e.target.value }))}
@@ -320,7 +320,7 @@ function TaxiDestinationPanel({ onDestinationReady, onClose, targetLang, S }) {
               {/* Stops */}
               <div>
                 {/* b.482 — anche qui la casella dell'icona era vuota. */}
-                <label style={{ fontSize: 11, fontWeight: 600, color: textMuted, marginBottom: 3, display: 'flex', alignItems: 'center', gap: 4 }}>
+                <label style={{ fontSize: 11, fontWeight: 500, color: textMuted, marginBottom: 3, display: 'flex', alignItems: 'center', gap: 4 }}>
                   <Icon name="link" size={12} color={textMuted} /> {L('intermediateStops')}
                 </label>
                 {stops.map((stop, i) => (
@@ -329,7 +329,7 @@ function TaxiDestinationPanel({ onDestinationReady, onClose, targetLang, S }) {
                     padding: '6px 10px', borderRadius: 8,
                     background: `${purple}10`, border: `1px solid ${purple}20`,
                   }}>
-                    <span style={{ fontSize: 10, color: purple, fontWeight: 600 }}>{i + 1}</span>
+                    <span style={{ fontSize: 10, color: purple, fontWeight: 500 }}>{i + 1}</span>
                     <span style={{ flex: 1, fontSize: 12, color: textPrimary }}>{stop}</span>
                     {/* b.482 — bersaglio da 44 per togliere una fermata. */}
                     <button onClick={() => removeStop(i)} aria-label={L('removeWord')} style={{
@@ -349,7 +349,7 @@ function TaxiDestinationPanel({ onDestinationReady, onClose, targetLang, S }) {
                     background: newStop.trim() ? `${purple}20` : 'transparent',
                     border: `1px solid ${newStop.trim() ? `${purple}30` : cardBorder}`,
                     color: newStop.trim() ? purple : textMuted,
-                    fontSize: 12, fontWeight: 600, fontFamily: FONT,
+                    fontSize: 12, fontWeight: 500, fontFamily: FONT,
                   }}>+</button>
                 </div>
               </div>
@@ -365,7 +365,7 @@ function TaxiDestinationPanel({ onDestinationReady, onClose, targetLang, S }) {
               ? `linear-gradient(135deg, ${accent}, ${purple})`
               : 'rgba(255,255,255,0.06)',
             border: 'none', color: selectedPlace ? '#fff' : textMuted,
-            fontSize: 15, fontWeight: 600, fontFamily: FONT,
+            fontSize: 15, fontWeight: 500, fontFamily: FONT,
             boxShadow: selectedPlace ? `0 4px 20px ${accent}35` : 'none',
           }}>
             {selectedPlace ? L('generateDestQR') : L('selectDestination')}

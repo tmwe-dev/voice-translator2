@@ -260,11 +260,11 @@ function TaxiDriverView({ destId, decryptionKey }) {
               niente. Il mappamondo dice cosa fa la schermata: parlarsi
               fra lingue diverse. */}
           <div style={{ marginBottom: 16 }}><Icon name="globe" size={40} color={(_S?.colors?.textMuted) || 'rgba(255,255,255,0.35)'} /></div>
-          <div style={{ fontSize: 16, fontWeight: 600, color: C.textPrimary, marginBottom: 8 }}>{error}</div>
+          <div style={{ fontSize: 16, fontWeight: 500, color: C.textPrimary, marginBottom: 8 }}>{error}</div>
           <button onClick={() => setView('home')} style={{
             padding: '10px 24px', minHeight: 44, borderRadius: 12, cursor: 'pointer',
             background: `${C.accent}15`, border: `1px solid ${C.accent}25`,
-            color: C.accent, fontSize: 13, fontWeight: 600, fontFamily: FONT,
+            color: C.accent, fontSize: 13, fontWeight: 500, fontFamily: FONT,
           }}>{L('backHome')}</button>
         </div>
       </div>
@@ -287,7 +287,7 @@ function TaxiDriverView({ destId, decryptionKey }) {
               niente. Il mappamondo dice cosa fa la schermata: parlarsi
               fra lingue diverse. */}
           <div style={{ marginBottom: 16 }}><Icon name="globe" size={40} color={(_S?.colors?.textMuted) || 'rgba(255,255,255,0.35)'} /></div>
-          <div style={{ fontSize: 22, fontWeight: 600, color: C.textPrimary, marginBottom: 6, textAlign: 'center' }}>
+          <div style={{ fontSize: 22, fontWeight: 500, color: C.textPrimary, marginBottom: 6, textAlign: 'center' }}>
             TaxiTalk
           </div>
           <div style={{ fontSize: 13, color: C.textMuted, marginBottom: 24, textAlign: 'center' }}>
@@ -309,7 +309,7 @@ function TaxiDriverView({ destId, decryptionKey }) {
                 }}>
                 <span style={{ fontSize: 24 }}>{lang.flag}</span>
                 <span style={{
-                  fontSize: 10, fontWeight: 600,
+                  fontSize: 10, fontWeight: 500,
                   color: driverLang === lang.code ? C.accent : C.textPrimary,
                 }}>{lang.name}</span>
               </button>
@@ -334,10 +334,10 @@ function TaxiDriverView({ destId, decryptionKey }) {
         padding: '14px 20px', flexShrink: 0,
       }}>
         <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 17, fontWeight: 600, color: C.textPrimary, display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div style={{ fontSize: 17, fontWeight: 500, color: C.textPrimary, display: 'flex', alignItems: 'center', gap: 8 }}>
             TaxiTalk
             <span style={{
-              fontSize: 9, fontWeight: 600, padding: '2px 8px', borderRadius: 6,
+              fontSize: 9, fontWeight: 500, padding: '2px 8px', borderRadius: 6,
               background: `${C.accent}12`, color: C.accent,
             }}>
               {driverLangInfo?.flag} {driverLangInfo?.name}
@@ -362,7 +362,7 @@ function TaxiDriverView({ destId, decryptionKey }) {
               background: driverLang === lang.code ? `${C.accent}18` : C.card,
               border: `1.5px solid ${driverLang === lang.code ? C.accent : C.cardBorder}`,
               color: driverLang === lang.code ? C.accent : C.textPrimary,
-              fontSize: 13, fontWeight: 600, fontFamily: FONT,
+              fontSize: 13, fontWeight: 500, fontFamily: FONT,
               WebkitTapHighlightColor: 'transparent' }}>
             <span style={{ fontSize: 17 }}>{lang.flag}</span> {lang.name}
           </button>
@@ -385,13 +385,13 @@ function TaxiDriverView({ destId, decryptionKey }) {
             </div>
           ) : (
             <>
-              <div style={{ fontSize: 10, fontWeight: 600, color: C.accent, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6 }}>
+              <div style={{ fontSize: 10, fontWeight: 500, color: C.accent, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6 }}>
                 {L('destinationWord')}
               </div>
               {/* b.503 — tavola 32: la destinazione e ENORME — si legge
                   con lo sguardo, non si studia. */}
               <div style={{
-                fontSize: 28, fontWeight: 600, color: C.textPrimary, lineHeight: 1.28, marginBottom: 8,
+                fontSize: 28, fontWeight: 500, color: C.textPrimary, lineHeight: 1.28, marginBottom: 8,
               }}>
                 {translatedAddress || destination.normalizedAddress}
               </div>
@@ -408,12 +408,12 @@ function TaxiDriverView({ destId, decryptionKey }) {
               <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                 {destination.terminal && (
                   <div style={{ fontSize: 14, color: C.textPrimary, display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <span></span> <strong style={{ fontWeight: 600 }}>{destination.terminal}</strong>
+                    <span></span> <strong style={{ fontWeight: 500 }}>{destination.terminal}</strong>
                   </div>
                 )}
                 {destination.hotelName && (
                   <div style={{ fontSize: 14, color: C.textPrimary, display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <span></span> <strong style={{ fontWeight: 600 }}>{destination.hotelName}</strong>
+                    <span></span> <strong style={{ fontWeight: 500 }}>{destination.hotelName}</strong>
                   </div>
                 )}
                 {destination.entrance && (
@@ -431,7 +431,7 @@ function TaxiDriverView({ destId, decryptionKey }) {
               {/* Stops */}
               {destination.stops?.length > 0 && (
                 <div style={{ marginTop: 10 }}>
-                  <div style={{ fontSize: 11, fontWeight: 600, color: C.accent, marginBottom: 4 }}>
+                  <div style={{ fontSize: 11, fontWeight: 500, color: C.accent, marginBottom: 4 }}>
                     {L('intermediateStops')}
                   </div>
                   {destination.stops.map((stop, i) => (
@@ -441,7 +441,7 @@ function TaxiDriverView({ destId, decryptionKey }) {
                       fontSize: 12, color: C.textPrimary,
                       display: 'flex', alignItems: 'center', gap: 6,
                     }}>
-                      <span style={{ fontSize: 10, fontWeight: 600, color: C.purple }}>{i + 1}</span>
+                      <span style={{ fontSize: 10, fontWeight: 500, color: C.purple }}>{i + 1}</span>
                       {stop}
                     </div>
                   ))}
@@ -471,14 +471,14 @@ function TaxiDriverView({ destId, decryptionKey }) {
               flex: 1, padding: '14px', borderRadius: 14, textAlign: 'center',
               background: C.card, border: `1px solid ${C.cardBorder}`,
             }}>
-              <div style={{ fontSize: 24, fontWeight: 600, color: C.accent }}>{routeInfo.distKm}</div>
+              <div style={{ fontSize: 24, fontWeight: 500, color: C.accent }}>{routeInfo.distKm}</div>
               <div style={{ fontSize: 10, color: C.textMuted }}>{L('unitKm')}</div>
             </div>
             <div style={{
               flex: 1, padding: '14px', borderRadius: 14, textAlign: 'center',
               background: C.card, border: `1px solid ${C.cardBorder}`,
             }}>
-              <div style={{ fontSize: 24, fontWeight: 600, color: C.purple }}>{routeInfo.durationMin}</div>
+              <div style={{ fontSize: 24, fontWeight: 500, color: C.purple }}>{routeInfo.durationMin}</div>
               <div style={{ fontSize: 10, color: C.textMuted }}>{L('unitMin')}</div>
             </div>
           </div>
@@ -498,7 +498,7 @@ function TaxiDriverView({ destId, decryptionKey }) {
             background: `${C.accent}10`, border: `1px solid ${C.accent}25`,
             textAlign: 'center',
           }}>
-            <div style={{ fontSize: 14, fontWeight: 600, color: C.accent }}>
+            <div style={{ fontSize: 14, fontWeight: 500, color: C.accent }}>
               ✓ {L('destConfirmed')}
             </div>
           </div>
@@ -514,7 +514,7 @@ function TaxiDriverView({ destId, decryptionKey }) {
           <button onClick={handleConfirm} style={{
             flex: 1, padding: '14px', minHeight: 44, borderRadius: 14, cursor: 'pointer',
             background: `linear-gradient(135deg, ${C.accent}, ${C.purple})`,
-            border: 'none', color: '#fff', fontSize: 15, fontWeight: 600, fontFamily: FONT,
+            border: 'none', color: '#fff', fontSize: 15, fontWeight: 500, fontFamily: FONT,
             boxShadow: `0 4px 20px ${C.accent}35`,
           }}>
             ✓ {L('confirmDestination')}
@@ -524,14 +524,14 @@ function TaxiDriverView({ destId, decryptionKey }) {
             <button onClick={openInMaps} style={{
               flex: 1, padding: '14px', minHeight: 44, borderRadius: 14, cursor: 'pointer',
               background: `${C.accent}12`, border: `1px solid ${C.accent}25`,
-              color: C.accent, fontSize: 13, fontWeight: 600, fontFamily: FONT,
+              color: C.accent, fontSize: 13, fontWeight: 500, fontFamily: FONT,
             }}>
               {L('openNavigator')}
             </button>
             <button onClick={() => setView('speaker')} style={{
               flex: 1, padding: '14px', minHeight: 44, borderRadius: 14, cursor: 'pointer',
               background: `linear-gradient(135deg, ${C.accent}, ${C.purple})`,
-              border: 'none', color: '#fff', fontSize: 13, fontWeight: 600, fontFamily: FONT,
+              border: 'none', color: '#fff', fontSize: 13, fontWeight: 500, fontFamily: FONT,
               boxShadow: `0 4px 20px ${C.accent}35`,
             }}>
               {L('talkToPassenger')}

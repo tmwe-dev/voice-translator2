@@ -111,7 +111,7 @@ export function viva(quanti, soglia = 3) {
 export function stileEtichetta(C) {
   return {
     display: 'inline-flex', alignItems: 'center', gap: 4,
-    fontSize: 10.5, fontWeight: 600, color: C.textMuted,
+    fontSize: 10.5, fontWeight: 500, color: C.textMuted,
     letterSpacing: 0.2, whiteSpace: 'nowrap',
   };
 }

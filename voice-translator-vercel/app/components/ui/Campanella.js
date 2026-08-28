@@ -152,7 +152,7 @@ export default function Campanella({ C = {}, L, chiaviSeguite, onApriContenuto }
               position: 'absolute', top: 4, right: 3,
               minWidth: 17, height: 17, padding: '0 4px', borderRadius: 9,
               background: rosso, color: '#fff',
-              fontSize: 10, fontWeight: 700, lineHeight: '17px', textAlign: 'center',
+              fontSize: 10, fontWeight: 500, lineHeight: '17px', textAlign: 'center',
               boxShadow: `0 0 0 2px ${C.bg || '#080b16'}`,
             }}>{pallino}</span>
         )}
@@ -180,7 +180,7 @@ export default function Campanella({ C = {}, L, chiaviSeguite, onApriContenuto }
               fontFamily: FONT, overflow: 'hidden',
             }}>
             <header style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 10px 10px 16px', flexShrink: 0, borderBottom: bordo }}>
-              <span style={{ flex: 1, fontSize: 14, fontWeight: 600, color: testoP }}>{tt('alertsTitle', 'Avvisi')}</span>
+              <span style={{ flex: 1, fontSize: 14, fontWeight: 500, color: testoP }}>{tt('alertsTitle', 'Avvisi')}</span>
               <button onClick={() => { vibrate(6); setAperto(false); }} aria-label={tt('closeWord', 'Chiudi')}
                 style={{
                   width: 44, height: 44, borderRadius: 12, flexShrink: 0, cursor: 'pointer',
@@ -213,7 +213,7 @@ export default function Campanella({ C = {}, L, chiaviSeguite, onApriContenuto }
                       background: nuova ? rosso : 'transparent',
                     }} />
                     <span style={{ flex: 1, minWidth: 0 }}>
-                      <span style={{ display: 'block', fontSize: 12, fontWeight: 600, color: accent }}>
+                      <span style={{ display: 'block', fontSize: 12, fontWeight: 500, color: accent }}>
                         {dettoRiga(riga)}
                       </span>
                       <span style={{

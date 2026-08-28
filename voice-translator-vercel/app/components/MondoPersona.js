@@ -69,7 +69,7 @@ function MondoPersona({ publicId, onClose, onOpenDiscussione }) {
   const accent = C.accent1 || '#26D9B0';
 
   const sezione = (titolo) => (
-    <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: 1.2, color: muto, textTransform: 'uppercase', margin: '16px 0 8px' }}>{titolo}</div>
+    <div style={{ fontSize: 10, fontWeight: 500, letterSpacing: 1.2, color: muto, textTransform: 'uppercase', margin: '16px 0 8px' }}>{titolo}</div>
   );
   // b.482 — LE RIGHE DEL PROFILO PRENDONO LE MISURE DEL TEMPLATE. Il
   // rientro laterale era dodici mentre tutto il resto della schermata
@@ -98,7 +98,7 @@ function MondoPersona({ publicId, onClose, onOpenDiscussione }) {
           display: 'flex', alignItems: 'center', justifyContent: 'center', color: muto, fontSize: 18,
         }}><Icon name="back" size={18} color={muto} /></button>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 16, fontWeight: 600, color: testoP }}>{p?.nome || (caricando ? '…' : '—')}</div>
+          <div style={{ fontSize: 16, fontWeight: 500, color: testoP }}>{p?.nome || (caricando ? '…' : '—')}</div>
           <div style={{ fontSize: 11, color: muto }}>{(p?.seguaci ?? 0)} {L('followersLabel')}</div>
         </div>
         {/* b.496 — tavola 22: Aa in testata, come ovunque. */}
@@ -106,7 +106,7 @@ function MondoPersona({ publicId, onClose, onOpenDiscussione }) {
           title={L('textBigger')} aria-label={L('textBigger')}
           style={{ width: 44, height: 44, borderRadius: 12, flexShrink: 0, cursor: 'pointer',
             background: zoomTesto ? `${accent}22` : card, border: bordo, color: muto,
-            fontFamily: FONT, fontSize: 15, fontWeight: 600 }}>
+            fontFamily: FONT, fontSize: 15, fontWeight: 500 }}>
           Aa
         </button>
         {/* b.482 — la pillola Segui era alta ventinove: sotto la soglia
@@ -114,7 +114,7 @@ function MondoPersona({ publicId, onClose, onOpenDiscussione }) {
             cambiare e solo l'altezza utile. */}
         {userToken && (
           <button onClick={toggleSegui} style={{
-            padding: '7px 16px', borderRadius: 999, minHeight: 44, cursor: 'pointer', fontFamily: FONT, fontSize: 12, fontWeight: 600,
+            padding: '7px 16px', borderRadius: 999, minHeight: 44, cursor: 'pointer', fontFamily: FONT, fontSize: 12, fontWeight: 500,
             background: seguito ? 'transparent' : `linear-gradient(135deg, ${accent}, ${C.accent2 || '#5b8cff'})`,
             border: seguito ? bordo : 'none', color: seguito ? muto : '#fff',
           }}>{seguito ? L('following') : L('follow')}</button>
@@ -165,7 +165,7 @@ function MondoPersona({ publicId, onClose, onOpenDiscussione }) {
                   [p.commenti?.length ?? 0, L('commentsLabel')],
                   [p.seguaci ?? 0, L('followersLabel')]].map(([nu, eti]) => (
                   <div key={eti}>
-                    <div style={{ fontSize: 20 * ingr, fontWeight: 600, color: testoP, fontVariantNumeric: 'tabular-nums' }}>{nu}</div>
+                    <div style={{ fontSize: 20 * ingr, fontWeight: 500, color: testoP, fontVariantNumeric: 'tabular-nums' }}>{nu}</div>
                     <div style={{ fontSize: 11 * ingr, color: muto }}>{eti}</div>
                   </div>
                 ))}

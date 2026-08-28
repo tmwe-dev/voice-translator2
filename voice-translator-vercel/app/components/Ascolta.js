@@ -69,7 +69,7 @@ export default function Ascolta({
         color: colore,
         cursor: disabilitato ? 'default' : 'pointer',
         opacity: disabilitato ? 0.45 : 1,
-        fontFamily: FONT, fontSize: 13, fontWeight: 600,
+        fontFamily: FONT, fontSize: 13, fontWeight: 500,
         WebkitTapHighlightColor: 'transparent',
         transition: 'opacity .15s, background .15s',
       }}>

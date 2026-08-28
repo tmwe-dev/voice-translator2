@@ -223,7 +223,7 @@ function HistoryView({ convHistory, viewConversation, verifiedName, archivioSolo
                   padding: '3px 8px',
                   borderRadius: 6,
                   fontSize: 10,
-                  fontWeight: 600,
+                  fontWeight: 500,
                   background: `${C.accent}15`,
                   color: C.accent,
                 }}
@@ -241,7 +241,7 @@ function HistoryView({ convHistory, viewConversation, verifiedName, archivioSolo
               {Array.isArray(c.lingue) && c.lingue.length > 0 ? (
                 <span style={{
                   display: 'inline-flex', alignItems: 'center', gap: 4,
-                  padding: '3px 8px', borderRadius: 6, fontSize: 10, fontWeight: 600,
+                  padding: '3px 8px', borderRadius: 6, fontSize: 10, fontWeight: 500,
                   background: `${C.purple}15`, color: C.purple,
                 }}>
                   {c.lingue.slice(0, 3).map((l, i) => (
@@ -257,7 +257,7 @@ function HistoryView({ convHistory, viewConversation, verifiedName, archivioSolo
                     padding: '3px 8px',
                     borderRadius: 6,
                     fontSize: 10,
-                    fontWeight: 600,
+                    fontWeight: 500,
                     background: `${C.purple}15`,
                     color: C.purple,
                   }}
@@ -418,7 +418,7 @@ function HistoryView({ convHistory, viewConversation, verifiedName, archivioSolo
               background: activeFilter === 'all' ? `${C.accent}15` : C.card,
               color: activeFilter === 'all' ? C.accent : C.textMuted,
               fontSize: 12,
-              fontWeight: 600,
+              fontWeight: 500,
               fontFamily: FONT,
               cursor: 'pointer',
               whiteSpace: 'nowrap',
@@ -456,7 +456,7 @@ function HistoryView({ convHistory, viewConversation, verifiedName, archivioSolo
                 background: activeFilter === filter.code ? `${C.accent}15` : C.card,
                 color: activeFilter === filter.code ? C.accent : C.textMuted,
                 fontSize: 12,
-                fontWeight: 600,
+                fontWeight: 500,
                 fontFamily: FONT,
                 cursor: 'pointer',
                 whiteSpace: 'nowrap',
@@ -494,7 +494,7 @@ function HistoryView({ convHistory, viewConversation, verifiedName, archivioSolo
                 background: activeFilter === filter.id ? `${C.accent}15` : C.card,
                 color: activeFilter === filter.id ? C.accent : C.textMuted,
                 fontSize: 12,
-                fontWeight: 600,
+                fontWeight: 500,
                 fontFamily: FONT,
                 cursor: 'pointer',
                 whiteSpace: 'nowrap',

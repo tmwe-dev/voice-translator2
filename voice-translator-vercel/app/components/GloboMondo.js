@@ -59,7 +59,13 @@ function IconaCielo({ tipo, size = 26, color = '#dfe6f2' }) {
 
 export default function GloboMondo({ sfondo = false, titolo = 'Il mondo ora', etichettaCielo = 'Cielo del pianeta', paese = null, rotte = null, traffico = null, onPaeseScelto = null, focusEsterno = null }) {
   const ref = useRef(null);
-  const [stato, setStato] = useState(0);
+  // b.549 — IL PIANETA PARTIVA DI NOTTE. Collaudo di Luca: «hai rimesso
+  // un filtro scuro davanti al mondo». Non era un filtro: era il cielo
+  // NOTTURNO, che era il primo dell'elenco e quindi il predefinito. Su
+  // uno schermo gia scuro un pianeta al buio e' un disco nero — non si
+  // vede niente, e sembra rotto. Si parte dal GIORNO (indice 1), che e'
+  // il mondo che si riconosce; la notte resta a un tocco.
+  const [stato, setStato] = useState(1);
   const [menuCielo, setMenuCielo] = useState(false); // b.401
 
   // b.363 — IL PAESE SCELTO DA FUORI ARRIVA AL PIANETA. Finora il globo e

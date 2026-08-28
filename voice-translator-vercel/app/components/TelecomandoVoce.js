@@ -56,7 +56,7 @@ export default function TelecomandoVoce({ L, accent = '#26D9B0', testoP = '#eaf0
           applicazione, e dove non esiste compare un rettangolo vuoto. */}
       <span style={{
         display: 'flex', alignItems: 'center', gap: 5,
-        fontSize: 13, fontWeight: 600, color: testoP, maxWidth: 120,
+        fontSize: 13, fontWeight: 500, color: testoP, maxWidth: 120,
         overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
       }}>
         <Icon name="speaker" size={13} /> {voce.etichetta || parola('lifeAudio', 'Audio')}
@@ -73,7 +73,7 @@ export default function TelecomandoVoce({ L, accent = '#26D9B0', testoP = '#eaf0
           width: 44, height: 44, borderRadius: 22, border: 'none',
           cursor: voce.preparando ? 'default' : 'pointer',
           background: voce.preparando ? `${accent}44` : accent,
-          color: '#04121c', fontSize: 18, fontWeight: 900,
+          color: '#04121c', fontSize: 18, fontWeight: 500,
         }}>
         {voce.preparando ? '…' : voce.inPausa ? '▶' : '⏸'}
       </button>
