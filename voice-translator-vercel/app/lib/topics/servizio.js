@@ -22,7 +22,8 @@ import { immagineSicura } from './ricerca.js';
 import { cercaNotizie, risolviLinkGoogle } from './ricerca.js';
 import { cercaWikipedia } from './wikipedia.js';
 import { meritaEnciclopedia } from './enciclopediaUtile.js'; // b.541 — l'enciclopedia solo dove c'entra
-import { vociDiRicerca, chiaveLista } from './fonti.js'; // b.543 — la ricerca a piu voci
+import { vociDiRicerca, chiaveLista, imparaFonti } from './fonti.js'; // b.543 — la ricerca a piu voci; b.553 — e chi si fa notare si comincia a seguirlo
+import { leggiFonti } from './registro.js'; // b.553 — le fonti si SEGUONO: si legge all'origine
 import { arricchisci } from './estrai.js';
 import { raggruppaInArgomenti } from './raggruppa.js';
 import { riordina } from './riordino.js';
@@ -126,22 +127,47 @@ export async function cercaArgomenti(query, lingua = 'en', {
   // site:testata` — cosi i risultati vengono da posti diversi per
   // costruzione, non per fortuna. Se la lista non c'e, tutto come prima.
   let voci = [];
+  let seguite = [];
   try {
     const kf = chiaveLista({ paese: paeseFonti, settore: settoreFonti });
     if (kf) {
       const salvata = await redis('GET', `fonti:${kf}`);
       if (salvata) {
         const lista = JSON.parse(salvata);
-        voci = vociDiRicerca(q, lista?.fonti || [], { quante: 4 });
+        seguite = Array.isArray(lista?.fonti) ? lista.fonti : [];
+        voci = vociDiRicerca(q, seguite, { quante: 4 });
       }
     }
   } catch { /* senza lista si cerca come si e sempre cercato */ }
   if (voci.length) racconta('fonti-mirate', { quante: voci.length });
 
+  // ═══ b.553 — PRIMA SI LEGGONO LE FONTI CHE SEGUIAMO ═══
+  // Decisione di Luca: «il feed Mondo nasce dalle FONTI, non dai motori
+  // di ricerca». Se per questo Paese o questo settore abbiamo delle
+  // testate, si va a bussare alle LORO porte — il loro flusso RSS, che
+  // pubblicano apposta perche' qualcuno lo legga — invece di chiedere a
+  // un intermediario di raccontarci cosa hanno scritto.
+  // Non e' solo piu pulito: e' gratis, senza tetti, e non dipende da
+  // nessuno. Se le fonti bastano, il motore non si sveglia nemmeno.
+  let daSeguite = [];
+  if (seguite.length) {
+    daSeguite = await leggiFonti(seguite, { q, quante: 8, perFonte: 6 }).catch(() => []);
+    if (daSeguite.length) racconta('fonti-seguite', { quante: daSeguite.length });
+  }
+  // QUANTE BASTANO. Sotto le sei il giornale sembra vuoto e il motore
+  // serve ancora; sopra, la ricerca diventa quello che deve essere —
+  // un'eccezione, non l'ossatura.
+  const BASTANO = 6;
+  const fontiCoprono = daSeguite.length >= BASTANO;
+
   const [articoli, wiki] = await Promise.all([
     (async () => {
+      // b.553 — le fonti hanno gia risposto: il motore resta spento.
+      if (fontiCoprono) return daSeguite;
       const generale = await cercaNotizie(q, lingua, { massimo: 20 });
-      if (!voci.length) return generale;
+      // e quando non bastano, cio che le fonti hanno dato viene PRIMA:
+      // e' roba di casa nostra, letta all'origine.
+      if (!voci.length) return [...daSeguite, ...generale.filter((a) => !daSeguite.some((s) => s.url === a.url))];
       // le voci mirate portano poco a testa (3): il punto non e la
       // quantita, e che ci sia dentro anche altro oltre a cio che
       // l'aggregatore avrebbe scelto da solo.
@@ -155,11 +181,31 @@ export async function cercaArgomenti(query, lingua = 'en', {
           extra.push(a);
         }
       }
-      return [...generale, ...extra];
+      const dalMotore = [...generale, ...extra];
+      return [...daSeguite, ...dalMotore.filter((a) => !daSeguite.some((s) => s.url === a.url))];
     })(),
     wikiSensata ? cercaWikipedia(q, lingua, { massimo: wikiMax }).catch(() => []) : Promise.resolve([]),
   ]);
   racconta('fonti', { quante: articoli.length + wiki.length });
+
+  // ═══ b.553 — DISCOVER → FOLLOW ═══
+  // La ricerca appena fatta ci ha detto DA CHI esce la roba buona su
+  // questo argomento. Quelle testate, da domani, non le cerchiamo piu:
+  // le leggiamo all'origine. E' il pezzo che fa crescere il patrimonio
+  // da solo, e che rende il Mondo piu bravo ogni giorno invece di
+  // costare uguale ogni giorno.
+  // Si fa DOPO aver risposto e senza far aspettare nessuno: se la
+  // scrittura non riesce, la ricerca e' andata bene lo stesso.
+  try {
+    const kf = chiaveLista({ paese: paeseFonti, settore: settoreFonti });
+    if (kf && articoli.length) {
+      const cresciuta = imparaFonti(seguite, articoli);
+      if (cresciuta) {
+        await redis('SET', `fonti:${kf}`, JSON.stringify({ fonti: cresciuta, quando: Date.now() }), 'EX', String(30 * 24 * 3600));
+        racconta('fonti-imparate', { quante: cresciuta.length - seguite.length });
+      }
+    }
+  } catch { /* imparare e un di piu: non deve mai rompere una ricerca riuscita */ }
   // b.150 — se e entrata la riserva Google, i rimbalzi si sbucciano
   // fino al dominio vero: senza questo, niente og:image e card nude.
   await risolviLinkGoogle(articoli, {

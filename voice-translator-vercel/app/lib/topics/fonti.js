@@ -129,3 +129,39 @@ export function fondiConDirettorio(fontiVive, dominiStorici) {
   }
   return uscita;
 }
+
+/**
+ * ═══ b.553 — CHI SI E' FATTO NOTARE, SI COMINCIA A SEGUIRLO ═══
+ *
+ * Il principio deciso da Luca: SEARCH → DISCOVER → FOLLOW → CACHE →
+ * PERSONALIZE, non SEARCH → SEARCH → SEARCH. Ogni ricerca che va a buon
+ * fine ci dice qualcosa che vale piu dei suoi risultati: DA CHI esce la
+ * roba buona su questo argomento. Quella testata, da domani, non la
+ * cerchiamo piu: la leggiamo.
+ *
+ * `apparse` sono i risultati appena arrivati. Si contano i domini, e
+ * quelli che tornano piu di una volta entrano in coda alla lista —
+ * comparire due volte separa il giornale dal blog capitato per caso.
+ * Le fonti gia dentro non si toccano e non cambiano posto: la lista e'
+ * ordinata per merito e una scoperta non scavalca chi ha gia dato prova.
+ *
+ * Ritorna la lista NUOVA, oppure null se non c'e' niente da aggiungere:
+ * chi chiama scrive solo quando c'e' davvero un cambiamento.
+ */
+export function imparaFonti(lista, apparse, { massimo = 24, almeno = 2 } = {}) {
+  const dentro = sanaFonti(lista, { massimo });
+  const gia = new Set(dentro.map((f) => f.dominio));
+  const conti = new Map();
+  for (const a of (Array.isArray(apparse) ? apparse : [])) {
+    const d = dominioNudo(a?.dominio || a?.url || '');
+    if (!d || gia.has(d)) continue;
+    conti.set(d, (conti.get(d) || 0) + 1);
+  }
+  const nuove = [...conti.entries()]
+    .filter(([, n]) => n >= almeno)
+    .sort((a, b) => b[1] - a[1])
+    .map(([dominio]) => ({ dominio, nome: dominio, viva: false, scoperta: Date.now() }));
+  if (!nuove.length) return null;
+  const fuori = sanaFonti([...dentro, ...nuove], { massimo });
+  return fuori.length === dentro.length ? null : fuori;
+}

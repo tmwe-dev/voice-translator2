@@ -96,7 +96,13 @@ describe('b.543 — il tasto, e la ricerca che lo usa', () => {
   it('la ricerca porta con se la lista: e cosi che la pluralita entra davvero', () => {
     expect(news).toMatch(/paeseFonti: paeseFiltro \|\| '', settoreFonti: bozzaCategoria \|\| ''/);
     const servizio = leggi('app/lib/topics/servizio.js');
-    expect(servizio).toMatch(/voci = vociDiRicerca\(q, lista\?\.fonti \|\| \[\], \{ quante: 4 \}\)/);
+    // b.553 — la lista adesso si tiene anche per intero in `seguite`,
+    // perche' non serve piu solo a costruire ricerche mirate: serve a
+    // LEGGERE quelle fonti all'origine, che e' la nuova ossatura del
+    // Mondo («il feed nasce dalle FONTI, non dai motori», Luca). Le voci
+    // mirate restano, e con loro la pluralita difesa da b.543.
+    expect(servizio).toMatch(/seguite = Array\.isArray\(lista\?\.fonti\) \? lista\.fonti : \[\]/);
+    expect(servizio).toMatch(/voci = vociDiRicerca\(q, seguite, \{ quante: 4 \}\)/);
     expect(servizio, 'le voci mirate si affiancano alla generale, non la sostituiscono')
       .toMatch(/const generale = await cercaNotizie\(q, lingua, \{ massimo: 20 \}\)/);
     expect(servizio, 'e senza doppioni').toMatch(/if \(!a\?\.url \|\| visti\.has\(a\.url\)\) continue/);

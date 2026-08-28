@@ -267,6 +267,62 @@ perche il working tree lo conteneva ancora.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.553** (push #839) — IL CAMBIO DI OSSATURA: SI SEGUE,
+  NON SI CERCA.
+
+  Decisione di Luca, presa apposta prima che il sistema crescesse:
+  «il feed Mondo nasce dalle FONTI, non dai motori di ricerca.
+  SEARCH → DISCOVER → FOLLOW → CACHE → PERSONALIZE, non
+  SEARCH → SEARCH → SEARCH».
+
+  I DUE NUMERI CHE COMANDANO (documentazione YouTube ufficiale,
+  verificata il 28/08/2026): cercare costa 100 unita **e** una delle
+  sole 100 chiamate `search.list` concesse al giorno — un tetto a parte,
+  che le unita non possono comprare; seguire un canale con
+  `playlistItems.list` costa **1 unita**. Cento volte meno. E il flusso
+  RSS di una testata e' pubblicato APPOSTA perche' qualcuno lo legga:
+  nessuna quota, nessun contratto forzato, nessun indirizzo da
+  nascondere. Una ricerca si paga ogni volta e domani non vale niente;
+  una fonte si scopre una volta e rende per anni.
+
+  ① `lib/topics/registro.js` (NUOVO) — dal dominio al suo flusso: lo si
+  chiede alla home, che lo dichiara nella sua testa; se non lo dice, si
+  provano i cinque indirizzi che usano quasi tutti. Legge RSS **e Atom**
+  (senza Atom si perderebbe meta delle fonti buone) e tiene solo cio che
+  c'entra con la domanda — bastando UNA parola vera, perche' in casa si
+  ordina, non si filtra.
+
+  ② `servizio.js` — PRIMA si leggono le fonti che seguiamo. Se bastano
+  (sei articoli), il motore di ricerca non si sveglia nemmeno. Se non
+  bastano, la roba letta all'origine viene comunque per prima.
+
+  ③ `imparaFonti` in `fonti.js` — DISCOVER → FOLLOW. Ogni ricerca
+  riuscita ci dice DA CHI esce la roba buona: due comparse fanno una
+  fonte (una sola separa il giornale dal blog capitato per caso), e da
+  domani quella testata non si cerca piu, si legge. E' il pezzo che fa
+  crescere il patrimonio da solo. Imparare non puo mai rompere una
+  ricerca riuscita: sta dentro un `catch`.
+
+  ④ `lib/topics/videoUfficiale.js` (NUOVO) + rotta video — YouTube dalla
+  porta principale. Ordine di Luca: «niente scraping della pagina
+  /results, in produzione solo la Data API», e soprattutto **mai**
+  «quota finita → scraper»: se la quota finisce si risponde che oggi non
+  c'e' niente di nuovo e si mostra cio che si ha gia (degradazione
+  controllata). Un canale diventa la sua playlist dei caricamenti
+  (UC… → UU…): una chiamata risparmiata per canale.
+  **PONTE TEMPORANEO**: senza `YOUTUBE_API_KEY` la vecchia lettura della
+  pagina resta accesa. Non e' un ripiego di quota — e' un ponte, e si
+  toglie il giorno che la chiave c'e'.
+
+  ⑤ Cache dei video da 30 minuti a **12 ore**: ogni chiamata in meno e'
+  una delle cento del giorno risparmiata.
+
+  RESTA DA FARE, dichiarato: il Source Graph in Supabase (oggi le liste
+  vivono in Redis a 30 giorni); il riordino a scala di registro
+  (`punteggioFeed` e `raggruppa` sono nati per dodici risultati, non per
+  il fiume di duecento fonti); e la chiave API di YouTube, che e' di
+  Luca.
+
 - Versione: **b.552** (push #838) — LA GIORNATA DEI COLLAUDI DI LUCA, e
   l'errore piu frequente dell'applicazione che era colpa nostra.
 
