@@ -1032,7 +1032,7 @@ export default function FeedNotizieMondo({ aperto, onChiudi, C, L, argomenti = [
                     fontSize: 15, fontWeight: 500, color: '#fff', lineHeight: 1.3,
                     display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
                   }}>{el.dati.titolo}</div>
-                  <Perche motivo={el.dati.perche} L={L} />
+                  <Perche motivo={el.dati.motivo} L={L} />
                 </div>
               </>
             ) : (
@@ -1136,7 +1136,7 @@ export default function FeedNotizieMondo({ aperto, onChiudi, C, L, argomenti = [
 
                 <div style={{ position: 'relative', zIndex: 1, padding: '16px 20px calc(28px + env(safe-area-inset-bottom))' }}>
                   <h3 style={{ margin: 0, fontSize: 17, fontWeight: 500, color: '#fff', lineHeight: 1.3 }}>{el.dati.titolo}</h3>
-                  <Perche motivo={el.dati.perche} L={L} />
+                  <Perche motivo={el.dati.motivo} L={L} />
                   {el.dati.sintesi && (
                     <p style={{
                       margin: '8px 0 0', fontSize: 13, lineHeight: 1.5, color: 'rgba(255,255,255,0.82)',

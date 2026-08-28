@@ -267,6 +267,38 @@ perche il working tree lo conteneva ancora.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.568** (push #853) — TRE DIFETTI VISTI A SCHERMO, non
+  dalle prove.
+
+  Collaudo dal vivo sull'applicazione vera (#852), col browser in mano.
+  Le 3.517 prove erano verdi; questi tre erano a schermo lo stesso.
+
+  ① **«in temaenciclopedia» sotto i titoli.** `perche` era GIA un campo
+  delle schede — il riordino (b.194) lo usa per dire quali segnali hanno
+  spinto su un risultato — e la regia ci scriveva sopra. Il campo adesso
+  si chiama `motivo`.
+  **TERZA COLLISIONE DI NOMI IN UN GIORNO**, dopo `reazioni.js` (b.545,
+  una rotta morta per otto versioni) e `interessi.js` (b.562). La regola
+  vale per i FILE e per i CAMPI: quando esiste gia, il nome non e' libero.
+  `grep` costa un secondo.
+
+  ② **I video non passavano dalla regia.** Nel feed «Solo video» non
+  c'era nessun motivo e la quota di mondo non li contava: la regia
+  lavorava solo sugli ARTICOLI, e i video vivono in un elenco separato.
+  Meta del carosello girava senza regole — niente «mai due della stessa
+  fonte», niente sorpresa, niente perche'. Adesso passano anche loro.
+
+  ③ **I titoli col codice HTML dentro** («Thailand&#39;s»), benche' il
+  rimedio (b.560) fosse in produzione da ore: i mazzi vecchi restano in
+  cache DODICI ORE. Chiave cambiata in `topics:video:v2:`.
+  **REGOLA: quando si corregge un DATO che finisce in cache, non basta
+  correggere il codice — si cambia la chiave**, se no il vecchio continua
+  a uscire fino a scadenza e sembra che il rimedio non funzioni.
+
+  CONFERMATO DAL VIVO, invece: il ventaglio a porta unica, l'apertura
+  istantanea col giornale di ieri, la riga origine con data e ora, e i
+  titoli dei video puliti quando arrivano dall'API (provato chiamandola).
+
 - Versione: **b.567** (push #852) — LA CI ERA ROSSA E NON L'AVEVO MAI
   GUARDATA.
 

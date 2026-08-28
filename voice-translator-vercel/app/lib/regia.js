@@ -123,7 +123,7 @@ export function componi(richiesta, altre, {
   sorpresaOgni = SORPRESA_OGNI, quotaMondo = QUOTA_MONDO,
 } = {}) {
   const testa = (Array.isArray(richiesta) ? richiesta : []).slice(0, quantaRichiesta)
-    .map((x) => ({ ...x, perche: x.perche || PERCHE.cercato }));
+    .map((x) => ({ ...x, motivo: x.motivo || PERCHE.cercato }));
 
   const restanti = [
     ...(Array.isArray(richiesta) ? richiesta : []).slice(quantaRichiesta),
@@ -181,7 +181,14 @@ export function componi(richiesta, altre, {
     if (eDelMondo(presa, miaLingua)) dalMondo += 1;
     fuori.push({
       ...presa,
-      perche: presa.perche
+      // ═══ b.568 — SI CHIAMA «motivo», NON «perche» ═══
+      // A schermo, in produzione, sotto il titolo compariva «in
+      // temaenciclopedia»: `perche` era GIA un campo delle schede — il
+      // riordino (b.194) lo usa per dire quali segnali hanno spinto su
+      // un risultato — e la regia ci scriveva sopra. Terza collisione di
+      // nomi in un giorno (dopo reazioni.js e interessi.js): quando un
+      // campo o un file esiste gia, il nome NON e' libero.
+      motivo: presa.motivo
         || (eDelMondo(presa, miaLingua) ? PERCHE.mondo
           : (fuori.length + 1) % sorpresaOgni === 0 ? PERCHE.sorpresa
             : presa.seme ? PERCHE.seme : PERCHE.ramo),

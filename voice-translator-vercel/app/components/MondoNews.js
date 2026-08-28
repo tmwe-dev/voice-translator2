@@ -453,7 +453,16 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
             visti.add(k); return true;
           });
           // b.558 — e anche fra i video il gia visto scende in fondo
-          return primaIlNuovo(senzaNascosti([...base, ...nuovi], prefsRef.current), vistiDiRecente());
+          // b.568 — E ANCHE I VIDEO PASSANO DALLA REGIA. Collaudo dal
+          // vivo: nel feed «Solo video» non compariva nessun «perche'»,
+          // e la quota di mondo non li contava — perche' la regia
+          // lavorava solo sugli ARTICOLI. I video vivono in un elenco
+          // separato ed erano rimasti fuori dalle regole: niente motivo,
+          // niente «mai due della stessa fonte di fila», niente
+          // sorpresa. Meta del carosello senza regia.
+          const puliti = primaIlNuovo(senzaNascosti([...base, ...nuovi], prefsRef.current), vistiDiRecente());
+          return componi([], puliti.map((v) => ({ ...v, seme: v.seme || q, lingua: v.lingua || lingua })),
+            { gusti: prefsRef.current?.gusti || {}, miaLingua: lingua, quantaRichiesta: 0 });
         });
       }
     } catch { /* i video sono un di piu, mai un errore in faccia */ }

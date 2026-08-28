@@ -76,7 +76,9 @@ describe('dove si annota e dove si usa', () => {
   it('il giornale mette in fondo il gia visto, articoli e video', () => {
     const n = leggi('app/components/MondoNews.js');
     expect(n).toMatch(/puliti = primaIlNuovo\(puliti, vistiDiRecente\(\)\)/);
-    expect(n).toMatch(/return primaIlNuovo\(senzaNascosti\(\[\.\.\.base, \.\.\.nuovi\], prefsRef\.current\), vistiDiRecente\(\)\)/);
+    // b.568 — anche i video passano dalla regia adesso: il gia visto
+    // scende in fondo PRIMA di comporre, non dopo.
+    expect(n).toMatch(/const puliti = primaIlNuovo\(senzaNascosti\(\[\.\.\.base, \.\.\.nuovi\], prefsRef\.current\), vistiDiRecente\(\)\)/);
   });
 
   it('e resta una cosa DIVERSA dal «non mostrare piu»', () => {

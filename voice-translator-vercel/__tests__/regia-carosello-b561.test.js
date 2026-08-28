@@ -32,13 +32,13 @@ describe('prima di tutto: la domanda si rispetta', () => {
 
   it('e sa dire di essere li perche l hai chiesta tu', () => {
     const [prima] = componi([scheda(1)], [], {});
-    expect(prima.perche).toBe(PERCHE.cercato);
+    expect(prima.motivo).toBe(PERCHE.cercato);
   });
 
   it('ma non tutto il mazzo: dopo le prime quattro si allarga', () => {
     const richiesta = Array.from({ length: 10 }, (_, i) => scheda(i));
     const fuori = componi(richiesta, [mondiale(50, 'en')], { miaLingua: 'it' });
-    expect(fuori.filter((x) => x.perche === PERCHE.cercato)).toHaveLength(4);
+    expect(fuori.filter((x) => x.motivo === PERCHE.cercato)).toHaveLength(4);
     expect(fuori).toHaveLength(11);
   });
 });
@@ -54,7 +54,7 @@ describe('regola 1 — la quota di mondo, che e il motivo per cui esistiamo', ()
 
   it('e lo dice: «arriva da un altra lingua»', () => {
     const fuori = componi([scheda(1)], [mondiale(2, 'ja')], { miaLingua: 'it' });
-    expect(fuori.find((x) => x.lingua === 'ja').perche).toBe(PERCHE.mondo);
+    expect(fuori.find((x) => x.lingua === 'ja').motivo).toBe(PERCHE.mondo);
   });
 
   it('se non c e niente da fuori non si inventa niente', () => {
@@ -103,7 +103,7 @@ describe('regola 3 — la sorpresa ogni sette, che non si spegne mai', () => {
   it('e la sorpresa si dichiara', () => {
     const mazzo = [...Array.from({ length: 9 }, (_, i) => amati(i)), { titolo: 'lontano', url: 'https://z.it/x', seme: 'strano' }];
     const fuori = componi([], mazzo, { gusti, quantaRichiesta: 0 });
-    expect(fuori.find((x) => x.titolo === 'lontano').perche).toBe(PERCHE.sorpresa);
+    expect(fuori.find((x) => x.titolo === 'lontano').motivo).toBe(PERCHE.sorpresa);
   });
 
   it('l esplorazione non si spegne nemmeno quando il sistema crede di aver capito', () => {
@@ -114,7 +114,7 @@ describe('regola 3 — la sorpresa ogni sette, che non si spegne mai', () => {
       { titolo: 'l1', url: 'https://z1.it/x', seme: 'strano' },
       { titolo: 'l2', url: 'https://z2.it/x', seme: 'strano' }];
     const fuori = componi([], mazzo, { gusti, quantaRichiesta: 0 });
-    const posti = fuori.map((x, i) => (x.perche === PERCHE.sorpresa ? i + 1 : 0)).filter(Boolean);
+    const posti = fuori.map((x, i) => (x.motivo === PERCHE.sorpresa ? i + 1 : 0)).filter(Boolean);
     expect(posti.length, 'ventidue schede: almeno due sorprese').toBeGreaterThanOrEqual(2);
   });
 });
@@ -152,12 +152,12 @@ describe('i gusti: contatori, non un modello', () => {
 describe('regola 5 — ogni scheda sa dire perche', () => {
   it('nessuna scheda esce senza il suo motivo', () => {
     const fuori = componi([scheda(1)], [scheda(2), mondiale(3, 'en'), scheda(4)], { miaLingua: 'it' });
-    expect(fuori.every((x) => !!x.perche)).toBe(true);
+    expect(fuori.every((x) => !!x.motivo)).toBe(true);
   });
 
   it('e un motivo gia scritto non viene sovrascritto', () => {
-    const fuori = componi([], [{ ...scheda(1), perche: PERCHE.ramo }], { quantaRichiesta: 0 });
-    expect(fuori[0].perche).toBe(PERCHE.ramo);
+    const fuori = componi([], [{ ...scheda(1), motivo: PERCHE.ramo }], { quantaRichiesta: 0 });
+    expect(fuori[0].motivo).toBe(PERCHE.ramo);
   });
 });
 
@@ -195,7 +195,9 @@ describe('la regia comanda il carosello vero', () => {
   });
 
   it('il «perche» si vede sotto il titolo, su articoli e video', () => {
-    expect((feed.match(/<Perche motivo=\{el\.dati\.perche\} L=\{L\} \/>/g) || [])).toHaveLength(2);
+    // b.568 — il campo si chiama `motivo`: `perche` era gia occupato dal
+    // riordino, e a schermo compariva «in temaenciclopedia».
+    expect((feed.match(/<Perche motivo=\{el\.dati\.motivo\} L=\{L\} \/>/g) || [])).toHaveLength(2);
     expect(feed).toMatch(/function Perche\(\{ motivo, L \}\)/);
   });
 
@@ -213,5 +215,42 @@ describe('la regia comanda il carosello vero', () => {
   it('e i due gesti forti alimentano il quaderno', () => {
     expect(news).toMatch(/suGesto\(d, 'bacheca'\)/);
     expect(news).toMatch(/suGesto\(d, 'nascosto'\)/);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════
+// b.568 — QUELLO CHE IL COLLAUDO DAL VIVO HA TROVATO
+//
+// Preso il browser sull'applicazione vera, dopo aver spinto la regia:
+// ① sotto i titoli compariva «in temaenciclopedia» invece del motivo.
+//    `perche` era GIA un campo delle schede — il riordino (b.194) lo usa
+//    per dire quali segnali hanno spinto su un risultato — e la regia ci
+//    scriveva sopra. TERZA collisione di nomi in un giorno, dopo
+//    reazioni.js (b.545) e interessi.js (b.562).
+// ② nel feed «Solo video» non c'era NESSUN motivo, e la quota di mondo
+//    non contava i video: la regia lavorava solo sugli articoli, e i
+//    video vivono in un elenco separato. Meta del carosello senza regia.
+// ③ i titoli mostravano ancora il codice HTML, benche' il rimedio fosse
+//    gia in produzione: i mazzi vecchi restano in cache dodici ore.
+// ═══════════════════════════════════════════════════════════════
+describe('b.568 — i tre difetti visti a schermo', () => {
+  const news = leggi('app/components/MondoNews.js');
+
+  it('il campo si chiama «motivo»: «perche» era gia occupato', () => {
+    const r = leggi('app/lib/regia.js');
+    expect(r).toMatch(/motivo: presa\.motivo/);
+    expect(r, 'e non si tocca piu il campo del riordino').not.toMatch(/perche: presa/);
+    // il riordino continua a usare il suo, e nessuno glielo tocca
+    expect(leggi('app/lib/topics/riordino.js')).toMatch(/perche/);
+  });
+
+  it('anche i VIDEO passano dalla regia, non solo gli articoli', () => {
+    expect(news).toMatch(/return componi\(\[\], puliti\.map\(\(v\) => \(\{ \.\.\.v, seme: v\.seme \|\| q, lingua: v\.lingua \|\| lingua \}\)\)/);
+  });
+
+  it('e quando si corregge un dato in cache, si cambia la chiave', () => {
+    // il rimedio era in produzione da ore e a schermo si vedeva ancora
+    // il difetto: dodici ore di cache non si aspettano, si scavalcano.
+    expect(leggi('app/api/topics/video/route.js')).toMatch(/topics:video:v2:/);
   });
 });

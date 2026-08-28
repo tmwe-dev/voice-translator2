@@ -34,7 +34,7 @@ function magra(v) {
     immagine: v.immagine, miniatura: v.miniatura, canale: v.canale,
     fonti: Array.isArray(v.fonti) ? v.fonti.slice(0, 3) : undefined,
     dominio: v.dominio, pubblicato: v.pubblicato, quandoTesto: v.quandoTesto,
-    lingua: v.lingua, seme: v.seme, perche: v.perche, tipo: v.tipo,
+    lingua: v.lingua, seme: v.seme, motivo: v.motivo, tipo: v.tipo,
   };
 }
 

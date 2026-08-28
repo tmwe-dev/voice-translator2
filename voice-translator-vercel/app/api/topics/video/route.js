@@ -33,7 +33,13 @@ async function handleGet(req) {
   const cronaca = ore > 0 && eDiCronaca(q);
   // e la cache si divide: il mazzo «di oggi» non deve finire nella
   // stessa casella di quello senza tempo.
-  const k = `topics:video:${lang}:${cronaca ? `ore${ore}:` : ''}${q}`;
+  // b.568 — «v2» nella chiave. Collaudo dal vivo: a schermo comparivano
+  // ancora titoli col codice HTML dentro («Thailand&#39;s»), anche se il
+  // rimedio (b.560) era gia in produzione — perche' i mazzi vecchi
+  // restano in cache dodici ore. Quando si corregge un DATO che finisce
+  // in cache non basta correggere il codice: bisogna cambiare la chiave,
+  // se no il vecchio continua a uscire fino a scadenza.
+  const k = `topics:video:v2:${lang}:${cronaca ? `ore${ore}:` : ''}${q}`;
   try {
     const salvato = await redis('GET', k);
     if (salvato) return NextResponse.json({ ...JSON.parse(salvato), daCache: true });

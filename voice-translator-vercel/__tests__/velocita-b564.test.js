@@ -23,7 +23,7 @@ import path from 'path';
 import { salvaGiornale, giornaleSalvato, etaGiornale, VITA_GIORNALE, QUANTE } from '../app/lib/giornaleSalvato.js';
 
 const leggi = (p) => fs.readFileSync(path.join(__dirname, '..', p), 'utf8');
-const scheda = (n) => ({ id: `v${n}`, titolo: `T${n}`, url: `https://a${n}.it/x`, perche: 'perSeme', seme: 'tema', immagine: 'i.jpg', roba: 'da buttare' });
+const scheda = (n) => ({ id: `v${n}`, titolo: `T${n}`, url: `https://a${n}.it/x`, motivo: 'perSeme', seme: 'tema', immagine: 'i.jpg', roba: 'da buttare' });
 
 describe('① il giornale di ieri', () => {
   it('si salva e si ritrova, coi «perche» dentro', () => {
@@ -31,7 +31,7 @@ describe('① il giornale di ieri', () => {
     const ieri = giornaleSalvato();
     expect(ieri.argomenti).toHaveLength(2);
     expect(ieri.video).toHaveLength(1);
-    expect(ieri.argomenti[0].perche, 'riaprire e come non essere mai usciti').toBe('perSeme');
+    expect(ieri.argomenti[0].motivo, 'riaprire e come non essere mai usciti').toBe('perSeme');
   });
 
   it('si tiene solo cio che serve a ridisegnare: il resto si butta', () => {
