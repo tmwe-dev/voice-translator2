@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, cleanup, act } from '@testing-library/react';
+import { render, screen, cleanup, act, fireEvent } from '@testing-library/react';
 import { nomePaese } from '../app/lib/schedaMondo.js';
 import { createElement as e } from 'react';
 import FeedNotizieMondo from '../app/components/FeedNotizieMondo.js';
@@ -210,7 +210,16 @@ describe('b.546 — «parlane non deve occupare tutto quello spazio»', () => {
     for (const b of container.querySelectorAll('button')) {
       expect(b.style.width === '100%' || b.style.flex === '1', b.getAttribute('aria-label') || '').toBe(false);
     }
-    // e le porte ci sono lo stesso, tonde da 46 punti
+    // b.556 — le porte adesso stanno DIETRO una sola icona in basso
+    // (ordine di Luca: «nascondi tutte le icone dietro una icona in
+    // basso, su click apri le altre»). Chiuse non esistono a schermo, e
+    // il video si vede intero; il patto di b.546 — nessun tasto a piena
+    // larghezza — vale identico e resta provato qui sopra.
+    const porta = screen.getByLabelText('actionsWord');
+    expect(porta.style.width).toBe('52px');
+    expect(screen.queryByLabelText('newsTalkAbout'), 'chiuse non ingombrano').toBe(null);
+    fireEvent.click(porta);
+    // aperte, ognuna con la sua parola accanto: niente piu da indovinare
     expect(screen.getByLabelText('newsTalkAbout').style.width).toBe('46px');
   });
 });

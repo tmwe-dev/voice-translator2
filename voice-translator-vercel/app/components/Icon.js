@@ -66,6 +66,10 @@ const paths = {
   // b.364 — l'occhio dell'anteprima coperta: dice "questo si guarda se
   // vuoi", che e l'opposto di un lucchetto ("questo non puoi vederlo").
   eye: 'M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7zM12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z',
+  // b.556 — i tre punti: la porta unica delle azioni sul feed. Non e'
+  // un'emoji ne una lettera: tre cerchi pieni, che si leggono uguale in
+  // ogni lingua e a qualunque misura.
+  dots: 'M6 12a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM14 12a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM22 12a2 2 0 1 1-4 0 2 2 0 0 1 4 0z',
   target: 'M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10zM12 18a6 6 0 1 0 0-12 6 6 0 0 0 0 12zM12 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4z',
 };
 

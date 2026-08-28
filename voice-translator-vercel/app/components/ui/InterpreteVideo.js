@@ -51,7 +51,7 @@ const ORIGINE_YT = 'https://www.youtube-nocookie.com';
 const PASSO_MS = 250;                 // ogni quarto di secondo si guarda l'ora
 const MODI = ['spento', 'sottotitoli', 'voce'];
 
-export default function InterpreteVideo({ videoId, lingua, attivo, onCambia, C, L, daFondo = 132 }) {
+export default function InterpreteVideo({ videoId, lingua, attivo, onCambia, C, L, daFondo = 132, comandoNascosto = false, apriOra = 0 }) {
   // b.551 — il gettone serve alle rotte a pagamento (traduzione e voce).
   // Si legge dal contesto SENZA useApp(), che lancia se il contesto non
   // c'e': questo e' un componente di `ui/`, deve poter vivere anche
@@ -63,6 +63,13 @@ export default function InterpreteVideo({ videoId, lingua, attivo, onCambia, C, 
   const [cercati, setCercati] = useState(false);   // la domanda e' stata fatta
   const [modo, setModo] = useState('spento');
   const [aperto, setAperto] = useState(false);
+  // b.556 — il comando puo vivere ALTROVE. Collaudo di Luca: «non si
+  // capisce come attivare i sottotitoli di traduzione o la voce». Aveva
+  // ragione: stava in un angolo in alto a sinistra, un tasto di vetro
+  // scuro sopra una fotografia, e nessuno lo trovava. Adesso la porta e'
+  // nel ventaglio delle azioni, insieme a tutto il resto: quando il
+  // ventaglio la apre, incrementa `apriOra` e il pannello compare qui.
+  useEffect(() => { if (apriOra) setAperto(true); }, [apriOra]);
   const [battuta, setBattuta] = useState('');      // la frase tradotta, adesso
 
   const dette = useRef(new Set());
@@ -283,7 +290,14 @@ export default function InterpreteVideo({ videoId, lingua, attivo, onCambia, C, 
           dedicata all'origine (bandiera, chi lo racconta, quando). Due
           cose nello stesso punto sono la stessa sovrapposizione che Luca
           ha fotografato in basso, solo in cima. */}
-      <div style={{ position: 'absolute', left: 12, top: 116, zIndex: 6, fontFamily: FONT }}>
+      <div style={{
+        position: 'absolute', left: 12, top: 116, zIndex: 6, fontFamily: FONT,
+        // b.556 — quando il comando sta nel ventaglio, qui resta solo il
+        // pannello: il tasto sarebbe un doppione, e un doppione in un
+        // angolo e' peggio di niente.
+        display: comandoNascosto && !aperto ? 'none' : 'block',
+      }}>
+        {!comandoNascosto && (
         <button
           onClick={() => { vibrate(6); setAperto((v) => !v); }}
           aria-label={parla('interpreteTitolo')}
@@ -304,6 +318,7 @@ export default function InterpreteVideo({ videoId, lingua, attivo, onCambia, C, 
             {acceso ? voci.find((v) => v.id === modo)?.titolo : parla('interpreteTitolo')}
           </span>
         </button>
+        )}
 
         {aperto && (
           <div role="radiogroup" aria-label={parla('interpreteTitolo')} style={{
@@ -316,7 +331,7 @@ export default function InterpreteVideo({ videoId, lingua, attivo, onCambia, C, 
               const scelto = v.id === modo;
               return (
                 <button key={v.id} role="radio" aria-checked={scelto}
-                  onClick={() => scegli(v.id)}
+                  onClick={() => { scegli(v.id); if (comandoNascosto) setAperto(false); }}
                   style={{
                     display: 'block', width: '100%', textAlign: 'left',
                     minHeight: 44, padding: '8px 10px', borderRadius: 10,

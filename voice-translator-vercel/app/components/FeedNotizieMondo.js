@@ -81,48 +81,83 @@ const SOGLIA_VISTA = 0.25;
 // porta e un cerchio da 46 punti in questa colonnina, mai una fascia
 // che si mangia mezzo schermo.
 // ═══════════════════════════════════════════════════════════════
-function Azioni({ voci }) {
+function Azioni({ voci, daFondo = 96, L }) {
+  // ═══ b.556 — UNA PORTA SOLA, IN BASSO ═══
+  // Collaudo di Luca, con la fotografia: «nascondi tutte le icone dietro
+  // una icona in basso, su click apri le altre per permettere una
+  // selezione». E, nella stessa riga: «non si capisce come attivare i
+  // sottotitoli di traduzione o la voce di traduzione».
+  //
+  // Le due cose sono lo stesso difetto. Sei cerchi muti incolonnati in
+  // mezzo allo schermo coprivano l'inquadratura e non dicevano cosa
+  // fanno; e il comando piu importante — tradurre il video — stava
+  // altrove ancora, in un angolo in alto, dove nessuno lo cercava.
+  // Adesso: chiuso c'e' UN tasto in basso; aperto, ogni voce si vede con
+  // la sua parola accanto, la traduzione compresa. Chi guarda non deve
+  // indovinare niente, e chi non tocca niente vede il video intero.
+  const [aperto, setAperto] = useState(false);
+  const vive = voci.filter(Boolean);
   return (
-    <div style={{
-      position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)',
-      zIndex: 3, display: 'flex', flexDirection: 'column', gap: 12,
-    }}>
-      {voci.filter(Boolean).map((v) => (
-        <div key={v.chiave} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
-          {/* b.550 — una voce puo essere un pezzo intero (il ventaglio
-              delle reazioni) invece di un tasto: la colonnina lo ospita
-              senza sapere cosa sia. */}
-          {v.nodo ? v.nodo : null}
-          {!v.nodo && (
-          <button
-            onClick={(e) => { e.stopPropagation(); v.onTocca(); }}
-            aria-label={v.parola} title={v.parola} aria-pressed={v.acceso || undefined}
-            style={{
-              width: 46, height: 46, borderRadius: 999, cursor: 'pointer', padding: 0,
-              // b.544 — acceso quando l'hai messo tu: si vede a colpo d'occhio
-              // che il tocco e' arrivato, senza aspettare la rete.
-              // b.552 — vetro, per ordine di Luca (vedi lib/vetro.js).
-              // In b.551 qui c'era un fondo pieno per risparmiare la
-              // sfocatura: la ricetta condivisa la tiene leggera.
-              ...(v.acceso ? VETRO_CUORE : VETRO),
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              WebkitTapHighlightColor: 'transparent',
-            }}>
-            {/* b.552 — acceso non vuol dire sempre rosso: il cuore e' caldo,
-                la stella della bacheca e' d'oro. */}
-            <Icon name={v.icona} size={19} color={v.acceso ? (v.caldo ? '#ff5470' : '#ffd479') : '#fff'} />
-          </button>
-          )}
-          {v.conto ? (
-            <span style={{
-              fontSize: 11, fontWeight: 500, fontFamily: FONT,
-              color: v.acceso ? '#ff5470' : 'rgba(255,255,255,0.82)',
-              textShadow: '0 1px 3px rgba(0,0,0,0.6)',
-            }}>{v.conto}</span>
-          ) : null}
-        </div>
-      ))}
-    </div>
+    <>
+      {/* si tocca fuori e si richiude: nessun menu che resta appeso */}
+      {aperto && (
+        <div onClick={(e) => { e.stopPropagation(); setAperto(false); }}
+          style={{ position: 'absolute', inset: 0, zIndex: 3, background: 'rgba(0,0,0,0.35)' }} />
+      )}
+      <div style={{
+        position: 'absolute', right: 10, zIndex: 4,
+        bottom: `calc(${daFondo}px + env(safe-area-inset-bottom))`,
+        display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 10,
+      }}>
+        {aperto && vive.map((v) => (
+          <div key={v.chiave} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            {/* la parola PRIMA del cerchio: si legge da destra verso il
+                dito, e il dito non la copre mentre si avvicina. */}
+            {v.parola ? (
+              <span style={{
+                ...VETRO, borderRadius: 999, padding: '5px 11px',
+                fontSize: 12.5, fontWeight: 500, fontFamily: FONT, color: '#fff',
+                whiteSpace: 'nowrap', textShadow: '0 1px 3px rgba(0,0,0,0.6)',
+              }}>{v.parola}</span>
+            ) : null}
+            {v.nodo ? v.nodo : (
+              <button
+                onClick={(e) => { e.stopPropagation(); v.onTocca(); if (!v.restaAperto) setAperto(false); }}
+                aria-label={v.parola} title={v.parola} aria-pressed={v.acceso || undefined}
+                style={{
+                  width: 46, height: 46, borderRadius: 999, cursor: 'pointer', padding: 0,
+                  ...(v.acceso ? (v.caldo ? VETRO_CUORE : VETRO_ACCESO) : VETRO),
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  WebkitTapHighlightColor: 'transparent',
+                }}>
+                <Icon name={v.icona} size={19} color={v.acceso ? (v.caldo ? '#ff5470' : '#ffd479') : '#fff'} />
+              </button>
+            )}
+            {v.conto ? (
+              <span style={{
+                position: 'absolute', right: 0, marginRight: -2,
+                fontSize: 11, fontWeight: 500, fontFamily: FONT, color: 'transparent',
+              }}>{v.conto}</span>
+            ) : null}
+          </div>
+        ))}
+
+        {/* LA PORTA. Chiusa mostra solo se stessa; se qualcosa e' acceso
+            (un cuore messo, la traduzione in corso) lo dice col colore,
+            cosi non serve aprirla per sapere come sta il video. */}
+        <button
+          onClick={(e) => { e.stopPropagation(); vibrate(8); setAperto((x) => !x); }}
+          aria-label={L ? L('actionsWord') : 'azioni'} aria-expanded={aperto}
+          style={{
+            width: 52, height: 52, borderRadius: 999, cursor: 'pointer', padding: 0,
+            ...(vive.some((v) => v.acceso) && !aperto ? VETRO_ACCESO : VETRO),
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            WebkitTapHighlightColor: 'transparent',
+          }}>
+          <Icon name={aperto ? 'x' : 'dots'} size={aperto ? 18 : 22} color="#fff" />
+        </button>
+      </div>
+    </>
   );
 }
 
@@ -345,6 +380,13 @@ export default function FeedNotizieMondo({ aperto, onChiudi, C, L, argomenti = [
   // perche' quello guarda `elementi` — e le cose si dichiarano sopra a
   // chi le guarda, sempre (lezione b.546, ripresa oggi da questa prova).
   const [visto, setVisto] = useState(false);   // una volta mostrato, resta mostrato
+  // b.556 — il comando della traduzione vive nel ventaglio, ma il
+  // pannello lo disegna InterpreteVideo: questi due valori sono il filo
+  // fra i due. `apriInterprete` e' un contatore, non un vero/falso:
+  // toccare due volte deve riaprire, e un vero/falso gia vero non
+  // avviserebbe nessuno.
+  const [apriInterprete, setApriInterprete] = useState(0);
+  const [modoInterprete, setModoInterprete] = useState('spento');
   const prontoRef = useRef(false);
 
   // b.552 — la memoria dell'ordine gia mostrato. Dichiarata QUI, sopra a
@@ -833,7 +875,9 @@ export default function FeedNotizieMondo({ aperto, onChiudi, C, L, argomenti = [
                     spento, sottotitoli tradotti, voce. */}
                 <InterpreteVideo videoId={el.dati.id} lingua={miaLingua}
                   attivo={i === indiceAttivo} C={C} L={L}
-                  daFondo={BARRA_YT + PIEDE_VIDEO} />
+                  daFondo={BARRA_YT + PIEDE_VIDEO}
+                  comandoNascosto apriOra={i === indiceAttivo ? apriInterprete : 0}
+                  onCambia={setModoInterprete} />
 
                 {/* b.539 — i tasti che mancavano ai video. */}
                 <Azioni voci={[
@@ -858,6 +902,14 @@ export default function FeedNotizieMondo({ aperto, onChiudi, C, L, argomenti = [
                     ) };
                   })(),
                   { chiave: 'parlane', icona: 'chat', parola: L('newsTalkAbout'), onTocca: () => { vibrate(10); onParlane?.({ titolo: el.dati.titolo, sintesi: el.dati.canale ? `YouTube \u00b7 ${el.dati.canale}` : '' }); } },
+                  /* b.556 — LA TRADUZIONE DEL VIDEO, finalmente dove si
+                     cerca. Luca: «non si capisce come attivare i
+                     sottotitoli di traduzione o la voce di traduzione».
+                     Stava in un angolo in alto a sinistra; adesso e' una
+                     voce come le altre, con la sua parola scritta. */
+                  { chiave: 'traduci', icona: 'mic', parola: L('interpreteTitolo'),
+                    acceso: modoInterprete !== 'spento', restaAperto: false,
+                    onTocca: () => { vibrate(8); setApriInterprete((n) => n + 1); } },
                   /* ═══ b.552 — I DUE POLLICI, per ordine di Luca ═══
                      «un tasto preferito, da tenere in una bacheca che devi
                      mettere nella sidebar» e «un tasto non mostrare piu
@@ -871,7 +923,7 @@ export default function FeedNotizieMondo({ aperto, onChiudi, C, L, argomenti = [
                   { chiave: 'basta', icona: 'eye', parola: L('hideForever'),
                     onTocca: () => { vibrate(12); onNascondi?.(el.dati); } },
                   { chiave: 'fuori', icona: 'link', parola: L('newsOpenSite'), onTocca: () => { vibrate(6); try { window.open(`https://www.youtube.com/watch?v=${el.dati.id}`, '_blank', 'noopener,noreferrer'); } catch { /* il browser ha rifiutato la finestra */ } } },
-                ]} />
+                ]} daFondo={BARRA_YT + PIEDE_VIDEO + 12} L={L} />
 
                 {/* b.535 — Luca: «il menu di youtube rimane nascosto».
                     Questo velo col titolo copriva la barra dei comandi del
@@ -1004,7 +1056,7 @@ export default function FeedNotizieMondo({ aperto, onChiudi, C, L, argomenti = [
                     onTocca: () => { vibrate(12); onNascondi?.(el.dati); } },
                   { chiave: 'parlane', icona: 'chat', parola: L('newsTalkAbout'), onTocca: () => { vibrate(10); onParlane?.(el.dati); } },
                   el.dati.url ? { chiave: 'fuori', icona: 'link', parola: L('newsOpenSite'), onTocca: () => { vibrate(6); try { window.open(el.dati.url, '_blank', 'noopener,noreferrer'); } catch { /* il telefono ha bloccato la finestra nuova: non e' un guasto nostro e non merita un allarme a schermo, chi vuole il sito ha ancora il tasto */ } } } : null,
-                ]} />
+                ]} daFondo={112} L={L} />
 
                 <div style={{ position: 'relative', zIndex: 1, padding: '16px 20px calc(28px + env(safe-area-inset-bottom))' }}>
                   <h3 style={{ margin: 0, fontSize: 17, fontWeight: 500, color: '#fff', lineHeight: 1.3 }}>{el.dati.titolo}</h3>

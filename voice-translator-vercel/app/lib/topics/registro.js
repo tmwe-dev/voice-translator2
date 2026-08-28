@@ -242,3 +242,40 @@ export async function leggiFonti(domini, { q = '', quante = 8, perFonte = 6, amb
   }
   return fuori;
 }
+
+// ═══════════════════════════════════════════════════════════════
+// b.557 — LE NOTIZIE HANNO UNA DATA DI SCADENZA
+//
+// Collaudo di Luca, con due fotografie: video del 2 e del 24 maggio
+// presentati come attualita. «Quando si parla di news devi lavorare
+// sulle 48 ore, breaking news ultim'ora da aggiungere al carosello».
+//
+// Vale per gli articoli come per i video: una fonte pubblica anche
+// l'archivio, e nel suo flusso ci sta dentro tutto. Per una domanda di
+// cronaca si tiene solo cio che ha meno di due giorni; per una domanda
+// senza tempo («tom cruise», «come si fa il pane») non si taglia
+// niente, perche' li il pezzo di tre anni fa puo essere il migliore.
+//
+// CHI NON HA DATA NON SI BUTTA. Molti flussi non la mettono, e scartare
+// per assenza di prova vorrebbe dire perdere fonti intere: chi non dice
+// quando resta, ma dopo chi lo dice. Si ordina, non si filtra — la
+// regola di casa, applicata anche al tempo.
+// ═══════════════════════════════════════════════════════════════
+export const DUE_GIORNI = 48 * 3600 * 1000;
+
+export function soloRecenti(voci, { finestra = DUE_GIORNI, adesso = Date.now() } = {}) {
+  const lista = Array.isArray(voci) ? voci : [];
+  const dentro = [];
+  const senzaData = [];
+  for (const v of lista) {
+    if (!v?.pubblicato) { senzaData.push(v); continue; }
+    if (adesso - v.pubblicato <= finestra) dentro.push(v);
+  }
+  dentro.sort((a, b) => (b.pubblicato || 0) - (a.pubblicato || 0));
+  return [...dentro, ...senzaData];
+}
+
+/** Quanto e' fresca una lista: serve a decidere se allargare la finestra. */
+export function quantiFreschi(voci, { finestra = DUE_GIORNI, adesso = Date.now() } = {}) {
+  return (Array.isArray(voci) ? voci : []).filter((v) => v?.pubblicato && adesso - v.pubblicato <= finestra).length;
+}

@@ -84,12 +84,28 @@ export async function ultimiDelCanale(canale, { massimo = 6 } = {}) {
 }
 
 /** CERCARE: 100 unita e un tetto di 100 al giorno. Solo se serve davvero. */
-export async function cercaSuYouTube(query, lingua = 'it', { massimo = 8 } = {}) {
+export async function cercaSuYouTube(query, lingua = 'it', { massimo = 8, dallOra = 0, recenti = false } = {}) {
   const q = String(query || '').trim();
   if (!q) return [];
-  const d = await chiedi('search', {
+  // ═══ b.557 — LE NOTIZIE SONO DI OGGI, NON DI MAGGIO ═══
+  // Collaudo di Luca, con due fotografie in mano: video del 2 maggio e
+  // del 24 maggio presentati come attualita. «Quando si parla di news
+  // devi lavorare sulle 48 ore».
+  // YouTube ordina per pertinenza, e per lui un servizio di tre mesi fa
+  // resta pertinente per sempre. Per le domande di cronaca si mette una
+  // finestra vera (`publishedAfter`) e si ordina per DATA: cosi il
+  // giornale e' un giornale. Per una ricerca senza tempo — «tom cruise»,
+  // «come si fa il pane» — la finestra non si mette: li il video di tre
+  // anni fa puo essere il migliore che esista.
+  const parametri = {
     part: 'snippet', q, type: 'video', maxResults: Math.min(massimo, 50),
     relevanceLanguage: String(lingua || 'it').slice(0, 2), safeSearch: 'moderate',
-  });
+  };
+  if (recenti) {
+    const da = dallOra || (Date.now() - 48 * 3600 * 1000);
+    parametri.publishedAfter = new Date(da).toISOString();
+    parametri.order = 'date';
+  }
+  const d = await chiedi('search', parametri);
   return daApi(d?.items).slice(0, massimo);
 }

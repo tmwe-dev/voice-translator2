@@ -24,7 +24,9 @@ import { ordinaFeed } from '../lib/ordineFeed.js';
 // campanella degli avvisi e il filo dei commenti sotto ogni articolo.
 import { ordinaPerPunteggio, mescolaConInteresse } from '../lib/punteggioFeed.js';
 import { chiaveContenuto, mieiCuori } from '../lib/gradimento.js';
-import { giraBacheca, nascondi, senzaNascosti, bachecaDi, spostaInBacheca, togliDaBacheca } from '../lib/bacheca.js'; // b.552 — la bacheca e il «non mostrarmelo piu»
+import { giraBacheca, nascondi, senzaNascosti, bachecaDi, spostaInBacheca, togliDaBacheca } from '../lib/bacheca.js';
+import { soloRecenti, quantiFreschi } from '../lib/topics/registro.js'; // b.557 — le notizie sono di oggi
+import { eDiCronaca } from '../lib/topics/enciclopediaUtile.js';        // b.557 — e questa domanda ha una scadenza? // b.552 — la bacheca e il «non mostrarmelo piu»
 import { cercaTopics, chiediRami, chiediFonti } from '../lib/topics/cliente.js';   // b.409 — il lettore a righe, uno per tutti; b.541 — i rami del giardino
 import { semiDi, prossimaQuery, esaurito, sanaRami } from '../lib/giardino.js'; // b.541 — le ricerche sono semi
 import { listaVecchia, giorniDiVita } from '../lib/topics/fonti.js'; // b.543 — il Fontiere
@@ -385,7 +387,7 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
   const cercaVideoPer = useCallback(async (q, dietro = false) => {
     if (!dietro) setVideo(null);
     try {
-      const r = await fetch(`/api/topics/video?q=${encodeURIComponent(q)}&lang=${lingua}`, { signal: AbortSignal.timeout(60000) /* b.363 — prima non c'era tetto di attesa: se la rete restava muta la chiamata pendeva per sempre e l'utente non vedeva mai un esito */ });
+      const r = await fetch(`/api/topics/video?q=${encodeURIComponent(q)}&lang=${lingua}&ore=${Number(prefsRef.current?.finestraOre ?? 48)}`, { signal: AbortSignal.timeout(60000) /* b.363 — prima non c'era tetto di attesa: se la rete restava muta la chiamata pendeva per sempre e l'utente non vedeva mai un esito */ });
       if (!r.ok) return;
       // b.363 — prima la lettura non era protetta e la ricerca video moriva
       // in silenzio, lasciando la griglia vuota senza un motivo.
@@ -635,7 +637,24 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
         // b.552 — cio che hai detto di non volere piu non rientra dalla
         // finestra al giro dopo: si filtra qui, dove il mazzo arriva, e
         // non in venti posti diversi.
-        const puliti = senzaNascosti(arrivati, prefs);
+        let puliti = senzaNascosti(arrivati, prefs);
+        // ═══ b.557 — LE NOTIZIE SONO DI OGGI ═══
+        // Collaudo di Luca, con due fotografie in mano: video del 2 e
+        // del 24 maggio presentati come attualita. «Quando si parla di
+        // news devi lavorare sulle 48 ore».
+        // La finestra si applica SOLO alle domande di cronaca: per «tom
+        // cruise» o «come si fa il pane» il pezzo di tre anni fa puo
+        // essere il migliore che esiste. E se dentro la finestra non
+        // resta abbastanza da fare un giornale (meno di quattro pezzi
+        // con una data vera) si tiene tutto: meglio una notizia di tre
+        // giorni fa che una pagina vuota.
+        // Quanto indietro andare lo decide chi guarda, dalla barra
+        // (`finestraOre`, ordine di Luca): 0 = nessun limite.
+        const oreIndietro = Number(prefs?.finestraOre ?? 48);
+        if (oreIndietro > 0 && eDiCronaca(pulita)) {
+          const finestra = oreIndietro * 3600 * 1000;
+          if (quantiFreschi(puliti, { finestra }) >= 4) puliti = soloRecenti(puliti, { finestra });
+        }
         const nuovi = puliti.filter((a) => {
           const chiave = a?.url || a?.id || a?.titolo;
           if (!chiave || vistiRef.current.has(chiave)) return false;
@@ -1138,6 +1157,33 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
           onScegliAggiunta={(q) => { setQuery(q); setChipAttiva(null); cerca(q); suChiudiStrumenti?.(); }}
           onTogliAggiunta={(q) => savePrefs?.(togliPreferita(prefs, q))}
           onScegli={(topic) => { setArgomentoFiltro(topic); suChiudiStrumenti?.(); }} />
+      </CardSezione>
+
+      {/* ═══ b.557 — QUANTO INDIETRO ═══
+          Ordine di Luca: «magari serve aggiungere un setting nel sidebar
+          per determinare quanto indietro deve caricare contenuti».
+          Vale SOLO per le notizie: su «tom cruise» o «come si fa il
+          pane» un pezzo di tre anni fa puo essere il migliore che
+          esiste, e tagliarlo sarebbe stupido. Il valore comanda sia gli
+          articoli sia i video (la stessa finestra, cosi il giornale non
+          si contraddice fra le due meta). */}
+      <CardSezione icona="history" titolo={L('windowTitle')} sotto={L('windowCaption')} C={C}>
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+          {[[24, 'window24'], [48, 'window48'], [168, 'window7d'], [0, 'windowAll']].map(([ore, chiave]) => {
+            const scelto = Number(prefs?.finestraOre ?? 48) === ore;
+            return (
+              <button key={ore} onClick={() => { vibrate(8); savePrefs?.({ ...prefs, finestraOre: ore }); }}
+                style={{
+                  minHeight: 40, padding: '0 14px', borderRadius: 10, cursor: 'pointer',
+                  fontFamily: FONT, fontSize: 12.5, fontWeight: 500,
+                  background: scelto ? `${C.accent}20` : C.card,
+                  border: scelto ? `1px solid ${C.accent}45` : bordo,
+                  color: scelto ? C.accent : C.textSecondary,
+                  WebkitTapHighlightColor: 'transparent',
+                }}>{L(chiave)}</button>
+            );
+          })}
+        </div>
       </CardSezione>
 
       {/* ═══ b.552 — LA BACHECA ═══

@@ -267,6 +267,52 @@ perche il working tree lo conteneva ancora.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.557** (push #842) — UNA PORTA SOLA, E LE NOTIZIE SONO DI
+  OGGI.
+
+  ① **«Nascondi tutte le icone dietro una icona in basso»** (Luca, con la
+  fotografia). Sei cerchi muti incolonnati in mezzo allo schermo
+  coprivano l'inquadratura e non dicevano cosa fanno. Adesso: chiuso c'e'
+  UN tasto in basso a destra; aperto, ogni voce compare con la sua
+  PAROLA accanto. Chiusa, la porta dice col colore se qualcosa e' acceso
+  (un cuore messo, la traduzione in corso), cosi non serve aprirla per
+  sapere come sta il video.
+
+  ② **«Non si capisce come attivare i sottotitoli o la voce»** — stessa
+  fotografia, stesso difetto. Il comando piu importante che abbiamo (il
+  motivo per cui BarTalk esiste) stava in un angolo in alto a sinistra,
+  vetro scuro su fotografia. Adesso e' una voce del ventaglio come le
+  altre. `InterpreteVideo` ha imparato a farsi comandare da fuori
+  (`comandoNascosto` + `apriOra`, che e' un CONTATORE e non un
+  vero/falso: toccare due volte deve riaprire).
+
+  ③ **LE NOTIZIE SONO DI OGGI.** Luca, con due fotografie: video del 2 e
+  del 24 maggio presentati come attualita a fine agosto. «Quando si
+  parla di news devi lavorare sulle 48 ore». La causa: YouTube ordina
+  per PERTINENZA, e per lui un servizio di tre mesi fa resta pertinente
+  per sempre — nessuno gli aveva detto che stiamo facendo un giornale.
+  Ora, per le domande di cronaca: `publishedAfter` + `order: date` sui
+  video, finestra sugli articoli, cache di mezz'ora invece di dodici ore.
+  DUE ECCEZIONI, e sono la sostanza: la finestra vale SOLO per la
+  cronaca (su «tom cruise» il pezzo di tre anni fa puo essere il
+  migliore), e chi non ha data NON si butta — molti flussi non la
+  mettono, e scartare per assenza di prova vorrebbe dire perdere fonti
+  intere. Si ordina, non si filtra: anche col tempo.
+  Se dentro la finestra non resta abbastanza da fare un giornale (meno
+  di quattro pezzi datati) si tiene tutto: meglio una notizia di tre
+  giorni fa che una pagina vuota.
+
+  ④ **Quanto indietro lo decide chi guarda**: nella barra, 24 ore / 48
+  ore / una settimana / nessun limite. Lo stesso valore comanda articoli
+  E video, cosi il giornale non si contraddice fra le due meta. Il
+  server non si fida del numero che arriva: tetto a un mese.
+
+  RESTA DA FARE: la pagina di scelta interessi (le 16 parole sono gia
+  tradotte in 38 lingue, il pezzo non e' ancora costruito) e la regia
+  del carosello — dopo la ricerca, l'allargamento ai simili e la quota
+  fissa di esplorazione. L'ultim'ora come lotto a se nel carosello e' il
+  primo pezzo di quella regia.
+
 - Versione: **b.555** (push #841) — IL SUONO DI UNO, L'IMMAGINE DI UN
   ALTRO: riparato, e chiusa la porta per sempre.
 
