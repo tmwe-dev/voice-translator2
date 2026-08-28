@@ -63,7 +63,17 @@ export function feedDaHtml(html, base) {
   return principale || trovati[0] || '';
 }
 
-/** Se la home non lo dichiara, gli indirizzi che quasi tutti usano. */
+/**
+ * Se la home non lo dichiara, gli indirizzi che quasi tutti usano.
+ *
+ * b.566 — E POI LE SITEMAP DELLE NOTIZIE, che sono la seconda porta.
+ * Molte testate hanno spento l'RSS ma pubblicano una «news sitemap»:
+ * e' uno standard nato per i motori di ricerca, con dentro esattamente
+ * quello che serve a noi — titolo, indirizzo e data delle ultime
+ * quarantott'ore. Sono le ultime della fila perche' l'RSS resta piu
+ * ricco (descrizione e immagine), ma senza questa porta perderemmo
+ * tutte le testate che l'RSS non ce l'hanno piu — e sono tante.
+ */
 export function indirizziDaProvare(dominio) {
   const d = dominioNudo(dominio);
   if (!d) return [];
@@ -73,7 +83,32 @@ export function indirizziDaProvare(dominio) {
     `https://${d}/rss.xml`,
     `https://${d}/feed.xml`,
     `https://${d}/index.xml`,
+    `https://${d}/sitemap-news.xml`,
+    `https://${d}/news-sitemap.xml`,
+    `https://${d}/sitemap_news.xml`,
   ];
+}
+
+/**
+ * LE VOCI DI UNA SITEMAP DELLE NOTIZIE.
+ * Formato diverso, stessa sostanza: <url> invece di <item>, il titolo
+ * dentro <news:title>, la data in <news:publication_date>. Non c'e'
+ * descrizione ne immagine — si mostra il titolo e basta, che e' meglio
+ * di non avere quella testata.
+ */
+export function leggiSitemap(xml) {
+  const testo = String(xml || '');
+  const fuori = [];
+  for (const blocco of (testo.match(/<url>[\s\S]*?<\/url>/gi) || [])) {
+    const url = (blocco.match(/<loc>([\s\S]*?)<\/loc>/i) || [])[1];
+    const titolo = (blocco.match(/<news:title>([\s\S]*?)<\/news:title>/i) || [])[1]
+      || (blocco.match(/<(?:\w+:)?title>([\s\S]*?)<\/(?:\w+:)?title>/i) || [])[1];
+    if (!url || !titolo) continue;   // una sitemap normale (senza titoli) non ci serve
+    const quando = (blocco.match(/<news:publication_date>([\s\S]*?)<\/news:publication_date>/i) || [])[1]
+      || (blocco.match(/<lastmod>([\s\S]*?)<\/lastmod>/i) || [])[1] || '';
+    fuori.push({ titolo: pulisci(titolo), url: pulisci(url), immagine: '', fonte: '', dataPub: quando.trim(), descrizione: '' });
+  }
+  return fuori;
 }
 
 /**
@@ -84,6 +119,10 @@ export function indirizziDaProvare(dominio) {
  */
 export function leggiVoci(xml) {
   const testo = String(xml || '');
+  // b.566 — il formato si riconosce dal contenuto, non dall'indirizzo:
+  // ci sono testate che servono una sitemap da un percorso che sembra
+  // un feed e viceversa. Guardare cosa c'e' dentro non sbaglia mai.
+  if (/<urlset[\s>]/i.test(testo) && /<news:/i.test(testo)) return leggiSitemap(testo);
   const voci = leggiRss(testo);
   const entry = testo.match(/<entry[\s>][\s\S]*?<\/entry>/gi) || [];
   for (const e of entry) {

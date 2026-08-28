@@ -188,6 +188,22 @@ export function withApiGuard(handler, opts = {}) {
           { status: 400 }
         );
       }
+      // ═══ b.566 — «RIPROVA FRA POCO» NON E' «GUASTO DEL SERVER» ═══
+      // Dai registri: tutti i 500 dell'applicazione erano l'interruttore
+      // di Redis che si apriva. Ma un magazzino che rallenta per otto
+      // secondi non e' un guasto nostro: e' un'attesa. Dirlo con un 503
+      // e col tempo di riposo permette a chi chiama di riprovare da solo
+      // — e a noi di distinguere, nei registri, un difetto vero da un
+      // inciampo del fornitore. Con tutto uguale a 500, il difetto vero
+      // resta nascosto in mezzo al rumore, che e' esattamente cosa e'
+      // successo per settimane.
+      if (e?.code === 'CIRCUIT_OPEN') {
+        log.warn(`${prefix}: magazzino non disponibile, riprova fra ${e.retryAfterSec || 8}s`);
+        return NextResponse.json(
+          { error: 'Servizio momentaneamente non disponibile, riprova fra poco.', riprova: true },
+          { status: 503, headers: { 'Retry-After': String(e.retryAfterSec || 8) } },
+        );
+      }
       // Track unhandled errors via Sentry
       trackError(prefix, e, req);
       return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

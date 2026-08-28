@@ -3,7 +3,7 @@
 // Now with: circuit breaker, timeout, in-memory fallback
 
 import { createLogger } from './logger.js';
-import { apiCircuitBreaker } from './circuitBreaker.js';
+import { redisCircuitBreaker } from './circuitBreaker.js';
 
 const log = createLogger('redis');
 
@@ -54,10 +54,20 @@ export async function redis(command, ...args) {
     if (command === 'SET' && args[0]) { fallbackSet(args[0], args[1]); return 'OK'; }
     return null;
   }
-  const circuitKey = 'redis:upstash';
+  // b.566 — quali comandi sono letture, e cosa vale «niente» per ognuno.
+// Una lista vuota non e' un errore; `undefined` invece si propaga e
+// rompe piu in la, dove nessuno se lo aspetta.
+const LETTURE = new Set(['LRANGE', 'HGETALL', 'HGET', 'HMGET', 'MGET', 'ZRANGE', 'ZREVRANGE',
+  'SMEMBERS', 'KEYS', 'SCAN', 'EXISTS', 'LLEN', 'ZCARD', 'SCARD', 'ZSCORE', 'HKEYS', 'HLEN']);
+const VUOTO = {
+  LRANGE: [], ZRANGE: [], ZREVRANGE: [], SMEMBERS: [], KEYS: [], HKEYS: [], MGET: [], HMGET: [],
+  HGETALL: {}, EXISTS: 0, LLEN: 0, ZCARD: 0, SCARD: 0, HLEN: 0,
+};
+
+const circuitKey = 'redis:upstash';
 
   try {
-    return await apiCircuitBreaker.execute(circuitKey, async () => {
+    return await redisCircuitBreaker.execute(circuitKey, async () => {
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), REDIS_TIMEOUT_MS);
 
@@ -112,6 +122,25 @@ export async function redis(command, ...args) {
     if (command === 'EXPIRE') return 1;
     if (command === 'TTL') return -1;
 
+    // ═══ b.566 — LE LETTURE NON DEVONO MAI FAR CADERE UNA PAGINA ═══
+    // Il fail-open c'era per GET, SET, INCR, EXPIRE e TTL — ma le
+    // stanze e i messaggi vivono su LISTE e HASH, e per quelle si
+    // rilanciava. Risultato, dai registri: tutti i 500 di /api/room,
+    // /api/messages e /api/reazioni erano questo. Un rallentamento di
+    // Upstash diventava una schermata rotta.
+    // Adesso una lettura che non riesce torna VUOTA nel tipo giusto:
+    // «adesso non ho niente da darti» e' una risposta, «errore del
+    // server» no. Chi chiama mostra cio che ha e riprova fra un attimo.
+    if (LETTURE.has(command)) {
+      log.warn(`Fail-open in lettura per ${command} ${args[0] || ''}`);
+      return VUOTO[command] !== undefined ? VUOTO[command] : null;
+    }
+
+    // Le SCRITTURE no: fingere che un messaggio sia stato salvato
+    // quando non lo e' e' peggio di un errore. Si rilancia, ma
+    // l'errore porta con se il suo motivo (`CIRCUIT_OPEN`), cosi
+    // apiGuard risponde «riprova fra poco» (503) invece di «guasto del
+    // server» (500) — vedi apiGuard.js.
     throw err;
   }
 }

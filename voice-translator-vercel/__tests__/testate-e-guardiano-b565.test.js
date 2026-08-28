@@ -111,3 +111,60 @@ describe('il guardiano che gira ogni ora', () => {
     expect(nostro.schedule).toBe('30 * * * *');
   });
 });
+
+// ═══════════════════════════════════════════════════════════════
+// b.566 — LA SECONDA PORTA: LE SITEMAP DELLE NOTIZIE
+//
+// Molte testate hanno spento l'RSS, ma quasi tutte pubblicano una «news
+// sitemap»: uno standard nato per i motori di ricerca che contiene
+// esattamente quello che serve a noi — titolo, indirizzo e data delle
+// ultime quarantott'ore. Senza questa porta perderemmo tutte le testate
+// che l'RSS non ce l'hanno piu, e sono tante: il registro resterebbe
+// con nove flussi su settantuno per sempre.
+// ═══════════════════════════════════════════════════════════════
+describe('la seconda porta: le sitemap delle notizie', () => {
+  it('si legge titolo, indirizzo e data', async () => {
+    const { leggiSitemap } = await import('../app/lib/topics/registro.js');
+    const xml = `<urlset xmlns:news="http://www.google.com/schemas/sitemap-news/0.9">
+      <url><loc>https://testata.it/uno</loc><news:news>
+        <news:title>Terremoto in Giappone</news:title>
+        <news:publication_date>2026-08-28T10:00:00Z</news:publication_date>
+      </news:news></url>
+      <url><loc>https://testata.it/due</loc><news:news>
+        <news:title>Sciopero dei treni</news:title>
+      </news:news></url>
+    </urlset>`;
+    const voci = leggiSitemap(xml);
+    expect(voci.map((v) => v.titolo)).toEqual(['Terremoto in Giappone', 'Sciopero dei treni']);
+    expect(voci[0].url).toBe('https://testata.it/uno');
+    expect(voci[0].dataPub).toBe('2026-08-28T10:00:00Z');
+  });
+
+  it('una sitemap SENZA titoli non ci serve: sono solo indirizzi', () => {
+    // la sitemap normale di un sito elenca pagine, non notizie: senza
+    // titolo non c'e' niente da mostrare, e tenerla vorrebbe dire
+    // riempire il feed di righe vuote.
+    return import('../app/lib/topics/registro.js').then(({ leggiSitemap }) => {
+      expect(leggiSitemap('<urlset><url><loc>https://a.it/x</loc></url></urlset>')).toEqual([]);
+    });
+  });
+
+  it('il formato si riconosce dal CONTENUTO, non dall indirizzo', async () => {
+    // ci sono testate che servono una sitemap da un percorso che sembra
+    // un feed, e viceversa. Guardare cosa c'e' dentro non sbaglia mai.
+    const { leggiVoci } = await import('../app/lib/topics/registro.js');
+    const sitemap = '<urlset xmlns:news="x"><url><loc>https://a.it/1</loc><news:title>Uno</news:title></url></urlset>';
+    const rss = '<rss><channel><item><title>Due</title><link>https://a.it/2</link></item></channel></rss>';
+    expect(leggiVoci(sitemap).map((v) => v.titolo)).toEqual(['Uno']);
+    expect(leggiVoci(rss).map((v) => v.titolo)).toEqual(['Due']);
+  });
+
+  it('e le sitemap si provano DOPO i feed: l RSS resta piu ricco', async () => {
+    const { indirizziDaProvare } = await import('../app/lib/topics/registro.js');
+    const strade = indirizziDaProvare('testata.it');
+    const primaSitemap = strade.findIndex((u) => u.includes('sitemap'));
+    const ultimoFeed = strade.map((u) => u.includes('sitemap')).lastIndexOf(false);
+    expect(primaSitemap).toBeGreaterThan(ultimoFeed);
+    expect(strade.filter((u) => u.includes('sitemap'))).toHaveLength(3);
+  });
+});

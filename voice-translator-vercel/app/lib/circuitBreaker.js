@@ -137,4 +137,17 @@ class CircuitBreaker {
 }
 
 export const apiCircuitBreaker = new CircuitBreaker({ failureThreshold: 3, cooldownMs: 30000 });
+
+// ═══ b.566 — REDIS HA UN INTERRUTTORE SUO, PIU PAZIENTE ═══
+// Dai registri di produzione: TUTTI i 500 dell'applicazione — stanze,
+// messaggi, reazioni — avevano una sola causa, «Circuit OPEN for
+// redis:upstash». Non e' Redis che si rompe: e' che con tre inciampi
+// l'interruttore restava aperto TRENTA SECONDI, e in quei trenta
+// secondi ogni chiamata falliva in partenza. Un rallentamento di un
+// istante diventava mezzo minuto di applicazione ferma.
+// Cinque tentativi prima di aprire (Redis inciampa e si riprende), e
+// otto secondi di riposo invece di trenta: si apre a fatica e si
+// richiude in fretta. I trenta secondi restano per i fornitori di
+// intelligenza, dove un errore costa davvero e ritentare costa di piu.
+export const redisCircuitBreaker = new CircuitBreaker({ failureThreshold: 5, cooldownMs: 8000 });
 export default CircuitBreaker;

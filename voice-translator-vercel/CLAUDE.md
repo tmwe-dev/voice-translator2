@@ -267,6 +267,43 @@ perche il working tree lo conteneva ancora.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.566** (push #851) — TUTTI I 500 AVEVANO UNA SOLA CAUSA,
+  e la seconda porta per le fonti.
+
+  ① **L'AFFIDABILITA'.** Cercando da dove venissero gli errori server:
+  35 in quattro ore, su tre rotte diverse (`/api/reazioni`, `/api/room`,
+  `/api/messages`) e **tutti lo stesso messaggio**:
+  `Circuit OPEN for redis:upstash — retry after 30s`.
+
+  Due cause, una dentro l'altra:
+  · `redis()` faceva fail-open per GET, SET, INCR, EXPIRE e TTL — ma
+    stanze e messaggi vivono su LISTE e HASH, e per quelle **rilanciava**.
+    Un rallentamento di Upstash diventava una schermata rotta.
+  · l'interruttore restava aperto **trenta secondi** dopo tre inciampi:
+    un istante di lentezza diventava mezzo minuto di applicazione ferma.
+
+  Ora Redis ha un interruttore SUO (cinque inciampi, otto secondi: si
+  apre a fatica e si richiude in fretta; i trenta secondi restano per i
+  fornitori di intelligenza, dove un errore costa davvero).
+
+  **LA REGOLA CHE NE ESCE, e vale oltre Redis: una LETTURA che non
+  riesce torna VUOTA, una SCRITTURA no.** «Adesso non ho niente da
+  darti» e' una risposta; fingere che un messaggio sia stato salvato
+  quando non lo e' sarebbe una bugia.
+
+  E in `apiGuard`: l'interruttore aperto diventa **503 con Retry-After**,
+  non 500. Un magazzino che rallenta non e' un guasto nostro — e se
+  tutto e' 500, il difetto vero resta nascosto nel rumore, che e'
+  esattamente cosa e' successo per settimane.
+
+  ② **LA SECONDA PORTA PER LE FONTI**: le *news sitemap*. Molte testate
+  hanno spento l'RSS ma pubblicano quello — standard nato per i motori
+  di ricerca, con dentro titolo, indirizzo e data delle ultime
+  quarantott'ore. Si provano DOPO i feed (l'RSS resta piu ricco:
+  descrizione e immagine), e il formato si riconosce dal CONTENUTO e non
+  dall'indirizzo, perche' ci sono testate che servono una sitemap da un
+  percorso che sembra un feed.
+
 - Versione: **b.565** (push #850) — LE FONTI VIVE: 116 testate scritte a
   mano, e un guardiano che le accende.
 
