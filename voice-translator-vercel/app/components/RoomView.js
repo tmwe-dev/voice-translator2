@@ -11,7 +11,7 @@ import VoiceCallOverlay from './VoiceCallOverlay.js';
 import MessageList from './MessageList.js';
 import InvitaGuru from './ui/InvitaGuru.js';           // b.549 — i guru in stanza
 import { parlaAmico } from '../lib/compagni/cliente.js'; // b.549 — la voce del guru
-import { trovaCompagno } from '../lib/compagni/catalogo.js';
+import { getCompagnoPredefinito } from '../lib/compagni/catalogo.js';
 // b.372 — IL CAROSELLO DI RADIOCHAT, portato qui come SECONDO MODO di
 // leggere la stessa chat (ordine di Luca). Si carica solo se lo si
 // apre: si porta dietro three.js, e chi non lo usa non deve scaricarlo.
@@ -252,7 +252,7 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
     if (guruInCorso) return;
     setGuruInCorso(true);
     try {
-      const chi = trovaCompagno(compagnoId);
+      const chi = getCompagnoPredefinito(compagnoId); // b.551 — il nome vero della funzione: «trovaCompagno» non e mai esistito
       // gli ultimi scambi, cosi entra sapendo di cosa si parla
       const ultimi = (messages || []).slice(-8).map((m) => ({
         ruolo: m.sender === myName ? 'persona' : 'persona',

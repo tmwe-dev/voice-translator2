@@ -296,6 +296,19 @@ describe('4 · niente si siede sulla BottomNav', () => {
         if (!/bottom:\s*0\b/.test(b)) continue;
         if (/top:\s*0\b/.test(b)) continue;           // copre tutto: e un velo, non una fascia
         const piano = Number((b.match(/zIndex:\s*(\d+)/) || [])[1] || 0);
+        // b.551 — un PANNELLO MODALE non e' un muro: davanti alla barra
+        // c'e' il suo velo a tutto schermo, che si tocca e chiude tutto.
+        // La barra e' irraggiungibile per un istante e per volonta di chi
+        // ha aperto il pannello, non murata come faceva InstallaApp —
+        // che e' il difetto vero da cui nasce questo controllo. Si
+        // riconosce dal velo: `inset: 0` su un piano piu basso, nello
+        // stesso file.
+        const conVelo = new RegExp(`position:\\s*['"]fixed['"][^}]*inset:\\s*0[^}]*zIndex:\\s*(\\d+)`, 'g');
+        let velo; let modale = false;
+        while ((velo = conVelo.exec(s))) {
+          if (Number(velo[1]) < piano && Number(velo[1]) > PIANO_BARRA) modale = true;
+        }
+        if (modale) continue;
         if (piano > PIANO_BARRA) {
           guasti.push(`${relativo(f)}:${riga(s, m.index)} — fascia fissa a bottom:0 con zIndex ${piano} sopra la barra (${PIANO_BARRA})`);
         }

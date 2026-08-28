@@ -12,7 +12,7 @@
 import { describe, it, expect } from 'vitest';
 import fs from 'fs';
 import path from 'path';
-import { rilevanza, TIPI } from '../app/lib/reazioni.js';
+import { rilevanza, TIPI } from '../app/lib/stanze/reazioni.js'; // b.551 — le reazioni delle STANZE (vedi la nota in quel file)
 import { siConservanoIMessaggi } from '../app/lib/decisioni.js';
 
 const APP = path.join(__dirname, '..', 'app');
@@ -51,7 +51,7 @@ describe('rilevanza', () => {
 });
 
 describe('reazioni e cifratura', () => {
-  const lib = leggi('lib/reazioni.js');
+  const lib = leggi('lib/stanze/reazioni.js');
   const rotta = leggi('api/reazioni/route.js');
 
   it('su e giu si escludono a vicenda', () => {

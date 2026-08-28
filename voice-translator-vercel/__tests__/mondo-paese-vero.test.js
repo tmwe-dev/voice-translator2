@@ -256,7 +256,11 @@ describe('la Home del Paese, e il passaggio fra pianeta e contenuti', () => {
     // (PreferitiTemi), che ricevono esattamente i temiCaldi della scheda
     // Paese e spariscono da soli quando non c'e nulla da dire. La prova
     // segue il filo di oggi: stessi dati, veste nuova.
-    expect(v).toMatch(/PreferitiTemi temi=\{schedaPaese\?\.temiCaldi\}/);
+    // b.551 — la prova guarda il DATO che passa, non l'ordine degli
+    // attributi: fra il nome e `temi` puo esserci `nudo` (b.53x) o quel
+    // che verra. Cio che non deve cambiare e' che i temi arrivino dalla
+    // scheda del Paese.
+    expect(v).toMatch(/PreferitiTemi[^>]*temi=\{schedaPaese\?\.temiCaldi\}/);
   });
 
   it('toccare un tema fa tutta la strada, non meta', () => {

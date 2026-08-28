@@ -67,7 +67,12 @@ describe('b.537 — 2. la card dice DI COSA SI PARLA (regola vera)', () => {
   it('e la card lo mette in grande, col resto di servizio sotto', () => {
     const v = leggi('app/components/StanzeView.js');
     const card = v.slice(v.indexOf('const argomento = argomentoNellaMiaLingua'));
-    expect(card).toMatch(/fontSize: 15, fontWeight: 600/);        // l'argomento e il titolo
+    // b.551 — l'argomento resta il titolo della card, ma il grassetto no:
+    // ordine tassativo di Luca in b.549 («non voglio grassetto da nessuna
+    // parte»). A distinguerlo dal resto bastano la misura e il colore
+    // pieno — ed e' cosi che il resto dell'applicazione fa gerarchia.
+    expect(card).toMatch(/fontSize: 15, fontWeight: 500/);        // l'argomento e il titolo
+    expect(card, 'niente grassetto nella card').not.toMatch(/fontWeight: (6|7|8|9)00/);
     expect(card).toMatch(/\{argomento \|\| s\.nome \|\| s\.roomId\}/); // e se manca, il nome
     expect(card).toMatch(/L\('roomNoWordsYet'\)/);                 // stanza muta: si dice
   });

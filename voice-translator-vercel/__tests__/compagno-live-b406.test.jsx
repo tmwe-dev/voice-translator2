@@ -64,6 +64,24 @@ const { default: CompagnoLive } = await import('../app/components/Life/CompagnoL
 const COMPAGNO = { id: 'c1', nome: 'Archimede', ruolo: 'maestro', personalita: 'curioso', voce: { id: 'v1' } };
 const COLORI = { testoP: '#fff', muto: '#999', accent: '#0af', card: '#111', bordo: '1px solid #333' };
 
+// ═══ b.550 — PERCHE QUESTA PROVA ADESSO PORTA UN TRADUTTORE VERO ═══
+// Fino a ieri la scheda teneva le sue frasi in italiano DENTRO il codice,
+// come ripiego di una chiave (`tt(chiave, 'frase italiana')`): montata
+// senza traduttore, come faceva questa prova, si leggeva l'italiano lo
+// stesso e le righe qui sotto lo trovavano. Ordine di Luca: quell'italiano
+// esce dal sorgente, resta solo `L('chiave')`.
+// La prova NON viene indebolita per stargli dietro — sarebbe il modo
+// peggiore di aggiustarla. Viene RAFFORZATA: si monta il componente col
+// pacchetto lingua ITALIANO VERO (app/lib/locales/it.js), quello che gira
+// in produzione. Cosi ogni riga che cerca «Guasto della linea vocale» o
+// «Ti ascolto» adesso dimostra due cose invece di una: che il componente
+// mostra il messaggio giusto al momento giusto, E che quella frase esiste
+// davvero nel pacchetto. Se un giorno una chiave sparisse dai pacchetti,
+// queste prove diventerebbero rosse — prima, non dopo averlo visto a
+// schermo un utente.
+const { default: PACCHETTO_IT } = await import('../app/lib/locales/it.js');
+const L_ITALIANO = (chiave) => PACCHETTO_IT[chiave] || chiave;
+
 // aspetta che le promesse in volo (import dinamico compreso) si posino
 const respira = async () => { await act(async () => { await new Promise((r) => setTimeout(r, 0)); await new Promise((r) => setTimeout(r, 0)); }); };
 
@@ -103,7 +121,7 @@ beforeEach(() => {
 afterEach(cleanup);
 
 async function apri(extra = {}) {
-  const r = render(<CompagnoLive compagno={COMPAGNO} lingua="it" contesto="" {...COLORI} {...extra} />);
+  const r = render(<CompagnoLive compagno={COMPAGNO} lingua="it" contesto="" L={L_ITALIANO} {...COLORI} {...extra} />);
   await respira();
   return r;
 }
@@ -371,5 +389,47 @@ describe('b.406 — il dal-vivo dentro le regole di casa', () => {
     act(() => { scattaInterruzione(); });
     expect(chiuso).toBe(true);
     expect(ultima().chiusa, 'e la sessione e chiusa davvero').toBe(true);
+  });
+});
+
+// ═══ b.550 — IL RIPIEGO ITALIANO E' SPARITO: QUESTA E' LA RETE ═══
+// Finche la scheda teneva `tt(chiave, 'frase italiana')`, una chiave persa
+// dai pacchetti non si vedeva: usciva l'italiano e nessuno se ne accorgeva
+// (tranne chi non parla italiano). Adesso c'e solo `L('chiave')`, quindi
+// una chiave persa uscirebbe A SCHERMO col suo nome, in mezzo a un avviso
+// che si legge nel momento peggiore — la linea che non parte. Questa prova
+// e la rete: le quattordici frasi e le parole dei tasti devono esserci in
+// tutti e trentotto i pacchetti, non solo in italiano.
+describe('b.550 — le parole del dal-vivo ci sono in tutte e 38 le lingue', () => {
+  const CHIAVI = [
+    // le quattordici frasi degli avvisi (quelle di b.484)
+    'liveMicUnavailable', 'liveMicCheckPermission', 'liveCantOpen', 'liveVoiceNotAllowed',
+    'liveMicNoResponse', 'liveDialling', 'liveNetDown', 'liveProviderDown', 'liveNoCredit',
+    'liveNotConfigured', 'liveCantOpenChatOk', 'liveDropped', 'liveClosed', 'liveMicOff',
+    // e le parole intorno: tasti, etichette, il guasto senza nome
+    'liveCompanionWord', 'liveSpeakingSuffix', 'liveListening', 'liveMicTurnOn', 'liveMicTurnOff',
+    'retryWord', 'mutedWord', 'micWord', 'closeWord', 'youWord', 'liveHim', 'errorTitle',
+  ];
+  it('nessuna chiave manca, e nessuna e vuota', async () => {
+    const { readdirSync } = await import('node:fs');
+    const { join } = await import('node:path');
+    const lingue = readdirSync(join(process.cwd(), 'app/lib/locales')).filter((f) => f.endsWith('.js'));
+    expect(lingue.length, 'i pacchetti sono trentotto').toBe(38);
+    for (const f of lingue) {
+      const pacchetto = (await import(`../app/lib/locales/${f}`)).default;
+      for (const k of CHIAVI) {
+        expect(typeof pacchetto[k], `${f}:${k}`).toBe('string');
+        expect(String(pacchetto[k]).trim().length, `${f}:${k}`).toBeGreaterThan(0);
+      }
+    }
+  });
+
+  it('e nel codice della scheda non e rimasta una frase italiana di ripiego', async () => {
+    const { readFileSync } = await import('node:fs');
+    const { join } = await import('node:path');
+    const src = readFileSync(join(process.cwd(), 'app/components/Life/CompagnoLive.js'), 'utf8');
+    // il ripiego si riconosce dalla forma: due argomenti, chiave e frase.
+    expect(src).not.toMatch(/\btt\('\w+', '/);
+    expect(src, 'la scorciatoia del ripiego non serve piu').not.toMatch(/conRipiego/);
   });
 });

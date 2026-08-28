@@ -24,8 +24,21 @@ const STATO_ETI = { attivo: 'Attivo', raggiunto: 'Raggiunto', pausa: 'In pausa' 
 function GestioneObiettivi({ L, userToken, testoP, muto, accent, card, bordo, cambiaScheda }) {
   const [lista, setLista] = useState([]);
   const [bozza, setBozza] = useState(null); // null = elenco; oggetto = form
+  // b.550 — quale card ha il menu «⋯» aperto (id, oppure null). Uno solo
+  // alla volta: due menu aperti insieme sarebbero due liste di comandi
+  // sovrapposte, e non si capirebbe a chi appartengono.
+  const [menuAperto, setMenuAperto] = useState(null);
 
   useEffect(() => { setLista(elencoObiettivi()); }, []);
+
+  // b.550 — Escape chiude il menu della card: stessa uscita della tendina
+  // di vetro (TendinaVetro), cosi il gesto e uno solo in tutta l'app.
+  useEffect(() => {
+    if (!menuAperto) return undefined;
+    const suTasto = (e) => { if (e.key === 'Escape') setMenuAperto(null); };
+    document.addEventListener('keydown', suTasto);
+    return () => document.removeEventListener('keydown', suTasto);
+  }, [menuAperto]);
 
   // b.334 — i corsi dell'utente: per collegare un obiettivo a un corso e per
   // muovere le barre DA SOLE (sincronizzaConCorsi) all'apertura della scheda.
@@ -168,8 +181,48 @@ function GestioneObiettivi({ L, userToken, testoP, muto, accent, card, bordo, ca
                     <div style={{ fontWeight: 500, color: vinto ? '#f1c40f' : testoP, fontSize: 14 }}>{o.titolo}</div>
                     {o.descrizione && <div style={{ fontSize: 12, color: muto, overflow: 'hidden', textOverflow: 'ellipsis' }}>{o.descrizione}</div>}
                   </div>
-                  <button onClick={() => setBozza({ ...o })} aria-label={L('lifeGoalEdit')} style={{ background: 'none', border: bordo, borderRadius: 8, padding: 7, minHeight: 44, cursor: 'pointer' }}><Icon name="settings" size={14} color={testoP} /></button>
-                  <button onClick={() => elimina(o.id)} aria-label={L('lifeGoalDelete')} style={{ background: 'none', border: bordo, borderRadius: 8, padding: 7, minHeight: 44, cursor: 'pointer' }}><Icon name="x" size={14} color="#f87171" /></button>
+                  {/* ═══ b.550 — LA MATITA E LA X ENTRANO NEL «⋯» ═══
+                      Scostamento dichiarato a b.494: «le matite e le X sulle
+                      card degli obiettivi restano (il template non le mostra
+                      ma sono funzioni vive: toglierle senza un posto nuovo e
+                      perdere funzioni)». Il posto nuovo adesso c'e: un menu
+                      in alto a destra della card, che si apre al tocco. La
+                      card torna pulita come sulla tavola di Luca — un'icona,
+                      il titolo, la barra — e non si perde niente: dentro il
+                      menu ci sono le STESSE due funzioni di prima (setBozza
+                      per modificare, elimina per cancellare), spostate. */}
+                  <div style={{ position: 'relative', flexShrink: 0 }}>
+                    <button onClick={() => { vibrate(8); setMenuAperto((m) => (m === o.id ? null : o.id)); }}
+                      aria-label={L('moreDots')} aria-haspopup="menu" aria-expanded={menuAperto === o.id}
+                      style={{ background: 'none', border: bordo, borderRadius: 8, width: 44, minHeight: 44,
+                        cursor: 'pointer', color: muto, fontFamily: FONT, fontSize: 17, lineHeight: 1,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      {'⋯'}
+                    </button>
+                    {menuAperto === o.id && <>
+                      {/* il velo trasparente raccoglie il tocco fuori e chiude:
+                          senza, il menu resterebbe aperto sotto le dita. */}
+                      <div onClick={() => setMenuAperto(null)}
+                        style={{ position: 'fixed', inset: 0, zIndex: 40, background: 'transparent' }} />
+                      <div role="menu" style={{ position: 'absolute', top: 'calc(100% + 6px)', right: 0, zIndex: 41,
+                        minWidth: 168, padding: 5, borderRadius: 12, background: 'rgba(10, 14, 26, 0.96)',
+                        border: bordo, boxShadow: CLAY_OMBRA,
+                        backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)' }}>
+                        <button role="menuitem" onClick={() => { vibrate(8); setMenuAperto(null); setBozza({ ...o }); }}
+                          style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', textAlign: 'left',
+                            padding: '0 12px', minHeight: 44, borderRadius: 9, border: 'none', background: 'none',
+                            cursor: 'pointer', color: testoP, fontFamily: FONT, fontSize: 14 }}>
+                          <Icon name="settings" size={15} color={testoP} /> {L('lifeGoalEdit')}
+                        </button>
+                        <button role="menuitem" onClick={() => { vibrate(8); setMenuAperto(null); elimina(o.id); }}
+                          style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', textAlign: 'left',
+                            padding: '0 12px', minHeight: 44, borderRadius: 9, border: 'none', background: 'none',
+                            cursor: 'pointer', color: '#f87171', fontFamily: FONT, fontSize: 14 }}>
+                          <Icon name="x" size={15} color="#f87171" /> {L('lifeGoalDelete')}
+                        </button>
+                      </div>
+                    </>}
+                  </div>
                 </div>
                 <div style={{ marginTop: 8, height: 6, borderRadius: 3, background: 'rgba(255,255,255,0.1)', overflow: 'hidden' }}>
                   <div style={{ width: `${o.progresso}%`, height: '100%', background: vinto ? '#f1c40f' : accent }} />

@@ -6,7 +6,7 @@ import { createLogger } from '../../lib/logger.js';
 import { leggiRegole } from '../../lib/moderazione.js';
 import {
   reagisci, leggiConte, leggiMie, contaRisposte, salvaMessaggio, storico, TIPI,
-} from '../../lib/reazioni.js';
+} from '../../lib/stanze/reazioni.js'; // b.551 — la casa vera: vedi la nota in quel file
 import { assertElaborazioneConsentita, DirectModeError } from '../../lib/sessionGuard.js';
 import { siConservanoIMessaggi } from '../../lib/decisioni.js';
 

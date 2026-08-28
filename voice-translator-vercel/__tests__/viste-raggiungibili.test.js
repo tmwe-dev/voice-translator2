@@ -44,8 +44,21 @@ describe('navigazione', () => {
     //                 non l'utente dell'app: e un ingresso esterno voluto
     const automatiche = new Set(['loading', 'welcome', 'room', 'lobby', 'taxi-driver']);
 
+    // b.551 — LA BARRA IN BASSO APRE SENZA NOMINARE. BottomNav non scrive
+    // `setView('stanze')`: tiene un elenco di viste per ogni voce e apre
+    // la prima (`handleTabClick(item.views[0])`). Con la sola ricerca
+    // testuale «stanze» risultava irraggiungibile, mentre e' proprio la
+    // vista che il tasto «Chat» apre da b.537.
+    // Cio che questa prova difende — che nessuna pagina resti orfana —
+    // vale ancora: si guarda anche l'elenco della barra.
+    const dallaBarra = new Set(
+      [...tutto.matchAll(/views: \[([^\]]+)\]/g)]
+        .flatMap((m) => [...m[1].matchAll(/'([a-zA-Z-]+)'/g)].map((x) => x[1])),
+    );
+
     const irraggiungibili = viste.filter(v => {
       if (automatiche.has(v)) return false;
+      if (dallaBarra.has(v)) return false;
       return !tutto.includes(`setView('${v}')`);
     });
 

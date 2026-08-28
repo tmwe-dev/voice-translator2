@@ -84,6 +84,40 @@ async function handlePost(req) {
 
     if (!text) return apiError(ErrorCode.MISSING_FIELD, 'No text provided');
 
+    // ═══ INIZIO b.518 — UN MESSAGGIO DI SOLE EMOTICON NON E UNA DOMANDA ═══
+    // TROVATO DAL VIVO in produzione (#805), Home, italiano -> inglese:
+    // si scrive «🎉🎉🎉» e sotto compare, come se fosse la traduzione,
+    //   «I'm sorry, I can't assist with that.»
+    // e la risposta arriva con `cached: true`, cioe il RIFIUTO DEL
+    // MODELLO era gia stato salvato in cache e veniva riservito a
+    // chiunque scrivesse quella stessa faccina.
+    //
+    // La causa e il rovescio di b.353: li ogni gruppo di emoticon
+    // diventa un segnaposto ⟦n⟧ prima che il testo veda un modello,
+    // proprio perche le emoticon non si traducono. Quando pero il
+    // messaggio e FATTO SOLO di emoticon, quello che resta e un testo
+    // di soli segnaposti — «⟦0⟧» — e al modello si finisce per
+    // chiedere di tradurre una stringa senza lingua: risponde che non
+    // puo aiutare, e quella frase diventa la "traduzione".
+    //
+    // Qui si chiude il caso alla radice: se dopo la protezione non
+    // resta NIENTE da tradurre (solo segnaposti e spazi), la
+    // traduzione e il testo di partenza, identico. Nessun modello,
+    // nessun addebito, e — cosa che conta di piu — si passa PRIMA
+    // della lettura della cache, quindi la voce avvelenata gia in
+    // produzione non viene piu nemmeno guardata.
+    const senzaSegnaposti = text.replace(/⟦\d+⟧/g, '').trim();
+    if (mappaEmoji.length > 0 && senzaSegnaposti === '') {
+      return NextResponse.json({
+        translated: testoOriginale,
+        confidence: 1,
+        cost: 0,
+        costEurCents: 0,
+        soloEmoji: true
+      });
+    }
+    // ═══ FINE b.518 ═══
+
     // Check if this is a simple translation (no context/review/domain/description/conversationContext)
     // b.95 — se ci sono termini di glossario la traduzione NON e semplice:
     // usare la cache restituirebbe una versione senza i termini dell'utente,

@@ -39,3 +39,36 @@ describe('tavola 10 — Obiettivi', () => {
     }
   });
 });
+
+// ═══ b.550 — LO SCOSTAMENTO DI b.494 E' CHIUSO ═══
+// b.494 aveva dichiarato: «le matite e le X sulle card degli obiettivi
+// restano (il template non le mostra ma sono funzioni vive: toglierle
+// senza un posto nuovo e perdere funzioni)». Il posto nuovo adesso c'e —
+// un menu «⋯» in alto a destra della card — quindi la card torna com'e
+// sulla tavola di Luca E le due funzioni restano tutte e due vive.
+describe('b.550 — le matite e le X vivono nel menu «⋯»', () => {
+  it('la card non porta piu i due tasti sempre accesi', () => {
+    // la matita e la X stavano nella riga del titolo, una accanto all'altra
+    expect(vista).not.toMatch(/aria-label=\{L\('lifeGoalEdit'\)\}[\s\S]{0,120}Icon name="settings"/);
+    expect(vista).not.toMatch(/onClick=\{\(\) => elimina\(o\.id\)\} aria-label/);
+  });
+
+  it('c\'e un menu che si apre al tocco, uno per card', () => {
+    expect(vista).toMatch(/setMenuAperto\(\(m\) => \(m === o\.id \? null : o\.id\)\)/);
+    expect(vista).toMatch(/aria-haspopup="menu"/);
+    expect(vista).toMatch(/role="menu"/);
+    expect(vista).toMatch(/⋯/);
+  });
+
+  it('e dentro ci sono le STESSE due funzioni di prima', () => {
+    expect(vista, 'Modifica apre la stessa bozza').toMatch(/setMenuAperto\(null\); setBozza\(\{ \.\.\.o \}\)/);
+    expect(vista, 'Elimina chiama la stessa elimina').toMatch(/setMenuAperto\(null\); elimina\(o\.id\)/);
+    expect(vista).toMatch(/L\('lifeGoalEdit'\)/);
+    expect(vista).toMatch(/L\('lifeGoalDelete'\)/);
+  });
+
+  it('si chiude toccando fuori e con Escape', () => {
+    expect(vista).toMatch(/onClick=\{\(\) => setMenuAperto\(null\)\}/);
+    expect(vista).toMatch(/e\.key === 'Escape'/);
+  });
+});

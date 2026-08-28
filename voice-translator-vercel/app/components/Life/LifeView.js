@@ -40,11 +40,12 @@ import CompagnoLive from './CompagnoLive.js';
 import { assistentePer, vocePrestata } from '../../lib/compagni/corsi/assistenti.js';
 import { staccaScena } from '../../lib/compagni/corsi/scena.js';
 import { apriScanner, ascoltaScansioni } from '../../lib/scanPonte.js';
-import { sesSet, memGet } from '../../lib/memoria.js';
+import { sesSet, sesGet, sesDel, memGet } from '../../lib/memoria.js';
 import { staccaEsercizio } from '../../lib/compagni/corsi/pronuncia.js';
 import PannelloPronuncia from './PannelloPronuncia.js';
 import GestioneCompagni from './GestioneCompagni.js';
 import GestioneObiettivi from './GestioneObiettivi.js';
+import { elencoObiettivi } from '../../lib/compagni/obiettivi.js'; // b.550 — i numeri sulle voci
 import CompitiView from './CompitiView.js';
 import AmicoChat from './AmicoChat.js';
 import Tavolo from './Tavolo.js';
@@ -69,6 +70,24 @@ function LifeView({ onApriStanza }) {
   // sola col contenuto gia dentro (Spiegamelo -> Impara; Tavola -> Tavolo).
   const [imparaPreset, setImparaPreset] = useState('');
   const [tavoloPreset, setTavoloPreset] = useState('');
+  // ═══ b.551 — LA NOTIZIA CHE ARRIVA DAL MONDO ═══
+  // Idea di Luca: «devo poter invitare uno degli agenti ai o piu di uno
+  // in una stanza, o meglio poter creare un podcast, magari con
+  // approfondimento e possibilita di partecipare (un tavolo)... cosi
+  // leghiamo life a una informazione».
+  // Il Mondo lascia qui l'argomento (memoria di sessione) e la scheda su
+  // cui atterrare; Vita lo raccoglie all'apertura e parte gia carica:
+  // niente schermo bianco con «scrivi un argomento» quando l'argomento
+  // ce l'avevamo gia in mano.
+  useEffect(() => {
+    let dono = null;
+    try { dono = JSON.parse(sesGet('vt-vita-da-mondo', 'null')); } catch { dono = null; }
+    if (!dono || !dono.argomento) return;
+    try { sesDel('vt-vita-da-mondo'); } catch { /* niente memoria: si riparte comunque */ }
+    const dove = ['tavolo', 'podcast', 'amico'].includes(dono.scheda) ? dono.scheda : 'tavolo';
+    setTavoloPreset(dono.argomento);
+    setScheda(dove);
+  }, []);
   useEffect(() => {
     try {
       const raw = sessionStorage.getItem('vt-life-preset');
@@ -109,6 +128,53 @@ function LifeView({ onApriStanza }) {
   // b.232 — memoizzato: prima si ricreava a ogni render e vanificava il memo()
   // dei figli (AmicoChat, Tavolo…), che ri-renderizzavano sempre.
   const tutti = useMemo(() => [...COMPAGNI_PREDEFINITI, ...miei], [miei]);
+
+  // ═══ b.550 — TAVOLA F: I NUMERI SULLE VOCI DEL PANNELLO ═══
+  // Ordine di Luca dal template: la voce non dice solo «Obiettivi», dice
+  // «Obiettivi 2»; e sui Compiti dice anche quanti sono i materiali. Senza
+  // il numero, per sapere se dentro c'e qualcosa bisogna entrare in tutte
+  // e sette le sezioni, una alla volta.
+  // Era lo scostamento dichiarato a b.503 («i numeri veri li sapremo quando
+  // le fonti saranno esposte in elenco»): le fonti ci sono, e sono quelle
+  // che le schede usano gia — nessuna rotta nuova. Gli obiettivi vivono sul
+  // dispositivo (elencoObiettivi, come in GestioneObiettivi); compiti e
+  // materiali passano da /api/compiti con le stesse due azioni della scheda
+  // Compiti (elenca, materiali).
+  // REGOLA DI LUCA, la stessa dei «N ricordi» di b.498: un numero falso e
+  // peggio di nessun numero. Finche il conteggio non e arrivato — o la
+  // chiamata e fallita, o non c'e accesso — resta `null` e sulla voce non
+  // compare niente. Nemmeno uno zero: uno zero e una risposta, e qui non
+  // ce l'abbiamo.
+  const [conteggi, setConteggi] = useState({ obiettivi: null, compiti: null, materiali: null });
+
+  // Gli obiettivi stanno nella memoria del dispositivo: si rileggono a ogni
+  // cambio di sezione, cosi il numero e vero anche subito dopo che ne hai
+  // aggiunto o cancellato uno e sei tornato al pannello.
+  useEffect(() => {
+    try { setConteggi((c) => ({ ...c, obiettivi: elencoObiettivi().length })); }
+    catch { /* memoria del dispositivo negata: la voce resta senza numero */ }
+  }, [scheda]);
+
+  useEffect(() => {
+    if (!userToken) { setConteggi((c) => ({ ...c, compiti: null, materiali: null })); return; }
+    let vivo = true;
+    const chiedi = async (azione) => {
+      const r = await fetch('/api/compiti', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ azione, userToken }),
+        signal: AbortSignal.timeout(60000),
+      });
+      if (!r.ok) throw new Error(azione);
+      return r.json();
+    };
+    chiedi('elenca')
+      .then((d) => { if (vivo && Array.isArray(d?.jobs)) setConteggi((c) => ({ ...c, compiti: d.jobs.length })); })
+      .catch(() => { /* senza rete la voce resta muta, non bugiarda */ });
+    chiedi('materiali')
+      .then((d) => { if (vivo && Array.isArray(d?.materiali)) setConteggi((c) => ({ ...c, materiali: d.materiali.length })); })
+      .catch(() => { /* idem: meglio nessun numero che un numero inventato */ });
+    return () => { vivo = false; };
+  }, [userToken]);
 
   // b.305 — TELECOMANDO AUDIO: un pulsante fluttuante che appare quando
   // qualcosa sta suonando e ti segue mentre cambi scheda di Life. Pausa,
@@ -170,8 +236,8 @@ function LifeView({ onApriStanza }) {
           { id: 'amico', icon: 'chat', label: L('lifeFriendTab') },
           { id: 'tavolo', icon: 'users', label: L('lifeTableTab') },
           { id: 'impara', icon: 'graduation', label: L('lifeLearn') },
-          { id: 'obiettivi', icon: 'target', label: L('lifeGoalsTab') },
-          { id: 'compiti', icon: 'history', label: L('lifeHomeworkTab') },
+          { id: 'obiettivi', icon: 'target', label: L('lifeGoalsTab'), numero: conteggi.obiettivi },
+          { id: 'compiti', icon: 'history', label: L('lifeHomeworkTab'), numero: conteggi.compiti, materiali: conteggi.materiali },
           { id: 'compagni', icon: 'star', label: L('lifeCompanionsTab') },
         ];
         const schedaAttiva = SEZIONI.find((t) => t.id === scheda);
@@ -206,7 +272,16 @@ function LifeView({ onApriStanza }) {
                         border: `1px solid ${on ? accent : 'transparent'}`,
                         color: testoP, fontSize: 14.5, fontWeight: 500 }}>
                       <Icon name={t.icon} size={19} color={on ? accent : testoP} />
-                      {t.label}
+                      <span style={{ flex: 1, minWidth: 0 }}>{t.label}</span>
+                      {/* b.550 — il conteggio accanto alla parola: discreto, nel
+                          colore d'accento, in fondo alla riga. Compare SOLO se
+                          lo sappiamo davvero (vedi `conteggi` qui sopra). */}
+                      {(t.numero > 0 || t.materiali > 0) && (
+                        <span style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexShrink: 0, color: accent }}>
+                          {t.numero > 0 && <span style={{ fontSize: 13.5, fontVariantNumeric: 'tabular-nums' }}>{t.numero}</span>}
+                          {t.materiali > 0 && <span style={{ fontSize: 11.5, opacity: 0.7 }}>{t.materiali} {L('lifeHomeworkMaterials')}</span>}
+                        </span>
+                      )}
                     </button>
                   );
                 })}

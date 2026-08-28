@@ -33,11 +33,20 @@ import Icon from './Icon.js';
 //   «TaxiTalk» → esiste gia in Home: e «Parla ora», che si ribalta verso
 //   chi hai davanti e sa dire dove vuoi andare. Una seconda porta per la
 //   stessa cosa fa solo dubitare che siano due cose diverse.
+// ═══ b.551 — IL «+» DIMAGRISCE ANCORA, e stavolta per un motivo nuovo ═══
+// Difetto che avevo dichiarato io e Luca ha confermato: «il + della barra
+// mescola cinque cose di tre famiglie diverse». Era vero, ma nel
+// frattempo e' successo qualcosa che lo rende peggio: da b.537 il tasto
+// «Chat» della barra apre le STANZE, e dentro quella schermata ci sono
+// gia, in alto, la porta «entra col codice» e quella dell'archivio.
+// Tenerle anche qui vuol dire due strade per la stessa cosa a un
+// centimetro di distanza — il doppione che abbiamo tolto tre volte
+// altrove. Restano le due porte che il «+» apre DA SOLO:
+//   · una stanza pubblica nuova (creare e' un gesto suo)
+//   · i contatti (che non vivono in nessuna delle quattro schede)
 const OPTIONS = [
-  { id: 'entra-codice', icona: 'doorOpen', titleKey: 'optCodeTitle', descKey: 'optCodeDesc' },
   { id: 'stanza-community', icona: 'globe', titleKey: 'optPublicTitle', descKey: 'optPublicDesc' },
   { id: 'contatti', icona: 'user', titleKey: 'optContactsTitle', descKey: 'optContactsDesc' },
-  { id: 'cronologia', icona: 'history', titleKey: 'optSavedTitle', descKey: 'optSavedDesc' },
 ];
 
 const NewConversationSheet = ({ open, onClose, onSelect }) => {

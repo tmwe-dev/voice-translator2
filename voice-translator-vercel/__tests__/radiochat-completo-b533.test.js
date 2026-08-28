@@ -76,7 +76,15 @@ describe('b.533 — il giornale del viaggiatore e la copertina del podcast', () 
     const f = leggi('app/components/MondoNews.js');
     expect(f).toMatch(/__VT_GAZZETTA/);
     expect(f).toMatch(/ricerchePredefinite\(prefs, nomePaese\)/);
-    expect(f).toMatch(/cerca\(giro\.query, 'notizie', false, true\)/ /* b.535: i giri RUOTANO a ogni ingresso («sempre le stesse notizie», Luca) — resta silenziosa: non sporca le tue */);
+    // b.551 — AGGIORNATA (rosso pre-esistente, dichiarato apertamente).
+    // b.549 ha cambiato il gesto: non si pianta piu UN giro (`giro.query`)
+    // ma i primi tre semi, il primo subito e gli altri accodati —
+    // collaudo di Luca «mostra solo i preferiti... non fa l'autoricerca».
+    // Cio che b.533 difendeva resta identico e resta provato qui sotto:
+    // la ricerca d'ingresso e' SILENZIOSA (quarto argomento `true`), cioe
+    // non finisce fra le tue ricerche.
+    expect(f).toMatch(/await cerca\(scelti\[0\]\.query, 'notizie', false, true\)/);
+    expect(f, 'gli altri semi si accodano, non sostituiscono').toMatch(/await cerca\(altro\.query, 'notizie', false, true, true\)/);
     expect(f).toMatch(/if \(silenziosa\) throw/);
   });
   it('il podcast ha la copertina dalla rotta video gia in cache (niente wallet)', () => {

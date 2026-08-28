@@ -35,6 +35,8 @@ import { testataChiusa } from '../lib/testateChiuse.js'; // b.535 — la porta c
 import { bandieraPaese, nomePaese, quando, tipoContenuto, fonteDi, viva, stileEtichetta, PUNTO, paeseDaLingua } from '../lib/schedaMondo.js';
 import PannelloLaterale from './ui/PannelloLaterale.js';
 import CardSezione from './ui/CardSezione.js';   // b.550 — la card di vetro, una per tutte e tre le sidebar
+import ParlaneCon from './ui/ParlaneCon.js';     // b.551 — il ponte fra una notizia e Vita
+import { sesSet } from '../lib/memoria.js';
 import PreferenzeMondo from './ui/PreferenzeMondo.js';
 import PreferitiTemi from './ui/PreferitiTemi.js';
 import { PAESI } from '../lib/paesi.js';
@@ -88,7 +90,7 @@ const QUERY_RAPIDE = {
 // didascalia LEGGIBILE (mai piu grigio smorto su fondo scuro), contenuto
 // dentro. Una sola forma per tutte le sezioni del pannello.
 function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApertaDiscussione, strumenti = false, suChiudiStrumenti, suApriStrumenti, paeseDalGlobo = null, suPaeseScelto, suScorrimento, temaDaFuori = null, suTemaLetto }) {
-  const { L, prefs, userToken, savePrefs } = useApp();
+  const { L, prefs, userToken, savePrefs, setView } = useApp();
   const lingua = prefs.uiLang || 'en';
   // b.186 — "cerca -> apri discussione col link": la discussione pubblica
   // persistente aperta da una card (id) e il flag di creazione in corso.
@@ -841,6 +843,28 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
 
   // IL FILO APERTO ADESSO: su quale contenuto, con che titolo, e con i
   // dati che servono a «Parlane» se dal filo si passa alla stanza.
+  // ═══ b.551 — «PARLANE CON CHI?» ═══
+  // Idea di Luca: da una notizia si deve poter aprire una stanza fra
+  // persone, chiamare un Compagno, aprire un Tavolo che discute per
+  // arrivare a una conclusione, o farsi un Podcast da ascoltare. Prima
+  // «Parlane» faceva una cosa sola — la stanza — e la stanza appena
+  // aperta e' vuota.
+  const [parlaneCon, setParlaneCon] = useState(null);
+  const smistaParlane = useCallback((modo, contenuto) => {
+    setParlaneCon(null);
+    // b.551 — il velo si chiude SU TUTTE le strade, non solo su quelle
+    // verso Vita: la stanza fra persone e' proprio quella che in b.542 si
+    // apriva dietro. La lezione era «dove ALTRO vive la stessa cosa?».
+    setFeedAperto(false);
+    if (modo === 'persone') { onParlane?.(contenuto); return; }
+    // le altre tre strade portano in Vita, con l'argomento gia in mano
+    const argomento = [contenuto?.titolo, contenuto?.sintesi].filter(Boolean).join(' — ').slice(0, 300);
+    const scheda = modo === 'compagno' ? 'amico' : modo;
+    try { sesSet('vt-vita-da-mondo', JSON.stringify({ argomento, scheda })); }
+    catch { /* senza memoria di sessione Vita si apre vuota: meglio che non aprirsi */ }
+    setView('life');
+  }, [onParlane]);
+
   const [filo, setFilo] = useState(null);   // { url, titolo, dati }
 
   const apriCommenti = useCallback((c) => {
@@ -1817,9 +1841,10 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
       <FeedNotizieMondo aperto={feedAperto} onChiudi={() => setFeedAperto(false)} C={C} L={L}
         argomenti={argomenti || []} video={video || []} filtro={feedFiltro}
         onFiltro={(id) => savePrefs({ ...prefs, mondoFeedFiltro: id })}
-        onParlane={(d) => { setFeedAperto(false); onParlane?.(d); }}
+        onParlane={(d) => setParlaneCon(d)}
         onStrumenti={suApriStrumenti}
         onCresci={cresci}
+        miaLingua={prefs?.lang || prefs?.uiLang || 'it'}
         onCommenta={apriCommenti}
         crescendo={crescendo}
         onCerca={(q) => { setQuery(q); setChipAttiva(null); cerca(q); }}
@@ -1868,6 +1893,10 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
           Sta SOPRA tutto e non su una faccia del foglio: si apre da una
           card, dal feed e (domani) da un avviso, e girando il foglio
           sparirebbe. La stessa scelta gia fatta per il profilo qui sopra. */}
+      {/* b.551 — «Parlane con chi?»: la domanda giusta al posto di una porta sola */}
+      <ParlaneCon aperto={!!parlaneCon} contenuto={parlaneCon}
+        onScegli={smistaParlane} onChiudi={() => setParlaneCon(null)} C={C} L={L} />
+
       <FiloCommenti aperto={!!filo} url={filo?.url} titolo={filo?.titolo}
         C={temaMondoUi} L={L} nome={prefs?.mondoNick || ''}
         onChiudi={() => setFilo(null)}

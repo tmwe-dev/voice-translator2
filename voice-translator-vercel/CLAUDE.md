@@ -267,6 +267,57 @@ perche il working tree lo conteneva ancora.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.551** (push #837) — IL GUASTO CHE SPIEGA «NON SI PUO DARE
+  UN MI PIACE A NESSUNO», e la lista chiusa.
+
+  ① **`/api/reazioni` era MORTA DA b.545 — e nessuno se n'era accorto.**
+  Costruendo le reazioni del Mondo ho scritto sopra a `lib/reazioni.js`,
+  che dal b.99 era il modulo SERVER delle stanze (su/giu/cuore su Redis).
+  Stesso nome, contenuto tutto diverso: da quel giorno la rotta importava
+  `reagisci`, `leggiConte`, `salvaMessaggio`... da un file che non li
+  esporta piu. Un import a graffe che punta al nulla non e' un avviso: la
+  rotta non parte proprio, 500 su ogni tocco. Luca lo aveva detto — «non
+  si puo dare un mi piace a nessuno» — e io avevo cercato altrove.
+  Adesso i due mondi hanno due case e due nomi:
+  `lib/reazioni.js` (le facce sui contenuti del Mondo, sul telefono) e
+  `lib/stanze/reazioni.js` (su/giu/cuore sui messaggi, server + Redis).
+  **LEZIONE, da tenere:** quando si crea un file nuovo, prima si guarda
+  se il nome e' libero. `git show <commit>^:<file>` dice cosa c'era prima.
+
+  ② `RoomView` importava `trovaCompagno` da `compagni/catalogo.js`: una
+  funzione che non e' mai esistita (si chiama `getCompagnoPredefinito`).
+  Invitare un guru in stanza — la richiesta di b.549 — sarebbe morto al
+  primo tocco. Trovato dallo scandaglio di b.539, non da Luca: e' la
+  seconda volta che quel controllo ripaga da solo tutto il tempo speso a
+  scriverlo.
+
+  ③ **Il velo del feed si chiude su TUTTE le strade di «Parlane».**
+  Andava a posto solo per Vita; la stanza fra persone si apriva DIETRO il
+  velo — esattamente il difetto di b.542, ricomparso su una strada nuova.
+  Adesso `setFeedAperto(false)` sta in cima a `smistaParlane`, prima di
+  sapere quale strada si prende.
+
+  ④ **Niente vetro sfocato sui pezzi che si ripetono** (la targa
+  bandiera+fonte e la colonnina dei tasti, una copia per slide): la
+  sfocatura la paga il telefono a ogni scorrimento, e nel feed lo
+  scorrimento non si ferma mai. Fondo pieno: costa zero e la targa si
+  legge meglio — che e' poi quello che Luca chiedeva («la bandiera e
+  l'origine, che si veda bene»).
+
+  ⑤ Le 216 prove sono verdi tutte insieme (2676). Cinque erano rosse per
+  bugie invecchiate — dicevano ancora `fontWeight: 600` dove il grassetto
+  e' vietato per ordine tassativo di b.549, o `cerca(giro.query...)` dove
+  b.549 pianta tre semi invece di uno. Aggiornate spiegando cosa
+  difendono OGGI, non cancellate.
+
+  ⑥ Il controllo «niente si siede sulla BottomNav» adesso distingue un
+  PANNELLO MODALE (che ha il suo velo a tutto schermo, si tocca e si
+  chiude) da una fascia che mura la barra per sempre — che era il difetto
+  vero da cui nasceva, `InstallaApp` prima di b.134-ter.
+
+  ⑦ `Interruttore.js` era orfano da b.508: spostato in `_to_delete/b551/`
+  (il mount non permette di cancellare — lo fa Luca).
+
 - Versione: **b.550** (push #836) — ALTRE TRE VOCI DELLA LISTA, e una
   trappola presa al volo.
 

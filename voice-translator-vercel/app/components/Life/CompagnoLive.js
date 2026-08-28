@@ -2,7 +2,6 @@
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { FONT } from '../../lib/constants.js';
 import { zittisci, suInterruzione } from '../../lib/voce.js';
-import { conRipiego } from '../../lib/ripiego.js';
 import Icon from '../Icon.js';
 
 // ═══════════════════════════════════════════════════════════════
@@ -83,8 +82,22 @@ function classificaChiusura(d, volutaDaNoi) {
 // Il traduttore arriva come PROP da chi monta la scheda: dentro non si
 // aggiunge nessun aggancio nuovo, perche qui sotto c'e la telefonata e
 // non si tocca. Cambia solo cio che si legge.
-function CompagnoLive({ compagno, lingua, userToken, contesto, onChiudi, onFine, testoP, muto, accent, card, bordo, L }) {
-  const tt = conRipiego(L);
+//
+// b.550 — E ADESSO L'ITALIANO E' USCITO DAL CODICE DAVVERO. Ordine di
+// Luca: «trovale tutte e sostituiscile con L('chiave')». A b.484 le
+// quattordici frasi erano state incatenate a una chiave, ma con il testo
+// italiano ancora scritto qui accanto come ripiego (`tt(chiave,
+// italiano)`): il file continuava a essere l'unico posto dell'app dove
+// una frase visibile stava in italiano dentro il sorgente, e chiunque
+// leggesse quelle righe poteva credere che l'italiano fosse la verita e
+// la traduzione un di piu.
+// Le quattordici chiavi esistono e sono tradotte in tutti e trentotto i
+// pacchetti (lo difende `compagno-live-b406`), quindi il ripiego non
+// difendeva piu niente: proteggeva solo se stesso. Ora si chiama L() e
+// basta. Se un giorno una chiave sparisse dai pacchetti si leggerebbe il
+// suo nome — brutto, ma onesto, e visibile subito; l'italiano di scorta
+// invece nascondeva il buco a tutti tranne che agli italiani.
+function CompagnoLive({ compagno, lingua, userToken, contesto, onChiudi, onFine, testoP, muto, accent, card, bordo, L = (chiave) => chiave }) {
   // collego | vivo | chiusa_da_te | caduta | caduta_rete | guasto_fornitore
   // | microfono_negato | avvio_fallito | credito_finito | non_configurato
   const [stato, setStato] = useState('collego');
@@ -211,7 +224,7 @@ function CompagnoLive({ compagno, lingua, userToken, contesto, onChiudi, onFine,
         const flusso = await navigator.mediaDevices.getUserMedia({ audio: true });
         flusso.getTracks().forEach((t) => t.stop());
       } catch (e) {
-        if (mioTurno()) { setStato('microfono_negato'); setDettaglio(`${tt('liveMicUnavailable', 'Microfono non disponibile.')} (${e?.name || ''}) ${tt('liveMicCheckPermission', 'Controlla il permesso e riprova.')}`); }
+        if (mioTurno()) { setStato('microfono_negato'); setDettaglio(`${L('liveMicUnavailable')} (${e?.name || ''}) ${L('liveMicCheckPermission')}`); }
         return;
       }
       if (!mioTurno()) return;
@@ -236,7 +249,7 @@ function CompagnoLive({ compagno, lingua, userToken, contesto, onChiudi, onFine,
         // Ogni rifiuto ha il suo nome: il credito finito non e un guasto
         // della linea, e una configurazione mancante non e colpa tua.
         const motivo = permesso?.motivo || '';
-        setDettaglio(String(permesso?.error || tt('liveCantOpen', 'La linea non si apre.')));
+        setDettaglio(String(permesso?.error || L('liveCantOpen')));
         setStato(
           risposta.status === 402 ? 'credito_finito'
           : risposta.status === 401 ? 'avvio_fallito'
@@ -372,7 +385,7 @@ function CompagnoLive({ compagno, lingua, userToken, contesto, onChiudi, onFine,
         // Le parole di questa schermata sono scritte qui da sempre (vedi
         // gli stati poco piu sotto): questa riga segue la stessa strada,
         // per non lasciarne una a meta fra due modi diversi.
-        setDettaglio(tt('liveVoiceNotAllowed', 'Il fornitore non consente di cambiare voce: parla con la sua.'));
+        setDettaglio(L('liveVoiceNotAllowed'));
       }
       if (!conv) { setStato('guasto_fornitore'); return; }
       convRef.current = conv;
@@ -384,9 +397,9 @@ function CompagnoLive({ compagno, lingua, userToken, contesto, onChiudi, onFine,
       setMuteDisponibile(typeof conv.setMicMuted === 'function');
     } catch (e) {
       console.warn('[CompagnoLive] apertura fallita:', e);
-      if (mioTurno()) { setStato('avvio_fallito'); setDettaglio(String(e?.message || e || 'guasto sconosciuto')); }
+      if (mioTurno()) { setStato('avvio_fallito'); setDettaglio(String(e?.message || e || L('errorTitle'))); }
     }
-  }, [compagno, lingua, userToken, consegnaTurni, chiudiConto, fermaBattito]);
+  }, [compagno, lingua, userToken, consegnaTurni, chiudiConto, fermaBattito, L]);
 
   useEffect(() => {
     vivoRef.current = true;
@@ -423,9 +436,9 @@ function CompagnoLive({ compagno, lingua, userToken, contesto, onChiudi, onFine,
     } catch (e) {
       // il microfono e rimasto com'era, e va detto: la scritta non cambia.
       console.warn('[CompagnoLive] il microfono non ha ubbidito:', e);
-      setDettaglio(tt('liveMicNoResponse', 'Il microfono non ha risposto al comando: resta come prima.'));
+      setDettaglio(L('liveMicNoResponse'));
     }
-  }, [micSpento]);
+  }, [micSpento, L]);
 
   const chiudi = useCallback(() => {
     generazioneRef.current += 1;
@@ -463,18 +476,18 @@ function CompagnoLive({ compagno, lingua, userToken, contesto, onChiudi, onFine,
   // P1.2 — ogni finale ha il suo nome. Il dettaglio tecnico resta sotto,
   // per chi lo vuole, ma la prima riga dice cosa e successo.
   const statoTesto =
-    stato === 'collego' ? tt('liveDialling', 'Compongo il numero…')
-    : stato === 'microfono_negato' ? (dettaglio || tt('liveMicUnavailable', 'Microfono non disponibile.'))
-    : stato === 'caduta_rete' ? tt('liveNetDown', 'È caduta la rete. Quando torna, riprova.')
-    : stato === 'guasto_fornitore' ? tt('liveProviderDown', 'Guasto della linea vocale — non è colpa tua. La chat scritta funziona.')
-    : stato === 'credito_finito' ? tt('liveNoCredit', 'Credito finito: ricarica e la linea riparte. La chat scritta funziona.')
-    : stato === 'non_configurato' ? tt('liveNotConfigured', 'Il dal vivo non è acceso su questo ambiente.')
-    : stato === 'avvio_fallito' ? (dettaglio || tt('liveCantOpenChatOk', 'La linea non si apre. La chat scritta funziona comunque.'))
-    : stato === 'caduta' ? tt('liveDropped', 'La linea è caduta.')
-    : stato === 'chiusa_da_te' ? tt('liveClosed', 'Conversazione chiusa.')
-    : micSpento ? tt('liveMicOff', 'Microfono spento — lui non ti sente')
-    : modo === 'speaking' ? `${compagno?.nome || tt('liveCompanionWord', 'Il Compagno')} ${tt('liveSpeakingSuffix', 'sta parlando…')}`
-    : tt('liveListening', 'Ti ascolto — parla pure, puoi interromperlo');
+    stato === 'collego' ? L('liveDialling')
+    : stato === 'microfono_negato' ? (dettaglio || L('liveMicUnavailable'))
+    : stato === 'caduta_rete' ? L('liveNetDown')
+    : stato === 'guasto_fornitore' ? L('liveProviderDown')
+    : stato === 'credito_finito' ? L('liveNoCredit')
+    : stato === 'non_configurato' ? L('liveNotConfigured')
+    : stato === 'avvio_fallito' ? (dettaglio || L('liveCantOpenChatOk'))
+    : stato === 'caduta' ? L('liveDropped')
+    : stato === 'chiusa_da_te' ? L('liveClosed')
+    : micSpento ? L('liveMicOff')
+    : modo === 'speaking' ? `${compagno?.nome || L('liveCompanionWord')} ${L('liveSpeakingSuffix')}`
+    : L('liveListening');
 
   return (
     <div style={{ padding: 14, borderRadius: 14, background: card, border: `1px solid ${accent}55`, marginBottom: 12 }}>
@@ -498,21 +511,21 @@ function CompagnoLive({ compagno, lingua, userToken, contesto, onChiudi, onFine,
           )}
         </div>
         {riprovabile && (
-          <button onClick={apriLinea} aria-label={tt('retryWord', 'Riprova')}
+          <button onClick={apriLinea} aria-label={L('retryWord')}
             style={{ background: accent, border: 'none', borderRadius: 8, minHeight: 44, padding: '6px 12px',
               cursor: 'pointer', color: '#04121c', fontFamily: FONT, fontSize: 13, fontWeight: 500 }}>
-            {tt('retryWord', 'Riprova')}
+            {L('retryWord')}
           </button>
         )}
         {stato === 'vivo' && muteDisponibile && (
           <button onClick={commutaMic} aria-pressed={micSpento}
-            aria-label={micSpento ? tt('liveMicTurnOn', 'Riaccendi microfono') : tt('liveMicTurnOff', 'Spegni microfono')}
+            aria-label={micSpento ? L('liveMicTurnOn') : L('liveMicTurnOff')}
             style={{ background: micSpento ? '#f8717122' : 'none', border: bordo, borderRadius: 8, minHeight: 44, padding: '6px 10px',
               cursor: 'pointer', color: micSpento ? '#f87171' : testoP, fontFamily: FONT, fontSize: 13 }}>
-            {micSpento ? tt('mutedWord', 'Muto') : tt('micWord', 'Mic')}
+            {micSpento ? L('mutedWord') : L('micWord')}
           </button>
         )}
-        <button onClick={chiudi} aria-label={tt('closeWord', 'Chiudi')}
+        <button onClick={chiudi} aria-label={L('closeWord')}
           style={{ background: 'none', border: bordo, borderRadius: 8, minHeight: 44, padding: '6px 10px', cursor: 'pointer', color: testoP, fontFamily: FONT, fontSize: 13,
             display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon name="x" size={14} /></button>
       </div>
@@ -521,7 +534,7 @@ function CompagnoLive({ compagno, lingua, userToken, contesto, onChiudi, onFine,
         <div style={{ maxHeight: 180, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 4, paddingTop: 6, borderTop: bordo }}>
           {righe.map((r, i) => (
             <div key={i} style={{ fontSize: 12, lineHeight: 1.4, color: r.chi === 'tu' ? muto : testoP, fontFamily: FONT }}>
-              <span style={{ fontWeight: 500 }}>{r.chi === 'tu' ? tt('youWord', 'Tu') : compagno?.nome || tt('liveHim', 'Lui')}: </span>{r.testo}
+              <span style={{ fontWeight: 500 }}>{r.chi === 'tu' ? L('youWord') : compagno?.nome || L('liveHim')}: </span>{r.testo}
             </div>
           ))}
           <div ref={fondoRef} />

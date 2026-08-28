@@ -4,6 +4,7 @@ import { FONT, vibrate } from '../lib/constants.js';
 import Icon from './Icon.js';
 import { chiaveContenuto, hoMessoCuore, giraCuore, quantiCuori } from '../lib/gradimento.js'; // b.544 — il mi piace
 import VentaglioReazioni from './ui/VentaglioReazioni.js';   // b.550 — le sei facce
+import InterpreteVideo from './ui/InterpreteVideo.js';       // b.551 — il video nella tua lingua
 import { miaReazione, giraReazione, contaReazioni, emojiDi } from '../lib/reazioni.js';
 import { bandieraPaese, nomePaese } from '../lib/schedaMondo.js'; // b.546 — la bandiera e il nome del paese
 import { paeseDellaNotizia } from '../lib/paeseDaFonte.js';       // b.546 — da dove arriva davvero la notizia
@@ -92,9 +93,13 @@ function Azioni({ voci }) {
               width: 46, height: 46, borderRadius: 999, cursor: 'pointer', padding: 0,
               // b.544 — acceso quando l'hai messo tu: si vede a colpo d'occhio
               // che il tocco e' arrivato, senza aspettare la rete.
-              background: v.acceso ? 'rgba(255,84,112,0.22)' : 'rgba(10,14,26,0.72)',
+              // b.551 — fondo pieno, NON vetro sfocato. Questi cerchi
+              // esistono in copia su ogni slide del feed: una sfocatura
+              // ripetuta la paga il telefono a ogni scorrimento, e nel
+              // feed lo scorrimento e' continuo. Un fondo denso si legge
+              // uguale sopra qualunque foto e non costa nulla.
+              background: v.acceso ? 'rgba(150,30,50,0.88)' : 'rgba(10,14,26,0.86)',
               border: `1px solid ${v.acceso ? 'rgba(255,84,112,0.65)' : 'rgba(255,255,255,0.18)'}`,
-              backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               WebkitTapHighlightColor: 'transparent',
             }}>
@@ -151,8 +156,11 @@ function BadgeOrigine({ bandiera, luogo, origine }) {
       maxWidth: 'calc(100% - 92px)',
       display: 'flex', alignItems: 'center', gap: 8,
       padding: '7px 13px 7px 11px', borderRadius: 999,
-      background: 'rgba(8,11,22,0.66)', border: '1px solid rgba(255,255,255,0.24)',
-      backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
+      // b.551 — come la colonnina qui sopra: niente vetro sfocato su un
+      // pezzo che si ripete a ogni slide. E questa targa Luca la vuole
+      // LEGGIBILE («la bandiera e l'origine, che si veda bene»): un fondo
+      // pieno la stacca dalla foto meglio di una sfocatura.
+      background: 'rgba(8,11,22,0.84)', border: '1px solid rgba(255,255,255,0.24)',
       boxShadow: '0 6px 20px rgba(0,0,0,0.42)',
       pointerEvents: 'none',
     }}>
@@ -178,7 +186,7 @@ function BadgeOrigine({ bandiera, luogo, origine }) {
   );
 }
 
-export default function FeedNotizieMondo({ aperto, onChiudi, C, L, argomenti = [], video = [], filtro, onFiltro, onParlane, onApriArticolo, onStrumenti, onCresci, crescendo = false, onCerca, onCommenta }) {
+export default function FeedNotizieMondo({ aperto, onChiudi, C, L, argomenti = [], video = [], filtro, onFiltro, onParlane, onApriArticolo, onStrumenti, onCresci, crescendo = false, onCerca, onCommenta, miaLingua = 'it' }) {
   const contenitoreRef = useRef(null);
   // ═══════════════════════════════════════════════════════════════
   // b.546 — L'OSSERVATORE CHE NON NASCEVA MAI. Quinta causa del
@@ -640,7 +648,9 @@ export default function FeedNotizieMondo({ aperto, onChiudi, C, L, argomenti = [
                     // dalla vista lo smontaggio del componente ferma
                     // l'audio da solo, senza un comando esplicito.
                     <iframe key={`on-${el.dati.id}`}
-                      src={`https://www.youtube-nocookie.com/embed/${el.dati.id}?autoplay=1&playsinline=1`}
+                      // b.551 — enablejsapi: senza, il player non si lascia ne silenziare
+                      // ne interrogare sul tempo, e l'Interprete resta cieco e muto.
+                      src={`https://www.youtube-nocookie.com/embed/${el.dati.id}?autoplay=1&playsinline=1&enablejsapi=1`}
                       title={el.dati.titolo}
                       allow="accelerometer; autoplay; clipboard-write; encrypted-media; fullscreen; gyroscope; picture-in-picture"
                       allowFullScreen
@@ -657,6 +667,20 @@ export default function FeedNotizieMondo({ aperto, onChiudi, C, L, argomenti = [
                     dal suo indirizzo, e una bandiera indovinata sarebbe
                     peggio di nessuna bandiera. */}
                 <BadgeOrigine origine={el.dati.canale} />
+                {/* ═══ b.551 — L'INTERPRETE DEL VIDEO ═══
+                    Ordini di Luca: «possiamo trovare il modo di silenziare
+                    l'audio e tradurre direttamente con elevenlabs?»,
+                    «rallentiamo la partenza del video di 5 secondi e diamo
+                    modo al sistema di elaborare frasi compiute», «potremmo
+                    darla dove disponibile no??», «le scelte possibili
+                    devono essere chiare senza confondere l'utente».
+                    Il tasto NON esiste se il video non ha sottotitoli: una
+                    porta che non si apre non si mostra (la regola delle
+                    testate chiuse, b.535). Tre scelte dette in chiaro:
+                    spento, sottotitoli tradotti, voce. */}
+                <InterpreteVideo videoId={el.dati.id} lingua={miaLingua}
+                  attivo={i === indiceAttivo} C={C} L={L} />
+
                 {/* b.539 — i tasti che mancavano ai video. */}
                 <Azioni voci={[
                   /* b.544 — IL CUORE, in cima: e la cosa piu facile da fare
@@ -790,7 +814,7 @@ export default function FeedNotizieMondo({ aperto, onChiudi, C, L, argomenti = [
                   { chiave: 'commenta', icona: 'chat', parola: L('commentsWord'), onTocca: () => { vibrate(8); onCommenta?.(el.dati); } },
                   { chiave: 'leggi', icona: 'doc', parola: L('newsOpenTranslate'), onTocca: () => { vibrate(8); onApriArticolo?.(el.dati); } },
                   { chiave: 'parlane', icona: 'chat', parola: L('newsTalkAbout'), onTocca: () => { vibrate(10); onParlane?.(el.dati); } },
-                  el.dati.url ? { chiave: 'fuori', icona: 'link', parola: L('newsOpenSite'), onTocca: () => { vibrate(6); try { window.open(el.dati.url, '_blank', 'noopener,noreferrer'); } catch { /* finestra rifiutata */ } } } : null,
+                  el.dati.url ? { chiave: 'fuori', icona: 'link', parola: L('newsOpenSite'), onTocca: () => { vibrate(6); try { window.open(el.dati.url, '_blank', 'noopener,noreferrer'); } catch { /* il telefono ha bloccato la finestra nuova: non e' un guasto nostro e non merita un allarme a schermo, chi vuole il sito ha ancora il tasto */ } } } : null,
                 ]} />
 
                 <div style={{ position: 'relative', zIndex: 1, padding: '16px 20px calc(28px + env(safe-area-inset-bottom))' }}>

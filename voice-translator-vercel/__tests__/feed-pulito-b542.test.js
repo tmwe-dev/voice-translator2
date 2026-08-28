@@ -37,7 +37,19 @@ describe('b.542 — niente doppioni: le porte stanno solo nella colonnina', () =
 
 describe('b.542 — «il tasto parlane non va»: si apriva dietro il velo', () => {
   it('il feed si chiude prima di aprire la discussione', () => {
-    expect(news).toMatch(/onParlane=\{\(d\) => \{ setFeedAperto\(false\); onParlane\?\.\(d\); \}\}/);
+    // b.551 — «Parlane» dal feed adesso chiede PRIMA con chi (ParlaneCon:
+    // persone / un esperto / il Tavolo / il Podcast — idea di Luca «cosi
+    // leghiamo life a una informazione»). Il velo si chiude comunque:
+    // dentro `smistaParlane`, su tutte le strade che escono dal feed —
+    // che e' cio che b.542 difendeva.
+    expect(news).toMatch(/onParlane=\{\(d\) => setParlaneCon\(d\)\}/);
+    const smista = news.slice(news.indexOf('const smistaParlane'));
+    // il velo si chiude PRIMA di smistare: vale per tutte e quattro le
+    // strade, comprese le persone — che erano proprio quelle che in b.542
+    // si aprivano dietro.
+    const primaRiga = smista.slice(0, smista.indexOf("if (modo === 'persone')"));
+    expect(primaRiga, 'il velo si chiude su ogni strada').toMatch(/setFeedAperto\(false\);/);
+    expect(smista.slice(0, 900)).toMatch(/onParlane\?\.\(contenuto\)/);
   });
   it('e la stessa cura vale gia per l\'articolo (b.535): nessuna porta resta dietro', () => {
     expect(news).toMatch(/tornaAlFeedRef\.current = true; setFeedAperto\(false\); setLettura/);

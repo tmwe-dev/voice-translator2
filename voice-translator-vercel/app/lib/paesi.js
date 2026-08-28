@@ -151,15 +151,62 @@ export function getPaese(codice) {
 // finiscono al posto giusto invece che in fondo.
 const PAESI_ORDINATI = [...PAESI].sort((a, b) => a.nome.localeCompare(b.nome, undefined, { sensitivity: 'base' }));
 
-export function cercaPaesi(testo) {
+// ═══ INIZIO b.519 — I PAESI NON SI TROVAVANO COL LORO NOME ═══
+// RIPRODOTTO dal vivo con interfaccia italiana (gia scritto nel diario
+// di b.516 e rimasto aperto due giri): «germania» -> «Nessun paese
+// trovato», mentre «germany» trovava Deutschland. Si cercava solo nel
+// nome del posto (l'ENDONIMO: Deutschland, 日本, Ελλάδα) e in quello
+// inglese, e per decine di paesi l'endonimo non e nemmeno scrivibile
+// con la tastiera di chi cerca.
+//
+// E' la stessa malattia che b.516 ha curato per le LINGUE, e la cura e
+// la stessa: aggiungere un modo in piu per arrivarci, senza cambiare
+// niente di quello che si vede. Li servi un elenco scritto a mano
+// (ALIAS_LINGUE) perche le lingue non stanno in nessuna tabella di
+// sistema; qui no: i nomi dei paesi il browser e Node li conoscono gia
+// tutti, in tutte le 15 lingue dell'interfaccia, con `Intl.DisplayNames`
+// (`of('DE')` -> «Germania» in it, «Germany» in en, «Alemania» in es).
+// Niente 89 nomi da scrivere e da tenere aggiornati a mano, e la
+// correzione vale per TUTTE le lingue dell'interfaccia, non solo per
+// l'italiano.
+//
+// Il dizionario si costruisce una volta per lingua e resta in memoria:
+// `Intl.DisplayNames` non e gratis se lo si chiama a ogni battuta di
+// tasto per 89 paesi. Se l'ambiente non ce l'ha (o la lingua non e
+// riconosciuta) si torna esattamente al comportamento di prima: la
+// ricerca continua a funzionare su endonimo, inglese e sigla.
+const nomiPerLingua = new Map();
+
+function dizionarioNomi(lingua) {
+  const chiave = String(lingua || 'en').slice(0, 5);
+  if (nomiPerLingua.has(chiave)) return nomiPerLingua.get(chiave);
+  let mappa = null;
+  try {
+    const dn = new Intl.DisplayNames([chiave], { type: 'region' });
+    mappa = new Map();
+    for (const p of PAESI) {
+      const n = dn.of(p.codice);
+      // `of()` restituisce la sigla stessa quando non sa il nome: in
+      // quel caso non aggiunge niente e non vale la pena tenerlo.
+      if (n && n !== p.codice) mappa.set(p.codice, normalizza(n));
+    }
+  } catch { mappa = null; }
+  nomiPerLingua.set(chiave, mappa);
+  return mappa;
+}
+
+export function cercaPaesi(testo, lingua) {
   const q = normalizza(testo);
   if (!q) return PAESI_ORDINATI;
+  const nomiLocali = dizionarioNomi(lingua);
   return PAESI_ORDINATI.filter(p =>
     normalizza(p.nome).includes(q) ||
     normalizza(p.nomeEn).includes(q) ||
+    (nomiLocali?.get(p.codice) || '').includes(q) ||
     p.codice.toLowerCase().startsWith(q)
   );
 }
+// ═══ FINE b.519 ═══
 
 function normalizza(s) {
   return String(s || '')
