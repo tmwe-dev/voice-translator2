@@ -267,6 +267,38 @@ perche il working tree lo conteneva ancora.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.570** (push #855) — «È APPARSA PER UN ISTANTE, POI SI È
+  ROTTO TUTTO».
+
+  Collaudo di Luca, e sono TRE difetti uno dentro l'altro, tutti nati
+  dal lavoro di oggi.
+
+  ① **LO SCHERMO ROSSO**: `Cannot read properties of undefined (reading
+  '0')`. La riga colpevole era `t.fonti[0]?.fonte` — col punto
+  interrogativo sul SECONDO passo ma non sul primo. Ha retto per mesi
+  perche' tutte le schede avevano `fonti`, finche' il **giornale
+  salvato** (b.564) non ha cominciato a produrne senza, per non riempire
+  la memoria del telefono.
+  **LEZIONE: quando si introduce una forma NUOVA di un dato che gia
+  circola, si guarda chi lo legge.** Il difetto non era dove esplodeva.
+  Corretto in due punti: il giornale salvato consegna sempre un elenco
+  (vuoto, non `undefined`) e chi legge si difende dal primo passo. Piu
+  una prova che cerca in tutto il codice altre letture nude.
+
+  ② **IL LAMPEGGIO**: l'accoglienza compariva un istante anche a chi
+  l'aveva gia fatta. Al primo disegno le preferenze non sono ancora
+  arrivate dal server, e **un oggetto vuoto SEMBRA uno che non ha mai
+  scelto niente**. «Non lo so ancora» e «non ha scelto» sono due cose
+  diverse, e confonderle si vede a schermo.
+
+  ③ **IL FEED CHE NON TORNAVA PIU**, ed e' il «poi si e' rotto tutto»:
+  l'effetto che fa partire la Gazzetta girava UNA volta sola (dipendenze
+  vuote). Chi vedeva la domanda usciva da quel giro con `return` e non
+  ci rientrava mai — nemmeno dopo aver risposto.
+  **REGOLA: una guardia che rimanda un lavoro deve poter essere
+  ricontrollata.** Un `return` dentro un effetto che gira una volta sola
+  non e' un rinvio: e' una rinuncia.
+
 - Versione: **b.569** (push #854) — LA PORTA CHE NON SI APRIVA.
 
   Ultimo difetto del collaudo dal vivo, e il piu insidioso perche' non

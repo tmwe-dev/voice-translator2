@@ -135,6 +135,11 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
   // il filtro (solo video di default — ordine di Luca) e una preferenza
   // persistita, cosi resta com'era l'ultima volta che l'ha scelto.
   const [feedAperto, setFeedAperto] = useState(false);
+  // b.570 — «so gia chi sei?». Le preferenze arrivano dal server dopo il
+  // primo disegno: finche' non ci sono, un oggetto vuoto non vuol dire
+  // «non ha scelto niente», vuol dire «non lo so ancora». Confondere le
+  // due cose faceva lampeggiare l'accoglienza a chi l'aveva gia fatta.
+  const prefsPronte = !!prefs && Object.keys(prefs).length > 0;
   // b.529 — Luca: «non vedo la visualizzazione default video di cui
   // abbiamo parlato». L'ordine originale (b.515) diceva «se uno ENTRA e
   // scorre attiva l'autoplay»: la vista continua a tutta pagina si apre
@@ -182,7 +187,12 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
     // niente: partirebbero tre giri di ricerca (e tre chiamate a
     // pagamento) per un giornale che verra buttato fra dieci secondi,
     // appena la persona sceglie i suoi interessi.
-    if (daChiedere(prefs)) return;
+    // b.570 — e se la domanda e' ancora aperta si aspetta: ma l'attesa
+    // NON puo essere definitiva. Questo effetto girava una volta sola
+    // (dipendenze vuote), quindi chi vedeva la domanda restava senza
+    // giornale PER SEMPRE, anche dopo aver risposto. Ecco perche' «poi
+    // si e' rotto tutto»: il feed non ripartiva piu.
+    if (!prefsPronte || daChiedere(prefs)) return;
     try {
       // b.541 — SI PARTE DAI TUOI SEMI. Luca: «se le mie ricerche ultime
       // sono dentro perche nei reel non vedo piu questi contenuti?».
@@ -235,8 +245,12 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
         await cerca(domanda, 'notizie', false, true, true, scelta);
       })();
     } catch { /* senza default si resta sull'invito a cercare */ }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- parte una volta, all'ingresso
-  }, []);
+    // b.570 — le dipendenze non sono piu vuote: l'effetto deve poter
+    // ripartire quando le preferenze arrivano e quando la domanda si
+    // chiude. La guardia vera resta `argomenti !== null`, che impedisce
+    // di cercare due volte.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- la guardia e `argomenti`, non le dipendenze
+  }, [prefsPronte, prefs?.interessi, prefs?.interessiSaltati]);
   const feedFiltro = prefs?.mondoFeedFiltro || 'video'; // { tipo: 'articolo'|'video', dati }
   const [video, setVideo] = useState(null);   // null = mai cercati
   const [videoAttivi, setVideoAttivi] = useState(false);
@@ -1949,7 +1963,14 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
               overflow: 'hidden',
             }}>
               <span style={{ fontSize: 26, fontWeight: 500, color: `${C.accent}55`, letterSpacing: 1 }}>
-                {(t.fonti[0]?.fonte || '·').slice(0, 1).toUpperCase()}
+                {/* b.570 — `t.fonti?.[0]`, col punto interrogativo anche sul
+                    primo passo. Senza, questa riga faceva esplodere tutta la
+                    schermata: «Cannot read properties of undefined (reading
+                    '0')». Le schede che arrivano dal giornale salvato
+                    (b.564) non portano `fonti` — le tolgo apposta per non
+                    riempire la memoria del telefono — e qui nessuno lo
+                    aveva previsto. */}
+                {(t.fonti?.[0]?.fonte || '·').slice(0, 1).toUpperCase()}
               </span>
               {/* eslint-disable-next-line @next/next/no-img-element -- immagine
                   esterna di dominio ignoto: next/image richiederebbe la lista
@@ -2200,7 +2221,13 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
       {/* b.562 — la prima domanda copre tutto: e' l'unica cosa da fare
           in questo momento, e mostrarle accanto un giornale a meta
           sarebbe chiedere e rispondere insieme. */}
-      {daChiedere(prefs) && (
+      {/* b.570 — «e apparsa per un istante ed e scomparsa» (Luca). Al
+          primo disegno le preferenze non sono ancora arrivate dal
+          server: `prefs` e' vuoto, e un oggetto vuoto sembra uno che non
+          ha mai scelto niente. Cosi la domanda compariva a TUTTI per un
+          lampo. Adesso si aspetta di sapere chi sei: senza preferenze
+          caricate non si chiede niente. */}
+      {prefsPronte && daChiedere(prefs) && (
         <SceltaInteressi C={C} L={L} onConferma={suInteressi} onSalta={suSaltaInteressi} />
       )}
 

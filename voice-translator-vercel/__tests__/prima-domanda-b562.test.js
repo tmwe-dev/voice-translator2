@@ -151,7 +151,10 @@ describe('e nel Mondo si collega dove serve', () => {
   it('la Gazzetta non parte finche la domanda e aperta', () => {
     // partirebbero tre giri (e tre chiamate a pagamento) per un giornale
     // che verrebbe buttato dieci secondi dopo.
-    expect(news).toMatch(/if \(daChiedere\(prefs\)\) return;/);
+    // b.570 — si aspetta anche che le preferenze siano ARRIVATE: un
+    // oggetto vuoto non vuol dire «non ha scelto», vuol dire «non lo so
+    // ancora». E l'attesa non e' piu definitiva (vedi b.570).
+    expect(news).toMatch(/if \(!prefsPronte \|\| daChiedere\(prefs\)\) return;/);
   });
 
   it('su conferma si semina subito, senza far vedere una pagina vuota', () => {

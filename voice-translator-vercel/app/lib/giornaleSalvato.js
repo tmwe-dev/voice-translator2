@@ -32,7 +32,13 @@ function magra(v) {
   return {
     id: v.id, url: v.url, titolo: v.titolo, sintesi: v.sintesi,
     immagine: v.immagine, miniatura: v.miniatura, canale: v.canale,
-    fonti: Array.isArray(v.fonti) ? v.fonti.slice(0, 3) : undefined,
+    // b.570 — un ARRAY VUOTO, non `undefined`. Una scheda senza `fonti`
+    // ha fatto esplodere il Mondo intero («Cannot read properties of
+    // undefined»): chi legge si aspetta un elenco, e trovare il nulla al
+    // posto di un elenco vuoto e' la differenza fra «non ha fonti» e
+    // «non esiste il concetto di fonte». Si consegna sempre la forma
+    // giusta, anche quando e' vuota.
+    fonti: Array.isArray(v.fonti) ? v.fonti.slice(0, 3) : [],
     dominio: v.dominio, pubblicato: v.pubblicato, quandoTesto: v.quandoTesto,
     lingua: v.lingua, seme: v.seme, motivo: v.motivo, tipo: v.tipo,
   };
