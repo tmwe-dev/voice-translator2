@@ -28,6 +28,7 @@ import { giraBacheca, nascondi, senzaNascosti, bachecaDi, spostaInBacheca, togli
 import { soloRecenti, quantiFreschi } from '../lib/topics/freschezza.js'; // b.557 — le notizie sono di oggi; b.559 — da un file PURO, che il browser puo leggere
 import { vistiDiRecente, primaIlNuovo } from '../lib/visti.js'; // b.558 — non si rivede Beethoven ad ogni ingresso
 import { componi, annota } from '../lib/regia.js';              // b.561 — la regia del carosello
+import { giornaleSalvato, salvaGiornale } from '../lib/giornaleSalvato.js'; // b.564 — l'apertura istantanea
 import { daChiedere, semiDaInteressi } from '../lib/accoglienza.js';  // b.562 — la prima domanda
 import SceltaInteressi from './ui/SceltaInteressi.js';
 import { eDiCronaca } from '../lib/topics/enciclopediaUtile.js';        // b.557 — e questa domanda ha una scadenza? // b.552 — la bacheca e il «non mostrarmelo piu»
@@ -164,6 +165,19 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
     // cache del server evita di ripagare le ricerche gia' fatte.
     if (typeof window === 'undefined') return;
     if (argomenti !== null || cercando) return;
+    // ═══ b.564 — IL GIORNALE DI IERI E' GIA IN MANO ═══
+    // Misurato in produzione: una ricerca impiega fra otto e quindici
+    // secondi, e per tutto quel tempo non c'era niente da guardare.
+    // Adesso l'ultima pagina vista compare SUBITO — con dentro i
+    // «perche'» e l'ordine deciso dalla regia — e quella nuova si
+    // stampa dietro. Riaprire dev'essere come non essere mai usciti.
+    // La ricerca parte lo stesso, subito sotto: il salvato riempie
+    // l'attesa, non la sostituisce.
+    const ieri = giornaleSalvato();
+    if (ieri) {
+      setArgomenti(ieri.argomenti);
+      if (ieri.video?.length) setVideo(ieri.video);
+    }
     // b.562 — se la prima domanda e' ancora da fare, non si cerca
     // niente: partirebbero tre giri di ricerca (e tre chiamate a
     // pagamento) per un giornale che verra buttato fra dieci secondi,
@@ -399,6 +413,17 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
   // e la diapositiva sotto i tuoi occhi spariva a meta. In sottofondo
   // adesso non si svuota niente: i video nuovi si ACCODANO in fondo,
   // dove li troverai scorrendo, senza toccare quello che stai vedendo.
+  // b.564 — si mette da parte il giornale che si sta guardando, con
+  // calma: salvare ad ogni scorrimento vorrebbe dire riscrivere
+  // ventiquattro schede cento volte al minuto per niente.
+  const salvaRef = useRef(null);
+  useEffect(() => {
+    if (!Array.isArray(argomenti) || !argomenti.length) return undefined;
+    clearTimeout(salvaRef.current);
+    salvaRef.current = setTimeout(() => salvaGiornale(argomenti, video), 4000);
+    return () => clearTimeout(salvaRef.current);
+  }, [argomenti, video]);
+
   // b.552 — le preferenze «di adesso» viste da dentro una richiesta che
   // e' partita un minuto fa: senza questo, il filtro dei nascosti
   // userebbe l'elenco che c'era quando la chiamata e' partita.
@@ -654,6 +679,23 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
         { q: pulita, lingua: linguaAlt || lingua, cat, fresca, profonda, fonti: profonda ? numFonti : 0, segnale: ac.signal,
           paeseFonti: paeseFiltro || '', settoreFonti: bozzaCategoria || '' },
         (r) => {
+          // ═══ b.564 — IL PRIMO MAZZO ARRIVA PRIMA DELLA FINE ═══
+          // Le fonti che seguiamo rispondono in uno o due secondi (sono
+          // flussi, non ricerche): il servizio le manda avanti e qui si
+          // mostrano SUBITO, senza aspettare il motore. Da otto-quindici
+          // secondi di schermo fermo a due.
+          // Vale anche in sottofondo, ma li si accoda in silenzio.
+          if (r.stadio === 'parziale' && Array.isArray(r.argomenti) && r.argomenti.length) {
+            const primi = senzaNascosti(r.argomenti, prefsRef.current)
+              .map((a) => ({ ...a, seme: a.seme || pulita, lingua: a.lingua || linguaAlt || lingua }));
+            if (primi.length) {
+              const gusti = prefsRef.current?.gusti || {};
+              setArgomenti((prima) => (accoda || dietro
+                ? [...(prima || []), ...componi([], primi, { gusti, miaLingua: lingua, quantaRichiesta: 0 })]
+                : componi(primi, [], { gusti, miaLingua: lingua })));
+            }
+            return;
+          }
           if (dietro) return;   // b.552 — in sottofondo non si racconta niente a schermo
           const testo = descriviStadio(r);
           if (testo) setProcesso(p => [...p.slice(-5), { testo, id: p.length }]);

@@ -174,9 +174,14 @@ describe('il servizio: prima le fonti, il motore come eccezione', () => {
   it('le fonti seguite si leggono PRIMA della ricerca', () => {
     expect(s).toMatch(/daSeguite = await leggiFonti\(daSeguire/);
     expect(s.indexOf('await leggiFonti(daSeguire'), 'e prima, non dopo').toBeLessThan(s.indexOf('await cercaNotizie(q, lingua'));
+    // b.564 — e ad ogni giro se ne provano due mai interrogate:
+    // l'esplorazione non si spegne nemmeno sul registro.
+    expect(s).toMatch(/const nuove = await fontiDaProvare\(\{ quante: 2 \}\)/);
     // e chi seguire lo dice il REGISTRO (la storia nel deposito), non
     // piu solo la lista in cache: e' il senso della casa vera.
-    expect(s).toMatch(/const dalRegistro = await fontiDelPosto\(\{ \.\.\.ambito, quante: 12 \}\)/);
+    // b.564 — venti invece di dodici: 49 fonti su 71 non erano mai
+    // state nemmeno interrogate.
+    expect(s).toMatch(/const dalRegistro = await fontiDelPosto\(\{ \.\.\.ambito, quante: 20 \}\)/);
     expect(s.indexOf('fontiDelPosto'), 'il registro parla per primo').toBeLessThan(s.indexOf('await leggiFonti(daSeguire'));
   });
 
@@ -234,7 +239,7 @@ describe('il deposito: la storia non scade', () => {
   });
 
   it('senza Supabase non si rompe niente: il deposito e un vantaggio, non una condizione', () => {
-    expect((d.match(/if \(!db/g) || []).length, 'ogni porta controlla').toBe(5);
+    expect((d.match(/if \(!db/g) || []).length, 'ogni porta controlla').toBe(6);
     expect(d).toMatch(/if \(!db\) return \[\];/);
   });
 

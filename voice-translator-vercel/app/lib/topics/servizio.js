@@ -24,7 +24,7 @@ import { cercaWikipedia } from './wikipedia.js';
 import { meritaEnciclopedia } from './enciclopediaUtile.js'; // b.541 — l'enciclopedia solo dove c'entra
 import { vociDiRicerca, chiaveLista, imparaFonti } from './fonti.js'; // b.543 — la ricerca a piu voci; b.553 — e chi si fa notare si comincia a seguirlo
 import { leggiFonti } from './registro.js'; // b.553 — le fonti si SEGUONO: si legge all'origine
-import { fontiDelPosto, fontiViste } from './deposito.js'; // b.553 — e il registro ha una casa vera, con la sua storia
+import { fontiDelPosto, fontiViste, fontiDaProvare } from './deposito.js'; // b.553 — e il registro ha una casa vera, con la sua storia
 import { arricchisci } from './estrai.js';
 import { raggruppaInArgomenti } from './raggruppa.js';
 import { riordina } from './riordino.js';
@@ -158,17 +158,44 @@ export async function cercaArgomenti(query, lingua = 'en', {
   const ambito = { paese: paeseFonti || '', settore: settoreFonti || '' };
   let daSeguire = seguite;
   try {
-    const dalRegistro = await fontiDelPosto({ ...ambito, quante: 12 });
+    const dalRegistro = await fontiDelPosto({ ...ambito, quante: 20 });
     if (dalRegistro.length) {
       daSeguire = dalRegistro;
       racconta('registro', { quante: dalRegistro.length });
+    }
+    // b.564 — e due mai provate, ad ogni giro: e' l'esplorazione del
+    // registro. Senza, una fonte appena scoperta non verrebbe mai
+    // interrogata — di merito non ne ha ancora, e senza essere letta non
+    // ne fara mai.
+    const nuove = await fontiDaProvare({ quante: 2 });
+    if (nuove.length) {
+      daSeguire = [...daSeguire, ...nuove];
+      racconta('registro-nuove', { quante: nuove.length });
     }
   } catch { /* senza deposito si usa la lista che c'e */ }
 
   let daSeguite = [];
   if (daSeguire.length) {
-    daSeguite = await leggiFonti(daSeguire, { q, quante: 8, perFonte: 6, ambito }).catch(() => []);
-    if (daSeguite.length) racconta('fonti-seguite', { quante: daSeguite.length });
+    // b.564 — QUATTORDICI, non otto. Dal deposito: 71 fonti scoperte, 9
+    // con un flusso trovato, e **49 mai nemmeno provate** — perche' ogni
+    // giro ne guardava solo otto, sempre le stesse otto (sono ordinate
+    // per merito). Il registro cresceva e restava spento.
+    // Si leggono in parallelo, quindi quattordici costano quanto otto in
+    // attesa; e ogni fonte nuova provata e' un flusso che da domani si
+    // legge senza cercare.
+    daSeguite = await leggiFonti(daSeguire, { q, quante: 14, perFonte: 5, ambito }).catch(() => []);
+    if (daSeguite.length) {
+      racconta('fonti-seguite', { quante: daSeguite.length });
+      // ═══ b.564 — CIO CHE C'E' GIA SI MANDA SUBITO ═══
+      // Misurato: una ricerca completa impiega fra otto e quindici
+      // secondi, quasi tutti spesi dal motore e dalla lettura delle
+      // pagine. Ma le fonti che SEGUIAMO rispondono in uno o due — sono
+      // flussi, non ricerche. Non c'e' nessun motivo per farle aspettare
+      // il resto: si mandano avanti, il giornale si apre, e il resto si
+      // aggiunge quando arriva. Chi guarda vede qualcosa in due secondi
+      // invece che in dodici, ed e' lo stesso lavoro.
+      if (daSeguite.length >= 3) racconta('parziale', { argomenti: daSeguite.slice(0, 10) });
+    }
   }
   // QUANTE BASTANO. Sotto le sei il giornale sembra vuoto e il motore
   // serve ancora; sopra, la ricerca diventa quello che deve essere —

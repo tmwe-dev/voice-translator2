@@ -79,6 +79,27 @@ export async function fontiViste(articoli, { paese = '', settore = '' } = {}) {
   return error ? 0 : (data || 0);
 }
 
+/**
+ * ═══ b.564 — LE FONTI MAI PROVATE ═══
+ * Dal deposito, misurato: 71 fonti scoperte, 9 con un flusso trovato,
+ * **49 mai nemmeno interrogate**. Il registro cresceva e restava spento,
+ * perche' ogni giro leggeva solo le prime per merito — e una fonte
+ * appena scoperta di merito non ne ha ancora.
+ * Ad ogni giro se ne provano due: e' la stessa idea della sorpresa nel
+ * carosello (regia.js), applicata alle fonti invece che alle schede.
+ * L'esplorazione non si spegne mai, nemmeno qui.
+ */
+export async function fontiDaProvare({ quante = 2 } = {}) {
+  const db = getSupabaseAdmin();
+  if (!db) return [];
+  const { data, error } = await db
+    .from('mondo_fonti').select('dominio, nome')
+    .is('feed_provato_il', null)
+    .limit(quante);
+  if (error || !Array.isArray(data)) return [];
+  return data.map((r) => ({ dominio: r.dominio, nome: r.nome || '', feed: '' })).filter((f) => f.dominio);
+}
+
 /** Quanto ha reso una fonte che abbiamo letto all'origine. */
 export async function fonteLetta(dominio, articoli = 0, { paese = '', settore = '' } = {}) {
   const db = getSupabaseAdmin();

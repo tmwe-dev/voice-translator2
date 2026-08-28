@@ -267,6 +267,37 @@ perche il working tree lo conteneva ancora.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.564** (push #849) — LA VELOCITA', primo passo verso i
+  90.000.
+
+  Misurato col cronometro in produzione: **una ricerca impiega fra otto
+  e quindici secondi**. Nessuna regola di regia compensa un'attesa cosi
+  — un feed lento e' un feed che non si apre. Tre mosse, in ordine di
+  quanto si sentono:
+
+  ① **IL GIORNALE DI IERI E' GIA IN MANO** (`lib/giornaleSalvato.js`).
+  Riaprire dev'essere come non essere mai usciti: l'ultima pagina vista
+  compare SUBITO — con dentro i «perche'» e l'ordine deciso dalla regia
+  — e quella nuova si stampa dietro. Dura sei ore: oltre, un giornale
+  vecchio e' peggio di un'attesa. Si salva solo cio che serve a
+  ridisegnare, ventiquattro schede, e con calma (quattro secondi di
+  quiete), perche' salvare ad ogni scorrimento vorrebbe dire riscrivere
+  cento volte al minuto per niente.
+
+  ② **CIO CHE C'E' GIA SI MANDA SUBITO.** Le fonti che seguiamo
+  rispondono in uno o due secondi — sono flussi, non ricerche — e
+  aspettavano il motore per niente. Ora il servizio le manda avanti
+  (`racconta('parziale')`) e il feed le mostra appena arrivano, passando
+  comunque dalla regia. Da dodici secondi di schermo fermo a due.
+
+  ③ **IL REGISTRO SI ACCENDE.** Dal deposito, misurato: 71 fonti
+  scoperte, 9 con flusso, **49 mai nemmeno interrogate** — ogni giro ne
+  leggeva otto, sempre le stesse otto (ordinate per merito), e una fonte
+  appena scoperta di merito non ne ha ancora. Ora se ne leggono
+  quattordici (in parallelo: costano quanto otto in attesa) piu **due
+  mai provate ad ogni giro**. E' la sorpresa del carosello applicata
+  alle fonti: l'esplorazione non si spegne mai, nemmeno qui.
+
 - Versione: **b.563** (push #848) — MILLEDUECENTO TRADUZIONI RIFIUTATE
   IN SEI ORE, e nessuno le guardava.
 
