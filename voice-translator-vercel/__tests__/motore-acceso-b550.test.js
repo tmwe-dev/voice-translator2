@@ -11,7 +11,10 @@ describe('b.550 — il ventaglio delle reazioni e nel feed', () => {
     expect(feed).toMatch(/import VentaglioReazioni from '\.\/ui\/VentaglioReazioni\.js'/);
     expect((feed.match(/chiave: 'facce'/g) || []).length, 'una per famiglia').toBe(2);
     // la colonnina sa ospitare un pezzo intero, non solo tasti
-    expect(feed).toMatch(/\{v\.nodo \? v\.nodo : null\}/);
+    // b.556 — il ventaglio si e' richiuso dietro una porta sola, e la
+    // voce-pezzo (il ventaglio delle reazioni) ci sta dentro come le
+    // altre: la colonnina non sa cosa sia, e va bene cosi.
+    expect(feed).toMatch(/\{v\.nodo \? v\.nodo : \(/);
   });
   it('la faccia si accende subito e il conto si aggiusta prima della rete', () => {
     const dentro = feed.slice(feed.indexOf('const reagisci = useCallback'));

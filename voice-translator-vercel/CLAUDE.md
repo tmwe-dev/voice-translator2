@@ -267,6 +267,53 @@ perche il working tree lo conteneva ancora.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.561** (push #846) — LA REGIA DEL CAROSELLO, e la QUOTA
+  DI MONDO.
+
+  Obiettivo dichiarato con Luca: **68.000/100.000**. Questo e' il primo
+  pezzo, e vale da solo circa venti dei trentadue punti mancanti.
+
+  DOTTRINA, decisa dopo aver studiato come fa Instagram: loro
+  ottimizzano il tempo sull'app e hanno miliardi di interazioni per
+  addestrare i modelli. Noi non abbiamo ne quei dati ne quell'obiettivo.
+  **Con dieci utenti una regola scritta bene batte qualunque rete
+  neurale** — e le regole si possono provare, un modello no.
+
+  `lib/regia.js` (NUOVO, file PURO) e le cinque regole:
+
+  ① **QUOTA DI MONDO** — almeno una scheda su quattro da un'altra
+  lingua. Non «se capita»: per costruzione. E' l'unica cosa che
+  Instagram non puo copiare senza rifare l'azienda, ed e' il motivo per
+  cui BarTalk esiste. Serviva anche il materiale: all'ingresso parte un
+  **quarto giro in una lingua diversa dalla tua**, che ruota ad ogni
+  apertura (`cerca(..., linguaAlt)`).
+
+  ② **MAI DUE DI FILA UGUALI** — stessa fonte, stesso tema. Se resta
+  solo quella si mostra lo stesso: meglio due della stessa fonte che un
+  giornale che finisce.
+
+  ③ **UNA SORPRESA OGNI SETTE**: al settimo posto entra la cosa piu
+  LONTANA dai gusti. E' l'unica riga del file che va contro il
+  gradimento, ed e' apposta — e' quella che evita di vedere Beethoven
+  per sempre perche' una volta l'hai cercato.
+
+  ④ **NIENTE GIA VISTO** in cima (visti.js, b.558).
+
+  ⑤ **OGNI SCHEDA SA DIRE PERCHE'** — tre parole sotto il titolo:
+  «l'hai cercato tu», «un tuo interesse», «da un'altra lingua», «la
+  sorpresa di oggi». Instagram non lo fara mai: se ti mostrasse i pesi
+  capiresti che sei tu il prodotto.
+
+  I GUSTI SONO CONTATORI, non un modello: bacheca 5, commento 4, cuore
+  e apertura 3, reazione 2, **restato oltre dieci secondi 2**, saltato
+  sotto due secondi -2, nascosto -8. Il rifiuto pesa piu del
+  gradimento perche' i rifiuti sono molti di piu. Si pesano sul TEMA
+  (il seme che ha portato la scheda), non sul singolo contenuto, e si
+  salvano con calma: le decisioni subito, i passaggi ogni venti secondi.
+
+  LA PERMANENZA e' il segnale piu onesto che esista: un cuore e' un
+  istante e a volte una cortesia, restare dieci secondi non lo decidi.
+
 - Versione: **b.560** (push #845) — DUE DIFETTI TROVATI APRENDO
   L'APPLICAZIONE VERA.
 

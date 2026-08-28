@@ -78,7 +78,11 @@ describe('b.544 — il cuore nella colonnina', () => {
     expect(dentro).toMatch(/\.catch\(\(\) => \{ \/\* il cuore resta mio anche se la rete non c'e \*\/ \}\)/);
   });
   it('e il tocco sul cuore non fa partire altro', () => {
-    expect(feed).toMatch(/onClick=\{\(e\) => \{ e\.stopPropagation\(\); v\.onTocca\(\); \}\}/);
+    // b.556 — il tocco fa la sua cosa E richiude il ventaglio (le voci
+    // stanno dietro una porta sola, ordine di Luca). Il punto di b.544
+    // resta: il tocco sul tasto non deve arrivare alla diapositiva
+    // sotto, se no aprirebbe anche il contenuto.
+    expect(feed).toMatch(/onClick=\{\(e\) => \{ e\.stopPropagation\(\); v\.onTocca\(\); if \(!v\.restaAperto\) setAperto\(false\); \}\}/);
   });
   it('l\'icona cuore esiste e la parola e tradotta ovunque', async () => {
     expect(leggi('app/components/Icon.js')).toMatch(/heart: 'M20\.8 4\.6/);

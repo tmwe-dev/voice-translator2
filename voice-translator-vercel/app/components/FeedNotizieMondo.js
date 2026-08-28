@@ -208,6 +208,22 @@ function Azioni({ voci, daFondo = 96, L }) {
 // il dominio non dice il paese, e allora resta la sola fonte. Meglio
 // nessuna bandiera che una bandiera sbagliata.
 // E' pittura, non un tasto (`pointerEvents: 'none'`).
+// ═══ b.561 — «PERCHE' VEDI QUESTO» ═══
+// Instagram non te lo dira mai: se ti mostrasse i pesi capiresti che
+// sei tu il prodotto. Per noi sono tre parole sotto il titolo, e sono
+// la cosa piu onesta che possiamo scrivere in tutta l'applicazione.
+// Sta SOTTO il titolo e non sopra: prima cosa e', poi perche' e' qui.
+function Perche({ motivo, L }) {
+  if (!motivo) return null;
+  return (
+    <div style={{
+      marginTop: 5, fontSize: 11.5, fontFamily: FONT, fontWeight: 500,
+      color: 'rgba(170,196,255,0.82)', letterSpacing: 0.2,
+      textShadow: '0 1px 3px rgba(0,0,0,0.6)',
+    }}>{L(motivo)}</div>
+  );
+}
+
 function RigaOrigine({ bandiera, luogo, origine, quandoMs, quandoTesto, lingua = 'it' }) {
   if (!bandiera && !origine && !quandoTesto && !quandoMs) return null;
   // La data si scrive per esteso e corta insieme: «28 ago» si legge in un
@@ -267,7 +283,7 @@ function RigaOrigine({ bandiera, luogo, origine, quandoMs, quandoTesto, lingua =
   );
 }
 
-export default function FeedNotizieMondo({ aperto, onChiudi, C, L, argomenti = [], video = [], filtro, onFiltro, onParlane, onApriArticolo, onStrumenti, onCresci, crescendo = false, onCerca, onCommenta, miaLingua = 'it', caricando = false, prefs = null, onBacheca, onNascondi }) {
+export default function FeedNotizieMondo({ aperto, onChiudi, C, L, argomenti = [], video = [], filtro, onFiltro, onParlane, onApriArticolo, onStrumenti, onCresci, crescendo = false, onCerca, onCommenta, miaLingua = 'it', caricando = false, prefs = null, onBacheca, onNascondi, onGesto }) {
   const contenitoreRef = useRef(null);
   // ═══════════════════════════════════════════════════════════════
   // b.546 — L'OSSERVATORE CHE NON NASCEVA MAI. Quinta causa del
@@ -464,8 +480,19 @@ export default function FeedNotizieMondo({ aperto, onChiudi, C, L, argomenti = [
     if (!aperto || !pronto) return undefined;
     const el = elementi[indiceAttivo];
     if (!el?.dati) return undefined;
+    // ═══ b.561 — LA PERMANENZA, che e' il segnale piu onesto ═══
+    // Un cuore e' un istante e a volte una cortesia; restare dieci
+    // secondi su una scheda non lo decidi, ti capita. Instagram lo sa e
+    // ci costruisce sopra meta del suo imbuto. Noi lo contiamo e basta:
+    // due secondi = l'hai vista (visti.js), dieci = ti interessava,
+    // meno di due = l'hai scartata.
     const t = setTimeout(() => segnaVisto(el.dati), 2000);
-    return () => clearTimeout(t);
+    const restato = setTimeout(() => onGesto?.(el.dati, 'restato'), 10000);
+    const entrato = Date.now();
+    return () => {
+      clearTimeout(t); clearTimeout(restato);
+      if (Date.now() - entrato < 2000) onGesto?.(el.dati, 'saltato');
+    };
   }, [aperto, pronto, indiceAttivo, elementi]);
 
   // si chiedono i conteggi delle slide che si stanno guardando, non di
@@ -1005,6 +1032,7 @@ export default function FeedNotizieMondo({ aperto, onChiudi, C, L, argomenti = [
                     fontSize: 15, fontWeight: 500, color: '#fff', lineHeight: 1.3,
                     display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
                   }}>{el.dati.titolo}</div>
+                  <Perche motivo={el.dati.perche} L={L} />
                 </div>
               </>
             ) : (
@@ -1108,6 +1136,7 @@ export default function FeedNotizieMondo({ aperto, onChiudi, C, L, argomenti = [
 
                 <div style={{ position: 'relative', zIndex: 1, padding: '16px 20px calc(28px + env(safe-area-inset-bottom))' }}>
                   <h3 style={{ margin: 0, fontSize: 17, fontWeight: 500, color: '#fff', lineHeight: 1.3 }}>{el.dati.titolo}</h3>
+                  <Perche motivo={el.dati.perche} L={L} />
                   {el.dati.sintesi && (
                     <p style={{
                       margin: '8px 0 0', fontSize: 13, lineHeight: 1.5, color: 'rgba(255,255,255,0.82)',

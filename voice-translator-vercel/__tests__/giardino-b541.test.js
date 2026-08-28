@@ -125,12 +125,21 @@ describe('b.541 — il feed non finisce piu, e parte dai tuoi semi', () => {
   const feed = leggi('app/components/FeedNotizieMondo.js');
 
   it('cerca() sa ACCODARE invece di sostituire (era questo il bug dei reel)', () => {
-    expect(news).toMatch(/const cerca = useCallback\(async \(q, cat = 'notizie', fresca = false, silenziosa = false, accoda = false\)/);
+    // b.561 — la firma ha un sesto posto, `linguaAlt`: e' la quota di
+    // mondo (lo stesso giro chiesto in un'altra lingua). Il patto di
+    // b.541 — accoda somma invece di sostituire — resta intatto.
+    expect(news).toMatch(/const cerca = useCallback\(async \(q, cat = 'notizie', fresca = false, silenziosa = false, accoda = false, linguaAlt = ''\)/);
     // b.552 — «arrivati» e' diventato «puliti»: cio che arriva passa
     // prima dal setaccio dei contenuti che hai detto di non voler piu
     // vedere (bacheca.js). Il patto di b.541 e' intatto: accoda somma,
     // senza accoda sostituisce.
-    expect(news).toMatch(/setArgomenti\(\(prima\) => \(accoda \? \[\.\.\.\(prima \|\| \[\]\), \.\.\.nuovi\] : puliti\)\)/);
+    // b.561 — fra il mazzo e lo schermo adesso c'e' la REGIA (quota di
+    // mondo, mai due di fila uguali, una sorpresa ogni sette). Il patto
+    // di b.541 pero e' identico e si vede qui: ACCODA somma alla testa
+    // che c'e' gia, senza accoda si sostituisce. Era questo il bug dei
+    // reel, e continua a non esserci.
+    expect(news).toMatch(/if \(!accoda\) return componi\(puliti, \[\], \{ gusti, miaLingua: lingua \}\)/);
+    expect(news).toMatch(/return \[\.\.\.testa, \.\.\.componi\(\[\], nuovi,/);
     expect(news, 'e non ripete cio che hai gia visto').toMatch(/vistiRef\.current\.has\(chiave\)/);
   });
 

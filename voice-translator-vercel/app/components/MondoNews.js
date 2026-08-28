@@ -26,7 +26,8 @@ import { ordinaPerPunteggio, mescolaConInteresse } from '../lib/punteggioFeed.js
 import { chiaveContenuto, mieiCuori } from '../lib/gradimento.js';
 import { giraBacheca, nascondi, senzaNascosti, bachecaDi, spostaInBacheca, togliDaBacheca } from '../lib/bacheca.js';
 import { soloRecenti, quantiFreschi } from '../lib/topics/freschezza.js'; // b.557 — le notizie sono di oggi; b.559 — da un file PURO, che il browser puo leggere
-import { vistiDiRecente, primaIlNuovo } from '../lib/visti.js';         // b.558 — e non si rivede Beethoven ad ogni ingresso
+import { vistiDiRecente, primaIlNuovo } from '../lib/visti.js'; // b.558 — non si rivede Beethoven ad ogni ingresso
+import { componi, annota } from '../lib/regia.js';              // b.561 — la regia del carosello
 import { eDiCronaca } from '../lib/topics/enciclopediaUtile.js';        // b.557 — e questa domanda ha una scadenza? // b.552 — la bacheca e il «non mostrarmelo piu»
 import { cercaTopics, chiediRami, chiediFonti } from '../lib/topics/cliente.js';   // b.409 — il lettore a righe, uno per tutti; b.541 — i rami del giardino
 import { semiDi, prossimaQuery, esaurito, sanaRami } from '../lib/giardino.js'; // b.541 — le ricerche sono semi
@@ -199,6 +200,18 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
         for (const altro of scelti.slice(1)) {
           await cerca(altro.query, 'notizie', false, true, true);   // accodato
         }
+        // ═══ b.561 — IL GIRO DEL MONDO ═══
+        // Un quarto giro, in una LINGUA DIVERSA dalla tua, che ruota ad
+        // ogni ingresso. E' la quota di mondo della regia: senza schede
+        // da fuori, la regola numero uno non avrebbe da cosa pescare e
+        // resteremmo un feed italiano come tutti gli altri.
+        // Va per ultimo e accodato: prima si risponde a te, poi si apre
+        // la finestra.
+        const mia = String(lingua || 'it').slice(0, 2);
+        const fuori = ['en', 'es', 'fr', 'de', 'pt', 'ja', 'ar'].filter((x) => x !== mia);
+        const scelta = fuori[n % fuori.length];
+        const domanda = (QUERY_RAPIDE.mondo || {})[scelta] || QUERY_RAPIDE.mondo.en;
+        await cerca(domanda, 'notizie', false, true, true, scelta);
       })();
     } catch { /* senza default si resta sull'invito a cercare */ }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- parte una volta, all'ingresso
@@ -586,7 +599,7 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
     ));
   }, [interessiMiei]);
 
-  const cerca = useCallback(async (q, cat = 'notizie', fresca = false, silenziosa = false, accoda = false) => {
+  const cerca = useCallback(async (q, cat = 'notizie', fresca = false, silenziosa = false, accoda = false, linguaAlt = '') => {
     const pulita = (q || '').trim();
     // b.549 — la guardia guarda un RIFERIMENTO, non lo stato. `cercando`
     // e uno stato di React: quando si incatenano due ricerche con await,
@@ -623,7 +636,11 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
       const fine = await cercaTopics(
         // b.543 — se per questo Paese esiste una lista di testate, la
         // ricerca si sdoppia in voci mirate (vedi topics/servizio.js).
-        { q: pulita, lingua, cat, fresca, profonda, fonti: profonda ? numFonti : 0, segnale: ac.signal,
+        // b.561 — `linguaAlt` e' la QUOTA DI MONDO: lo stesso giro, ma
+        // chiesto in un'altra lingua. E' l'unica cosa che Instagram non
+        // puo copiare senza rifare l'azienda, e senza questa riga il
+        // Mondo e' solo un feed italiano in piu.
+        { q: pulita, lingua: linguaAlt || lingua, cat, fresca, profonda, fonti: profonda ? numFonti : 0, segnale: ac.signal,
           paeseFonti: paeseFiltro || '', settoreFonti: bozzaCategoria || '' },
         (r) => {
           if (dietro) return;   // b.552 — in sottofondo non si racconta niente a schermo
@@ -665,6 +682,13 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
         // telefono. IN FONDO, non fuori: se hai visto tutto rivedi
         // tutto, perche' una pagina vuota e' peggio di una ripetizione.
         puliti = primaIlNuovo(puliti, vistiDiRecente());
+        // b.561 — LA REGIA HA BISOGNO DI SAPERE DA DOVE VIENE OGNI
+        // SCHEDA. `seme` e' la domanda che l'ha portata (serve per «mai
+        // due dello stesso tema di fila» e per pesare i gusti), `lingua`
+        // dice se arriva da un'altra lingua (la quota di mondo).
+        // Senza queste due righe la regia sarebbe cieca e ordinerebbe a
+        // caso credendo di ragionare.
+        puliti = puliti.map((a) => ({ ...a, seme: a.seme || pulita, lingua: a.lingua || linguaAlt || lingua }));
         const nuovi = puliti.filter((a) => {
           const chiave = a?.url || a?.id || a?.titolo;
           if (!chiave || vistiRef.current.has(chiave)) return false;
@@ -675,7 +699,21 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
         // b.548 — appena le schede sono in pagina, si traducono i titoli
         // che non sono gia nella lingua di chi guarda.
         if (nuovi.length) traduciSchede(nuovi);
-        setArgomenti((prima) => (accoda ? [...(prima || []), ...nuovi] : puliti));
+        // ═══ b.561 — QUI COMANDA LA REGIA ═══
+        // Ordine di Luca: «se cerco tom cruise mostri tom cruise, ma poi
+        // mostri anche il resto... mai monotono, esplorativo».
+        // Un giro NUOVO: le prime quattro rispondono alla domanda, il
+        // resto lo compone la regia (quota di mondo, mai due di fila
+        // uguali, una sorpresa ogni sette, e ognuna sa dire perche').
+        // Un giro ACCODATO: la testa non si tocca — chi sta guardando
+        // non deve vedersi spostare niente sotto il dito (b.552) — e la
+        // regia lavora solo sulla coda nuova.
+        setArgomenti((prima) => {
+          const gusti = prefsRef.current?.gusti || {};
+          if (!accoda) return componi(puliti, [], { gusti, miaLingua: lingua });
+          const testa = prima || [];
+          return [...testa, ...componi([], nuovi, { gusti, miaLingua: lingua, quantaRichiesta: 0 })];
+        });
         // b.545 — appena l'elenco e in pagina si chiedono i segnali di
         // tutti e si riordina. `argomentiRef` qui vale ancora quello di
         // un attimo fa, cioe esattamente il `prima` della riga sopra.
@@ -774,9 +812,32 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
   // non quello di tutti: vivono nelle sue preferenze, non nei conteggi
   // condivisi. Il contenuto nascosto sparisce SUBITO dall'elenco — se
   // restasse fino al prossimo giro, il tasto sembrerebbe rotto.
+  // ═══ b.561 — IL QUADERNO DEI GUSTI ═══
+  // Ogni gesto pesa su un TEMA (il seme che ha portato la scheda), non
+  // sul singolo contenuto: e' cosi che il carosello impara «ti
+  // interessa la Thailandia» invece di «ti e' piaciuto quell'articolo».
+  // Si salva con calma — un salvataggio ad ogni scorrimento
+  // manderebbe le preferenze avanti e indietro dal server cento volte
+  // al minuto — e i gesti che contano (cuore, bacheca) si salvano
+  // subito perche' sono decisioni, non passaggi.
+  const gustiRef = useRef(null);
+  const salvaGustiRef = useRef(null);
+  const suGesto = useCallback((d, gesto) => {
+    const tema = String(d?.seme || d?.canale || '').toLowerCase();
+    if (!tema) return;
+    const base = gustiRef.current || prefsRef.current?.gusti || {};
+    gustiRef.current = annota(base, tema, gesto);
+    clearTimeout(salvaGustiRef.current);
+    const subito = gesto === 'bacheca' || gesto === 'cuore' || gesto === 'nascosto';
+    salvaGustiRef.current = setTimeout(() => {
+      savePrefs?.({ ...prefsRef.current, gusti: gustiRef.current });
+    }, subito ? 0 : 20000);
+  }, [savePrefs]);
+
   const suBacheca = useCallback((d) => {
     const url = d?.url || (d?.id ? `youtube.com/watch?v=${d.id}` : '');
     savePrefs?.(giraBacheca(prefs, { ...d, url }));
+    suGesto(d, 'bacheca');
   }, [prefs, savePrefs]);
 
   const suNascondi = useCallback((d) => {
@@ -784,6 +845,7 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
     if (!url) return;
     const dopo = nascondi(prefs, url);
     savePrefs?.(dopo);
+    suGesto(d, 'nascosto');
     setArgomenti((prima) => senzaNascosti(prima, dopo));
     setVideo((prima) => senzaNascosti(prima, dopo));
   }, [prefs, savePrefs]);
@@ -2059,7 +2121,7 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
         onCresci={cresci}
         miaLingua={prefs?.lang || prefs?.uiLang || 'it'}
         onCommenta={apriCommenti}
-        prefs={prefs} onBacheca={suBacheca} onNascondi={suNascondi}
+        prefs={prefs} onBacheca={suBacheca} onNascondi={suNascondi} onGesto={suGesto}
         crescendo={crescendo}
         onCerca={(q) => { setQuery(q); setChipAttiva(null); cerca(q); }}
         onApriArticolo={(d) => { tornaAlFeedRef.current = true; setFeedAperto(false); setLettura({ url: d.url, titolo: d.titolo, fonte: d.fonti?.[0]?.fonte, dati: d, faccia: testataChiusa(d.url) ? 'sintesi' : 'articolo' }); }} />
