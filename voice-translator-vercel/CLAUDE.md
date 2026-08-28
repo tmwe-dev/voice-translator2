@@ -267,6 +267,44 @@ perche il working tree lo conteneva ancora.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.560** (push #845) — DUE DIFETTI TROVATI APRENDO
+  L'APPLICAZIONE VERA.
+
+  Luca: «puoi fare test fisici adesso? parti, prendi il comando del
+  computer». Preso il browser su voice-translator2.vercel.app. Tutte le
+  prove erano verdi; questi due difetti erano a schermo lo stesso —
+  **un difetto che le prove non possono vedere si trova solo
+  guardando**.
+
+  ① **I TITOLI CON LE ENTITA' HTML.** A schermo: «Garlasco,
+  l&#39;intercettazione fra Stefania ed Ermanno Cappa». L'API di YouTube
+  consegna i titoli con le entita dentro; finche' li leggevamo dalla
+  pagina passavano da `pulisciTestoWeb`, che le scioglieva, e passando
+  alla porta ufficiale (b.553) quel passaggio e' rimasto indietro. Le
+  prove non potevano accorgersene: i titoli finti li scriviamo noi, e le
+  entita non ce l'hanno.
+
+  ② **LA RICERCA LENTA E MUTA.** Cercato «sciopero treni» dalla barra:
+  per quindici secondi NON cambia niente — stesse diapositive, nessun
+  segnale. Avevo concluso che fosse rotta; era solo lenta (8-15 secondi,
+  misurati) e senza voce. Chi guarda pensa la stessa cosa e tocca di
+  nuovo. Ora, a giornale gia pieno, compare una fascia sottile in cima
+  che gira; l'anello a tutta pagina resta solo per il primo ingresso,
+  quando non c'e' niente da coprire.
+
+  ALTRO VISTO DAL VIVO, e non ancora chiuso:
+  · `/api/topics/search` ha risposto **503 una volta** su tre prove;
+    nei registri quella richiesta risulta 200 e accanto c'e' un
+    «Fail-open for INCR rl:topics» di Redis. Da guardare.
+  · La ricerca profonda con dieci fonti impiega **8,4 secondi**
+    (misurati). Regge, ma e' il tetto.
+  · L'osservatore delle diapositive funziona: scorrendo, la slide attiva
+    cambia davvero (b.555 confermato dal vivo).
+  · Il registro delle fonti E' VIVO in produzione: la ricerca dichiara
+    `{"stadio":"registro","quante":12}` e `{"stadio":"fonti-seguite"}`.
+  · L'autoplay non parte sul computer fisso: e' Chrome che blocca il
+    suono, non un difetto nostro.
+
 - Versione: **b.559** (push #844) — DUE DEPLOY IN ERRORE: IL BROWSER SI
   PORTAVA DIETRO NODE.
 

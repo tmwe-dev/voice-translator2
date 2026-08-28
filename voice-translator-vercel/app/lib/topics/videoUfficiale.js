@@ -34,6 +34,24 @@ export function playlistCaricamenti(canale) {
   return /^UC[\w-]{20,24}$/.test(c) ? `UU${c.slice(2)}` : '';
 }
 
+// ═══ b.560 — LE ENTITA' HTML, VISTE COL COLLAUDO DAL VIVO ═══
+// A schermo, in produzione: «Garlasco, l&#39;intercettazione fra
+// Stefania ed Ermanno Cappa». L'API di YouTube consegna i titoli con le
+// entita HTML dentro, e finche' i video li leggevamo dalla pagina
+// passavano da `pulisciTestoWeb`, che le scioglieva. Passando alla
+// porta ufficiale (b.553) quel passaggio e' rimasto indietro: nessuna
+// prova se ne poteva accorgere, perche' le prove usano titoli scritti
+// da noi, che le entita non ce l'hanno. L'ho visto con gli occhi
+// aprendo l'applicazione.
+const ENTITA = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ' };
+export function sciogli(testo) {
+  return String(testo || '')
+    .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(Number(n)))
+    .replace(/&#x([0-9a-f]+);/gi, (_, n) => String.fromCharCode(parseInt(n, 16)))
+    .replace(/&(amp|lt|gt|quot|apos|nbsp);/g, (_, k) => ENTITA[k])
+    .trim();
+}
+
 /** Le voci dell'API nella forma che il feed conosce gia. */
 export function daApi(voci) {
   const fuori = [];
@@ -44,8 +62,8 @@ export function daApi(voci) {
     const mini = dati.thumbnails || {};
     fuori.push({
       id,
-      titolo: String(dati.title || '').trim(),
-      canale: String(dati.videoOwnerChannelTitle || dati.channelTitle || '').trim(),
+      titolo: sciogli(dati.title),
+      canale: sciogli(dati.videoOwnerChannelTitle || dati.channelTitle),
       canaleId: dati.videoOwnerChannelId || dati.channelId || '',
       miniatura: (mini.high || mini.medium || mini.default || {}).url || `https://i.ytimg.com/vi/${id}/hqdefault.jpg`,
       pubblicato: dati.publishedAt ? (Date.parse(dati.publishedAt) || null) : null,

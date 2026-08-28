@@ -794,6 +794,38 @@ export default function FeedNotizieMondo({ aperto, onChiudi, C, L, argomenti = [
             a cercare — cioe un compito. Adesso, se non c'e ancora niente,
             il giardino sta gia lavorando e lo si dice; il campo per
             seminare a mano resta in fondo, per chi lo vuole. */}
+        {/* ═══ b.560 — E ANCHE DOPO, LA RICERCA SI VEDE ═══
+            Collaudo dal vivo, fatto da me sull'applicazione vera: ho
+            cercato «sciopero treni» dalla barra e per quindici secondi
+            NON E' successo niente — stesse diapositive, nessun segnale.
+            Avevo pensato che la ricerca fosse rotta; era solo lenta e
+            muta. Chi guarda pensa la stessa cosa, e tocca di nuovo.
+            L'anello grande vale al primo ingresso (quando non c'e'
+            niente da mostrare); qui il giornale c'e' gia, quindi basta
+            una fascia sottile in cima che dice «sto cercando». */}
+        {pronto && caricando && (
+          <div aria-live="polite" style={{
+            position: 'fixed', left: 0, right: 0, top: 62, zIndex: 6,
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 9,
+            padding: '7px 0', pointerEvents: 'none',
+          }}>
+            <span style={{
+              display: 'inline-flex', alignItems: 'center', gap: 9,
+              padding: '6px 14px', borderRadius: 999, ...VETRO,
+              fontFamily: FONT, fontSize: 12.5, fontWeight: 500, color: '#fff',
+            }}>
+              <span aria-hidden="true" style={{
+                width: 13, height: 13, borderRadius: '50%',
+                border: '2px solid rgba(150,178,255,0.35)',
+                borderTopColor: 'rgba(190,210,255,0.95)',
+                animation: 'vtGira 0.9s linear infinite',
+              }} />
+              {L('growingWord')}
+            </span>
+            <style>{'@keyframes vtGira { to { transform: rotate(360deg); } }'}</style>
+          </div>
+        )}
+
         {/* ═══ b.552 — L'ATTESA HA UNA FACCIA, E IL PRIMO CONTENUTO ARRIVA
             QUANDO E' CERTO ═══
             Collaudo di Luca: «quando apro Mondo mostra la pagina cerca,

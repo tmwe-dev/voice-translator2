@@ -64,7 +64,9 @@ describe('in basso non si sovrappone piu niente', () => {
 
   it('i sottotitoli non hanno piu un numero cucito addosso', () => {
     const i = leggi('components/ui/InterpreteVideo.js');
-    expect(i).toMatch(/daFondo = 132 \}/);           // il ripiego resta, per chi non lo passa
+    // b.556 — la firma si e' allungata (il comando puo vivere nel
+    // ventaglio): il ripiego a 132 resta per chi non passa niente.
+    expect(i).toMatch(/daFondo = 132,/);
     expect(i).toMatch(/bottom: `calc\(\$\{daFondo\}px \+ env\(safe-area-inset-bottom\)\)`/);
     expect(i, 'e il comando in cima e sceso sotto la riga nuova').toMatch(/left: 12, top: 116/);
   });
@@ -123,7 +125,9 @@ describe('b.552 — il vetro di Luca', () => {
 
   it('il feed la usa per i tasti, i filtri e la riga dell origine', () => {
     expect(feed).toMatch(/import \{ VETRO, VETRO_ACCESO, VETRO_CUORE, VETRO_FASCIA \}/);
-    expect(feed, 'i tasti della colonnina').toMatch(/\.\.\.\(v\.acceso \? VETRO_CUORE : VETRO\)/);
+    // b.556 — acceso non vuol dire sempre caldo: il cuore e' rosso, la
+    // stella della bacheca e' d'oro, e il vetro cambia di conseguenza.
+    expect(feed, 'i tasti del ventaglio').toMatch(/\.\.\.\(v\.acceso \? \(v\.caldo \? VETRO_CUORE : VETRO_ACCESO\) : VETRO\)/);
     expect(feed, 'la riga in alto').toMatch(/\.\.\.VETRO_FASCIA/);
     expect(feed, 'il filtro acceso').toMatch(/\.\.\.\(acceso \? VETRO_ACCESO/);
   });
