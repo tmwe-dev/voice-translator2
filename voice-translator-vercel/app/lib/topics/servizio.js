@@ -24,6 +24,7 @@ import { cercaWikipedia } from './wikipedia.js';
 import { meritaEnciclopedia } from './enciclopediaUtile.js'; // b.541 — l'enciclopedia solo dove c'entra
 import { vociDiRicerca, chiaveLista, imparaFonti } from './fonti.js'; // b.543 — la ricerca a piu voci; b.553 — e chi si fa notare si comincia a seguirlo
 import { leggiFonti } from './registro.js'; // b.553 — le fonti si SEGUONO: si legge all'origine
+import { fontiDelPosto, fontiViste } from './deposito.js'; // b.553 — e il registro ha una casa vera, con la sua storia
 import { arricchisci } from './estrai.js';
 import { raggruppaInArgomenti } from './raggruppa.js';
 import { riordina } from './riordino.js';
@@ -149,9 +150,24 @@ export async function cercaArgomenti(query, lingua = 'en', {
   // un intermediario di raccontarci cosa hanno scritto.
   // Non e' solo piu pulito: e' gratis, senza tetti, e non dipende da
   // nessuno. Se le fonti bastano, il motore non si sveglia nemmeno.
+  // b.553 — IL REGISTRO VIENE PRIMA DELLA LISTA IN CACHE. Nel deposito
+  // (Supabase) le fonti hanno la loro storia: quante volte sono uscite
+  // nei risultati, quante volte le abbiamo lette, quanto hanno reso. E'
+  // quello l'ordine di merito vero. La lista in Redis resta dietro, per
+  // il caso in cui il deposito non ci sia (prove, sviluppo).
+  const ambito = { paese: paeseFonti || '', settore: settoreFonti || '' };
+  let daSeguire = seguite;
+  try {
+    const dalRegistro = await fontiDelPosto({ ...ambito, quante: 12 });
+    if (dalRegistro.length) {
+      daSeguire = dalRegistro;
+      racconta('registro', { quante: dalRegistro.length });
+    }
+  } catch { /* senza deposito si usa la lista che c'e */ }
+
   let daSeguite = [];
-  if (seguite.length) {
-    daSeguite = await leggiFonti(seguite, { q, quante: 8, perFonte: 6 }).catch(() => []);
+  if (daSeguire.length) {
+    daSeguite = await leggiFonti(daSeguire, { q, quante: 8, perFonte: 6, ambito }).catch(() => []);
     if (daSeguite.length) racconta('fonti-seguite', { quante: daSeguite.length });
   }
   // QUANTE BASTANO. Sotto le sei il giornale sembra vuoto e il motore
@@ -196,6 +212,9 @@ export async function cercaArgomenti(query, lingua = 'en', {
   // costare uguale ogni giorno.
   // Si fa DOPO aver risposto e senza far aspettare nessuno: se la
   // scrittura non riesce, la ricerca e' andata bene lo stesso.
+  // Nel deposito entra tutto cio che si e visto: li la scoperta non
+  // scade, e domani sara il registro a dire chi seguire.
+  try { if (articoli.length) await fontiViste(articoli, ambito); } catch { /* la storia e un di piu, mai una condizione */ }
   try {
     const kf = chiaveLista({ paese: paeseFonti, settore: settoreFonti });
     if (kf && articoli.length) {

@@ -9,8 +9,7 @@
 import { NextResponse } from 'next/server';
 import { redis } from '../../../lib/redis.js';
 import { withApiGuard } from '../../../lib/apiGuard.js';
-import { cercaVideo, videoDisponibili } from '../../../lib/topics/video.js';
-import { chiaveYouTube, cercaSuYouTube } from '../../../lib/topics/videoUfficiale.js'; // b.553 — la porta principale
+import { chiaveYouTube, cercaSuYouTube } from '../../../lib/topics/videoUfficiale.js'; // b.553-bis — l'unica porta
 import { normalizzaQuery } from '../../../lib/topics/servizio.js';
 
 const LINGUE = new Set(['it','en','es','fr','de','pt','zh','ja','ko','th','ar','hi','ru','tr','vi']);
@@ -20,7 +19,7 @@ async function handleGet(req) {
   const url = new URL(req.url);
   const q = normalizzaQuery(url.searchParams.get('q') || '');
   const lang = LINGUE.has(url.searchParams.get('lang')) ? url.searchParams.get('lang') : 'en';
-  if (!q) return NextResponse.json({ disponibile: videoDisponibili(), video: [] });
+  if (!q) return NextResponse.json({ disponibile: !!chiaveYouTube(), video: [] });
 
   const k = `topics:video:${lang}:${q}`;
   try {
@@ -28,24 +27,20 @@ async function handleGet(req) {
     if (salvato) return NextResponse.json({ ...JSON.parse(salvato), daCache: true });
   } catch { /* la cache non risponde: si cerca da capo, nessun dramma */ }
 
-  // ═══ b.553 — PRIMA LA PORTA PRINCIPALE ═══
-  // Decisione di Luca: «niente scraping della pagina /results, in
-  // produzione solo la YouTube Data API». Con la chiave si passa di li e
-  // basta: se la quota e' finita NON si ripiega sullo scraper — si
-  // risponde che oggi non ci sono video nuovi e si mostra cio che
-  // abbiamo gia («degradazione controllata», parole sue).
-  // Senza chiave resta per ora la vecchia strada: e' un ponte, non un
-  // ripiego, e si toglie il giorno che la chiave c'e' (vedi CLAUDE.md).
+  // ═══ b.553-bis — L'UNICA PORTA ═══
+  // La chiave c'e' (Luca l'ha creata e messa su Vercel il 28/08), e con
+  // lei se ne va l'ultima riga di scraping: la pagina /results non la
+  // leggiamo piu, ne qui ne altrove. Era un ponte dichiarato, e i ponti
+  // si tolgono.
+  // Se la quota finisce NON si ripiega su niente: si dice che oggi non
+  // c'e' niente di nuovo e restano i video gia in cache e le fonti che
+  // seguiamo. Sono le parole di Luca: «degradazione controllata».
   let esito;
-  if (chiaveYouTube()) {
-    try {
-      esito = { disponibile: true, video: await cercaSuYouTube(q, lang, { massimo: 8 }) };
-    } catch (e) {
-      if (e?.quotaFinita) return NextResponse.json({ disponibile: true, video: [], quotaFinita: true });
-      esito = { disponibile: true, video: [] };
-    }
-  } else {
-    esito = await cercaVideo(q, lang);
+  try {
+    esito = { disponibile: true, video: await cercaSuYouTube(q, lang, { massimo: 8 }) };
+  } catch (e) {
+    if (e?.quotaFinita) return NextResponse.json({ disponibile: true, video: [], quotaFinita: true });
+    esito = { disponibile: !!chiaveYouTube(), video: [] };
   }
   // Si mette in cache solo un esito PIENO: una risposta vuota non deve
   // spegnere i video per dodici ore a tutti.

@@ -18,7 +18,7 @@
 import { describe, it, expect } from 'vitest';
 import fs from 'fs';
 import path from 'path';
-import { estraiVideoDaHtml } from '../app/lib/topics/video.js';
+import { daApi } from '../app/lib/topics/videoUfficiale.js';
 
 const APP = path.join(__dirname, '..', 'app');
 const leggi = (p) => fs.readFileSync(path.join(APP, p), 'utf8');
@@ -71,16 +71,19 @@ describe('in basso non si sovrappone piu niente', () => {
 });
 
 describe('la data del video: quella vera che esiste', () => {
-  it('si legge l eta scritta da YouTube, non se ne inventa una', () => {
-    const finto = '"videoRenderer":{"videoId":"abcdefghijk"'
-      + '"title":{"runs":[{"text":"Prova"}]},'
-      + '"ownerText":{"runs":[{"text":"Nova Lectio"}]},'
-      + '"publishedTimeText":{"simpleText":"2 giorni fa"}';
-    const [v] = estraiVideoDaHtml(finto);
+  it('viene dalla Data API, ed e un istante preciso', () => {
+    // b.553-bis — quando la data la leggevamo dalla pagina di YouTube
+    // avevamo solo l'eta scritta a parole («2 giorni fa»), e la
+    // mostravamo cosi: meglio una verita approssimata che una data
+    // inventata. Dalla porta ufficiale arriva `publishedAt`, cioe
+    // l'istante vero: la riga in alto puo scrivere data E ora, che e'
+    // esattamente quello che Luca aveva chiesto.
+    const [v] = daApi([{ snippet: {
+      title: 'Prova', channelTitle: 'Nova Lectio',
+      resourceId: { videoId: 'abcdefghijk' }, publishedAt: '2026-08-26T07:30:00Z',
+    } }]);
     expect(v.canale).toBe('Nova Lectio');
-    expect(v.quandoTesto).toBe('2 giorni fa');
-    // e non ci si inventa un istante preciso che non conosciamo
-    expect(v.pubblicato).toBe(null);
+    expect(new Date(v.pubblicato).toISOString()).toBe('2026-08-26T07:30:00.000Z');
   });
 });
 

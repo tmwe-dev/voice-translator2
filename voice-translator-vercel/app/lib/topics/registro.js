@@ -25,17 +25,12 @@
 // risponde a «valanga d'acqua in Nepal». Per quello resta il motore —
 // ma come eccezione, dietro, quando le fonti non bastano.
 // ═══════════════════════════════════════════════════════════════
-import { redis } from '../redis.js';
 import { leggiRss, immagineSicura } from './ricerca.js';
 import { isSSRFSafe } from './ssrf.js';
+import { feedRicordato, ricordaFeed, fonteLetta } from './deposito.js'; // b.553 — il flusso si ricorda per sempre, non per trenta giorni
 
 const UA = 'BarTalk/1.0 (+https://voice-translator2.vercel.app) lettore di feed';
 
-// Il flusso di una testata non cambia mai: si tiene un mese. Se invece
-// non l'abbiamo trovato, si riprova fra una settimana — magari lo
-// accendono (o cambiano sito).
-export const VITA_FEED = 30 * 24 * 3600;
-export const VITA_BUCO = 7 * 24 * 3600;
 
 /** Il dominio nudo: niente protocollo, niente www, niente coda. */
 export function dominioNudo(d) {
@@ -185,11 +180,15 @@ async function scarica(url, { timeout = 7000 } = {}) {
 export async function feedDelDominio(dominio) {
   const d = dominioNudo(dominio);
   if (!d) return '';
-  const chiave = `registro:feed:${d}`;
+  // b.553 — la memoria sta nel DEPOSITO, non in una cache che scade:
+  // trovare un flusso costa una visita alla home e fino a cinque
+  // tentativi, ed e' una fatica da fare una volta nella vita. Anche il
+  // «non ce l'ha» si ricorda, se no lo ricercheremmo ogni giorno per
+  // tutti i siti che l'RSS non ce l'hanno.
   try {
-    const salvato = await redis('GET', chiave);
-    if (salvato !== null && salvato !== undefined) return JSON.parse(salvato) || '';
-  } catch { /* senza cache si cerca, e basta */ }
+    const gia = await feedRicordato(d);
+    if (gia !== null) return gia;
+  } catch { /* senza deposito si cerca, e basta */ }
 
   let trovato = '';
   try {
@@ -206,9 +205,7 @@ export async function feedDelDominio(dominio) {
     }
   }
 
-  try {
-    await redis('SET', chiave, JSON.stringify(trovato), 'EX', String(trovato ? VITA_FEED : VITA_BUCO));
-  } catch { /* senza cache si vive, si rifa la fatica domani */ }
+  try { await ricordaFeed(d, trovato); } catch { /* senza deposito si rifa la fatica domani */ }
   return trovato;
 }
 
@@ -217,7 +214,7 @@ export async function feedDelDominio(dominio) {
  * Una fonte lenta non deve far aspettare le altre: si va in parallelo e
  * chi non risponde in tempo resta indietro senza rovinare il giro.
  */
-export async function leggiFonti(domini, { q = '', quante = 8, perFonte = 6 } = {}) {
+export async function leggiFonti(domini, { q = '', quante = 8, perFonte = 6, ambito = {} } = {}) {
   const lista = (Array.isArray(domini) ? domini : []).slice(0, quante);
   if (!lista.length) return [];
   const gruppi = await Promise.all(lista.map(async (voce) => {
@@ -228,6 +225,9 @@ export async function leggiFonti(domini, { q = '', quante = 8, perFonte = 6 } = 
       if (!feed) return [];
       const xml = await scarica(feed);
       const tutte = daFonte(leggiVoci(xml), dominio, nome);
+      // b.553 — quanto ha reso, non quanto e' famosa: e' questo che
+      // ordina il registro domani.
+      try { await fonteLetta(dominio, tutte.length, ambito); } catch { /* la storia e un di piu */ }
       return (q ? tutte.filter((v) => parlaDi(v, q)) : tutte).slice(0, perFonte);
     } catch { return []; }
   }));

@@ -173,7 +173,7 @@ function Azioni({ voci }) {
 // nessuna bandiera che una bandiera sbagliata.
 // E' pittura, non un tasto (`pointerEvents: 'none'`).
 function RigaOrigine({ bandiera, luogo, origine, quandoMs, quandoTesto, lingua = 'it' }) {
-  if (!bandiera && !origine && !quandoTesto) return null;
+  if (!bandiera && !origine && !quandoTesto && !quandoMs) return null;
   // La data si scrive per esteso e corta insieme: «28 ago» si legge in un
   // colpo d'occhio, «28/08/2026» va decifrato.
   let data = '';
@@ -783,7 +783,11 @@ export default function FeedNotizieMondo({ aperto, onChiudi, C, L, argomenti = [
                     canale YouTube non ha un paese che si possa leggere
                     dal suo indirizzo, e una bandiera indovinata sarebbe
                     peggio di nessuna bandiera. */}
+                {/* b.553-bis — dalla porta ufficiale arriva l'istante
+                    vero (`pubblicato`), non piu l'eta a parole: la riga
+                    in alto puo scrivere data E ora, come chiesto. */}
                 <RigaOrigine origine={el.dati.canale}
+                  quandoMs={el.dati.pubblicato || 0}
                   quandoTesto={el.dati.quandoTesto || ''}
                   lingua={miaLingua} />
                 {/* ═══ b.551 — L'INTERPRETE DEL VIDEO ═══

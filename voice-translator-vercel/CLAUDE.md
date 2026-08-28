@@ -267,6 +267,55 @@ perche il working tree lo conteneva ancora.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.554** (push #840) — IL REGISTRO HA UNA CASA VERA, E IL
+  PONTE CON YOUTUBE E' TOLTO.
+
+  ① **Le fonti passano su Supabase** (ordine di Luca: «il Source Graph ha
+  bisogno di una casa vera con la sua storia»). Fino a ieri le liste
+  stavano in Redis con trenta giorni di vita: Redis e' una CACHE, roba
+  che si puo perdere senza danno. Ma «chi ci ha dato roba buona, dove, e
+  quante volte» e' l'unica cosa che il Mondo accumula e che i motori non
+  hanno: se scade da sola, ogni mese si ricomincia da capo.
+  Due tavole, `mondo_fonti` e `mondo_fonti_ambito`, perche' una fonte e'
+  una sola al mondo (il dominio) ma il suo MERITO cambia da paese a
+  paese e da settore a settore — Le Monde vale in Francia e sull'estero,
+  non sul calcio italiano. Tre numeri per ambito, e ognuno dice una cosa
+  diversa: **apparizioni** (quante volte e' uscita nei risultati),
+  **letture** (quante volte l'abbiamo aperta), **articoli** (quanto ha
+  reso davvero). Una fonte che compare sempre ma non pubblica mai non
+  merita la lettura, e i tre numeri lo dicono senza indovinare.
+  `lib/topics/deposito.js` e' la porta; senza Supabase torna vuoto e il
+  Mondo funziona come prima — il deposito e' un vantaggio, mai una
+  condizione.
+
+  ② **Anche il flusso RSS si ricorda per sempre**, e anche il «questo
+  sito non ce l'ha» (stringa vuota + `feed_provato_il`): trovarlo costa
+  una visita alla home piu cinque tentativi, ed e' la fatica piu cara
+  del registro. Via la cache Redis dei feed: una casa sola.
+
+  ③ **SICUREZZA, presa dal controllo di Supabase e chiusa subito**: le
+  due funzioni nuove erano `security definer` esposte su /rest/v1/rpc,
+  quindi chiunque avesse la chiave pubblica — che sta nel telefono di
+  tutti — poteva chiamarle e **inquinare il registro**. Adesso le esegue
+  solo la chiave di servizio. Lezione: ogni RPC nuova va guardata con
+  `get_advisors` PRIMA di considerarla finita.
+
+  ④ **IL PONTE E' TOLTO**: Luca ha creato la chiave YouTube e l'ha messa
+  su Vercel, quindi `lib/topics/video.js` — il modulo che leggeva la
+  pagina /results — e' uscito dall'applicazione (`_to_delete/b553/`).
+  Da adesso l'unica porta e' la Data API. Se la quota finisce non si
+  ripiega su niente: si dice che oggi non c'e' niente di nuovo e restano
+  la cache e le fonti che seguiamo.
+  Effetto collaterale buono: dalla porta ufficiale arriva `publishedAt`,
+  l'istante vero, e la riga in alto puo scrivere data E ora invece
+  dell'eta a parole («2 giorni fa»).
+
+  RESTA DA FARE, dichiarato: il riordino a scala di registro
+  (`punteggioFeed` e `raggruppa` sono nati per dodici risultati, non per
+  il fiume di duecento fonti). E il registro nasce VUOTO: si popola da
+  solo con le ricerche, ma i primi giorni il Mondo si appoggia ancora ai
+  motori.
+
 - Versione: **b.553** (push #839) — IL CAMBIO DI OSSATURA: SI SEGUE,
   NON SI CERCA.
 

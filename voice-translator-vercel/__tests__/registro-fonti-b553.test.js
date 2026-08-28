@@ -172,8 +172,12 @@ describe('il servizio: prima le fonti, il motore come eccezione', () => {
   const s = leggi('app/lib/topics/servizio.js');
 
   it('le fonti seguite si leggono PRIMA della ricerca', () => {
-    expect(s).toMatch(/daSeguite = await leggiFonti\(seguite/);
-    expect(s.indexOf('await leggiFonti(seguite'), 'e prima, non dopo').toBeLessThan(s.indexOf('await cercaNotizie(q, lingua'));
+    expect(s).toMatch(/daSeguite = await leggiFonti\(daSeguire/);
+    expect(s.indexOf('await leggiFonti(daSeguire'), 'e prima, non dopo').toBeLessThan(s.indexOf('await cercaNotizie(q, lingua'));
+    // e chi seguire lo dice il REGISTRO (la storia nel deposito), non
+    // piu solo la lista in cache: e' il senso della casa vera.
+    expect(s).toMatch(/const dalRegistro = await fontiDelPosto\(\{ \.\.\.ambito, quante: 12 \}\)/);
+    expect(s.indexOf('fontiDelPosto'), 'il registro parla per primo').toBeLessThan(s.indexOf('await leggiFonti(daSeguire'));
   });
 
   it('se bastano, il motore non si sveglia nemmeno', () => {
@@ -186,6 +190,7 @@ describe('il servizio: prima le fonti, il motore come eccezione', () => {
   });
 
   it('ogni ricerca riuscita insegna, e imparare non puo rompere la ricerca', () => {
+    expect(s, 'nel deposito entra tutto cio che si e visto').toMatch(/await fontiViste\(articoli, ambito\)/);
     expect(s).toMatch(/const cresciuta = imparaFonti\(seguite, articoli\);/);
     const blocco = s.slice(s.indexOf('DISCOVER → FOLLOW'), s.indexOf('DISCOVER → FOLLOW') + 1400);
     expect(blocco).toMatch(/catch \{ \/\* imparare e un di piu/);
@@ -193,5 +198,70 @@ describe('il servizio: prima le fonti, il motore come eccezione', () => {
 
   it('la cache dei video sta a dodici ore, non a mezz ora', () => {
     expect(leggi('app/api/topics/video/route.js')).toMatch(/const TTL = 12 \* 3600;/);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════
+// b.553-bis — LA CASA VERA, e il ponte tolto
+//
+// Ordine di Luca: «le liste di fonti passino su Supabase — il Source
+// Graph ha bisogno di una casa vera con la sua storia». Redis e' una
+// cache: roba che si puo perdere senza danno. Ma «chi ci ha dato roba
+// buona, dove, quante volte» e' l'unica cosa che il Mondo accumula e
+// che i motori non hanno: se scade da sola, ogni mese si ricomincia da
+// capo e il patrimonio non esiste.
+// ═══════════════════════════════════════════════════════════════
+describe('il deposito: la storia non scade', () => {
+  const d = leggi('app/lib/topics/deposito.js');
+
+  it('due tavole, perche il merito cambia da posto a posto', () => {
+    // una fonte e' una sola al mondo (il dominio), ma Le Monde vale in
+    // Francia e sull'estero, non sul calcio italiano.
+    expect(d).toMatch(/from\('mondo_fonti_ambito'\)/);
+    expect(d).toMatch(/\.eq\('paese', paese \|\| ''\)/);
+    expect(d).toMatch(/\.eq\('settore', settore \|\| ''\)/);
+  });
+
+  it('l ordine e il merito: prima chi e comparso, poi chi ha reso', () => {
+    expect(d).toMatch(/\.order\('apparizioni', \{ ascending: false \}\)/);
+    expect(d).toMatch(/\.order\('articoli', \{ ascending: false \}\)/);
+  });
+
+  it('la scoperta costa UNA chiamata, non una per fonte', () => {
+    // la scoperta non deve costare piu della ricerca che l'ha prodotta.
+    expect(d).toMatch(/rpc\('mondo_fonti_viste'/);
+    expect(d).toMatch(/\[\.\.\.conti\.values\(\)\]\.slice\(0, 40\)/);
+  });
+
+  it('senza Supabase non si rompe niente: il deposito e un vantaggio, non una condizione', () => {
+    expect((d.match(/if \(!db/g) || []).length, 'ogni porta controlla').toBe(5);
+    expect(d).toMatch(/if \(!db\) return \[\];/);
+  });
+
+  it('anche il «questo sito l RSS non ce l ha» si ricorda', () => {
+    // se no lo ricercheremmo ogni giorno per tutti i siti che non l'hanno:
+    // e' la fatica piu cara del registro (una visita alla home piu cinque
+    // tentativi) e va fatta una volta nella vita.
+    expect(d).toMatch(/feed_provato_il/);
+    const r = leggi('app/lib/topics/registro.js');
+    expect(r, 'la memoria non e piu una cache che scade').not.toMatch(/redis\(/);
+    expect(r).toMatch(/const gia = await feedRicordato\(d\);\s*\n\s*if \(gia !== null\) return gia;/);
+  });
+
+  it('quanto ha reso una fonte si annota dopo averla letta', () => {
+    expect(leggi('app/lib/topics/registro.js')).toMatch(/await fonteLetta\(dominio, tutte\.length, ambito\)/);
+  });
+});
+
+describe('b.553-bis — il ponte e tolto: la pagina di YouTube non si legge piu', () => {
+  it('il modulo che la leggeva e uscito dall applicazione', () => {
+    expect(fs.existsSync(path.join(__dirname, '..', 'app/lib/topics/video.js'))).toBe(false);
+  });
+
+  it('e la rotta ha una porta sola', () => {
+    const r = leggi('app/api/topics/video/route.js');
+    expect(r).not.toMatch(/cercaVideo\b/);
+    expect(r).toMatch(/cercaSuYouTube\(q, lang/);
+    expect(r, 'quota finita = si mostra cio che si ha, non si torna indietro').toMatch(/quotaFinita: true/);
   });
 });

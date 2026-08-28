@@ -244,20 +244,30 @@ describe('Scheda e video (b.153)', () => {
     }
   });
 
-  it('i video si estraggono dalla pagina risultati, SENZA Data API (ordine di Luca)', async () => {
-    const { estraiVideoDaHtml } = await import('../app/lib/topics/video.js');
-    const campione = '{"videoRenderer":{"videoId":"abcDEF12345","x":1,"title":{"runs":[{"text":"Gran Premio, la sintesi"}]},"ownerText":{"runs":[{"text":"Canale Sport"}]}}}'
-      + '{"videoRenderer":{"videoId":"abcDEF12345","title":{"runs":[{"text":"doppione da scartare"}]}}}'
-      + '{"videoRenderer":{"videoId":"zzzZZZ99900","title":{"runs":[{"text":"Secondo video"}]}}}';
-    const video = estraiVideoDaHtml(campione);
-    expect(video).toHaveLength(2);
+  it('i video arrivano dalla Data API, non piu dalla pagina risultati', async () => {
+    // b.553-bis — CAMBIO DI ROTTA, deciso da Luca: «niente scraping
+    // della pagina /results, in produzione solo la YouTube Data API».
+    // La vecchia prova difendeva l'esatto contrario ed era giusta finche'
+    // l'ordine era quello; oggi difende la porta nuova. Il modulo che
+    // leggeva la pagina e' uscito dall'applicazione (_to_delete/b553).
+    const { daApi, playlistCaricamenti } = await import('../app/lib/topics/videoUfficiale.js');
+    const video = daApi([
+      { snippet: { title: 'Gran Premio, la sintesi', channelTitle: 'Canale Sport',
+        resourceId: { videoId: 'abcDEF12345' }, publishedAt: '2026-08-20T09:00:00Z' } },
+      { snippet: { title: 'senza id, si scarta' } },
+    ]);
+    expect(video).toHaveLength(1);
     expect(video[0]).toMatchObject({ id: 'abcDEF12345', titolo: 'Gran Premio, la sintesi', canale: 'Canale Sport' });
     expect(video[0].miniatura).toBe('https://i.ytimg.com/vi/abcDEF12345/hqdefault.jpg');
+    // e seguire un canale costa 1 unita invece di 100: e' tutto qui il motivo
+    expect(playlistCaricamenti('UCabcdefghijklmnopqrstu')).toBe('UUabcdefghijklmnopqrstu');
   });
 
-  it('il modulo video non nomina la Data API: niente chiavi, niente quota', () => {
-    const src = fs.readFileSync(path.resolve(__dirname, '../app/lib/topics/video.js'), 'utf8');
-    expect(src).not.toContain('YOUTUBE_API_KEY');
-    expect(src).not.toContain('googleapis.com');
+  it('la pagina dei risultati non si legge piu da nessuna parte', () => {
+    const dentro = fs.readdirSync(path.resolve(__dirname, '../app/lib/topics'));
+    expect(dentro, 'il modulo che leggeva la pagina e uscito').not.toContain('video.js');
+    const rotta = fs.readFileSync(path.resolve(__dirname, '../app/api/topics/video/route.js'), 'utf8');
+    expect(rotta).not.toMatch(/cercaVideo\b/);
+    expect(rotta, 'e la quota finita non riporta indietro').toMatch(/quotaFinita: true/);
   });
 });
