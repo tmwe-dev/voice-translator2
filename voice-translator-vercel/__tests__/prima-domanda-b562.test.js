@@ -166,3 +166,37 @@ describe('e nel Mondo si collega dove serve', () => {
     expect(news).toMatch(/interessiSaltati: true/);
   });
 });
+
+// ═══════════════════════════════════════════════════════════════
+// b.571 — LA DOMANDA SOLO A CHI E' DAVVERO NUOVO
+//
+// Collaudo di Luca: «quando faccio back da quella pagina mostra il menu
+// onboarding». Aveva ragione a lamentarsi, e il caso e' istruttivo: lui
+// non aveva mai risposto — la domanda non esisteva quando ha cominciato
+// — quindi tecnicamente era «da chiedere», e ricompariva ogni volta.
+//
+// Ma la domanda serve a UNA cosa: avere dei semi da cui partire. Chi ha
+// gia cercato qualcosa o messo una stella i semi ce li ha, e sono
+// MIGLIORI di qualunque risposta a un questionario, perche' se li e'
+// scelti facendo. Chiedergli gli interessi non e' accogliere: e'
+// rifargli compilare un modulo che ha gia riempito vivendo.
+// ═══════════════════════════════════════════════════════════════
+describe('b.571 — chi ha gia una storia non e nuovo', () => {
+  it('a chi ha gia cercato non si chiede niente', () => {
+    expect(daChiedere({ ricercheRecenti: [{ q: 'thailandia' }] })).toBe(false);
+  });
+
+  it('e nemmeno a chi ha messo una stella', () => {
+    expect(daChiedere({ ricerchePreferite: [{ q: 'milan' }] })).toBe(false);
+  });
+
+  it('ma a chi arriva davvero da zero si', () => {
+    expect(daChiedere({ ricercheRecenti: [], ricerchePreferite: [] })).toBe(true);
+    expect(daChiedere({})).toBe(true);
+  });
+
+  it('e il Mondo aspetta di sapere chi sei prima di chiedere', () => {
+    const news = leggi('app/components/MondoNews.js');
+    expect(news).toMatch(/\{prefsPronte && daChiedere\(prefs\) && \(/);
+  });
+});

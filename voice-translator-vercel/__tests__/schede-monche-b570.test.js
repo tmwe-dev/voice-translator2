@@ -79,3 +79,36 @@ describe('③ il giornale deve poter partire anche DOPO la domanda', () => {
     expect(news).toMatch(/if \(argomenti !== null \|\| cercando\) return;/);
   });
 });
+
+// ═══════════════════════════════════════════════════════════════
+// b.571 — NESSUN SUONO SENZA IMMAGINE
+//
+// Collaudo di Luca: «e partito un video non so dove, si sente l'audio ma
+// non vedo niente», col feed vuoto a schermo.
+//
+// Non sono riuscito a riprodurlo — e lo dico invece di far finta di
+// aver capito. Ma la regola non ha eccezioni e vale per ogni strada che
+// possa produrlo: se non c'e' niente da guardare, non ci deve essere
+// niente da sentire. Quindi si parla a TUTTI i player della pagina,
+// anche a quelli che non sappiamo di avere.
+// ═══════════════════════════════════════════════════════════════
+describe('b.571 — nessun suono senza immagine', () => {
+  const feed = leggi('app/components/FeedNotizieMondo.js');
+
+  it('quando il feed si chiude o si svuota, tutti i player si fermano', () => {
+    expect(feed).toMatch(/if \(aperto && elementi\.length\) return;/);
+    expect(feed).toMatch(/pauseVideo/);
+  });
+
+  it('si parla a tutti gli iframe di YouTube, non solo a quelli che conosciamo', () => {
+    const i = feed.indexOf('NESSUN SUONO SENZA IMMAGINE');
+    const blocco = feed.slice(i, i + 1600);
+    expect(blocco).toMatch(/document\.querySelectorAll\('iframe'\)/);
+    expect(blocco).toMatch(/\/youtube\/\.test\(f\.src \|\| ''\)/);
+  });
+
+  it('e un player che non risponde non ferma la pagina', () => {
+    const i = feed.indexOf('NESSUN SUONO SENZA IMMAGINE');
+    expect(feed.slice(i, i + 1600)).toMatch(/catch \{ \/\* un player che non risponde/);
+  });
+});

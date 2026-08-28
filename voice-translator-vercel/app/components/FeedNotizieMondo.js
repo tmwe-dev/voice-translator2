@@ -465,6 +465,29 @@ export default function FeedNotizieMondo({ aperto, onChiudi, C, L, argomenti = [
   useEffect(() => { prontoRef.current = pronto; if (pronto && !visto) setVisto(true); }, [pronto, visto]);
   useEffect(() => { if (!aperto) { setVisto(false); ordineRef.current = []; prontoRef.current = false; } }, [aperto]);
 
+  // ═══ b.571 — NESSUN SUONO SENZA IMMAGINE ═══
+  // Collaudo di Luca: «e' partito un video non so dove, si sente l'audio
+  // ma non vedo niente», col feed vuoto a schermo.
+  // Non sono riuscito a riprodurlo, e quindi non so QUALE strada lo
+  // produca: un player rimasto vivo mentre l'elenco si svuotava, uno
+  // che YouTube ha tenuto in vita per conto suo, o una scheda aperta
+  // dietro. Ma la regola vale comunque, e non ha eccezioni: **se non
+  // c'e' niente da guardare, non ci deve essere niente da sentire.**
+  // Quindi quando il feed si chiude o resta senza diapositive si dice a
+  // TUTTI i player della pagina di fermarsi — anche a quelli che non
+  // sappiamo di avere. `postMessage` e' il comando che YouTube accetta
+  // dall'esterno (enablejsapi, b.551): non serve conoscerli, basta
+  // parlare a tutti.
+  useEffect(() => {
+    if (aperto && elementi.length) return;
+    try {
+      for (const f of document.querySelectorAll('iframe')) {
+        if (!/youtube/.test(f.src || '')) continue;
+        f.contentWindow?.postMessage('{"event":"command","func":"pauseVideo","args":""}', '*');
+      }
+    } catch { /* un player che non risponde non deve fermare la pagina */ }
+  }, [aperto, elementi.length]);
+
   // b.546 — l'indice e l'elenco tenuti anche «a mano». Servono a chi
   // ascolta gli eventi della finestra: un ascoltatore registrato una
   // volta sola si porterebbe dietro per sempre i valori del giorno in

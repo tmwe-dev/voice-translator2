@@ -72,7 +72,21 @@ export function interessiDi(prefs) {
  * ogni ingresso ha gia perso.
  */
 export function daChiedere(prefs) {
-  return interessiDi(prefs).length === 0 && !prefs?.interessiSaltati;
+  if (interessiDi(prefs).length > 0) return false;
+  if (prefs?.interessiSaltati) return false;
+  // ═══ b.571 — E CHI HA GIA UNA STORIA NON E' NUOVO ═══
+  // Collaudo di Luca: «quando faccio back da quella pagina mostra il
+  // menu onboarding». Giusto: lui non aveva mai risposto alla domanda —
+  // la domanda non esisteva quando ha cominciato — e quindi gli
+  // ricompariva ad ogni ingresso.
+  // Ma la domanda serve a UNA cosa sola: avere dei semi da cui partire.
+  // Chi ha gia cercato qualcosa, o messo una stella, i semi ce li ha —
+  // e sono migliori di qualunque risposta a un questionario, perche' se
+  // li e' scelti facendo. Chiedergli gli interessi non e' accogliere: e'
+  // rifargli compilare un modulo che ha gia riempito vivendo.
+  const storia = (Array.isArray(prefs?.ricercheRecenti) ? prefs.ricercheRecenti.length : 0)
+    + (Array.isArray(prefs?.ricerchePreferite) ? prefs.ricerchePreferite.length : 0);
+  return storia === 0;
 }
 
 /**

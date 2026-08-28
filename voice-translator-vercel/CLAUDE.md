@@ -267,6 +267,30 @@ perche il working tree lo conteneva ancora.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.571** (push #856) — L'ACCOGLIENZA A CHI NON SERVE, e il
+  suono senza immagine.
+
+  ① **«Quando faccio back da quella pagina mostra il menu onboarding»**
+  (Luca). Aveva ragione, e il caso e' istruttivo: lui non aveva mai
+  risposto alla domanda — **la domanda non esisteva quando ha
+  cominciato** — quindi tecnicamente era «da chiedere», e gli
+  ricompariva ad ogni ingresso.
+  Ma la domanda serve a UNA cosa sola: avere dei semi da cui partire.
+  Chi ha gia cercato qualcosa o messo una stella i semi ce li ha, e sono
+  **migliori** di qualunque risposta a un questionario, perche' se li e'
+  scelti facendo. **Chiedergli gli interessi non e' accogliere: e'
+  rifargli compilare un modulo che ha gia riempito vivendo.**
+  Adesso `daChiedere` guarda anche la storia: niente ricerche, niente
+  stelle, allora sei nuovo davvero.
+
+  ② **«E' partito un video non so dove, si sente l'audio ma non vedo
+  niente»**, col feed vuoto a schermo. Non sono riuscito a riprodurlo, e
+  lo scrivo invece di far finta di aver capito. Ma la regola non ha
+  eccezioni e vale per ogni strada che possa produrlo: **se non c'e'
+  niente da guardare, non ci deve essere niente da sentire.** Quando il
+  feed si chiude o resta senza diapositive si dice a TUTTI i player
+  della pagina di fermarsi — anche a quelli che non sappiamo di avere.
+
 - Versione: **b.570** (push #855) — «È APPARSA PER UN ISTANTE, POI SI È
   ROTTO TUTTO».
 
