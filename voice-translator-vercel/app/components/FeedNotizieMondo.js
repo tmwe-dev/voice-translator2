@@ -11,7 +11,8 @@ import { paeseDellaNotizia } from '../lib/paeseDaFonte.js';       // b.546 — d
 import AnteprimaCoperta from './ui/AnteprimaCoperta.js';
 import Sovrapposizione from './ui/Sovrapposizione.js';
 import { VETRO, VETRO_ACCESO, VETRO_CUORE, VETRO_FASCIA } from '../lib/vetro.js'; // b.552 — la ricetta del vetro, una per tutti
-import { inBacheca } from '../lib/bacheca.js';                                    // b.552 — la stella: messo da parte
+import { inBacheca } from '../lib/bacheca.js';   // b.552 — la stella: messo da parte
+import { segnaVisto } from '../lib/visti.js';    // b.558 — quello che hai gia guardato
 
 // ═══════════════════════════════════════════════════════════════
 // FeedNotizieMondo — IL FEED A TUTTA PAGINA (b.515)
@@ -451,6 +452,21 @@ export default function FeedNotizieMondo({ aperto, onChiudi, C, L, argomenti = [
   const indiceRef = useRef(0);
   const elementiRef = useRef(elementi);
   useEffect(() => { indiceRef.current = indiceAttivo; elementiRef.current = elementi; });
+
+  // ═══ b.558 — QUESTO L'HAI VISTO ═══
+  // Collaudo di Luca: «quando rientro nel sistema mi riproponi in serie
+  // video, altrimenti ogni volta che entro vedo Beethoven».
+  // Si annota qui e non altrove perche' QUI si sa davvero cosa hai
+  // guardato: la diapositiva attiva e' quella che ti sta in mezzo allo
+  // schermo, non una che e' passata in un elenco. Si aspettano due
+  // secondi: scorrere veloce oltre qualcosa non e' averlo visto.
+  useEffect(() => {
+    if (!aperto || !pronto) return undefined;
+    const el = elementi[indiceAttivo];
+    if (!el?.dati) return undefined;
+    const t = setTimeout(() => segnaVisto(el.dati), 2000);
+    return () => clearTimeout(t);
+  }, [aperto, pronto, indiceAttivo, elementi]);
 
   // si chiedono i conteggi delle slide che si stanno guardando, non di
   // tutte: una manciata di indirizzi per volta.

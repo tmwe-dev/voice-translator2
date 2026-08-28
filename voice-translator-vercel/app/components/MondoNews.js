@@ -26,6 +26,7 @@ import { ordinaPerPunteggio, mescolaConInteresse } from '../lib/punteggioFeed.js
 import { chiaveContenuto, mieiCuori } from '../lib/gradimento.js';
 import { giraBacheca, nascondi, senzaNascosti, bachecaDi, spostaInBacheca, togliDaBacheca } from '../lib/bacheca.js';
 import { soloRecenti, quantiFreschi } from '../lib/topics/registro.js'; // b.557 — le notizie sono di oggi
+import { vistiDiRecente, primaIlNuovo } from '../lib/visti.js';         // b.558 — e non si rivede Beethoven ad ogni ingresso
 import { eDiCronaca } from '../lib/topics/enciclopediaUtile.js';        // b.557 — e questa domanda ha una scadenza? // b.552 — la bacheca e il «non mostrarmelo piu»
 import { cercaTopics, chiediRami, chiediFonti } from '../lib/topics/cliente.js';   // b.409 — il lettore a righe, uno per tutti; b.541 — i rami del giardino
 import { semiDi, prossimaQuery, esaurito, sanaRami } from '../lib/giardino.js'; // b.541 — le ricerche sono semi
@@ -406,7 +407,8 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
             if (!k || visti.has(k)) return false;
             visti.add(k); return true;
           });
-          return senzaNascosti([...base, ...nuovi], prefsRef.current);
+          // b.558 — e anche fra i video il gia visto scende in fondo
+          return primaIlNuovo(senzaNascosti([...base, ...nuovi], prefsRef.current), vistiDiRecente());
         });
       }
     } catch { /* i video sono un di piu, mai un errore in faccia */ }
@@ -655,6 +657,14 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
           const finestra = oreIndietro * 3600 * 1000;
           if (quantiFreschi(puliti, { finestra }) >= 4) puliti = soloRecenti(puliti, { finestra });
         }
+        // ═══ b.558 — E QUELLO CHE HAI GIA VISTO VA IN FONDO ═══
+        // «Ogni volta che entro vedo Beethoven» (Luca). La memoria del
+        // gia visto viveva dentro la pagina e rinasceva vuota ad ogni
+        // ricarica: stessa ricerca d'ingresso, stessa risposta, stesso
+        // Beethoven. Adesso la memoria dura una settimana e sta sul
+        // telefono. IN FONDO, non fuori: se hai visto tutto rivedi
+        // tutto, perche' una pagina vuota e' peggio di una ripetizione.
+        puliti = primaIlNuovo(puliti, vistiDiRecente());
         const nuovi = puliti.filter((a) => {
           const chiave = a?.url || a?.id || a?.titolo;
           if (!chiave || vistiRef.current.has(chiave)) return false;

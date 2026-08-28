@@ -267,6 +267,38 @@ perche il working tree lo conteneva ancora.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.558** (push #843) — «OGNI VOLTA CHE ENTRO VEDO
+  BEETHOVEN».
+
+  Collaudo di Luca: «quando rientro nel sistema mi riproponi in serie
+  video. Non devi».
+
+  LA CAUSA, e non era il motore: la memoria dei contenuti gia mostrati
+  viveva DENTRO la pagina (`vistiRef`). Dentro una sessione funzionava;
+  ricaricando l'applicazione rinasceva vuota. Stessa ricerca d'ingresso,
+  stessa risposta, stesso ordine — Beethoven ogni volta. Chiedevamo
+  sempre la stessa cosa e non ci ricordavamo di averla gia ricevuta.
+
+  `lib/visti.js` (NUOVO): la memoria dura **una settimana**, sta sul
+  telefono (e' un fatto di questo apparecchio, non una preferenza da
+  mandare avanti e indietro dal server ad ogni scorrimento) e ha un
+  tetto di 600.
+
+  DUE COSE DA NON CONFONDERE MAI, e sono file diversi apposta:
+  · **«non mostrare piu»** (bacheca.js) e' una DECISIONE: vale per
+    sempre e fa sparire il contenuto;
+  · **«gia visto»** (visti.js) e' un FATTO: dura sette giorni e manda
+    solo IN FONDO. Fra una settimana quel video puo tornare, ed e'
+    giusto — un servizio che ti e' piaciuto a maggio puoi rivederlo a
+    settembre.
+
+  E non svuota mai il giornale: se hai visto tutto, rivedi tutto
+  nell'ordine di prima. Si ordina, non si filtra — anche qui.
+
+  DOVE SI ANNOTA: sulla diapositiva ATTIVA, dopo due secondi. Li si sa
+  davvero cosa hai guardato, e scorrere veloce oltre qualcosa non e'
+  averlo visto.
+
 - Versione: **b.557** (push #842) — UNA PORTA SOLA, E LE NOTIZIE SONO DI
   OGGI.
 
