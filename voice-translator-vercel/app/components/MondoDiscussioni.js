@@ -88,7 +88,11 @@ function MondoDiscussioni({ discussionId, onClose, onOpenPersona }) {
   // lingua non si fa niente — tradurre dall'italiano all'italiano e solo
   // una chiamata pagata per niente.
   useEffect(() => {
-    if ((prefs?.mondoTitoli || 'originali') !== 'tradotti') return;
+    // b.548 — il predefinito e TRADOTTI (ordine di Luca in b.541): qui
+    // era rimasto 'originali', quindi chi non aveva mai toccato la
+    // preferenza vedeva il pannello dire «Tradotti» e i titoli restare
+    // in lingua. Stessa incoerenza gia trovata sul ritmo del globo.
+    if ((prefs?.mondoTitoli || 'tradotti') !== 'tradotti') return;
     if (!disc?.title || tradotti.title) return;
     const mia = (prefs?.uiLang || prefs?.lang || 'it').split('-')[0];
     if ((disc.title_lang || '').split('-')[0] === mia) return;

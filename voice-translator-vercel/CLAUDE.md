@@ -267,6 +267,23 @@ perche il working tree lo conteneva ancora.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.548** (push #834) — LA TRADUZIONE CHE NON TRADUCEVA.
+  Luca: «i testi non vengono tradotti anche se il setting dice di farlo».
+  Verificato: la preferenza «Titoli in altre lingue → Tradotti» era una
+  FEATURE ORFANA in piena regola — esisteva nel pannello, si accendeva,
+  si salvava, e in tutto il programma UNA sola riga la leggeva
+  (MondoDiscussioni, per il titolo di una discussione). Nel giornale,
+  dove Luca la vede ogni giorno su titoli inglesi, non arrivava.
+  Nasce lib/topics/titoliTradotti.js (logica pura: cosa vale la pena
+  tradurre, niente sigle, mai dall'italiano all'italiano, tetto di 24
+  voci, originale sempre conservato dentro la scheda) e il giornale la
+  usa davvero: le schede appena arrivate passano dal traduttore, e la
+  stessa frase non si paga due volte.
+  In piu il predefinito e stato allineato anche in MondoDiscussioni,
+  dove era rimasto 'originali' mentre il pannello diceva «Tradotti» —
+  la stessa incoerenza gia trovata sul ritmo del globo (b.535).
+  9 prove sui risultati.
+
 - Versione: **b.547** (push #833) — PERCHE' LUCA VEDEVA VERSIONI
   MESCOLATE. «Hai rotto il cazzo», con la schermata rossa e l'indirizzo
   che diceva **?v=819** mentre in produzione girava il numero 832.

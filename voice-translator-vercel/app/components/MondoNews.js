@@ -27,6 +27,7 @@ import { chiaveContenuto, mieiCuori } from '../lib/gradimento.js';
 import { cercaTopics, chiediRami, chiediFonti } from '../lib/topics/cliente.js';   // b.409 — il lettore a righe, uno per tutti; b.541 — i rami del giardino
 import { semiDi, prossimaQuery, esaurito, sanaRami } from '../lib/giardino.js'; // b.541 — le ricerche sono semi
 import { listaVecchia, giorniDiVita } from '../lib/topics/fonti.js'; // b.543 — il Fontiere
+import { vociDaTradurre, applicaTraduzioni, traduzioneAccesa } from '../lib/topics/titoliTradotti.js'; // b.548 — i titoli nella tua lingua
 import Scelta from './ui/Scelta.js';
 import { ricerchePredefinite } from '../lib/casaEViaggio.js';
 import { preferitiAggiunti, ePreferita, aggiungiPreferita, togliPreferita } from '../lib/preferitiRicerche.js'; // b.535
@@ -394,6 +395,50 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
   // finire mai — e cio che mancava perche' i semi di Luca (Tom Cruise,
   // Chelsea) non si vedevano: il giornale teneva UNA ricerca alla volta,
   // l'ultima, e le altre sparivano.
+  // ═══ b.548 — I TITOLI SI TRADUCONO DAVVERO ═══
+  // Collaudo di Luca: «i testi non vengono tradotti anche se il setting
+  // dice di farlo». La preferenza esisteva, si accendeva, si salvava — e
+  // nel giornale non la leggeva nessuno: una feature orfana in piena
+  // regola. Adesso, quando le schede arrivano, cio che non e gia nella
+  // lingua di chi guarda viene tradotto e sostituito (l'originale resta
+  // dentro la scheda: non si perde niente).
+  // Si traduce SOLO cio che si sta guardando (tetto in vociDaTradurre) e
+  // mai due volte la stessa frase.
+  const tradottiRef = useRef(new Map());   // impronta -> resa, per non ripagare
+  const [inTraduzione, setInTraduzione] = useState(false);
+  const traduciSchede = useCallback(async (schede) => {
+    if (!traduzioneAccesa(prefs)) return;
+    const mia = prefs?.uiLang || prefs?.lang || 'it';
+    const voci = vociDaTradurre(schede, mia);
+    if (!voci.length) return;
+    setInTraduzione(true);
+    try {
+      const rese = {};
+      // le frasi gia tradotte prima non si ripagano
+      const daChiedere = voci.filter((v) => {
+        const gia = tradottiRef.current.get(`${mia}|${v.testo}`);
+        if (gia) { rese[`${v.id}|${v.campo}`] = gia; return false; }
+        return true;
+      });
+      await Promise.all(daChiedere.map(async (v) => {
+        try {
+          const r = await fetch('/api/translate', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text: v.testo, sourceLang: 'auto', targetLang: mia, userToken }),
+            signal: AbortSignal.timeout(20000),
+          });
+          if (!r.ok) return;
+          const d = await r.json().catch(() => null);
+          const resa = d?.translated || d?.testo || '';
+          if (!resa) return;
+          tradottiRef.current.set(`${mia}|${v.testo}`, resa);
+          rese[`${v.id}|${v.campo}`] = resa;
+        } catch { /* una frase che non si traduce resta nella sua lingua */ }
+      }));
+      if (Object.keys(rese).length) setArgomenti((prima) => applicaTraduzioni(prima || [], rese));
+    } finally { setInTraduzione(false); }
+  }, [prefs, userToken]);
+
   // b.543 — si guarda (gratis) che lista c'e per questo Paese: serve a
   // sapere se l'icona va accesa, e da quanto tempo.
   useEffect(() => {
@@ -542,6 +587,9 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
           return true;
         });
         usateRef.current = [...usateRef.current, pulita];
+        // b.548 — appena le schede sono in pagina, si traducono i titoli
+        // che non sono gia nella lingua di chi guarda.
+        if (nuovi.length) traduciSchede(nuovi);
         setArgomenti((prima) => (accoda ? [...(prima || []), ...nuovi] : arrivati));
         // b.545 — appena l'elenco e in pagina si chiedono i segnali di
         // tutti e si riordina. `argomentiRef` qui vale ancora quello di

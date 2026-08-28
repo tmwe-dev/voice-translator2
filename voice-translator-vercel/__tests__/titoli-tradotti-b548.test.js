@@ -1,0 +1,74 @@
+import { describe, it, expect } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+const leggi = (p) => readFileSync(join(process.cwd(), p), 'utf8');
+
+// ═══ b.548 — «i testi non vengono tradotti anche se il setting dice di
+// farlo» (Luca). Era una feature ORFANA: la preferenza esisteva, si
+// accendeva, si salvava, e nel giornale non la leggeva nessuno. ═══
+
+describe('b.548 — cosa si traduce e cosa no (regole vere)', () => {
+  it('non si traduce cio che e gia nella tua lingua', async () => {
+    const { daTradurre } = await import('../app/lib/topics/titoliTradotti.js');
+    expect(daTradurre('Una notizia lunga abbastanza', 'it', 'it-IT'), 'italiano -> italiano').toBe(false);
+    expect(daTradurre('Both countries accused other of firing', 'en', 'it')).toBe(true);
+    expect(daTradurre('Ein langer deutscher Titel hier', 'de', 'it')).toBe(true);
+  });
+  it('non si traducono le sigle e i frammenti', async () => {
+    const { daTradurre } = await import('../app/lib/topics/titoliTradotti.js');
+    expect(daTradurre('IMF', 'en', 'it')).toBe(false);
+    expect(daTradurre('', 'en', 'it')).toBe(false);
+    expect(daTradurre(null, 'en', 'it')).toBe(false);
+  });
+  it('se la lingua del testo non si sa, si prova (meglio che lasciarlo straniero)', async () => {
+    const { daTradurre } = await import('../app/lib/topics/titoliTradotti.js');
+    expect(daTradurre('Thailand: Selected Issues paper', null, 'it')).toBe(true);
+  });
+  it('si raccolgono titolo e sintesi, senza doppioni e con un tetto', async () => {
+    const { vociDaTradurre } = await import('../app/lib/topics/titoliTradotti.js');
+    const schede = [
+      { id: 'a', titolo: 'Both countries accused other of firing first', sintesi: 'Weeks of simmering tensions', lingua: 'en' },
+      { id: 'b', titolo: 'Notizia italiana abbastanza lunga da contare', lingua: 'it' },
+      { id: 'c', titolo: 'Both countries accused other of firing first', lingua: 'en' },  // stessa frase: una volta sola
+    ];
+    const voci = vociDaTradurre(schede, 'it');
+    expect(voci.map((v) => `${v.id}.${v.campo}`)).toEqual(['a.titolo', 'a.sintesi']);
+    // il tetto vale davvero
+    const tante = Array.from({ length: 50 }, (_, i) => ({ id: `x${i}`, titolo: `A long english title number ${i}`, lingua: 'en' }));
+    expect(vociDaTradurre(tante, 'it')).toHaveLength(24);
+  });
+  it('la traduzione sostituisce ma NON butta l\'originale', async () => {
+    const { applicaTraduzioni } = await import('../app/lib/topics/titoliTradotti.js');
+    const schede = [{ id: 'a', titolo: 'Both countries accused', sintesi: 'Tensions', lingua: 'en' }];
+    const dopo = applicaTraduzioni(schede, { 'a|titolo': 'Entrambi i paesi si accusano' });
+    expect(dopo[0].titolo).toBe('Entrambi i paesi si accusano');
+    expect(dopo[0].titoloOriginale, 'l\'originale resta, si puo sempre tornare indietro').toBe('Both countries accused');
+    expect(dopo[0].sintesi, 'cio che non e stato tradotto non si tocca').toBe('Tensions');
+    expect(dopo[0].tradotta).toBe(true);
+    // niente traduzioni: niente da fare, e nessuna copia inutile
+    expect(applicaTraduzioni(schede, {})).toBe(schede);
+  });
+  it('il predefinito e TRADOTTI, come dice il pannello', async () => {
+    const { traduzioneAccesa } = await import('../app/lib/topics/titoliTradotti.js');
+    expect(traduzioneAccesa({}), 'chi non ha mai toccato niente').toBe(true);
+    expect(traduzioneAccesa({ mondoTitoli: 'originali' })).toBe(false);
+    expect(traduzioneAccesa({ mondoTitoli: 'tradotti' })).toBe(true);
+  });
+});
+
+describe('b.548 — e adesso il giornale la usa davvero', () => {
+  const news = leggi('app/components/MondoNews.js');
+  it('le schede appena arrivate passano dal traduttore', () => {
+    expect(news).toMatch(/const traduciSchede = useCallback/);
+    expect(news).toMatch(/if \(nuovi\.length\) traduciSchede\(nuovi\)/);
+    expect(news).toMatch(/setArgomenti\(\(prima\) => applicaTraduzioni\(prima \|\| \[\], rese\)\)/);
+  });
+  it('la stessa frase non si paga due volte', () => {
+    expect(news).toMatch(/tradottiRef\.current\.get\(`\$\{mia\}\|\$\{v\.testo\}`\)/);
+    expect(news).toMatch(/tradottiRef\.current\.set\(`\$\{mia\}\|\$\{v\.testo\}`, resa\)/);
+  });
+  it('e il predefinito e allineato ovunque (la lezione del ritmo del globo)', () => {
+    expect(leggi('app/components/MondoDiscussioni.js')).toMatch(/prefs\?\.mondoTitoli \|\| 'tradotti'/);
+    expect(leggi('app/components/ui/PreferenzeMondo.js')).toMatch(/chiave: 'mondoTitoli',[\s\S]{0,700}predefinito: 'tradotti'/);
+  });
+});
