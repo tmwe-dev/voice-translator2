@@ -50,8 +50,10 @@ describe('b.549 — le stanze hanno una faccia nell\'elenco', () => {
 
 describe('b.549 — all\'apertura si piantano TUTTI i semi', () => {
   const news = leggi('app/components/MondoNews.js');
-  it('fino a tre semi, il primo apre e gli altri si accodano', () => {
-    expect(news).toMatch(/const quanti = Math\.min\(giri\.length, 3\)/);
+  // b.573 — erano tre, ora sono quattro (i tuoi semi piu i rami) e non
+  // si ruotano piu qui: l'ordine giusto lo ha gia deciso `mescolaSemi`.
+  it('fino a quattro giri, il primo apre e gli altri si accodano', () => {
+    expect(news).toMatch(/const scelti = giri\.filter\(\(g\) => g\?\.query\)\.slice\(0, 4\)/);
     expect(news).toMatch(/await cerca\(scelti\[0\]\.query, 'notizie', false, true\)/);
     expect(news).toMatch(/await cerca\(altro\.query, 'notizie', false, true, true\)/);
   });

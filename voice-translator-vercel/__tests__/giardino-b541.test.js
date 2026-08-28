@@ -143,9 +143,15 @@ describe('b.541 — il feed non finisce piu, e parte dai tuoi semi', () => {
     expect(news, 'e non ripete cio che hai gia visto').toMatch(/vistiRef\.current\.has\(chiave\)/);
   });
 
-  it('all\'apertura si piantano i TUOI semi, non piu solo il giro fisso', () => {
-    expect(news).toMatch(/const semiUtente = semiDi\(prefs, ricerchePredefinite\(prefs, nomePaese\)\)/);
-    expect(news).toMatch(/semiUtente\.length \? semiUtente : ricerchePredefinite/);
+  // b.573 — l'intenzione di b.541 resta («si parte da cio che hai
+  // cercato»), la strada e cambiata: i semi tuoi non sono piu TUTTO il
+  // giornale, sono la meta che ti riconosce. L'altra meta sono i rami
+  // che allargano, ed e' quello che Luca ha chiesto vedendo il Mondo
+  // restare incollato a un solo argomento.
+  it('all\'apertura si piantano i TUOI semi, e accanto i rami del mondo', () => {
+    expect(news).toMatch(/const semiUtente = semiDi\(prefs, \[\]\)/);
+    expect(news).toMatch(/const giri = mescolaSemi\(/);
+    expect(news).toMatch(/ramiDelGiorno\(\{ lingua, ultimora, giro: n/);
   });
 
   it('il giardino cresce da solo tre slide prima della fine', () => {

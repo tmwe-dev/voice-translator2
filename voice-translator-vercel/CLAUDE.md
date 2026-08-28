@@ -267,6 +267,34 @@ perche il working tree lo conteneva ancora.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.573** (push #858) — PRIMA TU, POI IL MONDO.
+
+  Ordine di Luca: «ma perche non presenti niente random????? se non do
+  preferenze lavora su ultime notizie, tendenze, moda, wellness etc, non
+  puoi mantenere solo un contesto e non sviluppare alcun ramo includendo
+  le ultime ricerche e poi allargando».
+
+  Aveva ragione e il difetto era vecchio: **senza preferenze il giornale
+  nasceva da UNA query sola** — «breaking news» del Paese. E chi aveva
+  cercato qualcosa restava incollato li: una ricerca su Beethoven, e il
+  Mondo diventava un monumento a Beethoven.
+
+  Nuovo `app/lib/topics/rami.js` (puro): quindici rami — ultima ora,
+  tendenze, moda, benessere, **curiosita**, scienza, tecnologia, cucina,
+  viaggi, sport, cultura, natura, storie, soldi, motori — in sei lingue.
+  `mescolaSemi` alterna: **un seme tuo, un ramo, un seme tuo, un ramo**,
+  con il tetto di meta sui semi tuoi (senza quel tetto tre preferiti
+  riempiono tutto e si torna al monumento).
+
+  «Random» NON e' diventato un dado: un dado darebbe due volte lo stesso
+  ramo e zero volte un altro. La **ruota** (il contatore d'ingresso che
+  gia esisteva) garantisce che in pochi ingressi hai girato tutto il
+  giardino, non ha bisogno di memoria, e si puo provare — cosa che con
+  `Math.random` sarebbe impossibile.
+
+  Le chiamate restano quattro come prima: **cambia cosa si chiede, non
+  quanto si spende.**
+
 - Versione: **b.572** (push #857) — TRE COSE ROTTE, E UNA LEZIONE SOLA:
   aggiustare dove fa male non e' aggiustare.
 

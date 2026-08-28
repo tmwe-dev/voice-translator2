@@ -30,6 +30,7 @@ import { vistiDiRecente, primaIlNuovo } from '../lib/visti.js'; // b.558 — non
 import { componi, annota } from '../lib/regia.js';              // b.561 — la regia del carosello
 import { giornaleSalvato, salvaGiornale } from '../lib/giornaleSalvato.js'; // b.564 — l'apertura istantanea
 import { daChiedere, semiDaInteressi } from '../lib/accoglienza.js';  // b.562 — la prima domanda
+import { ramiDelGiorno, mescolaSemi } from '../lib/topics/rami.js';
 import SceltaInteressi from './ui/SceltaInteressi.js';
 import { eDiCronaca } from '../lib/topics/enciclopediaUtile.js';        // b.557 — e questa domanda ha una scadenza? // b.552 — la bacheca e il «non mostrarmelo piu»
 import { cercaTopics, chiediRami, chiediFonti } from '../lib/topics/cliente.js';   // b.409 — il lettore a righe, uno per tutti; b.541 — i rami del giardino
@@ -227,8 +228,34 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
       // predefinito. Ora il primo a entrare e' il seme piu importante
       // che hai (una ricerca salvata con la stella, poi le recenti), e
       // il giro predefinito resta come ultima riserva.
-      const semiUtente = semiDi(prefs, ricerchePredefinite(prefs, nomePaese));
-      const giri = semiUtente.length ? semiUtente : ricerchePredefinite(prefs, nomePaese);
+      // Il contatore del giro sta QUI, sopra chi lo legge: e' un
+      // argomento di `ramiDelGiorno` due righe piu sotto, e in
+      // JavaScript gli argomenti si valutano subito. Averlo dichiarato
+      // dopo mi e' gia costato due schermate bianche (b.559, b.568):
+      // la ruota si prepara prima di girarla.
+      let n = 0;
+      try {
+        n = parseInt(localStorage.getItem('vt-gazzetta-giro') || '0', 10) || 0;
+        localStorage.setItem('vt-gazzetta-giro', String(n + 1));
+      } catch { /* senza memoria si parte dal primo giro */ }
+      // ═══ b.573 — PRIMA TU, POI IL MONDO ═══
+      // Ordine di Luca: «non puoi mantenere solo un contesto e non
+      // sviluppare alcun ramo includendo le ultime ricerche e poi
+      // allargando». Prima qui c'era una sola strada: i tuoi semi, e se
+      // non ne avevi, UNA query — «breaking news» del tuo Paese. Un
+      // giornale intero su una domanda, e per chi aveva cercato una
+      // volta Beethoven, un monumento a Beethoven.
+      // Adesso i semi tuoi si ALTERNANO con i rami che ruotano
+      // (tendenze, moda, benessere, curiosita, scienza...): ti si
+      // riconosce in cima e ti si allarga sotto. Le chiamate restano
+      // quelle di prima — cambia cosa si chiede, non quanto si spende.
+      const semiUtente = semiDi(prefs, []);
+      const ultimora = (ricerchePredefinite(prefs, nomePaese)[0] || {}).query || '';
+      const giri = mescolaSemi(
+        semiUtente,
+        ramiDelGiorno({ lingua, ultimora, giro: n, quanti: 4 }),
+        { quanti: 4 },
+      );
       // b.535 — «perche mi presenta sempre le stesse notizie quando
       // entro????» (Luca): la prima ricerca era SEMPRE giri[0], quindi
       // stesso mazzo a ogni ingresso (e articoli anche vecchi di
@@ -236,11 +263,6 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
       // RUOTANO a ogni ingresso (la Gazzetta di casa, il paese dove
       // sei, i temi): il giornale cambia faccia da solo, senza
       // spendere ricerche in piu.
-      let n = 0;
-      try {
-        n = parseInt(localStorage.getItem('vt-gazzetta-giro') || '0', 10) || 0;
-        localStorage.setItem('vt-gazzetta-giro', String(n + 1));
-      } catch { /* senza memoria si parte dal primo giro */ }
       // ═══ b.549 — SI PIANTANO TUTTI I SEMI, NON UNO ═══
       // Collaudo di Luca: «mostra solo i preferiti, e limita le pagine da
       // vedere, non fa l'autoricerca». Vero: qui si piantava UN giro solo
@@ -250,8 +272,11 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
       // pugni sulla stessa chiamata: tre semi, tre mazzi di contenuti.
       // La rotazione di b.535 decide da quale si comincia, cosi il
       // giornale cambia faccia a ogni ingresso.
-      const quanti = Math.min(giri.length, 3);
-      const scelti = Array.from({ length: quanti }, (_, i) => giri[(n + i) % giri.length]).filter((g) => g?.query);
+      // b.573 — l'ordine e' gia quello giusto: `mescolaSemi` ha messo i
+      // tuoi semi in cima e i rami in mezzo, e la ruota ha gia girato
+      // dentro `ramiDelGiorno`. Ruotare una seconda volta qui
+      // scombinerebbe proprio l'alternanza che serve.
+      const scelti = giri.filter((g) => g?.query).slice(0, 4);
       if (!scelti.length) return;
       (async () => {
         await cerca(scelti[0].query, 'notizie', false, true);
