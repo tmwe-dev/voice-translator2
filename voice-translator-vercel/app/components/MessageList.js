@@ -85,6 +85,7 @@ const MessageList = memo(function MessageList({
   partnerSpeaking, partnerTyping, partnerLiveText,
   msgsEndRef, S, L,
   solo = false, // b.537 — sei l'unico dentro: la stanza vuota lo dice
+  onAvvisami, avvisoAcceso = false,   // b.550 — «avvisami quando arriva qualcuno»
   onMessageRead, // callback(msgId) when a partner's message becomes visible
   onReaction, // callback(msgId, emoji) for sending reactions via P2P
   onMessageDoubleClick, // callback(msg) for Taxi Mode activation on double-tap
@@ -201,12 +202,30 @@ const MessageList = memo(function MessageList({
         <div style={{textAlign:'center', color:S.colors.textMuted, marginTop:60, fontSize:13, lineHeight:1.6}}>
           {solo && (
             <div style={{ marginBottom: 14 }}>
+              {/* b.550 — «AVVISAMI QUANDO ARRIVA QUALCUNO». Le parole
+                  erano tradotte in tutti e 38 i pacchetti da b.537 e non
+                  le mostrava nessuno: una promessa scritta e mai
+                  mantenuta. Adesso chi resta solo puo chiedere di essere
+                  avvisato — il telefono se lo ricorda (vt-attese) e la
+                  stanza lo saluta appena entra il primo. */}
               <div style={{ fontSize: 15, fontWeight: 500, color: S.colors.textPrimary, marginBottom: 4 }}>
                 {L('firstHereTitle')}
               </div>
               <div style={{ fontSize: 12.5, color: S.colors.textSecondary || S.colors.textMuted, maxWidth: 300, margin: '0 auto' }}>
                 {L('firstHereDesc')}
               </div>
+              <button onClick={() => { haptic(8); onAvvisami?.(); }}
+                disabled={avvisoAcceso}
+                style={{
+                  marginTop: 12, minHeight: 44, padding: '0 18px', borderRadius: 999,
+                  cursor: avvisoAcceso ? 'default' : 'pointer',
+                  background: avvisoAcceso ? `${S.colors.accent1}18` : 'rgba(255,255,255,0.06)',
+                  border: `1px solid ${avvisoAcceso ? `${S.colors.accent1}66` : S.colors.cardBorder}`,
+                  color: avvisoAcceso ? S.colors.accent1 : S.colors.textPrimary,
+                  fontSize: 13, fontWeight: 500,
+                }}>
+                {avvisoAcceso ? L('warnMeOn') : L('warnMeWord')}
+              </button>
             </div>
           )}
           {L('speakNow')}{'\n'}

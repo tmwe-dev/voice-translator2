@@ -61,7 +61,13 @@ describe('b.523 — la scelta del Paese esiste davvero nel pannello', () => {
   const f = leggi('app/components/MondoView.js');
 
   it('c e una tendina Paese, non solo il commento che la prometteva', () => {
-    expect(f).toMatch(/etichetta=\{L\('countryLabel'\)\}/);
+    // b.550 — il titolo ora lo porta la CARD DI VETRO (sbWhereTitle +
+    // icona globe), la stessa che le Notizie hanno da b.535: e' lo
+    // scheletro unico di b.524, finalmente su tutte e tre le sidebar.
+    // Cio che b.523 difendeva — che la scelta del Paese ESISTA e non sia
+    // solo un commento che la promette — vale ancora, ed e provato qui
+    // sotto dalla tendina vera.
+    expect(f).toMatch(/icona="globe" titolo=\{L\('sbWhereTitle'\)\}/);
     // b.529 — la tendina mostra la BOZZA (si applica col tasto Applica)
     expect(f).toMatch(/valore=\{bozzaPaesePanello \|\| 'tutto'\}/);
   });

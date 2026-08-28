@@ -267,6 +267,44 @@ perche il working tree lo conteneva ancora.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.550** (push #836) — ALTRE TRE VOCI DELLA LISTA, e una
+  trappola presa al volo.
+
+  ① IL VENTAGLIO DELLE REAZIONI, che era costruito da b.545 e fermo in un
+  cassetto. Sta nella colonnina, sotto il cuore, su video e articoli: il
+  cuore e' il gesto veloce, le sei facce dicono COME ti ha colpito. La
+  faccia si accende subito e il conto si aggiusta sotto gli occhi prima
+  che il server risponda; i conteggi arrivano insieme a quelli dei cuori,
+  una tornata sola per le slide che si stanno guardando. Per ospitarlo la
+  colonnina ha imparato a contenere un pezzo intero (`nodo`), non solo
+  tasti. Aggiunto anche il tasto commenti sugli articoli del feed.
+
+  ② «AVVISAMI QUANDO ARRIVA QUALCUNO» — la promessa di b.537 con le
+  parole gia tradotte in 38 lingue e NESSUNO che le mostrasse. Adesso chi
+  resta solo in una stanza puo chiedere di essere avvisato: la richiesta
+  vive nel telefono, e quando la stanza smette di essere vuota arriva la
+  notifica (piu la striscia dentro l'app). Una volta sola, non a ogni
+  ridisegno.
+
+  ③ LA CARD DI VETRO PER TUTTE E TRE LE SIDEBAR. Era nata dentro
+  MondoNews in b.535 ed era rimasta li: Stanze e Mondo restavano al
+  vecchio disegno, e lo scheletro unico promesso in b.524 tornava a
+  essere due cose diverse. Ora vive in ui/CardSezione.js e la usano
+  tutte: chi la cambia, la cambia per tutte e tre.
+
+  E LA TRAPPOLA: scrivendo i guru e l'avviso avevo messo i due blocchi IN
+  CIMA al componente, dove leggevano `myName` e `otherMembers` che
+  nascono piu sotto — la stessa zona morta che ieri ha ucciso il feed
+  («Cannot access 'T'»). Stavolta l'ha presa la prova
+  mai-letto-prima-di-nascere invece di Luca: i blocchi sono stati
+  spostati sotto le loro dipendenze. Le reti servono a questo.
+
+  PROVE: motore-acceso-b550 (9) + 1400 verdi su tutte le suite.
+  Aggiornate CON spiegazione: b.517, b.523, b.524, b.535 — tutte
+  difendevano la vecchia forma della sidebar, e cio che volevano davvero
+  (i preferiti in cima, la scelta del Paese che esiste, lo scheletro
+  unico) vale ancora, dentro la card.
+
 - Versione: **b.549** (push #835) — CINQUE ORDINI CHIUSI IN UN COLPO.
 
   ① NIENTE GRASSETTO. Ordine tassativo di Luca: «non voglio grassetto da

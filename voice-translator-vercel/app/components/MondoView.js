@@ -5,6 +5,7 @@ import PannelloLaterale, { LinguettaPannello } from './ui/PannelloLaterale.js';
 import { COLONNA, riservaADestra } from '../lib/righello.js';
 import PreferenzeMondo from './ui/PreferenzeMondo.js';
 import PreferitiTemi from './ui/PreferitiTemi.js';
+import CardSezione from './ui/CardSezione.js';   // b.550 — la stessa card di vetro delle Notizie
 import Scelta from './ui/Scelta.js';
 import { PAESI } from '../lib/paesi.js';
 // ═══════════════════════════════════════════════
@@ -717,9 +718,14 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
       <PannelloLaterale aperto={strumenti && (tab === 'stanze' || tab === 'mondo')} onChiudi={() => setStrumenti(false)}
         titolo={tab === 'mondo' ? L('worldNowTitle') : L('tabRooms')} C={C}>
       {/* b.517 — i preferiti stanno IN CIMA, prima di ogni filtro: sono
-          la scorciatoia, non un'impostazione. */}
-      <PreferitiTemi temi={schedaPaese?.temiCaldi} prefs={prefs} savePrefs={savePrefs} C={C} L={L}
-        onScegli={(topic) => { setTemaDaMondo(topic); setTab('news'); setStrumenti(false); }} />
+          la scorciatoia, non un'impostazione.
+          b.550 — e adesso stanno dentro la CARD DI VETRO, la stessa delle
+          Notizie: lo scheletro unico promesso in b.524 vale davvero per
+          tutte e tre le sidebar, non solo per una. */}
+      <CardSezione icona="star" titolo={L('favouritesWord')} sotto={L('sbFavCaption')} C={C}>
+        <PreferitiTemi nudo temi={schedaPaese?.temiCaldi} prefs={prefs} savePrefs={savePrefs} C={C} L={L}
+          onScegli={(topic) => { setTemaDaMondo(topic); setTab('news'); setStrumenti(false); }} />
+      </CardSezione>
       {/* b.504 — M2, col Mondo guardato con Luca: il pannello e SOLO
           preferenze. La RICERCA e andata NELLA PAGINA (M1: si cerca dove
           si guarda, non dietro una porta che nessuno apre per cercare). */}
@@ -755,8 +761,8 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
           (nomePaese usa Intl.DisplayNames, b.398), con davanti «Mondo
           intero» per tornare a vedere tutto. Ogni voce porta quante
           stanze ci sono dietro, come le altre tendine. */}
+      <CardSezione icona="globe" titolo={L('sbWhereTitle')} sotto={L('sbWhereCaption')} C={C}>
       <Scelta C={C}
-        etichetta={L('countryLabel')}
         valore={bozzaPaesePanello || 'tutto'}
         opzioni={[
           { valore: 'tutto', etichetta: L('wholeWorld'), conto: rooms.length },
@@ -779,6 +785,7 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
             .sort((a, b) => a.etichetta.localeCompare(b.etichetta)),
         ]}
         onCambia={(v) => setBozzaPaesePanello(v === 'tutto' ? null : v)} />
+      </CardSezione>
 
       {availableModes.length > 2 && (
         <Scelta C={C}
@@ -810,7 +817,9 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
         {L('applyWord')}
       </button>
 
-      <PreferenzeMondo C={C} />
+      <CardSezione icona="settings" titolo={L('sbPrefsTitle')} sotto={L('sbPrefsCaption')} C={C}>
+        <PreferenzeMondo C={C} />
+      </CardSezione>
       </PannelloLaterale>
 
       {/* ═══ b.361 — I RISULTATI DELLA RICERCA come POPUP centrata sul globo

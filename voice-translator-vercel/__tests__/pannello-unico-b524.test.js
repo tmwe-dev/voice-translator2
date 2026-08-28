@@ -12,7 +12,8 @@ describe('b.524 — lo scheletro del pannello e lo stesso su tutte le schede', (
   const news = leggi('app/components/MondoNews.js');
 
   it('tutti e due i pannelli hanno i Preferiti', () => {
-    expect(vista).toMatch(/<PreferitiTemi temi=\{schedaPaese\?\.temiCaldi\}/);
+    // b.550 — anche qui i preferiti sono dentro la card di vetro.
+    expect(vista).toMatch(/<PreferitiTemi nudo temi=\{schedaPaese\?\.temiCaldi\}/);
     expect(news).toMatch(/<PreferitiTemi nudo temi=\{argomentiVeri\.map/ /* b.535: dentro la card di vetro i Preferiti vanno nudi (il titolo lo da la card) */);
   });
 
@@ -21,7 +22,9 @@ describe('b.524 — lo scheletro del pannello e lo stesso su tutte le schede', (
     // (sbWhereTitle + icona globe); in Stanze/Mondo resta l'etichetta
     // classica. La tendina sotto e' la stessa Scelta, con «Mondo
     // intero» in testa in entrambi.
-    expect(vista).toMatch(/etichetta=\{L\('countryLabel'\)\}/);
+    // b.550 — il titolo del Paese lo porta la CARD anche nel Mondo, come
+    // gia nelle Notizie: e' lo stesso scheletro, davvero.
+    expect(vista).toMatch(/icona="globe" titolo=\{L\('sbWhereTitle'\)\}/);
     expect(news).toMatch(/icona="globe" titolo=\{L\('sbWhereTitle'\)\}/);
     for (const f of [vista, news]) {
       expect(f).toMatch(/etichetta: L\('wholeWorld'\)/);

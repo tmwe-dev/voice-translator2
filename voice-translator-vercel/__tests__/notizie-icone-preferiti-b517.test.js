@@ -33,7 +33,9 @@ describe('b.517 — i temi diventano preferiti di vetro nel pannello', () => {
     expect(v).not.toMatch(/\{L\('talkedAboutHere'\)\}/);
   });
   it('PreferitiTemi e montato dentro il pannello, in cima', () => {
-    expect(v).toMatch(/<PreferitiTemi temi=\{schedaPaese\?\.temiCaldi\}/);
+    // b.550 — i preferiti stanno DENTRO la card di vetro (nudo), come
+    // nelle Notizie: lo scheletro unico di b.524 vale per tutte e tre.
+    expect(v).toMatch(/<PreferitiTemi nudo temi=\{schedaPaese\?\.temiCaldi\}/);
     expect(v.indexOf('<PreferitiTemi')).toBeGreaterThan(v.indexOf('<PannelloLaterale'));
     expect(v.indexOf('<PreferitiTemi')).toBeLessThan(v.indexOf('<PreferenzeMondo'));
   });

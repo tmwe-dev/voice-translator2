@@ -34,6 +34,7 @@ import { preferitiAggiunti, ePreferita, aggiungiPreferita, togliPreferita } from
 import { testataChiusa } from '../lib/testateChiuse.js'; // b.535 — la porta chiusa non si offre
 import { bandieraPaese, nomePaese, quando, tipoContenuto, fonteDi, viva, stileEtichetta, PUNTO, paeseDaLingua } from '../lib/schedaMondo.js';
 import PannelloLaterale from './ui/PannelloLaterale.js';
+import CardSezione from './ui/CardSezione.js';   // b.550 — la card di vetro, una per tutte e tre le sidebar
 import PreferenzeMondo from './ui/PreferenzeMondo.js';
 import PreferitiTemi from './ui/PreferitiTemi.js';
 import { PAESI } from '../lib/paesi.js';
@@ -86,30 +87,6 @@ const QUERY_RAPIDE = {
 // «Card di vetro con icona»). Chip con icona blu, titolo bianco,
 // didascalia LEGGIBILE (mai piu grigio smorto su fondo scuro), contenuto
 // dentro. Una sola forma per tutte le sezioni del pannello.
-function CardSezione({ icona, titolo, sotto, C, children }) {
-  return (
-    <div style={{
-      background: 'rgba(255,255,255,0.035)', border: `1px solid ${C.cardBorder}`,
-      borderRadius: 14, padding: '12px 12px 13px', marginBottom: 12,
-    }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-        <span style={{
-          width: 30, height: 30, borderRadius: 9, flexShrink: 0,
-          background: `${C.accent}16`, border: `1px solid ${C.accent}3a`,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-        }}>
-          <Icon name={icona} size={15} color={C.accent} />
-        </span>
-        <div style={{ minWidth: 0, flex: 1 }}>
-          <div style={{ fontSize: 13, fontWeight: 500, color: '#fff', fontFamily: FONT }}>{titolo}</div>
-          {sotto && <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.62)', fontFamily: FONT, marginTop: 1 }}>{sotto}</div>}
-        </div>
-      </div>
-      <div style={{ marginTop: 10 }}>{children}</div>
-    </div>
-  );
-}
-
 function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApertaDiscussione, strumenti = false, suChiudiStrumenti, suApriStrumenti, paeseDalGlobo = null, suPaeseScelto, suScorrimento, temaDaFuori = null, suTemaLetto }) {
   const { L, prefs, userToken, savePrefs } = useApp();
   const lingua = prefs.uiLang || 'en';

@@ -117,7 +117,10 @@ describe('b.535 — il giornale non e mai vuoto, e il feed apre le porte giuste'
 describe('b.535 — la sidebar a card di vetro e la Home senza doppioni', () => {
   it('le cinque card hanno icona blu, titolo e didascalia leggibile', () => {
     const n = leggi('app/components/MondoNews.js');
-    expect(n).toMatch(/function CardSezione\(\{ icona, titolo, sotto, C, children \}\)/);
+    // b.550 — la card e uscita da MondoNews e vive in ui/CardSezione.js:
+    // la usano tutte e tre le sidebar, non piu solo le Notizie.
+    expect(n).toMatch(/import CardSezione from '\.\/ui\/CardSezione\.js'/);
+    expect(leggi('app/components/ui/CardSezione.js')).toMatch(/export default function CardSezione/);
     for (const icona of ['"star"', '"history"', '"globe"', '"target"', '"settings"']) {
       expect(n, `card ${icona}`).toContain(`icona=${icona}`);
     }

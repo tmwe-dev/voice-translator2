@@ -3,6 +3,8 @@ import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { FONT, vibrate } from '../lib/constants.js';
 import Icon from './Icon.js';
 import { chiaveContenuto, hoMessoCuore, giraCuore, quantiCuori } from '../lib/gradimento.js'; // b.544 — il mi piace
+import VentaglioReazioni from './ui/VentaglioReazioni.js';   // b.550 — le sei facce
+import { miaReazione, giraReazione, contaReazioni, emojiDi } from '../lib/reazioni.js';
 import { bandieraPaese, nomePaese } from '../lib/schedaMondo.js'; // b.546 — la bandiera e il nome del paese
 import { paeseDellaNotizia } from '../lib/paeseDaFonte.js';       // b.546 — da dove arriva davvero la notizia
 import AnteprimaCoperta from './ui/AnteprimaCoperta.js';
@@ -78,6 +80,11 @@ function Azioni({ voci }) {
     }}>
       {voci.filter(Boolean).map((v) => (
         <div key={v.chiave} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
+          {/* b.550 — una voce puo essere un pezzo intero (il ventaglio
+              delle reazioni) invece di un tasto: la colonnina lo ospita
+              senza sapere cosa sia. */}
+          {v.nodo ? v.nodo : null}
+          {!v.nodo && (
           <button
             onClick={(e) => { e.stopPropagation(); v.onTocca(); }}
             aria-label={v.parola} title={v.parola} aria-pressed={v.acceso || undefined}
@@ -93,6 +100,7 @@ function Azioni({ voci }) {
             }}>
             <Icon name={v.icona} size={19} color={v.acceso ? '#ff5470' : '#fff'} />
           </button>
+          )}
           {v.conto ? (
             <span style={{
               fontSize: 11, fontWeight: 500, fontFamily: FONT,
@@ -170,7 +178,7 @@ function BadgeOrigine({ bandiera, luogo, origine }) {
   );
 }
 
-export default function FeedNotizieMondo({ aperto, onChiudi, C, L, argomenti = [], video = [], filtro, onFiltro, onParlane, onApriArticolo, onStrumenti, onCresci, crescendo = false, onCerca }) {
+export default function FeedNotizieMondo({ aperto, onChiudi, C, L, argomenti = [], video = [], filtro, onFiltro, onParlane, onApriArticolo, onStrumenti, onCresci, crescendo = false, onCerca, onCommenta }) {
   const contenitoreRef = useRef(null);
   // ═══════════════════════════════════════════════════════════════
   // b.546 — L'OSSERVATORE CHE NON NASCEVA MAI. Quinta causa del
@@ -200,6 +208,32 @@ export default function FeedNotizieMondo({ aperto, onChiudi, C, L, argomenti = [
   // (dal server, quando arriva).
   const [miei, setMiei] = useState(() => new Set());
   const [conteggi, setConteggi] = useState({});
+  // ═══ b.550 — LE REAZIONI ═══
+  // Costruite in b.545 e rimaste ferme in un cassetto: «i tasti non
+  // funzionano bene» (Luca). Adesso il ventaglio sta nella colonnina,
+  // sotto il cuore: il cuore e' il gesto veloce, le sei facce dicono
+  // COME ti ha colpito. Le mie stanno nel telefono (immediate), i
+  // conteggi di tutti arrivano dal server.
+  const [mieFacce, setMieFacce] = useState({});      // chiave -> id faccia
+  const [conteggiFacce, setConteggiFacce] = useState({});
+
+  const reagisci = useCallback((url, idFaccia) => {
+    const esito = giraReazione(url, idFaccia);
+    if (!esito.chiave) return;
+    vibrate(10);
+    setMieFacce((prima) => ({ ...prima, [esito.chiave]: esito.dopo }));
+    // si aggiusta subito il conto sotto gli occhi, poi lo si dice al server
+    setConteggiFacce((prima) => {
+      const perChiave = { ...(prima[esito.chiave] || {}) };
+      if (esito.prima) perChiave[esito.prima] = Math.max(0, (perChiave[esito.prima] || 0) - 1);
+      if (esito.dopo) perChiave[esito.dopo] = (perChiave[esito.dopo] || 0) + 1;
+      return { ...prima, [esito.chiave]: perChiave };
+    });
+    fetch('/api/mondo/reazioni', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chiave: esito.chiave, prima: esito.prima, dopo: esito.dopo }),
+    }).catch(() => { /* la faccia resta mia anche senza rete */ });
+  }, []);
 
   // ═══════════════════════════════════════════════════════════════
   // b.546 — LA CAUSA VERA DEL «PASSAGGIO ROTTO», e viene prima di
@@ -255,10 +289,21 @@ export default function FeedNotizieMondo({ aperto, onChiudi, C, L, argomenti = [
     let vivo = true;
     (async () => {
       try {
-        const r = await fetch(`/api/mondo/gradimento?chiavi=${encodeURIComponent(chiavi.join(','))}`, { signal: AbortSignal.timeout(8000) });
-        if (!r.ok) return;
-        const d = await r.json().catch(() => null);
-        if (vivo && d?.conteggi) setConteggi((prima) => ({ ...prima, ...d.conteggi }));
+        const [rCuori, rFacce] = await Promise.all([
+          fetch(`/api/mondo/gradimento?chiavi=${encodeURIComponent(chiavi.join(','))}`, { signal: AbortSignal.timeout(8000) }),
+          // b.550 — le facce si chiedono insieme ai cuori: una tornata
+          // sola per le slide che si stanno guardando.
+          fetch(`/api/mondo/reazioni?chiavi=${encodeURIComponent(chiavi.join(','))}`, { signal: AbortSignal.timeout(8000) }).catch(() => null),
+        ]);
+        if (rCuori?.ok) {
+          const d = await rCuori.json().catch(() => null);
+          if (vivo && d?.conteggi) setConteggi((prima) => ({ ...prima, ...d.conteggi }));
+        }
+        if (rFacce?.ok) {
+          const d2 = await rFacce.json().catch(() => null);
+          if (vivo && d2?.conteggi) setConteggiFacce((prima) => ({ ...prima, ...d2.conteggi }));
+        }
+        return;
       } catch { /* senza conteggi il cuore si mette lo stesso */ }
     })();
     return () => { vivo = false; };
@@ -624,6 +669,16 @@ export default function FeedNotizieMondo({ aperto, onChiudi, C, L, argomenti = [
                     return { chiave: 'cuore', icona: 'heart', parola: L('likeWord'), acceso,
                       conto: quantiCuori(conteggi, u, null) || null, onTocca: () => cuore(u) };
                   })(),
+                  (() => {
+                    const u = `youtube.com/watch?v=${el.dati.id}`;
+                    const k = chiaveContenuto(u);
+                    const mia = mieFacce[k] !== undefined ? mieFacce[k] : miaReazione(u);
+                    const { totale } = contaReazioni(conteggiFacce, u);
+                    return { chiave: 'facce', conto: totale || null, nodo: (
+                      <VentaglioReazioni valore={mia} onScegli={(id) => reagisci(u, id)}
+                        C={C} targa={L('reactWord')} />
+                    ) };
+                  })(),
                   { chiave: 'parlane', icona: 'chat', parola: L('newsTalkAbout'), onTocca: () => { vibrate(10); onParlane?.({ titolo: el.dati.titolo, sintesi: el.dati.canale ? `YouTube \u00b7 ${el.dati.canale}` : '' }); } },
                   { chiave: 'fuori', icona: 'link', parola: L('newsOpenSite'), onTocca: () => { vibrate(6); try { window.open(`https://www.youtube.com/watch?v=${el.dati.id}`, '_blank', 'noopener,noreferrer'); } catch { /* il browser ha rifiutato la finestra */ } } },
                 ]} />
@@ -722,6 +777,17 @@ export default function FeedNotizieMondo({ aperto, onChiudi, C, L, argomenti = [
                     return { chiave: 'cuore', icona: 'heart', parola: L('likeWord'), acceso,
                       conto: quantiCuori(conteggi, u, null) || null, onTocca: () => cuore(u) };
                   })(),
+                  (() => {
+                    const u = el.dati.url || '';
+                    const k = chiaveContenuto(u);
+                    const mia = mieFacce[k] !== undefined ? mieFacce[k] : miaReazione(u);
+                    const { totale } = contaReazioni(conteggiFacce, u);
+                    return { chiave: 'facce', conto: totale || null, nodo: (
+                      <VentaglioReazioni valore={mia} onScegli={(id) => reagisci(u, id)}
+                        C={C} targa={L('reactWord')} />
+                    ) };
+                  })(),
+                  { chiave: 'commenta', icona: 'chat', parola: L('commentsWord'), onTocca: () => { vibrate(8); onCommenta?.(el.dati); } },
                   { chiave: 'leggi', icona: 'doc', parola: L('newsOpenTranslate'), onTocca: () => { vibrate(8); onApriArticolo?.(el.dati); } },
                   { chiave: 'parlane', icona: 'chat', parola: L('newsTalkAbout'), onTocca: () => { vibrate(10); onParlane?.(el.dati); } },
                   el.dati.url ? { chiave: 'fuori', icona: 'link', parola: L('newsOpenSite'), onTocca: () => { vibrate(6); try { window.open(el.dati.url, '_blank', 'noopener,noreferrer'); } catch { /* finestra rifiutata */ } } } : null,

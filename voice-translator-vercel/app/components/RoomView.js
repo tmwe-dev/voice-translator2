@@ -74,42 +74,6 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
   const { L, S, prefs, myLang, setView, setMyLang, savePrefs, status, theme, setTheme } = useApp();
   // b.468 — il pannello laterale della chat: dentro ci sono le voci.
   const [pannelloVoci, setPannelloVoci] = useState(false);
-  // ═══ b.549 — I GURU IN STANZA ═══
-  // Luca: «non vedo alcun comando ne icona dei guru da invitare alla chat
-  // (archimede albert pitagora newton etc)». I Compagni vivevano solo
-  // dentro Vita; qui, dove servono di piu — una stanza che si e' fermata,
-  // un fatto da verificare, una conversazione da aprire — non c'era
-  // nessuna porta. Adesso c'e: il guru legge gli ultimi scambi e dice la
-  // sua nella conversazione, con la sua vocazione.
-  const [guruAperto, setGuruAperto] = useState(false);
-  const [guruInCorso, setGuruInCorso] = useState(false);
-  const invitaGuru = useCallback(async (compagnoId) => {
-    if (guruInCorso) return;
-    setGuruInCorso(true);
-    try {
-      const chi = trovaCompagno(compagnoId);
-      // gli ultimi scambi, cosi entra sapendo di cosa si parla
-      const ultimi = (messages || []).slice(-8).map((m) => ({
-        ruolo: m.sender === myName ? 'persona' : 'persona',
-        testo: String(m.original || m.translated || '').slice(0, 400),
-        nome: m.sender || '',
-      })).filter((m) => m.testo);
-      const esito = await parlaAmico({
-        compagnoId,
-        messaggi: ultimi.length ? ultimi : [{ ruolo: 'persona', testo: L('inviteGuruOpen'), nome: myName }],
-        lingua: myLang || 'it',
-        userToken,
-        superficie: 'amico',
-      });
-      const detto = String(esito?.risposta || esito?.testo || '').trim();
-      if (!detto) return;
-      // il guru parla NELLA conversazione: il messaggio parte come gli
-      // altri e viene tradotto per tutti, come quello di una persona.
-      setTextInput(`${chi?.nome || 'Compagno'}: ${detto}`);
-      setGuruAperto(false);
-    } catch { /* il guru non risponde: la stanza resta come prima */ }
-    finally { setGuruInCorso(false); }
-  }, [guruInCorso, messages, myName, myLang, userToken, L, setTextInput]);
 
   // b.379 — CHI SONO IO, DICHIARATO SUBITO. Stava piu di cento righe piu
   // in basso, e da b.372 due punti sopra lo leggevano gia: l'elenco di
@@ -242,6 +206,76 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
 // apposta), `?.` non salta niente: chiama .find su un oggetto e la
 // schermata muore. L'aiutante giusto esiste da b.387: membriDi().
   const otherMembers = membriDi(roomInfo).filter(m => m.name !== myName);
+
+  // b.550 — QUESTI DUE BLOCCHI STANNO QUI, NON PIU IN CIMA. Leggono
+  // `myName` e `otherMembers`, che nascono qui sopra: scritti prima,
+  // finivano nella zona morta e uccidevano la stanza intera — la stessa
+  // trappola che ieri ha fatto morire il feed («Cannot access 'T'»).
+  // Stavolta l'ha presa la prova mai-letto-prima-di-nascere, non Luca.
+  // b.550 — «AVVISAMI QUANDO ARRIVA QUALCUNO». La promessa di b.537 con
+  // le parole gia tradotte in 38 lingue e nessuno che le mostrasse.
+  // La richiesta vive nel telefono: quando la stanza smette di essere
+  // vuota, il telefono lo dice — senza che il server debba tenere
+  // l'elenco di chi aspetta cosa.
+  const [avvisoAcceso, setAvvisoAcceso] = useState(false);
+  const avvisatoRef = useRef(false);
+  const chiediAvviso = useCallback(() => {
+    setAvvisoAcceso(true);
+    try {
+      if (typeof Notification !== 'undefined' && Notification.permission === 'default') Notification.requestPermission();
+    } catch { /* niente permesso: si avvisa lo stesso dentro l'app */ }
+  }, []);
+  useEffect(() => {
+    if (!avvisoAcceso || avvisatoRef.current) return;
+    if (otherMembers.length === 0) return;
+    avvisatoRef.current = true;
+    const chi = otherMembers[0]?.name || '';
+    try {
+      if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+        // eslint-disable-next-line no-new -- la notifica non serve conservarla
+        new Notification(L('warnMeArrived'), { body: chi, icon: '/icons/icon-192x192.png' });
+      }
+    } catch { /* il browser non vuole: resta l'avviso dentro l'app */ }
+    try { toast(L('warnMeArrived')); } catch { /* niente striscia: l'avviso resta quello del sistema */ }
+  }, [avvisoAcceso, otherMembers, L]);
+
+  // ═══ b.549 — I GURU IN STANZA ═══
+  // Luca: «non vedo alcun comando ne icona dei guru da invitare alla chat
+  // (archimede albert pitagora newton etc)». I Compagni vivevano solo
+  // dentro Vita; qui, dove servono di piu — una stanza che si e' fermata,
+  // un fatto da verificare, una conversazione da aprire — non c'era
+  // nessuna porta. Adesso c'e: il guru legge gli ultimi scambi e dice la
+  // sua nella conversazione, con la sua vocazione.
+  const [guruAperto, setGuruAperto] = useState(false);
+  const [guruInCorso, setGuruInCorso] = useState(false);
+  const invitaGuru = useCallback(async (compagnoId) => {
+    if (guruInCorso) return;
+    setGuruInCorso(true);
+    try {
+      const chi = trovaCompagno(compagnoId);
+      // gli ultimi scambi, cosi entra sapendo di cosa si parla
+      const ultimi = (messages || []).slice(-8).map((m) => ({
+        ruolo: m.sender === myName ? 'persona' : 'persona',
+        testo: String(m.original || m.translated || '').slice(0, 400),
+        nome: m.sender || '',
+      })).filter((m) => m.testo);
+      const esito = await parlaAmico({
+        compagnoId,
+        messaggi: ultimi.length ? ultimi : [{ ruolo: 'persona', testo: L('inviteGuruOpen'), nome: myName }],
+        lingua: myLang || 'it',
+        userToken,
+        superficie: 'amico',
+      });
+      const detto = String(esito?.risposta || esito?.testo || '').trim();
+      if (!detto) return;
+      // il guru parla NELLA conversazione: il messaggio parte come gli
+      // altri e viene tradotto per tutti, come quello di una persona.
+      setTextInput(`${chi?.nome || 'Compagno'}: ${detto}`);
+      setGuruAperto(false);
+    } catch { /* il guru non risponde: la stanza resta come prima */ }
+    finally { setGuruInCorso(false); }
+  }, [guruInCorso, messages, myName, myLang, userToken, L, setTextInput]);
+
   const partner = otherMembers[0];
   const myL = getLang(myLang);
   const otherL = partner ? getLang(partner.lang) : getLang('en');
@@ -924,6 +958,7 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
       <MessageList
         /* b.537 — la stanza vuota diventa un annuncio: vedi MessageList */
         solo={otherMembers.length === 0}
+        onAvvisami={chiediAvviso} avvisoAcceso={avvisoAcceso}
         passoTesto={Number(prefs?.testoGrande) || 0}
         messages={messages} streamingMsg={streamingMsg}
         myName={myName} myLang={myLang} prefs={prefs}
