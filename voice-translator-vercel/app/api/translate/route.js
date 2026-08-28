@@ -252,8 +252,14 @@ async function handlePost(req) {
     // diversi. Prima Asia girava con opts {} vuoto → niente glossario né
     // dominio: due livelli di qualità. Il Global lo usa come prima (stesso
     // prompt, stesso punto di chiamata: nessun cambio di comportamento).
+    // b.563 — con «auto» non sappiamo da che lingua si parte, e va bene:
+    // si chiede al modello di riconoscerla. Senza questa riga il prompt
+    // direbbe «traduci da auto a italiano», che non vuol dire niente.
+    const nomePartenza = sourceLang === 'auto'
+      ? (sourceLangName || 'the original language (detect it yourself)')
+      : sourceLangName;
     let systemPrompt = buildSystemPrompt({
-      sourceLang, targetLang, sourceLangName, targetLangName,
+      sourceLang, targetLang, sourceLangName: nomePartenza, targetLangName,
       roomMode, nativeLang, domainContext, description, isReview, conversationContext,
       glossario, // b.95 — i termini dell'utente pesano sulla traduzione
     });

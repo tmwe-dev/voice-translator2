@@ -69,7 +69,21 @@ export function validateTranslateInput(body) {
   const e = (field, err) => { if (err) errors[field] = err; };
 
   e('text', check(body.text, 'string', { required: true, minLen: 1, maxLen: 10000 }));
-  e('sourceLang', check(body.sourceLang, 'string', { required: true, pattern: LANG_CODE_RE }));
+  // ═══ b.563 — «auto» E' UNA LINGUA DI PARTENZA LEGITTIMA ═══
+  // Trovato nei registri di produzione: 1.273 richieste rifiutate in sei
+  // ore, tutte con «Invalid fields: sourceLang». Quattro pezzi
+  // dell'applicazione mandano `sourceLang: 'auto'` — i titoli del feed,
+  // i sottotitoli dell'interprete video, e due punti del tassista —
+  // perche' NON SANNO in che lingua sia il testo: e' proprio il caso in
+  // cui si chiede alla macchina di riconoscerla. Ma la regola voleva due
+  // o tre lettere, e «auto» ne ha quattro: rifiutate tutte, in silenzio.
+  // E' il difetto che spiega il collaudo di Luca «i testi non vengono
+  // tradotti anche se il setting dice di farlo»: l'aggancio l'avevamo
+  // riparato in b.548, la chiamata non e' mai passata.
+  // Vale SOLO per la partenza: la lingua d'arrivo «auto» non vuol dire
+  // niente — verso dove?
+  const partenzaAuto = body.sourceLang === 'auto';
+  if (!partenzaAuto) e('sourceLang', check(body.sourceLang, 'string', { required: true, pattern: LANG_CODE_RE }));
   e('targetLang', check(body.targetLang, 'string', { required: true, pattern: LANG_CODE_RE }));
   e('sourceLangName', check(body.sourceLangName, 'string', { maxLen: 50 }));
   e('targetLangName', check(body.targetLangName, 'string', { maxLen: 50 }));
@@ -84,7 +98,7 @@ export function validateTranslateInput(body) {
     valid: true,
     data: {
       text: clean(body.text, 10000),
-      sourceLang: body.sourceLang.slice(0, 10),
+      sourceLang: partenzaAuto ? 'auto' : body.sourceLang.slice(0, 10),
       targetLang: body.targetLang.slice(0, 10),
       sourceLangName: clean(body.sourceLangName || '', 50),
       targetLangName: clean(body.targetLangName || '', 50),

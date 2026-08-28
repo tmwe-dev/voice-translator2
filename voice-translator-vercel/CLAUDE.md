@@ -267,6 +267,38 @@ perche il working tree lo conteneva ancora.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.563** (push #848) — MILLEDUECENTO TRADUZIONI RIFIUTATE
+  IN SEI ORE, e nessuno le guardava.
+
+  Trovato scavando nei registri dopo aver visto che **il 21% delle
+  richieste in produzione rispondeva 400**. Erano tutte la stessa rotta
+  e tutte lo stesso errore:
+
+      POST /api/translate → 400
+      {"code":"INVALID_INPUT","message":"Invalid fields: sourceLang"}
+
+  LA CAUSA. Quattro pezzi mandano `sourceLang: 'auto'` — i titoli del
+  feed, i sottotitoli dell'interprete video, e due punti del tassista —
+  perche' NON SANNO in che lingua sia il testo: e' esattamente il caso
+  in cui si chiede alla macchina di riconoscerla. Ma il controllo voleva
+  due o tre lettere (`^[a-z]{2,3}`) e «auto» ne ha quattro. Rifiutate
+  tutte, in silenzio, dal giorno in cui il controllo e' stato scritto.
+
+  COSA SPIEGA, ed e' molto: il collaudo di Luca **«i testi non vengono
+  tradotti anche se il setting dice di farlo»**. In b.548 avevo riparato
+  l'aggancio — e l'aggancio era giusto — ma la chiamata non e' MAI
+  passata dalla porta. E spiega perche' i sottotitoli tradotti del video
+  non si vedevano mai, e perche' il tassista non traduceva.
+
+  Ora «auto» passa (solo in PARTENZA: «verso auto» non vuol dire niente)
+  e la rotta chiede al modello di riconoscere la lingua invece di
+  ordinargli di tradurre «da auto».
+
+  **LEZIONE DA TENERE: un 400 non e' rumore.** Un 500 e' colpa nostra e
+  lo guardiamo; un 400 sembra colpa di chi chiama — ma chi chiama siamo
+  NOI, e mille errori al giorno erano mille funzioni spente. Da oggi il
+  giro di controllo guarda i 400 come guarda i 500.
+
 - Versione: **b.562** (push #847) — LA PRIMA DOMANDA, e un errore mio
   ripreso in tempo.
 
