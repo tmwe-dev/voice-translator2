@@ -23,7 +23,7 @@
 import { describe, it, expect } from 'vitest';
 import fs from 'fs';
 import path from 'path';
-import { soloRecenti, quantiFreschi, DUE_GIORNI } from '../app/lib/topics/registro.js';
+import { soloRecenti, quantiFreschi, DUE_GIORNI } from '../app/lib/topics/freschezza.js'; // b.559 — le funzioni pure hanno una casa loro
 import { eDiCronaca } from '../app/lib/topics/enciclopediaUtile.js';
 
 const leggi = (p) => fs.readFileSync(path.join(__dirname, '..', p), 'utf8');

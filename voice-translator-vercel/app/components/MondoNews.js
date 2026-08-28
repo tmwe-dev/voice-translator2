@@ -25,7 +25,7 @@ import { ordinaFeed } from '../lib/ordineFeed.js';
 import { ordinaPerPunteggio, mescolaConInteresse } from '../lib/punteggioFeed.js';
 import { chiaveContenuto, mieiCuori } from '../lib/gradimento.js';
 import { giraBacheca, nascondi, senzaNascosti, bachecaDi, spostaInBacheca, togliDaBacheca } from '../lib/bacheca.js';
-import { soloRecenti, quantiFreschi } from '../lib/topics/registro.js'; // b.557 — le notizie sono di oggi
+import { soloRecenti, quantiFreschi } from '../lib/topics/freschezza.js'; // b.557 — le notizie sono di oggi; b.559 — da un file PURO, che il browser puo leggere
 import { vistiDiRecente, primaIlNuovo } from '../lib/visti.js';         // b.558 — e non si rivede Beethoven ad ogni ingresso
 import { eDiCronaca } from '../lib/topics/enciclopediaUtile.js';        // b.557 — e questa domanda ha una scadenza? // b.552 — la bacheca e il «non mostrarmelo piu»
 import { cercaTopics, chiediRami, chiediFonti } from '../lib/topics/cliente.js';   // b.409 — il lettore a righe, uno per tutti; b.541 — i rami del giardino

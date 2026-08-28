@@ -267,6 +267,43 @@ perche il working tree lo conteneva ancora.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.559** (push #844) — DUE DEPLOY IN ERRORE: IL BROWSER SI
+  PORTAVA DIETRO NODE.
+
+  Trovato guardando Vercel, non dai test: **b.557 e b.558 non hanno mai
+  compilato**. In produzione era rimasto b.555, e Luca continuava a
+  collaudare una versione vecchia senza saperlo.
+
+      Module not found: Can't resolve 'dns'
+      ./app/lib/topics/ssrf.js → ./app/lib/topics/registro.js
+      → ./app/components/MondoNews.js → ./app/page.js
+
+  LA CAUSA, ed e' mia. In b.557 avevo messo due funzioni PURE
+  (`soloRecenti`, `quantiFreschi`) dentro `registro.js`, che legge i
+  flussi dalla rete e quindi importa `ssrf.js`, che importa `dns` di
+  Node. Quando MondoNews — codice del BROWSER — ne ha importata una, si
+  e' tirato dietro tutta la catena.
+
+  PERCHE' LE PROVE ERANO VERDI: vitest gira su Node, e su Node `dns`
+  esiste. Il difetto viveva esattamente dove le nostre prove non
+  guardavano — la compilazione per il browser.
+
+  ① Le funzioni pure vivono in `lib/topics/freschezza.js`, che **non
+  importa niente**. Regola generale: una funzione pura non sta nello
+  stesso file di chi apre connessioni — non e' pulizia formale, e' cio
+  che decide se il browser puo usarla.
+
+  ② `browser-senza-node-b559.test.js`: cammina il grafo degli import
+  STATICI da ogni schermata `'use client'` e si ferma se arriva a un
+  modulo di Node. Guarda solo gli import in cima, non quelli dentro le
+  funzioni: un `await import()` diventa un pacchetto a parte e non
+  rompe (la catena decisioni → store → crypto compila da mesi). E'
+  quella la forma che rompe, ed e' quella che si controlla.
+
+  ③ REGOLA DI PROCESSO, da tenere: **dopo ogni push si guarda lo stato
+  del deploy su Vercel**. Le prove verdi non dicono che l'applicazione
+  compila; solo il compilatore lo dice.
+
 - Versione: **b.558** (push #843) — «OGNI VOLTA CHE ENTRO VEDO
   BEETHOVEN».
 
