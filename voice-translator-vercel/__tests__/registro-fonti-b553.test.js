@@ -49,7 +49,9 @@ describe('dal dominio al suo flusso', () => {
 
   it('se la pagina non lo dichiara, prova gli indirizzi che usano quasi tutti', () => {
     expect(feedDaHtml('<html><head></head></html>', 'https://esempio.it/')).toBe('');
-    expect(indirizziDaProvare('www.Esempio.it/sezione')).toEqual([
+    // b.566 — dopo i cinque feed ci sono le tre news sitemap: la
+    // seconda porta, per le testate che l'RSS l'hanno spento.
+    expect(indirizziDaProvare('www.Esempio.it/sezione').slice(0, 5)).toEqual([
       'https://esempio.it/feed',
       'https://esempio.it/rss',
       'https://esempio.it/rss.xml',

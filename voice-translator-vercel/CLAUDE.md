@@ -267,6 +267,41 @@ perche il working tree lo conteneva ancora.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.567** (push #852) — LA CI ERA ROSSA E NON L'AVEVO MAI
+  GUARDATA.
+
+  Un'analisi esterna del repository ha scritto: «sull'ultimo commit il
+  deploy Vercel risulta riuscito, mentre la GitHub Action fallisce nello
+  step npm test». **Verificato: era vero.** Ho clonato il deposito in un
+  ambiente pulito e fatto girare la batteria INTERA come fa la CI:
+  **5 prove rosse su 3.513.**
+
+  E sono tutte mie. Nessuna era un difetto del prodotto: erano prove
+  vecchie non aggiornate dopo le mie modifiche —
+  la colonnina diventata porta unica (b.556), gli indirizzi delle fonti
+  cresciuti con le sitemap (b.566), il comando della voce cambiato
+  (b.531), le due tabelle nuove del registro mai aggiunte all'elenco
+  delle tavole vive (b.554), e un controllo su `puliti`.
+
+  **PERCHE' MI ERANO SFUGGITE, e questa e' la lezione operativa:** il
+  ponte verso il Mac ammazza ogni comando dopo 45 secondi, e la batteria
+  intera ne chiede duecento. Ho preso l'abitudine di far girare BLOCCHI
+  SCELTI da me — cioe di controllare solo dove pensavo di aver toccato.
+  Ma il punto delle prove e' proprio scoprire dove hai toccato **senza
+  saperlo**.
+  **DA ORA: prima di ogni consegna la batteria completa gira nel
+  container (dove non c'e' il limite dei 45 secondi), non a blocchi sul
+  Mac.** Il comando e' `git clone` + `npm ci` + `npx vitest run`, e sono
+  cinque minuti.
+
+  E una prova nuova che chiude il buco che ha prodotto b.563:
+  `contratto-chiamate-b567.test.js` prende i corpi delle richieste
+  scritti nei componenti VERI e li fa passare dal validatore VERO. Il
+  difetto delle 1.273 traduzioni rifiutate viveva esattamente nello
+  spazio fra due prove verdi: quella del componente diceva «chiama»,
+  quella della rotta diceva «valida», e nessuna le metteva nella stessa
+  stanza.
+
 - Versione: **b.566** (push #851) — TUTTI I 500 AVEVANO UNA SOLA CAUSA,
   e la seconda porta per le fonti.
 

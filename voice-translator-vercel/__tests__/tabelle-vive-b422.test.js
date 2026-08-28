@@ -64,6 +64,12 @@ const TABELLE_VIVE = new Set([
   // Mondo
   'mondo_discussions', 'mondo_comments', 'mondo_comment_likes',
   'mondo_follows', 'mondo_segnalazioni',
+  // b.554 — il registro delle fonti. VISTE SUL DATABASE prima di
+  // scriverle qui, come vuole questa prova: create con la migrazione
+  // `b553_registro_fonti` sul progetto voicetranslate, e oggi contengono
+  // 71 fonti e 86 ambiti. Erano finite in produzione senza passare da
+  // qui — ed e' proprio il buco che questa prova esiste per chiudere.
+  'mondo_fonti', 'mondo_fonti_ambito',
   // PeepOff
   'peepoff_dispositivi', 'peepoff_segnali',
 ]);

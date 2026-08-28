@@ -84,12 +84,20 @@ describe('b.539 — le schermate nuove si montano senza morire', () => {
 describe('b.539 — «perche questo contenuto non ha tasti?» (Luca)', () => {
   const feed = require('node:fs').readFileSync(require('node:path').join(process.cwd(), 'app/components/FeedNotizieMondo.js'), 'utf8');
 
-  it('la colonnina esiste, e sta sul bordo destro lontano dai comandi del player', () => {
-    expect(feed).toMatch(/function Azioni\(\{ voci \}\)/);
-    const col = feed.slice(feed.indexOf('function Azioni'), feed.indexOf('function Azioni') + 900);
-    expect(col).toMatch(/right: 10, top: '50%'/);          // meta altezza, a destra
-    expect(col).not.toMatch(/bottom: \d/);                  // MAI in fondo: li c'e YouTube
-    expect(col).toMatch(/width: 46, height: 46/);           // bersaglio da dito
+  it('le porte ci sono, dietro una icona sola, e non coprono i comandi del player', () => {
+    // b.556 — AGGIORNATA. Ordine di Luca con la fotografia: «nascondi
+    // tutte le icone dietro una icona in basso, su click apri le altre».
+    // La colonnina a meta altezza non c'e' piu; il patto di b.539 —
+    // le porte esistono, sono bersagli da dito e non stanno sopra la
+    // barra di YouTube — vale identico e si prova qui.
+    expect(feed).toMatch(/function Azioni\(\{ voci, daFondo = 96, L \}\)/);
+    const col = feed.slice(feed.indexOf('function Azioni'), feed.indexOf('function Azioni') + 4200);
+    expect(col, 'la porta sta in basso a destra').toMatch(/bottom: `calc\(\$\{daFondo\}px \+ env\(safe-area-inset-bottom\)\)`/);
+    expect(col, 'e sopra la barra di YouTube, non sopra i suoi comandi')
+      .toMatch(/width: 52, height: 52/);
+    expect(col, 'le voci restano bersagli da dito').toMatch(/width: 46, height: 46/);
+    // e il feed le passa la quota giusta per stare sopra il player
+    expect(feed).toMatch(/daFondo=\{BARRA_YT \+ PIEDE_VIDEO \+ 12\}/);
   });
 
   it('i VIDEO ora hanno Parlane e la porta verso YouTube', () => {

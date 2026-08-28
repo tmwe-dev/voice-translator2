@@ -122,8 +122,12 @@ describe('i due tasti stanno nel feed, la bacheca nella sidebar', () => {
   });
 
   it('e cio che arriva dalla rete e gia ripulito', () => {
-    expect(news).toMatch(/const puliti = senzaNascosti\(arrivati, prefs\)/);
-    expect(news, 'anche i video').toMatch(/return senzaNascosti\(\[\.\.\.base, \.\.\.nuovi\], prefsRef\.current\)/);
+    // b.557/558 — la ripulitura si e' allungata (finestra delle 48 ore,
+    // gia visto in fondo) e `puliti` e' diventato `let`, ma il primo
+    // passaggio resta questo: cio che hai detto di non voler piu vedere
+    // non rientra dalla finestra.
+    expect(news).toMatch(/let puliti = senzaNascosti\(arrivati, prefs\)/);
+    expect(news, 'anche i video').toMatch(/senzaNascosti\(\[\.\.\.base, \.\.\.nuovi\], prefsRef\.current\)/);
   });
 
   it('la bacheca in sidebar ha miniatura e frecce, come chiesto', () => {

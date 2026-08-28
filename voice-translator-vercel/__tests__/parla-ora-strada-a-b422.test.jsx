@@ -238,6 +238,12 @@ describe('cio che era gia buono non e stato toccato', () => {
   it('la voce si puo far ripetere, ma non e piu una barra che sembra obbligatoria', () => {
     const src = leggi('app/components/PrimaProva.js');
     expect(src, 'via la barra a tutta larghezza').not.toMatch(/<Ascolta\s/);
-    expect(src, 'resta il comando per farla ripetere').toMatch(/parla\(ultimaResa\)/);
+    // b.531 — il comando c'e' ancora, ma legge la RIGA SCELTA se ne hai
+    // scelta una, e l'ultima resa se no («permetti di selezionare le
+    // frasi... in fondo aggiungi una icona play che ripete il testo»,
+    // Luca). Il punto di b.422 — la voce si puo far ripetere e non e'
+    // piu una barra obbligatoria — resta intero.
+    expect(src).toMatch(/const daLeggere = rigaScelta \? rigaScelta\.resa : ultimaResa;/);
+    expect(src, 'resta il comando per farla ripetere').toMatch(/onClick=\{\(\) => parla\(daLeggere, linguaLettura\)\}/);
   });
 });
