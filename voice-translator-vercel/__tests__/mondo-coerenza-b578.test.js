@@ -61,7 +61,7 @@ describe('b.578 — la domanda esplicita e davvero mondiale', () => {
 
   it('legge arabo, cirillico e coreano', () => {
     expect(pertinenza({ title: 'آخر أخبار الاقتصاد والأسواق اليوم', summary: '' }, 'الاقتصاد')).toBeGreaterThan(0);
-    expect(pertinenza({ title: 'Новые события сегодня в Москве', summary: '' }, 'Москва')).toBeGreaterThan(0);
+    expect(pertinenza({ title: 'Новые события сегодня: Москва в центре внимания', summary: '' }, 'Москва')).toBeGreaterThan(0);
     expect(pertinenza({ title: '서울 인공지능 연구의 새로운 결과', summary: '' }, '인공지능')).toBeGreaterThan(0);
   });
 
