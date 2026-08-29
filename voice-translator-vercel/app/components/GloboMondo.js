@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { postoADestra, MARGINE, COLONNA_DESTRA } from '../lib/righello.js';
 
 // ═══════════════════════════════════════════════════════════════
@@ -65,11 +65,11 @@ export default function GloboMondo({ sfondo = false, titolo = 'Il mondo ora', et
     return () => window.removeEventListener('bartalk:mondo-layer', cambia);
   }, []);
 
-  const trafficoEffettivo = radar.layer === 'community'
-    ? (traffico || {})
-    : radar.layer === 'following'
-      ? (radar.following || {})
-      : (radar.live || {});
+  const trafficoEffettivo = useMemo(() => {
+    if (radar.layer === 'community') return traffico || {};
+    if (radar.layer === 'following') return radar.following || {};
+    return radar.live || {};
+  }, [radar, traffico]);
 
   // Il paese scelto a mano ha precedenza sul focus temporaneo di una
   // breaking. Lo zoom resta quello originale del pianeta.
@@ -78,7 +78,7 @@ export default function GloboMondo({ sfondo = false, titolo = 'Il mondo ora', et
     if (!finestra) return;
     const manda = () => {
       try { finestra.postMessage({ tipo: 'bartalk:paese', code: paese || focusEsterno || null }, ORIGINE); }
-      catch {}
+      catch { /* iframe in caricamento: il messaggio verra ripetuto a globo-pronto */ }
     };
     manda();
     const suPronto = (ev) => {
@@ -97,7 +97,7 @@ export default function GloboMondo({ sfondo = false, titolo = 'Il mondo ora', et
     if (!finestra) return;
     const manda = () => {
       try { finestra.postMessage({ tipo: 'bartalk:rotte', coppie: rotte || [] }, ORIGINE); }
-      catch {}
+      catch { /* iframe in caricamento: il messaggio verra ripetuto a globo-pronto */ }
     };
     manda();
     const suPronto = (ev) => {
@@ -115,8 +115,8 @@ export default function GloboMondo({ sfondo = false, titolo = 'Il mondo ora', et
     const finestra = ref.current?.contentWindow;
     if (!finestra) return;
     const manda = () => {
-      try { finestra.postMessage({ tipo: 'bartalk:traffico', perPaese: trafficoEffettivo || {} }, ORIGINE); }
-      catch {}
+      try { finestra.postMessage({ tipo: 'bartalk:traffico', perPaese: trafficoEffettivo }, ORIGINE); }
+      catch { /* iframe in caricamento: il messaggio verra ripetuto a globo-pronto */ }
     };
     manda();
     const suPronto = (ev) => {
