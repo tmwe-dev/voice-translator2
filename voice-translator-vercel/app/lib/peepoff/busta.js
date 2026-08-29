@@ -26,7 +26,10 @@ const FIRMA = { name: 'ECDSA', hash: 'SHA-256' };
 const pulisciJwk = (j) => ({ kty: j.kty, crv: j.crv, x: j.x, y: j.y });
 
 const versoBase64 = (buf) => btoa(String.fromCharCode(...new Uint8Array(buf)));
-const daBase64 = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0)).buffer;
+// Manteniamo un Uint8Array, non il suo `.buffer`: e' un BufferSource
+// accettato in modo coerente sia dal WebCrypto del browser sia da quello
+// di Node/Vitest, evitando mismatch fra realm diversi (jsdom/Node).
+const daBase64 = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
 const codifica = (s) => new TextEncoder().encode(s);
 const decodifica = (b) => new TextDecoder().decode(b);
 
@@ -56,13 +59,6 @@ async function chiaveAccordo(privatoECDH, pubblicoJwk) {
   return crypto.subtle.deriveKey({ name: 'ECDH', public: loro }, privatoECDH, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
 }
 
-/**
- * SIGILLA un messaggio per un destinatario.
- * @param {{oggetto:string, corpo:string, da:string, a:string, quando:number}} messaggio
- * @param {object} scambioPubDestinatario  JWK pubblica ECDH del destinatario
- * @param {CryptoKey} firmaPrivataMittente chiave di firma del mittente
- * @returns busta pronta da spedire sul canale diretto (solo campi cifrati/pubblici)
- */
 export async function sigilla(messaggio, scambioPubDestinatario, firmaPrivataMittente) {
   const effimera = await crypto.subtle.generateKey(ECDH, false, ['deriveKey']);
   const effimeraPub = pulisciJwk(await crypto.subtle.exportKey('jwk', effimera.publicKey));
@@ -79,10 +75,6 @@ export async function sigilla(messaggio, scambioPubDestinatario, firmaPrivataMit
   };
 }
 
-/**
- * APRE una busta ricevuta e VERIFICA la firma del mittente.
- * @returns {{messaggio:object, firmaValida:boolean, improntaBusta:string}}
- */
 export async function apri(busta, scambioPrivatoDestinatario, firmaPubMittenteJwk) {
   const cifrato = daBase64(busta.cifrato);
   let firmaValida = false;
@@ -96,13 +88,11 @@ export async function apri(busta, scambioPrivatoDestinatario, firmaPubMittenteJw
   return { messaggio: JSON.parse(decodifica(chiaro)), firmaValida, improntaBusta: versoBase64(h) };
 }
 
-/** La RICEVUTA: il destinatario firma l'impronta della busta. */
 export async function firmaRicevuta(improntaBusta, firmaPrivataDestinatario) {
   const firma = await crypto.subtle.sign(FIRMA, firmaPrivataDestinatario, daBase64(improntaBusta));
   return { v: 1, impronta: improntaBusta, firma: versoBase64(firma), quando: Date.now() };
 }
 
-/** Il mittente VERIFICA la ricevuta contro la busta che ha spedito. */
 export async function verificaRicevuta(ricevuta, bustaSpedita, firmaPubDestinatarioJwk) {
   try {
     const cifrato = daBase64(bustaSpedita.cifrato);
