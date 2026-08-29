@@ -267,6 +267,43 @@ perche il working tree lo conteneva ancora.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.576** (push #861) — FASI 2, 3 E 4: NORMALIZZAZIONE,
+  RANKER, REGIA. Sempre scollegate: il documento dice «nessun cambio
+  UI» fino alla FASE 5, e il test degli orfani lo verifica.
+
+  · `normalize.js` — articoli, video, discussioni e ultim'ora diventano
+    **la stessa forma**. E' il rimedio strutturale a un guasto vero: in
+    b.568 la regia lavorava solo sugli articoli e meta del carosello
+    girava senza regole. Nessuno l'aveva deciso: con due forme e'
+    facile dimenticarne una.
+    Scelta dichiarata: **i topic non si indovinano dal titolo.** Il
+    segnale onesto ce l'abbiamo gia ed e' piu forte — sappiamo quale
+    domanda ha prodotto quel contenuto. Un riconoscitore a occhio
+    costruirebbe un profilo falso, e un profilo sbagliato non si vede:
+    si subisce.
+  · `rankingConfig.js` — i pesi del capitolo 17, che sommano a 1. Un
+    peso in mezzo a una funzione e' una decisione di chi passava di li
+    quel giorno; un peso qui e' una decisione di prodotto, e si puo
+    discutere.
+  · `ranker.js` — **un solo Ranker**, con tre promesse verificate dai
+    test: la domanda scritta comanda sulla personalizzazione (cap. 19,
+    ed e' un GRADINO non un peso — con un peso l'affinita potrebbe
+    comunque scavalcare la risposta giusta); ogni contenuto esce con
+    almeno un motivo (cap. 24); qualita e popolarita restano due numeri
+    diversi (cap. 28).
+  · `reasons.js` — i motivi sono **dati**, non frasi: la frase la
+    scrive la schermata nella sua lingua (cap. 6). E da ogni motivo si
+    puo agire (cap. 25).
+  · `director.js` — la Regia, separata. Lezione presa scrivendola: la
+    prima versione, quando nessun candidato andava bene, cedeva TUTTE
+    le regole insieme e tornava all'ordine di classifica — con dieci
+    pezzi dello stesso argomento usciva una fila di quattro video della
+    stessa fonte, il caso peggiore proprio dove serviva di piu. **Le
+    regole non hanno lo stesso valore**: due di fila sullo stesso
+    argomento, in una giornata che parla solo di quello, sono la
+    realta; due di fila della stessa fonte sono pigrizia nostra. Si
+    cede in ordine.
+
 - Versione: **b.575** (push #860) — FASE 1 DEL MODELLO DI MONDO.
 
   Luca ha scritto il documento di come Mondo va fatto dentro, e arriva
