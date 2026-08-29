@@ -225,7 +225,9 @@ export function clusterBreakingCandidates(entries, { now = Date.now(), followedT
   }
 
   return cluster.map((e) => {
-    const sourceCount = Math.max(e.sourceCount || 0, e.queryHits > 1 && e.sourceCount === 1 ? 2 : e.sourceCount || 0);
+    // queryHits misura quante ricerche hanno ritrovato il fatto, NON quante
+    // fonti indipendenti lo confermano. La conferma usa soltanto sources.
+    const sourceCount = e.sourceCount || 0;
     const status = statoDaFonti(sourceCount);
     const scored = breakingScore({ ...e, sourceCount }, { now, followedTopics, countries, isNew: true });
     const urgente = importanzaTestuale(e) >= 0.78;
