@@ -40,6 +40,7 @@ describe('b.575 → b.580 — settings sono scelte della persona', () => {
   });
   it('migra il vecchio filtro senza conservare le finte preferenze tecniche', () => {
     expect(settingsDaPrefs({ mondoFeedFiltro: 'video' }).contentMix).toBe('moreVideo');
+    expect(settingsDaPrefs({ mondoAutoplayVideo: false }).autoplayVideo).toBe(false);
     for (const k of ['mondoModo', 'mondoRitmo', 'mondoAggiorna']) expect(NON_PIU_PREFERENZE).toContain(k);
   });
 });
@@ -115,7 +116,9 @@ describe('b.580 — confine esplicito fra UI, motore e adattatori Live', () => {
   });
 
   it('il core puro non importa UI o route', () => {
-    const core = ['taxonomy.js', 'queries.js', 'settings.js', 'profile.js', 'events.js', 'memory.js', 'session.js', 'models.js', 'ranker.js', 'regia.js'];
+    // b.580: la vecchia regia.js e stata sostituita dal MondoDirector,
+    // che mantiene la stessa responsabilita ma dentro il nuovo core.
+    const core = ['taxonomy.js', 'queries.js', 'settings.js', 'profile.js', 'events.js', 'memory.js', 'session.js', 'models.js', 'ranker.js', 'director.js'];
     const base = join(process.cwd(), 'app/lib/mondo');
     for (const f of core) {
       const s = readFileSync(join(base, f), 'utf8');
