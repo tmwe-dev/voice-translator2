@@ -193,22 +193,23 @@ describe('b.541 — il feed non finisce piu, e parte dai tuoi semi', () => {
   }, 30000);
 });
 
-describe('b.541 — i predefiniti che Luca ha eletto', () => {
-  it('titoli tradotti, ricerca approfondita, ritmo 5, aggiorna all\'apertura', () => {
+describe('b.541 → b.580 — i predefiniti restano scelte della persona, non del motore', () => {
+  it('titoli tradotti e Mondo Live importante sono i default attuali', async () => {
+    const { SETTINGS_DEFAULT, NON_PIU_PREFERENZE } = await import('../app/lib/mondo/settings.js');
+    expect(SETTINGS_DEFAULT.titles).toBe('translated');
+    expect(SETTINGS_DEFAULT.breaking).toBe('important');
+    expect(SETTINGS_DEFAULT.contentMix).toBe('balanced');
+    for (const k of ['mondoModo', 'mondoRitmo', 'mondoAggiorna']) {
+      expect(NON_PIU_PREFERENZE).toContain(k);
+    }
+  });
+
+  it('il pannello non espone piu ricerca approfondita, ritmo o aggiornamento', () => {
     const p = leggi('app/components/ui/PreferenzeMondo.js');
-    expect(p).toMatch(/chiave: 'mondoTitoli',\n\s*predefinito: 'tradotti'/);
-    expect(p).toMatch(/chiave: 'mondoModo',\n\s*predefinito: 'approfondita'/);
-    expect(p).toMatch(/chiave: 'mondoRitmo',[\s\S]{0,600}predefinito: '5'/);
-    expect(p).toMatch(/chiave: 'mondoAggiorna',\n\s*predefinito: 'apertura'/);
-    // b.552 — questa prova apre a uno a uno TUTTI e 38 i pacchetti di
-    // lingua: mezzo megabyte di traduzioni. Sul portatile mentre lavora
-    // i cinque secondi di prammatica non bastano, e un rosso per
-    // stanchezza della macchina e' peggio di nessun rosso.
-  }, 30000);
-  it('e il codice dice lo stesso del pannello (la lezione di b.535)', () => {
-    const news = leggi('app/components/MondoNews.js');
-    expect(news).toMatch(/prefs\?\.mondoModo \|\| 'approfondita'/);
-    expect(news).toMatch(/prefs\?\.mondoAggiorna \|\| 'apertura'/);
-    expect(news).toMatch(/useState\(10\); \/\/ b\.541/);
+    expect(p).toMatch(/key: 'titles'/);
+    expect(p).toMatch(/key: 'breaking'/);
+    expect(p).not.toMatch(/key:\s*['"]mondoModo['"]/);
+    expect(p).not.toMatch(/key:\s*['"]mondoRitmo['"]/);
+    expect(p).not.toMatch(/key:\s*['"]mondoAggiorna['"]/);
   });
 });
