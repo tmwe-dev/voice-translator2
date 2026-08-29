@@ -68,6 +68,7 @@ export default function FinestraSulMondo({ C, L, lingua, prefs, attiva, paese, o
   const [events, setEvents] = useState([]);
   const [cartello, setCartello] = useState(null);
   const [aperta, setAperta] = useState(null);
+  const [videoLettura, setVideoLettura] = useState(null);
   const [status, setStatus] = useState({ state: settings.breaking === 'off' ? 'off' : 'connecting', age: null, when: 0 });
   const [layer, setLayer] = useState(() => {
     if (typeof window === 'undefined') return 'live';
@@ -226,6 +227,26 @@ export default function FinestraSulMondo({ C, L, lingua, prefs, attiva, paese, o
     setPushOn(!!r.enabled);
   };
 
+  // b.580 — b.515 resta valido anche col bus SSE: i video non fanno
+  // parte dell'ingest Live e non vanno cercati per ogni evento in coda.
+  // Si usa la quota video soltanto quando la persona apre davvero una
+  // notizia; autoplay decide solo se il player parte da solo.
+  useEffect(() => {
+    setVideoLettura(null);
+    if (!aperta?.title) return undefined;
+    let vivo = true;
+    (async () => {
+      try {
+        const r = await fetch(`/api/topics/video?q=${encodeURIComponent(aperta.title)}&lang=${encodeURIComponent(lingua)}`,
+          { signal: AbortSignal.timeout(15000) });
+        if (!r.ok || !vivo) return;
+        const d = await r.json().catch(() => null);
+        if (vivo && d?.video?.[0]) setVideoLettura(d.video[0]);
+      } catch { /* niente video: la lettura resta articolo + fonti */ }
+    })();
+    return () => { vivo = false; };
+  }, [aperta, lingua]);
+
   useEffect(() => {
     if (!cartello || aperta) return undefined;
     const timer = setTimeout(avanza, DURATA_CARTELLO_MS);
@@ -327,7 +348,18 @@ export default function FinestraSulMondo({ C, L, lingua, prefs, attiva, paese, o
             </span>
           </header>
           <div style={{ flex: 1, overflowY: 'auto', padding: '0 20px calc(24px + env(safe-area-inset-bottom))', scrollbarWidth: 'none' }}>
-            {aperta.image && <AnteprimaCoperta src={aperta.image} L={L} contenuto={{ url: aperta.url }} stile={{ width: '100%', aspectRatio: '16/9', borderRadius: 16, objectFit: 'cover', marginBottom: 14 }} />}
+            {videoLettura ? (
+              <div style={{ position: 'relative', aspectRatio: '16/9', borderRadius: 16, overflow: 'hidden', background: '#000', marginBottom: 14 }}>
+                <iframe
+                  src={`https://www.youtube-nocookie.com/embed/${videoLettura.id}${settings.autoplayVideo ? '?autoplay=1' : ''}`}
+                  title={videoLettura.titolo || aperta.title}
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                  style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 'none' }} />
+              </div>
+            ) : aperta.image && (
+              <AnteprimaCoperta src={aperta.image} L={L} contenuto={{ url: aperta.url }} stile={{ width: '100%', aspectRatio: '16/9', borderRadius: 16, objectFit: 'cover', marginBottom: 14 }} />
+            )}
             <h2 style={{ margin: 0, fontSize: 21, fontWeight: 500, lineHeight: 1.3, color: C.textPrimary }}>{aperta.title}</h2>
             {aperta.summary && <p style={{ margin: '10px 0 0', fontSize: 15, lineHeight: 1.6, color: C.textSecondary }}>{aperta.summary}</p>}
             {(aperta.sources || []).slice(0, 6).map((f, i) => f?.url ? (
