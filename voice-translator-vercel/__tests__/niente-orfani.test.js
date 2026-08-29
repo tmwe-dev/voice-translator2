@@ -70,8 +70,33 @@ describe('nessun file orfano in app/', () => {
       return codice.length === 0;
     };
 
+    // ── b.575 — UN CANTIERE NON E UN ORFANO, MA QUASI ──
+    // Il documento di Mondo impone una migrazione a fasi: «FASE 1:
+    // creare i nuovi modelli. Nessun cambio UI». Per un tratto quei
+    // file esistono e nessuno li chiama ancora — che e' esattamente
+    // l'aspetto del codice morto, ed e' il motivo per cui questa
+    // guardia esiste.
+    // La differenza non puo essere una lista di eccezioni (diventa
+    // subito il posto dove si nasconde la polvere). Deve essere una
+    // PROVA: il file dichiara a quale fase e' attaccato, e c'e' un test
+    // che lo monta davvero. Un cantiere ha degli operai dentro; una
+    // rovina no. Il giorno che la fase collega il file, la riga di
+    // dichiarazione se ne va con lei.
+    const TEST = path.join(__dirname);
+    const provati = new Set();
+    for (const t of fs.readdirSync(TEST).filter(x => x.endsWith('.test.js'))) {
+      const src = fs.readFileSync(path.join(TEST, t), 'utf8');
+      for (const r of src.matchAll(/from\s+['"](\.[^'"]+)['"]/g)) {
+        provati.add(path.resolve(path.dirname(path.join(TEST, t)), r[1]));
+      }
+    }
+    const eCantiere = (f) => {
+      const src = fs.readFileSync(f, 'utf8');
+      return /CANTIERE — collegato alla FASE \d+/.test(src) && provati.has(path.resolve(f));
+    };
+
     const orfani = file
-      .filter(f => !importati.has(path.resolve(f)) && !INGRESSI.test(f) && !eLapide(f))
+      .filter(f => !importati.has(path.resolve(f)) && !INGRESSI.test(f) && !eLapide(f) && !eCantiere(f))
       .map(f => path.relative(APP, f));
 
     expect(orfani, `File mai importati. Collegali, oppure cancellali:\n  ${orfani.join('\n  ')}`).toEqual([]);

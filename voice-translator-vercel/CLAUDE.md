@@ -267,6 +267,38 @@ perche il working tree lo conteneva ancora.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.575** (push #860) — FASE 1 DEL MODELLO DI MONDO.
+
+  Luca ha scritto il documento di come Mondo va fatto dentro, e arriva
+  al momento giusto: **quasi tutti i guasti di oggi nascono dallo stesso
+  posto.** `prefs` e' diventato un sacco dove stanno insieme
+  impostazioni, interessi, memoria di cosa hai fatto e stato della
+  schermata — e ogni volta che si tira un filo si strappa dall'altra
+  parte (il filtro salvato per sempre, l'onboarding che non sapeva
+  distinguere «non lo so» da «non ha scelto»).
+
+  Nuova cartella `app/lib/mondo/`, tutta pura e non ancora collegata —
+  **FASE 1 dice esplicitamente di non toccare l'interfaccia**, e c'e' un
+  test che lo verifica:
+  · `taxonomy.js` — 43 topic con parentela vera (`formula1 → motorsport
+    → sport`) e **ID canonici**: un identificatore e' un nome proprio,
+    non si traduce. `canonico()` converte i nomi vecchi, nessuno perde i
+    suoi interessi.
+  · `queries.js` — le parole per CERCARE, separate da quelle per
+    leggere. Sei lingue, inglese obbligatorio come rete di sicurezza.
+  · `settings.js` — solo cio che una persona puo davvero volere; le
+    finte preferenze tecniche (`mondoModo`, `mondoAggiorna`, numero
+    fonti) sono elencate per essere tolte.
+  · `profile.js` — cio che hai DETTO. `memory.js` — cio che abbiamo
+    NOTATO, **e che invecchia**: mezzo peso a 90 giorni, un quarto a
+    180, calcolato in lettura (non esiste un momento in cui un lavoro
+    periodico potrebbe girare). Le tue parole non decadono mai.
+  · `events.js` — un listino solo per i segnali. `session.js` — cio che
+    muore quando chiudi (il filtro sta QUI, non nelle preferenze).
+  · `models.js` — `ContentCandidate`: articoli, video e discussioni
+    finalmente della stessa forma, con **tutti i campi sempre presenti**
+    (la lezione che b.570 e b.572 mi hanno fatto pagare due volte).
+
 - Versione: **b.574** (push #859) — IL NERO NON E' UNO STATO.
 
   ① **«Ho appena usato il filtro ed e' sparito tutto per un minuto e
