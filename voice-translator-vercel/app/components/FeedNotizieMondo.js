@@ -331,6 +331,12 @@ export default function FeedNotizieMondo({ aperto, onChiudi, C, L, argomenti = [
     }
   }, []);
   const [indiceAttivo, setIndiceAttivo] = useState(0);
+  // ═══ b.579 — INDICE LOGICO E SLIDE VISIBILE NON SONO LA STESSA COSA ═══
+  // Se il browser conserva per un istante lo snap in fondo, indiceAttivo
+  // puo essere ancora 0 mentre gli occhi sono altrove. Il player puo
+  // esistere soltanto quando l'osservatore ha confermato che quella stessa
+  // diapositiva e davvero visibile. null = nessun video autorizzato a suonare.
+  const [indiceVisibile, setIndiceVisibile] = useState(null);
   const [seme, setSeme] = useState('');   // b.541 — il campo dell'ultima slide
   // ═══ b.544 — I CUORI ═══
   // «Non si puo dare un mi piace a nessuno» (Luca). `miei` e cio che ho
@@ -656,7 +662,14 @@ export default function FeedNotizieMondo({ aperto, onChiudi, C, L, argomenti = [
         miglioreArea = area;
         miglioreIdx = idx;
       });
-      if (miglioreIdx >= 0) setIndiceAttivo((prima) => (prima === miglioreIdx ? prima : miglioreIdx));
+      if (miglioreIdx >= 0) {
+        setIndiceVisibile(miglioreIdx);
+        setIndiceAttivo((prima) => (prima === miglioreIdx ? prima : miglioreIdx));
+      } else {
+        // Nessuna diapositiva di contenuto e realmente in vista (per
+        // esempio sulla slide di ricerca in fondo): nessun player suona.
+        setIndiceVisibile(null);
+      }
       // b.546 — DUE soglie, non una: quella bassa perche una slide piu
       // alta della finestra non arriva mai al 60% e senza di lei non
       // scatterebbe MAI nessun avviso; quella alta perche appena una
@@ -777,6 +790,7 @@ export default function FeedNotizieMondo({ aperto, onChiudi, C, L, argomenti = [
   // ora punta a un elemento diverso.
   useEffect(() => {
     if (!aperto) return;
+    setIndiceVisibile(null);
     setIndiceAttivo(0);
     // b.545 — l'indice da solo non basta: senza riportare anche lo
     // SCORRIMENTO, si guarda una slide e ne suona un'altra.
@@ -853,6 +867,9 @@ export default function FeedNotizieMondo({ aperto, onChiudi, C, L, argomenti = [
       <div ref={prendiContenitore} style={{
         position: 'absolute', inset: 0, overflowY: 'auto', scrollSnapType: 'y mandatory',
         WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain', scrollbarWidth: 'none',
+        // b.579 — il browser non deve tenere agganciata la slide finale
+        // mentre il caricamento viene sostituito dalle vere diapositive.
+        overflowAnchor: 'none',
       }}>
         {/* b.544 — IL FEED VUOTO NON CHIEDE NIENTE A NESSUNO: prepara.
             «devi produrre i contenuti» (Luca). Prima qui c'era un invito
@@ -949,7 +966,7 @@ export default function FeedNotizieMondo({ aperto, onChiudi, C, L, argomenti = [
             {el.tipo === 'video' ? (
               <>
                 <div style={{ position: 'absolute', inset: 0, background: '#000' }}>
-                  {i === indiceAttivo ? (
+                  {i === indiceAttivo && i === indiceVisibile ? (
                     // b.515 — il player ufficiale YouTube (nocookie), come
                     // in SchedaArgomento.js: la sua monetizzazione resta
                     // sua. Esiste SOLO mentre e la slide attiva: uscendo
@@ -993,11 +1010,11 @@ export default function FeedNotizieMondo({ aperto, onChiudi, C, L, argomenti = [
                     testate chiuse, b.535). Tre scelte dette in chiaro:
                     spento, sottotitoli tradotti, voce. */}
                 <InterpreteVideo videoId={el.dati.id} lingua={miaLingua}
-                  attivo={i === indiceAttivo} C={C} L={L}
+                  attivo={i === indiceAttivo && i === indiceVisibile} C={C} L={L}
                   daFondo={BARRA_YT + PIEDE_VIDEO}
-                  comandoNascosto apriOra={i === indiceAttivo ? apriInterprete : 0}
+                  comandoNascosto apriOra={i === indiceAttivo && i === indiceVisibile ? apriInterprete : 0}
                   onCambia={setModoInterprete}
-                  onDisponibile={i === indiceAttivo ? setInterpretePronto : undefined} />
+                  onDisponibile={i === indiceAttivo && i === indiceVisibile ? setInterpretePronto : undefined} />
 
                 {/* b.539 — i tasti che mancavano ai video. */}
                 <Azioni voci={[
@@ -1027,7 +1044,7 @@ export default function FeedNotizieMondo({ aperto, onChiudi, C, L, argomenti = [
                      sottotitoli di traduzione o la voce di traduzione».
                      Stava in un angolo in alto a sinistra; adesso e' una
                      voce come le altre, con la sua parola scritta. */
-                  (i === indiceAttivo && interpretePronto) ? {
+                  (i === indiceAttivo && i === indiceVisibile && interpretePronto) ? {
                     chiave: 'traduci', icona: 'mic', parola: L('interpreteTitolo'),
                     acceso: modoInterprete !== 'spento', restaAperto: false,
                     onTocca: () => { vibrate(8); setApriInterprete((n) => n + 1); },
@@ -1228,7 +1245,7 @@ export default function FeedNotizieMondo({ aperto, onChiudi, C, L, argomenti = [
             gia ci sono (`elementi.length > 0`), e' nuda — campo e tasto,
             nessuna descrizione — e appena si semina si torna in cima,
             dove il contenuto nuovo sta gia arrivando. */}
-        {elementi.length > 0 && onCerca && (
+        {pronto && elementi.length > 0 && onCerca && (
           <div style={{
             height: '100dvh', scrollSnapAlign: 'start', scrollSnapStop: 'always',
             display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',

@@ -267,6 +267,14 @@ perche il working tree lo conteneva ancora.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.579** (push #864) — APERTURA FEED MONDO: niente fondo vuoto con audio fuori schermo.
+
+  Collaudo reale: all'apertura compariva la slide finale «Cosa vuoi seguire?» mentre si sentiva un pezzo del primo video. La causa era una gara fra caricamento, scroll-snap e autoplay: la slide finale nasceva prima che il feed fosse stabile e il browser poteva conservarla come snap target; intanto `indiceAttivo` restava 0 e montava il primo iframe con `autoplay=1`.
+
+  Correzione: indice logico separato da `indiceVisibile`; YouTube puo montarsi/autoplay solo se l'IntersectionObserver conferma la stessa slide realmente in vista. La slide di ricerca finale nasce solo a feed pronto e il contenitore disabilita lo scroll anchoring. Nessun cambio grafico.
+
+  PROVA: `feed-apertura-b579.test.js` verifica i quattro guardrail del difetto.
+
 - Versione: **b.578** (push #863) — COERENZA DEL MOTORE MONDO, senza modifiche all'interfaccia.
 
   Quattro difetti reali emersi dall'audit del percorso ricerca → normalizzazione → ranking → regia → feed:
