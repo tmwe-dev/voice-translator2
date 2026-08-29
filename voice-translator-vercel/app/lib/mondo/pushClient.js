@@ -67,6 +67,9 @@ export async function disableMondoPush() {
       body: JSON.stringify({ endpoint }), signal: AbortSignal.timeout(8000),
     }).catch(() => null);
     await sub.unsubscribe();
-  } catch {}
+  } catch {
+    // La sottoscrizione puo essere gia scaduta/rimossa: lo stato locale
+    // deve comunque tornare spento e non bloccare l'interfaccia.
+  }
   return { enabled: false };
 }
