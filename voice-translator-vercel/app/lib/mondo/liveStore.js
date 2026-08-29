@@ -11,6 +11,7 @@ import { redis } from '../redis.js';
 const KEY_EVENTS = 'mondo:live:events:v1';
 const KEY_HEARTBEAT = 'mondo:live:last-ingest:v1';
 const KEY_SUBS = 'mondo:live:push:v1';
+const KEY_INGEST_LOCK = 'mondo:live:ingest-lock:v1';
 const MAX_EVENTS = 160;
 const MAX_AGE = 36 * 3600 * 1000;
 
@@ -87,6 +88,25 @@ export async function getLastIngestAt() {
 export async function setLastIngestAt(ts = Date.now()) {
   await redis('SET', KEY_HEARTBEAT, String(ts), 'EX', '86400');
   return ts;
+}
+
+/**
+ * Un solo redattore alla volta. Serve soprattutto quando il cron e' in
+ * ritardo e molte persone aprono Mondo nello stesso istante: il primo
+ * riaccende l'ingest, gli altri ascoltano il deposito gia condiviso.
+ */
+export async function acquireIngestLock(ttlSeconds = 70) {
+  const token = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  const r = await redis('SET', KEY_INGEST_LOCK, token, 'NX', 'EX', String(ttlSeconds)).catch(() => null);
+  return r === 'OK' ? token : null;
+}
+
+export async function releaseIngestLock(token) {
+  if (!token) return false;
+  const corrente = await redis('GET', KEY_INGEST_LOCK).catch(() => null);
+  if (corrente !== token) return false;
+  await redis('DEL', KEY_INGEST_LOCK).catch(() => null);
+  return true;
 }
 
 function hashEndpoint(endpoint) {
