@@ -199,10 +199,23 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
     // stampa dietro. Riaprire dev'essere come non essere mai usciti.
     // La ricerca parte lo stesso, subito sotto: il salvato riempie
     // l'attesa, non la sostituisce.
+    // ═══ b.574 — «CONTINUA A PRESENTARMI LA STESSA LISTA DI VIDEO» ═══
+    // Collaudo di Luca. E la colpa era proprio di questa cortesia: il
+    // giornale di ieri (b.564) ti veniva rimesso in mano TALE E QUALE,
+    // nello stesso ordine, quindi la prima cosa che vedevi rientrando
+    // era l'ultima che avevi gia guardato. La memoria del «gia visto»
+    // (b.558) c'era e funzionava, ma nessuno la interpellava QUI: si
+    // applicava solo ai risultati nuovi, cioe a quelli che arrivavano
+    // dopo — troppo tardi per contare.
+    // Adesso anche il salvato passa dal setaccio: quello che hai gia
+    // guardato scende in fondo (non sparisce: fra sette giorni puo
+    // tornare, e' la regola di visti.js) e in cima trovi cio che non
+    // avevi ancora visto. Aprire non e' rivedere.
     const ieri = giornaleSalvato();
     if (ieri) {
-      setArgomenti(ieri.argomenti);
-      if (ieri.video?.length) setVideo(ieri.video);
+      const gia = vistiDiRecente();
+      setArgomenti(primaIlNuovo(ieri.argomenti, gia));
+      if (ieri.video?.length) setVideo(primaIlNuovo(ieri.video, gia));
     }
     // b.562 — se la prima domanda e' ancora da fare, non si cerca
     // niente: partirebbero tre giri di ricerca (e tre chiamate a
@@ -2297,7 +2310,18 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
         // piano: la crescita in sottofondo NON rimette il feed in
         // attesa, altrimenti si tornerebbe a interrompere chi guarda.
         caricando={cercando}
-        onFiltro={(id) => savePrefs({ ...prefs, mondoFeedFiltro: id })}
+        // b.574 — «ho appena usato il filtro ed e sparito tutto per un
+        // minuto e senza clessidra» (Luca). Cambiare filtro non e' una
+        // preferenza da salvare e basta: e' una RICHIESTA. Se di quel
+        // tipo non abbiamo niente in mano, si va a cercarlo subito
+        // invece di lasciare lo schermo vuoto ad aspettare che la
+        // crescita in sottofondo passi di li per caso.
+        onFiltro={(id) => {
+          savePrefs({ ...prefs, mondoFeedFiltro: id });
+          const manca = (id === 'video' && !(video || []).length)
+            || (id === 'articoli' && !(argomenti || []).length);
+          if (manca && !cercandoRef.current) cresci();
+        }}
         onParlane={(d) => setParlaneCon(d)}
         onStrumenti={suApriStrumenti}
         onCresci={cresci}

@@ -62,7 +62,9 @@ describe('② una ricerca che dura quindici secondi deve dirlo', () => {
     // l'anello grande vale solo quando non c'e' niente da mostrare:
     // coprire un giornale che c'e' gia sarebbe peggio del silenzio.
     expect(f).toMatch(/\{pronto && caricando && \(/);
-    expect(f).toMatch(/\{!pronto && \(/);
+    // b.574 — l'anello non dipende piu dal solo `pronto`: si accende
+    // anche a elenco vuoto, perche' uno schermo nero non e' uno stato
+    expect(f).toMatch(/\{\(!pronto \|\| !elementi\.length\) && \(/);
   });
 
   it('la fascia non ruba tocchi e si fa leggere dai lettori di schermo', () => {

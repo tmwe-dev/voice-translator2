@@ -464,6 +464,17 @@ export default function FeedNotizieMondo({ aperto, onChiudi, C, L, argomenti = [
   const pronto = visto || (aperto && !caricando && elementi.length > 0);
   useEffect(() => { prontoRef.current = pronto; if (pronto && !visto) setVisto(true); }, [pronto, visto]);
   useEffect(() => { if (!aperto) { setVisto(false); ordineRef.current = []; prontoRef.current = false; } }, [aperto]);
+  // ═══ b.574 — LA CERTEZZA VALE PER QUESTA LISTA, NON PER SEMPRE ═══
+  // Collaudo di Luca: «ho appena usato il filtro ed e sparito tutto per
+  // un minuto e senza clessidra». Ecco il perche', ed e' un difetto di
+  // ragionamento mio: `visto` diceva «ormai ho mostrato qualcosa» e non
+  // si spegneva piu fino alla chiusura del feed. Serviva a non
+  // rimettere in attesa chi guarda mentre il giardino cresce dietro
+  // (b.552) — giusto. Ma cambiando filtro l'elenco diventa un ALTRO
+  // elenco, e puo essere vuoto: la vecchia certezza restava accesa su
+  // una lista che non esisteva piu, quindi niente diapositive e niente
+  // anello. Lo schermo nero, che e' la cosa peggiore che possiamo fare.
+  useEffect(() => { setVisto(false); }, [filtro]);
 
   // ═══ b.571 — NESSUN SUONO SENZA IMMAGINE ═══
   // Collaudo di Luca: «e' partito un video non so dove, si sente l'audio
@@ -891,7 +902,13 @@ export default function FeedNotizieMondo({ aperto, onChiudi, C, L, argomenti = [
             arrivavano gli altri, la diapositiva in mezzo allo schermo
             diventava un'altra e il player restava a meta. Adesso finche'
             non e' pronto non c'e' NIENTE da saltare: solo l'anello. */}
-        {!pronto && (
+        {/* b.574 — la regola, senza eccezioni: SE NON C'E' NIENTE DA
+            GUARDARE, C'E' L'ANELLO. Prima la condizione era il solo
+            `!pronto`, e bastava un elenco vuoto con la certezza gia
+            accesa per non disegnare ne le diapositive ne l'attesa. Un
+            minuto di nero. Il nero non e' uno stato: e' un'assenza di
+            stato, e non deve poter capitare. */}
+        {(!pronto || !elementi.length) && (
           <div style={{
             height: '100dvh', display: 'flex', flexDirection: 'column',
             alignItems: 'center', justifyContent: 'center',
@@ -912,7 +929,7 @@ export default function FeedNotizieMondo({ aperto, onChiudi, C, L, argomenti = [
             <style>{'@keyframes vtGira { to { transform: rotate(360deg); } }'}</style>
           </div>
         )}
-        {pronto && elementi.map((el, i) => {
+        {pronto && !!elementi.length && elementi.map((el, i) => {
           // b.546 — l'origine si calcola QUI, una volta sola per slide,
           // e non in mezzo al disegno: cosi si legge, e chi arriva
           // domani vede subito da dove esce la bandiera.

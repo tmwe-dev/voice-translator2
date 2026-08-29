@@ -22,7 +22,10 @@ describe('b.515 — il feed a tutta pagina (stile reel), autoplay in sequenza, f
     expect(m).toMatch(/const \[feedAperto, setFeedAperto\] = useState\(false\);/);
     expect(m).toMatch(/const feedFiltro = prefs\?\.mondoFeedFiltro \|\| 'video';/);
     expect(m).toMatch(/<FeedNotizieMondo aperto=\{feedAperto\}/);
-    expect(m).toMatch(/onFiltro=\{\(id\) => savePrefs\(\{ \.\.\.prefs, mondoFeedFiltro: id \}\)\}/);
+    // b.574 — il filtro non e' piu solo una preferenza da salvare: se
+    // manca quel tipo di contenuto, lo si va a cercare subito
+    expect(m).toMatch(/onFiltro=\{\(id\) => \{/);
+    expect(m).toMatch(/savePrefs\(\{ \.\.\.prefs, mondoFeedFiltro: id \}\);/);
   });
 
   it('it.js e en.js hanno le chiavi del feed', () => {

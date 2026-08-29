@@ -64,7 +64,9 @@ describe('① il giornale di ieri', () => {
   it('e il Mondo lo mostra prima di cercare, senza rinunciare a cercare', () => {
     const n = leggi('app/components/MondoNews.js');
     expect(n).toMatch(/const ieri = giornaleSalvato\(\);/);
-    expect(n).toMatch(/setArgomenti\(ieri\.argomenti\)/);
+    // b.574 — il salvato passa dal setaccio del gia visto: rientrare
+    // non e' rivedere («continua a presentarmi la stessa lista»)
+    expect(n).toMatch(/setArgomenti\(primaIlNuovo\(ieri\.argomenti, gia\)\)/);
     const dopo = n.slice(n.indexOf('const ieri = giornaleSalvato()'));
     expect(dopo, 'la ricerca parte lo stesso, subito sotto').toMatch(/semiUtente|ricerchePredefinite/);
   });

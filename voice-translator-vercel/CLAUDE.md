@@ -267,6 +267,29 @@ perche il working tree lo conteneva ancora.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.574** (push #859) — IL NERO NON E' UNO STATO.
+
+  ① **«Ho appena usato il filtro ed e' sparito tutto per un minuto e
+  senza clessidra»** (Luca). Difetto di ragionamento, non svista:
+  `visto` diceva «ormai ho mostrato qualcosa» e restava acceso fino alla
+  chiusura del feed — giusto per non rimettere in attesa chi guarda
+  mentre il giardino cresce dietro (b.552). Ma **cambiando filtro
+  l'elenco diventa un ALTRO elenco**, e puo essere vuoto: la vecchia
+  certezza restava accesa su una lista che non esisteva piu, quindi ne'
+  diapositive ne' anello. Ora la certezza si spegne al cambio di filtro,
+  e la regola non ha eccezioni: **se non c'e' niente da guardare, c'e'
+  l'anello.**
+  E cambiare filtro non e' piu solo una preferenza salvata: e' una
+  **richiesta**. Se di quel tipo non abbiamo niente, si va a cercarlo
+  subito invece di aspettare che la crescita passi di li per caso.
+
+  ② **«Continua a presentarmi la stessa lista di video»** (Luca). Il
+  giornale di ieri (b.564) tornava in mano **tale e quale**: rientrando,
+  la prima cosa che vedevi era l'ultima che avevi gia guardato. La
+  memoria del «gia visto» (b.558) c'era e funzionava, ma la
+  interpellavamo solo sui risultati NUOVI — troppo tardi per contare.
+  Ora passa dal setaccio anche il salvato: **aprire non e' rivedere.**
+
 - Versione: **b.573** (push #858) — PRIMA TU, POI IL MONDO.
 
   Ordine di Luca: «ma perche non presenti niente random????? se non do

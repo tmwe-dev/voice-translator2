@@ -94,8 +94,8 @@ describe('b.552 — il primo contenuto si mostra quando e certo', () => {
     // Il difetto raccontato da Luca: «mostra la pagina cerca, poi un
     // video, e a volte salta subito ad altri e si ferma». Saltava perche'
     // l'elenco continuava a ricomporsi sotto una diapositiva gia montata.
-    expect(feed).toMatch(/\{!pronto && \(/);
-    expect(feed).toMatch(/\{pronto && elementi\.map\(/);
+    expect(feed).toMatch(/\{\(!pronto \|\| !elementi\.length\) && \(/);   // b.574
+    expect(feed).toMatch(/\{pronto && !!elementi\.length && elementi\.map\(/);   // b.574
   });
 
   it('e intanto gira un anello: l attesa ha una faccia', () => {
