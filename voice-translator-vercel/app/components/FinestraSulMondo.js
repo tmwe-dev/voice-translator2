@@ -61,6 +61,8 @@ export default function FinestraSulMondo({ C, L, lingua, prefs, attiva, paese, o
   const topics = useMemo(() => topicDichiarati(profile), [profile]);
   const poli = useMemo(() => poliDelViaggiatore(prefs), [prefs]);
   const countries = useMemo(() => [...new Set([poli.casa, poli.qui, paese].filter(Boolean))], [poli.casa, poli.qui, paese]);
+  const topicsKey = topics.join('|');
+  const countriesKey = countries.join('|');
   const T = diz(lingua);
 
   const [events, setEvents] = useState([]);
@@ -131,12 +133,16 @@ export default function FinestraSulMondo({ C, L, lingua, prefs, attiva, paese, o
   // nessuna nuova ricerca, cambia soltanto cosa stiamo guardando.
   useEffect(() => {
     if (!attiva) return;
-    try { window.localStorage.setItem(KEY_LAYER, layer); } catch {}
+    try { window.localStorage.setItem(KEY_LAYER, layer); }
+    catch { /* localStorage puo essere disabilitato: il layer resta valido in memoria */ }
     queueRef.current = [];
     shownRef.current = new Set(cartello ? [cartello.id] : []);
     const candidati = events.filter(visibileNelLayer);
     accoda(candidati);
-  }, [layer]); // volutamente solo il gesto sul layer
+    // Il rebuild deve avvenire al gesto sul layer, non a ogni evento che
+    // arriva: gli eventi nuovi passano gia da accoda() nel listener SSE.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [layer]);
 
   // Il globo conserva esattamente il renderer/animazioni esistenti: gli
   // passiamo solo il significato dei puntini da mostrare in quel momento.
@@ -160,7 +166,10 @@ export default function FinestraSulMondo({ C, L, lingua, prefs, attiva, paese, o
 
     let source = null;
     let closed = false;
-    const oldSeen = (() => { try { return Number(window.localStorage.getItem(KEY_LAST_SEEN)) || 0; } catch { return 0; } })();
+    const oldSeen = (() => {
+      try { return Number(window.localStorage.getItem(KEY_LAST_SEEN)) || 0; }
+      catch { return 0; }
+    })();
     const params = new URLSearchParams({
       since: String(oldSeen),
       lang: String(lingua || 'en'),
@@ -175,7 +184,9 @@ export default function FinestraSulMondo({ C, L, lingua, prefs, attiva, paese, o
       try {
         const d = JSON.parse(ev.data);
         setStatus({ state: d.status || 'live', age: Number.isFinite(d.age) ? d.age : null, when: d.when || Date.now(), lastIngestAt: d.lastIngestAt || 0 });
-      } catch {}
+      } catch {
+        // Un heartbeat monco non modifica lo stato buono precedente.
+      }
     });
     source.addEventListener('events', (ev) => {
       if (closed) return;
@@ -190,8 +201,11 @@ export default function FinestraSulMondo({ C, L, lingua, prefs, attiva, paese, o
         }
         primoBatchRef.current = false;
         accoda(incoming);
-        try { window.localStorage.setItem(KEY_LAST_SEEN, String(Math.max(Date.now(), Number(d.cursor) || 0))); } catch {}
-      } catch {}
+        try { window.localStorage.setItem(KEY_LAST_SEEN, String(Math.max(Date.now(), Number(d.cursor) || 0))); }
+        catch { /* il cursore resta comunque attivo per questa sessione */ }
+      } catch {
+        // Una riga SSE incompleta viene ignorata; EventSource prosegue.
+      }
     });
     source.onerror = () => {
       if (!closed) setStatus((s) => ({ ...s, state: 'recovering', when: Date.now() }));
@@ -201,16 +215,17 @@ export default function FinestraSulMondo({ C, L, lingua, prefs, attiva, paese, o
     return () => {
       closed = true;
       source?.close();
-      try { window.localStorage.setItem(KEY_LAST_SEEN, String(Date.now())); } catch {}
+      try { window.localStorage.setItem(KEY_LAST_SEEN, String(Date.now())); }
+      catch { /* nessun errore visibile per storage privato/disabilitato */ }
     };
-  }, [attiva, settings.breaking, lingua, topics.join('|'), countries.join('|'), accoda]);
+  }, [attiva, settings.breaking, lingua, topicsKey, countriesKey, accoda, topics, countries]);
 
   // Se il browser aveva gia il permesso, sincronizza senza aprire popup.
   useEffect(() => {
     if (!attiva || settings.breaking === 'off' || !pushDisponibile()) return;
     const preferences = { topics, countries, breaking: settings.breaking, lang: lingua };
-    syncMondoPush(preferences).then((r) => setPushOn(!!r.enabled)).catch(() => {});
-  }, [attiva, settings.breaking, lingua, topics.join('|'), countries.join('|')]);
+    syncMondoPush(preferences).then((r) => setPushOn(!!r.enabled)).catch(() => null);
+  }, [attiva, settings.breaking, lingua, topicsKey, countriesKey, topics, countries]);
 
   const togglePush = async () => {
     vibrate(8);
