@@ -1,17 +1,5 @@
 // ═══════════════════════════════════════════════════════════════
 // b.556 — UNA PORTA SOLA, IN BASSO, E LA TRADUZIONE DENTRO
-//
-// Collaudo di Luca, con la fotografia della slide: «nascondi tutte le
-// icone dietro una icona in basso, su click apri le altre per
-// permettere una selezione» e, nella stessa riga, «non si capisce come
-// attivare i sottotitoli di traduzione o la voce di traduzione».
-//
-// Sono lo stesso difetto detto due volte: sei cerchi muti incolonnati
-// in mezzo allo schermo coprivano l'inquadratura senza dire cosa fanno,
-// e il comando piu importante — tradurre il video, che e' il motivo per
-// cui BarTalk esiste — stava in un angolo in alto dove nessuno lo
-// cercava. Chiuso: un tasto. Aperto: ogni voce con la sua parola
-// accanto, traduzione compresa.
 // ═══════════════════════════════════════════════════════════════
 import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest';
 import { render, screen, cleanup, fireEvent } from '@testing-library/react';
@@ -20,8 +8,6 @@ import fs from 'fs';
 import path from 'path';
 import FeedNotizieMondo from '../app/components/FeedNotizieMondo.js';
 
-// L'osservatore e il recupero dalla rete non esistono in jsdom: qui
-// serve solo che il componente si monti e si tocchi.
 class OsservatoreFinto { observe() {} unobserve() {} disconnect() {} }
 beforeEach(() => {
   global.IntersectionObserver = OsservatoreFinto;
@@ -45,7 +31,7 @@ describe('chiusa, si vede il video e basta', () => {
 });
 
 describe('aperta, ogni voce dice cosa fa', () => {
-  it('compaiono tutte', () => {
+  it('compaiono tutte le azioni disponibili', () => {
     monta();
     fireEvent.click(screen.getByLabelText('actionsWord'));
     for (const k of ['likeWord', 'newsTalkAbout', 'boardSave', 'hideForever']) {
@@ -53,20 +39,13 @@ describe('aperta, ogni voce dice cosa fa', () => {
     }
   });
 
-  it('ma l INTERPRETE solo se quel video ha davvero i sottotitoli', () => {
-    // b.569 — trovato col browser in mano: la voce «Interprete» c'era
-    // sempre, la si toccava e non succedeva NIENTE, perche' il pezzo non
-    // si disegna quando il video non ha sottotitoli. Una porta che non
-    // si apre e' peggio di una porta che non c'e' (regola di b.535,
-    // ordine di Luca). Qui non c'e' rete, quindi sottotitoli non ce ne
-    // sono: la voce NON deve comparire.
+  it('l interprete compare solo se quel video ha davvero i sottotitoli', () => {
     monta();
     fireEvent.click(screen.getByLabelText('actionsWord'));
     expect(screen.queryByLabelText('interpreteTitolo')).toBe(null);
   });
 
-  it('e ognuna ha la parola scritta accanto, non solo l icona', () => {
-    // e' meta dell'ordine di Luca: sei cerchi muti non si capiscono.
+  it('ogni azione ha la parola scritta accanto, non solo l icona', () => {
     monta();
     fireEvent.click(screen.getByLabelText('actionsWord'));
     const parole = [...document.querySelectorAll('span')].map((x) => x.textContent);
@@ -74,33 +53,31 @@ describe('aperta, ogni voce dice cosa fa', () => {
     expect(parole).toContain('hideForever');
   });
 
-  it('toccare una voce fa la cosa e richiude', () => {
+  it('toccare una voce la esegue e richiude il menu', () => {
     monta();
     fireEvent.click(screen.getByLabelText('actionsWord'));
     fireEvent.click(screen.getByLabelText('boardSave'));
-    expect(screen.queryByLabelText('boardSave'), 'si richiude da sola').toBe(null);
+    expect(screen.queryByLabelText('boardSave')).toBe(null);
   });
 });
 
-describe('il comando della traduzione non vive piu in un angolo', () => {
+describe('il comando della traduzione vive nella stessa porta delle azioni', () => {
   const i = fs.readFileSync(path.join(__dirname, '..', 'app/components/ui/InterpreteVideo.js'), 'utf8');
   const f = fs.readFileSync(path.join(__dirname, '..', 'app/components/FeedNotizieMondo.js'), 'utf8');
 
-  it('l interprete accetta di avere il comando altrove', () => {
+  it('l interprete puo avere il comando nascosto e aprirsi dall esterno', () => {
     expect(i).toMatch(/comandoNascosto = false, apriOra = 0/);
     expect(i).toMatch(/useEffect\(\(\) => \{ if \(apriOra\) setAperto\(true\); \}, \[apriOra\]\)/);
-    expect(i, 'e allora non disegna un tasto doppione').toMatch(/\{!comandoNascosto && \(/);
+    expect(i).toMatch(/\{!comandoNascosto && \(/);
   });
 
-  it('e il feed lo apre dal ventaglio, contando i tocchi', () => {
-    // un contatore e non un vero/falso: toccare due volte deve riaprire,
-    // e un vero/falso gia vero non avviserebbe nessuno.
+  it('il feed usa un contatore e autorizza il comando solo sulla slide attiva e visibile', () => {
     expect(f).toMatch(/const \[apriInterprete, setApriInterprete\] = useState\(0\)/);
     expect(f).toMatch(/setApriInterprete\(\(n\) => n \+ 1\)/);
-    expect(f).toMatch(/comandoNascosto apriOra=\{i === indiceAttivo \? apriInterprete : 0\}/);
+    expect(f).toMatch(/comandoNascosto apriOra=\{i === indiceAttivo && i === indiceVisibile \? apriInterprete : 0\}/);
   });
 
-  it('la porta chiusa dice se qualcosa e acceso, senza doverla aprire', () => {
+  it('la porta chiusa segnala se qualcosa e acceso', () => {
     expect(f).toMatch(/vive\.some\(\(v\) => v\.acceso\) && !aperto \? VETRO_ACCESO : VETRO/);
   });
 });
