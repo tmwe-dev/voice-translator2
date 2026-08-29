@@ -7,8 +7,7 @@ export const maxDuration = 60;
 
 export async function GET(req) {
   const pass = req.headers.get('x-admin-pass') || req.headers.get('authorization')?.replace('Bearer ', '');
-  const cronConfigured = !!process.env.CRON_SECRET;
-  const ok = !cronConfigured || safeCompare(pass, process.env.CRON_SECRET) || safeCompare(pass, process.env.ADMIN_PASS);
+  const ok = safeCompare(pass, process.env.CRON_SECRET) || safeCompare(pass, process.env.ADMIN_PASS);
   if (!ok) return NextResponse.json({ error: 'no' }, { status: 401 });
 
   try {
