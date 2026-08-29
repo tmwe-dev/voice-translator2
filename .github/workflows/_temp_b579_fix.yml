@@ -16,6 +16,16 @@ jobs:
           ref: b864-pronto
           fetch-depth: 0
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: voice-translator-vercel/package-lock.json
+
+      - name: Installa dipendenze
+        working-directory: voice-translator-vercel
+        run: npm ci
+
       - name: Corregge apertura feed e audio fuori schermo
         shell: bash
         run: |
