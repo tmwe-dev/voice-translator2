@@ -38,12 +38,27 @@ describe('P0-1: Direct Mode non si fida piu solo dell\'intestazione client', () 
     'app/api/tts-elevenlabs/route.js',
   ];
 
-  it('tutte usano la guardia autorevole (chiede alla stanza, non solo all\'intestazione)', () => {
+  it('tutte usano la guardia autorevole: una barriera preliminare non puo sostituire la stanza vera', () => {
     for (const rotta of ROTTE_CON_STANZA) {
       const src = leggi(rotta);
+      // La proprieta di sicurezza e questa: ogni rotta che puo elaborare
+      // contenuto di una stanza DEVE consultare la stanza vera. Una
+      // barriera header-only puo esistere in aggiunta (fail-fast), ma non
+      // e mai sufficiente da sola.
       expect(src, rotta).toContain('assertElaborazioneConsentita');
-      expect(src, rotta).not.toContain('assertCloudProcessingAllowed');
+      const soloHeader = src.includes('assertCloudProcessingAllowed') && !src.includes('assertElaborazioneConsentita');
+      expect(soloHeader, `${rotta}: la guardia client non puo essere l'unica barriera`).toBe(false);
     }
+  });
+
+  it('/api/summary usa difesa in profondita: blocca Direct prima del body e verifica la stanza dopo convId', () => {
+    const src = leggi('app/api/summary/route.js');
+    const iHeader = src.indexOf('assertCloudProcessingAllowed(req)');
+    const iBody = src.indexOf('await req.json()');
+    const iStanza = src.indexOf('assertElaborazioneConsentita(req, { roomId: convId })');
+    expect(iHeader, 'la barriera fail-fast Direct deve esserci').toBeGreaterThan(-1);
+    expect(iBody, 'il body viene letto solo dopo il fail-fast').toBeGreaterThan(iHeader);
+    expect(iStanza, 'dopo convId serve comunque la stanza autorevole').toBeGreaterThan(iBody);
   });
 
   it('/api/messages e /api/conversation restano quelle gia corrette (eDiretta sulla stanza vera)', () => {
