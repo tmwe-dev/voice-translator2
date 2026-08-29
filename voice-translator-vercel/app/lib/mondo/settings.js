@@ -86,7 +86,10 @@ export function settingsDaPrefs(prefs) {
   if (p.mondoBreaking === 'off' || p.mondoBreaking === false) fuori.breaking = 'off';
   else if (p.mondoBreaking === 'all' || p.mondoBreaking === 'tutte') fuori.breaking = 'all';
 
-  if (p.autoPlay === false || p.mondoAutoplay === false) fuori.autoplayVideo = false;
+  // b.580 — b.515 salvava la scelta come mondoAutoplayVideo. Durante
+  // la migrazione era rimasto fuori da questo ponte e chi l'aveva
+  // disattivato tornava involontariamente al default true.
+  if (p.autoPlay === false || p.mondoAutoplay === false || p.mondoAutoplayVideo === false) fuori.autoplayVideo = false;
   if (p.personalizzazione === false || p.mondoPersonalizza === false) fuori.personalization = false;
 
   return fuori;
