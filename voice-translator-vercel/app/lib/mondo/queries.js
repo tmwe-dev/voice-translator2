@@ -1,24 +1,23 @@
 // ═══════════════════════════════════════════════════════════════
 // LE PAROLE PER CERCARE, SEPARATE DALLE PAROLE PER LEGGERE
-// (b.575, FASE 1)
+// (b.575, FASE 1; b.578, ponte di compatibilita)
 //
 // Regola 6 del documento di Luca: «le traduzioni della UI non devono
-// mai determinare le query di ricerca». Oggi succede l'opposto: la
-// stessa stringa e' etichetta sullo schermo E domanda al motore, e
-// quindi cambiando lingua all'interfaccia cambia cio che si cerca,
-// senza che nessuno l'abbia deciso.
-//
-// Qui la separazione e' fisica: il motore conosce solo `economy`, e
-// QUESTO file — e nessun altro — sa come si chiede «economy» in
-// italiano. L'etichetta sullo schermo la decide il file delle lingue e
-// non c'entra niente con quello che si va a cercare.
+// mai determinare le query di ricerca». Il motore conosce ID canonici
+// (`economy`, `sport`, `technology`); questo file — e nessun altro — sa
+// come trasformarli nelle parole con cui interrogare le fonti.
 //
 // L'inglese e' obbligatorio per ogni topic: e' la rete di sicurezza.
 // Una lingua che non c'e' non fa sparire un ramo, lo fa cercare in
-// inglese — che e' peggio dell'italiano ma infinitamente meglio del
-// nulla.
+// inglese.
 //
-// File PURO: nessun import (lezione di b.559).
+// b.578 — durante la migrazione la UI vecchia usa ancora QUERY_RAPIDE.
+// Alcune di quelle stringhe non coincidono con DOMANDE (es. «sport»
+// contro «sport risultati»). Finche la UI non portera il topic insieme
+// alla query, questa tabella di alias e' il solo ponte ammesso: il topic
+// resta canonico e non viene mai indovinato dal titolo del contenuto.
+//
+// File PURO: nessun import.
 // ═══════════════════════════════════════════════════════════════
 
 export const DOMANDE = {
@@ -78,10 +77,14 @@ function radice(l) {
   return String(l || '').split('-')[0].toLowerCase();
 }
 
+/** Una query ha una sola forma di confronto, indipendente da spazi doppi. */
+function chiaveQuery(q) {
+  return String(q || '').trim().toLowerCase().replace(/\s+/g, ' ');
+}
+
 /**
  * Come si chiede questo topic in questa lingua.
- * Manca la lingua → inglese. Manca il topic → stringa vuota: il
- * chiamante decide cosa farne, ma nessuno inventa una domanda.
+ * Manca la lingua → inglese. Manca il topic → stringa vuota.
  */
 export function domandaPer(topic, lingua = 'en') {
   const d = DOMANDE[String(topic || '')];
@@ -95,7 +98,7 @@ export function domandePer(topics, lingua = 'en') {
   const fuori = [];
   for (const t of (Array.isArray(topics) ? topics : [])) {
     const q = domandaPer(t, lingua);
-    const k = q.toLowerCase();
+    const k = chiaveQuery(q);
     if (!q || visti.has(k)) continue;
     visti.add(k);
     fuori.push({ topic: t, query: q });
@@ -103,23 +106,58 @@ export function domandePer(topics, lingua = 'en') {
   return fuori;
 }
 
-// ═══ b.577 — LA STRADA A RITROSO ═══
-// Le schede portano con se il SEME che le ha prodotte: la domanda
-// vera, in lingua. Da li si risale al topic senza indovinare niente —
-// e' la stessa tabella letta al contrario, quindi o e' esatta o dice
-// «non lo so», che e' cio che serve (FASE 5).
+// La UI precedente alla FASE 5 usa ancora queste domande. Non sono una
+// seconda tassonomia: sono solo alias di ingresso verso gli stessi ID.
+const ALIAS_QUERY_LEGACY = {
+  'ultime notizie': 'news',
+  'últimas noticias': 'news',
+  'dernières nouvelles': 'news',
+  'nachrichten heute': 'news',
+
+  'sport': 'sport',
+  'sports': 'sport',
+  'deportes': 'sport',
+
+  'tecnologia': 'technology',
+  'technology': 'technology',
+  'tecnología': 'technology',
+  'technologie': 'technology',
+
+  'economia': 'economy',
+  'economy business': 'economy',
+  'economía': 'economy',
+  'économie': 'economy',
+  'wirtschaft': 'economy',
+
+  'scienza': 'science',
+  'science': 'science',
+  'ciencia': 'science',
+  'wissenschaft': 'science',
+
+  'arte cultura': 'art',
+  'art culture': 'art',
+  'kunst kultur': 'art',
+};
+
+// La strada a ritroso serve solo al ponte con il mondo vecchio. Prima
+// si leggono le domande canoniche; poi gli alias espliciti. Una domanda
+// libera dell'utente non viene MAI classificata per somiglianza.
 const A_RITROSO = (() => {
   const m = {};
   for (const [topic, lingue] of Object.entries(DOMANDE)) {
     for (const q of Object.values(lingue)) {
-      const k = String(q || '').trim().toLowerCase();
+      const k = chiaveQuery(q);
       if (k && !m[k]) m[k] = topic;
     }
+  }
+  for (const [q, topic] of Object.entries(ALIAS_QUERY_LEGACY)) {
+    const k = chiaveQuery(q);
+    if (k && !m[k]) m[k] = topic;
   }
   return m;
 })();
 
-/** Il topic di una domanda, se e' esattamente una delle nostre. */
+/** Il topic di una domanda nostra; una domanda libera resta senza topic. */
 export function topicDallaDomanda(query) {
-  return A_RITROSO[String(query || '').trim().toLowerCase()] || '';
+  return A_RITROSO[chiaveQuery(query)] || '';
 }

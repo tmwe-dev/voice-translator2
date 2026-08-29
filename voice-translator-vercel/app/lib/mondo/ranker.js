@@ -3,25 +3,13 @@
 //
 // Documento di Luca, capitoli 16-19. Un solo Ranker, e una sola cosa da
 // fare: dire QUANTO E' RILEVANTE ogni contenuto. In quale ordine
-// mostrarlo non e' affar suo — quella e' la Regia (capitolo 20), e
-// tenerli separati e' la regola 10.
+// mostrarlo non e' affar suo — quella e' la Regia.
 //
-// Perche' e' importante che siano due: rilevanza e sequenza rispondono
-// a domande diverse. «Questo pezzo vale» e «questo pezzo va bene QUI,
-// dopo altri due della stessa fonte» non si possono decidere insieme
-// senza che una delle due vinca sempre. Oggi sono mischiate, ed e' il
-// motivo per cui aggiustare la varieta significa sempre rovinare la
-// pertinenza.
-//
-// TRE COSE CHE QUESTO FILE FA E CHE VANNO LETTE COME PROMESSE:
-//   · se hai scritto una domanda, quella comanda (capitolo 19). La
-//     personalizzazione non cambia la domanda dell'utente. Mai.
-//   · ogni contenuto esce con almeno un MOTIVO (capitolo 24): se non
-//     sappiamo dire perche' lo mostriamo, non lo mostriamo.
-//   · qualita e popolarita sono due numeri diversi (capitolo 28). Una
-//     cosa molto cliccata non e' automaticamente migliore.
-//
-// Import: solo file puri di questa cartella.
+// b.578 — la pertinenza non puo essere ASCII in un prodotto mondiale.
+// Prima il tokenizer accettava solo a-z/0-9: cinese, giapponese, arabo,
+// coreano, cirillico e molte altre scritture diventavano silenziosamente
+// zero. Ora la normalizzazione e' Unicode, usa Intl.Segmenter quando il
+// runtime lo offre e conserva un fallback Unicode puro.
 // ═══════════════════════════════════════════════════════════════
 import { PESI_RANKING, FRESCHEZZA } from './rankingConfig.js';
 import { ammessi } from './models.js';
@@ -40,22 +28,60 @@ export function freschezza(c, adesso = Date.now()) {
   return 0.5 ** (ore / mezza);
 }
 
-/** Le parole di una domanda, senza le corte che non distinguono niente. */
+/** Forma confrontabile senza perdere lettere non latine. */
+function testoNormalizzato(q) {
+  return String(q || '')
+    .toLowerCase()
+    .normalize('NFKD')
+    .replace(/\p{M}+/gu, '')
+    .trim();
+}
+
+/**
+ * Le parole di una domanda in QUALUNQUE scrittura.
+ * Intl.Segmenter gestisce anche lingue senza spazi fra le parole; il
+ * fallback conserva almeno ogni sequenza di lettere/numeri Unicode.
+ */
 function parole(q) {
-  return String(q || '').toLowerCase()
-    .normalize('NFD').replace(/[̀-ͯ]/g, '')
-    .split(/[^a-z0-9]+/).filter((w) => w.length >= 3);
+  const testo = testoNormalizzato(q);
+  if (!testo) return [];
+
+  try {
+    if (typeof Intl !== 'undefined' && typeof Intl.Segmenter === 'function') {
+      const segmenter = new Intl.Segmenter(undefined, { granularity: 'word' });
+      const fuori = [];
+      for (const pezzo of segmenter.segment(testo)) {
+        if (!pezzo.isWordLike) continue;
+        const w = String(pezzo.segment || '').trim();
+        if (!w || !/[\p{L}\p{N}]/u.test(w)) continue;
+        // Le parole latine molto corte restano rumore come prima; per
+        // ideogrammi e altre scritture due caratteri possono gia essere
+        // una parola intera e non vanno buttati.
+        if (w.length >= 3 || /[^\x00-\x7F]/.test(w)) fuori.push(w);
+      }
+      if (fuori.length) return fuori;
+    }
+  } catch { /* runtime senza Segmenter completo: usa il fallback sotto */ }
+
+  return testo
+    .split(/[^\p{L}\p{N}]+/u)
+    .filter((w) => w && (w.length >= 3 || /[^\x00-\x7F]/.test(w)));
 }
 
 /**
  * Da 0 a 1: quanto questo contenuto risponde alla domanda scritta.
- * Titolo e sintesi, niente di piu: se una notizia parla di Tom Cruise
- * lo dice nel titolo.
+ * Prima prova la frase intera normalizzata (fondamentale per CJK), poi
+ * confronta le parole segmentate. La domanda esplicita resta la priorita.
  */
 export function pertinenza(c, query) {
-  const cerca = parole(query);
+  const domanda = testoNormalizzato(query);
+  if (!domanda) return 0;
+  const corpo = testoNormalizzato(`${c?.title || ''} ${c?.summary || ''}`);
+  if (domanda.length >= 2 && corpo.includes(domanda)) return 1;
+
+  const cerca = parole(domanda);
   if (!cerca.length) return 0;
-  const dentro = new Set(parole(`${c?.title || ''} ${c?.summary || ''}`));
+  const dentro = new Set(parole(corpo));
   let presi = 0;
   for (const w of cerca) if (dentro.has(w)) presi += 1;
   return presi / cerca.length;
@@ -65,13 +91,12 @@ export function pertinenza(c, query) {
 export function qualita(c) {
   if (!c) return 0;
   let punti = 0;
-  // piu testate raccontano la stessa cosa = piu e' verificata
   const fonti = Array.isArray(c.sources) ? c.sources.length : 0;
   punti += Math.min(0.35, fonti * 0.12);
-  if (c.summary && c.summary.length > 80) punti += 0.2;   // ha davvero qualcosa da dire
+  if (c.summary && c.summary.length > 80) punti += 0.2;
   if (c.image) punti += 0.1;
-  if (c.publishedAt) punti += 0.15;                        // una data valida
-  if (c.sourceId) punti += 0.1;                            // si sa da dove viene
+  if (c.publishedAt) punti += 0.15;
+  if (c.sourceId) punti += 0.1;
   if (Number(c.qualityScore) > 0) punti += Math.min(0.1, c.qualityScore / 100);
   return Math.min(1, punti);
 }
@@ -85,8 +110,6 @@ function daiTuoiInteressi(c, profile) {
     for (const suo of c.topics) {
       if (!discende(suo, mio)) continue;
       const tipo = p.followedTopics.includes(mio) ? 'followed_topic' : 'declared_interest';
-      // esatto vale piu di «discende da»: chi segue formula1 e' piu
-      // contento di un pezzo di formula1 che di uno di sport generico
       return { punteggio: suo === mio ? 1 : 0.7, motivi: [motivo(tipo, mio)] };
     }
   }
@@ -111,11 +134,7 @@ function daCiòCheFai(c, memory, adesso) {
 
 /**
  * IL RANKER. Riceve tutto e torna [{ content, score, reasons }].
- *
- * `exploration` non e' rumore: e' il posto, dentro il punteggio, dove
- * abita cio che non hai chiesto. Senza una voce sua verrebbe sempre
- * schiacciato da cio che gia ti piace — ed e' esattamente come nasce
- * una bolla (capitolo 23).
+ * Prima elimina cio che non puo essere mostrato; poi assegna il valore.
  */
 export function rankMondoCandidates({
   candidates = [],
@@ -129,7 +148,6 @@ export function rankMondoCandidates({
   const query = session?.currentQuery || '';
   const personalizza = settings?.personalization !== false;
 
-  // capitolo 18: prima si TOGLIE, poi si ordina
   const puliti = ammessi(candidates, {
     hidden: session?.hidden || [],
     blockedSources: p.blockedSources,
@@ -146,7 +164,6 @@ export function rankMondoCandidates({
     motivi.push(...int.motivi, ...aff.motivi);
 
     const collettivo = Math.max(0, Math.min(1, (Number(c.collectiveScore) || 0) / 50));
-    // esplorazione: vale per cio che NON tocca i tuoi interessi
     const esplora = int.punteggio > 0 ? 0 : 1;
     if (esplora && !motivi.length && c.topics?.length) motivi.push(motivo('discovery', c.topics[0]));
 
@@ -159,14 +176,7 @@ export function rankMondoCandidates({
       PESI_RANKING.collective * collettivo +
       PESI_RANKING.exploration * esplora;
 
-    // ═══ CAPITOLO 19 — LA DOMANDA SCRITTA COMANDA ═══
-    // «Se l'utente cerca Tom Cruise, i primi risultati devono parlare di
-    // Tom Cruise. La personalizzazione non deve cambiare la domanda
-    // dell'utente. Sempre.»
-    // Non e' un peso piu alto: e' un GRADINO. Con un peso, dieci punti
-    // di affinita su un altro argomento potrebbero comunque scavalcare
-    // la risposta giusta — ed e' esattamente il modo in cui i motori
-    // «intelligenti» diventano irritanti.
+    // La domanda scritta comanda: non e' solo un peso, e' un gradino.
     if (query) {
       if (rilevanza > 0) punteggio += 1;
       else punteggio *= 0.35;

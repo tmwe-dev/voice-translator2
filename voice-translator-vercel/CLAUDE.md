@@ -267,6 +267,16 @@ perche il working tree lo conteneva ancora.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.578** (push #863) — COERENZA DEL MOTORE MONDO, senza modifiche all'interfaccia.
+
+  Quattro difetti reali emersi dall'audit del percorso ricerca → normalizzazione → ranking → regia → feed:
+  ① le query rapide legacy non coincidevano sempre con le domande canoniche del motore nuovo; ora gli alias entrano negli stessi ID canonici senza indovinare le ricerche libere.
+  ② il Ranker spezzava il testo con un tokenizer ASCII; ora la pertinenza della domanda esplicita e' Unicode, con `Intl.Segmenter` e fallback Unicode.
+  ③ i contenuti nascosti partecipavano a Ranker/Director e venivano tolti solo alla fine; ora vengono eliminati prima della Regia.
+  ④ `ponte.js` prometteva le stesse schede ma creava copie con `{...s}`; ora annota e restituisce le stesse istanze, preservando la guardia asincrona dei segnali.
+
+  PROVE: `mondo-coerenza-b578.test.js` 7/7, `mondo-fase5-b577` 17/17, `mondo-ranker-b576` 27/27, lint 0 errori. La suite completa resta rossa solo per i quattro test SubtleCrypto gia' rossi su `main` (PeepOff x3, Taxi x1): nessun nuovo fallimento Mondo.
+
 - Versione: **b.577** (push #862) — FASE 5: IL MOTORE NUOVO E' COLLEGATO,
   GLI ARTICOLI CI PASSANO DAVVERO. I video no: e' la FASE 6, e le fasi
   non si saltano.
