@@ -238,23 +238,39 @@ describe('b.575 — un solo modello di contenuto', () => {
   });
 });
 
-describe('b.575 — FASE 1 non tocca l interfaccia', () => {
-  it('nessun componente usa ancora i modelli nuovi: si costruisce, non si sostituisce', () => {
+// ═══ b.577 — LA REGOLA CAMBIA CON LA FASE, E VA RISCRITTA ═══
+// In FASE 1 la regola era «nessun componente tocca i modelli nuovi».
+// La FASE 5 li collega: quella prova ha finito il suo lavoro e
+// lasciarla in piedi vorrebbe dire mentire su cosa stiamo facendo.
+// Al suo posto la regola che vale ADESSO, ed e' piu importante di
+// quella di prima: si entra da UNA PORTA SOLA. Se ogni componente
+// potesse pescare dentro `lib/mondo/` a piacere, fra un mese avremmo
+// di nuovo dieci strade per la stessa decisione — cioe' esattamente il
+// sacco da cui stiamo uscendo.
+describe('b.577 — FASE 5: si entra da una porta sola', () => {
+  it('i componenti conoscono il ponte, e nient altro del motore', () => {
     const dir = join(process.cwd(), 'app/components');
     const files = readdirSync(dir).filter((f) => f.endsWith('.js'));
     for (const f of files) {
       const s = readFileSync(join(dir, f), 'utf8');
-      expect(s, `${f} collega gia i modelli nuovi: FASE 1 dice di non toccare la UI`)
-        .not.toMatch(/from '\.\.\/lib\/mondo\//);
+      const dentro = [...s.matchAll(/from '[^']*lib\/mondo\/([a-zA-Z]+)\.js'/g)].map((m) => m[1]);
+      for (const modulo of dentro) {
+        expect(['ponte', 'rankingConfig'], `${f} entra dal modulo «${modulo}»: si passa dal ponte`)
+          .toContain(modulo);
+      }
     }
   });
 
-  it('i modelli restano puri: niente che il browser non possa caricare', () => {
+  it('il motore resta puro; solo il ponte conosce le due rive', () => {
     const base = join(process.cwd(), 'app/lib/mondo');
     for (const f of readdirSync(base)) {
       const s = readFileSync(join(base, f), 'utf8');
       const imports = [...s.matchAll(/^import .* from '([^']+)'/gm)].map((m) => m[1]);
       for (const i of imports) {
+        if (f === 'ponte.js') {
+          expect(i, 'nemmeno il ponte esce dalle librerie pure').toMatch(/^\.\.?\//);
+          continue;
+        }
         expect(i, `${f} importa qualcosa fuori da lib/mondo`).toMatch(/^\.\//);
       }
     }

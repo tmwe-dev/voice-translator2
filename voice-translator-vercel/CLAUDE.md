@@ -267,6 +267,38 @@ perche il working tree lo conteneva ancora.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.577** (push #862) — FASE 5: IL MOTORE NUOVO E' COLLEGATO,
+  GLI ARTICOLI CI PASSANO DAVVERO. I video no: e' la FASE 6, e le fasi
+  non si saltano.
+
+  `app/lib/mondo/ponte.js` e' l'unico punto in cui il motore nuovo tocca
+  il mondo vecchio, ed e' fatto apposta perche' sia l'unico: dentro
+  `lib/mondo/` nessuno sa che esistono le `prefs`, fuori nessuno sa che
+  esiste un `ContentCandidate`. Due promesse:
+  · **escono le stesse schede che sono entrate**, in altro ordine — le
+    schede VERE, non oggetti nuovi: il motore ordina, non riscrive;
+  · **se si rompe, il giornale resta.** Qualunque cosa vada storta si
+    torna alla lista di prima. E' la lezione di oggi, pagata due volte.
+
+  Il «perche' lo vedi» parla la lingua di prima (`perCercato`,
+  `perSeme`, `perMondo`, `perSorpresa`): FASE 5 non tocca un pixel.
+  E `confronta()` dice col numeri cosa e' cambiato rispetto al vecchio
+  ordinamento — quante schede si sono spostate, e se qualcuna e' sparita
+  o comparsa dal nulla (cap. 40).
+
+  **Difetto trovato scrivendolo, e vale la pena ricordarlo:** il ponte
+  ha una rete di sicurezza che rimette in coda le schede che il motore
+  non ha trattato. Quella rete ripescava anche **le nascoste**, che
+  rientravano dal fondo della pagina. Una rete di sicurezza che non sa
+  cosa e' stato buttato via di proposito non e' una rete: e' il secchio
+  della spazzatura rovesciato all'indietro. Il nascosto e' l'unica cosa
+  che esce davvero (regola 9).
+
+  La guardia dei modelli e' stata **riscritta**, non allargata: in FASE
+  1 diceva «nessun componente tocca i modelli nuovi»; adesso dice «si
+  entra da una porta sola». Lasciare in piedi la vecchia avrebbe voluto
+  dire mentire su cosa stiamo facendo.
+
 - Versione: **b.576** (push #861) — FASI 2, 3 E 4: NORMALIZZAZIONE,
   RANKER, REGIA. Sempre scollegate: il documento dice «nessun cambio
   UI» fino alla FASE 5, e il test degli orfani lo verifica.

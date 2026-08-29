@@ -28,6 +28,11 @@ import { giraBacheca, nascondi, senzaNascosti, bachecaDi, spostaInBacheca, togli
 import { soloRecenti, quantiFreschi } from '../lib/topics/freschezza.js'; // b.557 — le notizie sono di oggi; b.559 — da un file PURO, che il browser puo leggere
 import { vistiDiRecente, primaIlNuovo } from '../lib/visti.js'; // b.558 — non si rivede Beethoven ad ogni ingresso
 import { componi, annota } from '../lib/regia.js';              // b.561 — la regia del carosello
+// b.577 — FASE 5 del documento di Mondo: gli ARTICOLI passano dal
+// motore nuovo (un profilo, un ranking, una regia). I video restano
+// dove sono: e' la FASE 6, e le fasi non si saltano.
+import { ordinaArticoli } from '../lib/mondo/ponte.js';
+import { MOTORE_NUOVO_ARTICOLI } from '../lib/mondo/rankingConfig.js';
 import { giornaleSalvato, salvaGiornale } from '../lib/giornaleSalvato.js'; // b.564 — l'apertura istantanea
 import { daChiedere, semiDaInteressi } from '../lib/accoglienza.js';  // b.562 — la prima domanda
 import { ramiDelGiorno, mescolaSemi } from '../lib/topics/rami.js';
@@ -778,9 +783,17 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
               .map((a) => ({ ...a, seme: a.seme || pulita, lingua: a.lingua || linguaAlt || lingua }));
             if (primi.length) {
               const gusti = prefsRef.current?.gusti || {};
-              setArgomenti((prima) => (accoda || dietro
-                ? [...(prima || []), ...componi([], primi, { gusti, miaLingua: lingua, quantaRichiesta: 0 })]
-                : componi(primi, [], { gusti, miaLingua: lingua })));
+              const opz = { prefs: prefsRef.current, miaLingua: lingua, query: pulita };
+              setArgomenti((prima) => {
+                if (MOTORE_NUOVO_ARTICOLI) {
+                  return (accoda || dietro)
+                    ? [...(prima || []), ...ordinaArticoli(primi, opz)]
+                    : ordinaArticoli(primi, opz);
+                }
+                return (accoda || dietro)
+                  ? [...(prima || []), ...componi([], primi, { gusti, miaLingua: lingua, quantaRichiesta: 0 })]
+                  : componi(primi, [], { gusti, miaLingua: lingua });
+              });
             }
             return;
           }
@@ -851,6 +864,16 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
         // regia lavora solo sulla coda nuova.
         setArgomenti((prima) => {
           const gusti = prefsRef.current?.gusti || {};
+          // b.577 — FASE 5. Stesse schede, ordine deciso dal motore
+          // nuovo: Ranker (quanto vale) e Regia (in che ordine),
+          // separati come vuole il documento. La testa non si tocca mai
+          // quando si accoda — chi sta guardando non deve vedersi
+          // spostare niente sotto il dito (regola di b.552).
+          if (MOTORE_NUOVO_ARTICOLI) {
+            const opz = { prefs: prefsRef.current, miaLingua: lingua, query: pulita };
+            if (!accoda) return ordinaArticoli(puliti, opz);
+            return [...(prima || []), ...ordinaArticoli(nuovi, opz)];
+          }
           if (!accoda) return componi(puliti, [], { gusti, miaLingua: lingua });
           const testa = prima || [];
           return [...testa, ...componi([], nuovi, { gusti, miaLingua: lingua, quantaRichiesta: 0 })];

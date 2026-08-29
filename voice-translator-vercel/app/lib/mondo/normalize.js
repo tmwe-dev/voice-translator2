@@ -1,7 +1,3 @@
-// CANTIERE — collegato alla FASE 5 del documento di Mondo (b.576).
-// Finche' quella fase non arriva questo file esiste e non lo chiama
-// ancora nessuno: e' voluto, il documento dice «nessun cambio UI».
-// Quando verra collegato, questa riga se ne va con la fase.
 // ═══════════════════════════════════════════════════════════════
 // FASE 2 — TUTTO DIVENTA UN CANDIDATO (b.576)
 //

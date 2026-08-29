@@ -1,7 +1,3 @@
-// CANTIERE — collegato alla FASE 5 del documento di Mondo (b.575).
-// Finche' quella fase non arriva questo file esiste e non lo chiama
-// ancora nessuno: e' voluto, il documento dice «nessun cambio UI».
-// Quando verra collegato, questa riga se ne va con la fase.
 // ═══════════════════════════════════════════════════════════════
 // LA TASSONOMIA — I NOMI VERI DELLE COSE (b.575, FASE 1)
 //

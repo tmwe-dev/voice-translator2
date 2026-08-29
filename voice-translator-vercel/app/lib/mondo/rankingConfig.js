@@ -1,7 +1,3 @@
-// CANTIERE — collegato alla FASE 5 del documento di Mondo (b.576).
-// Finche' quella fase non arriva questo file esiste e non lo chiama
-// ancora nessuno: e' voluto, il documento dice «nessun cambio UI».
-// Quando verra collegato, questa riga se ne va con la fase.
 // ═══════════════════════════════════════════════════════════════
 // I PESI DEL RANKING, IN UN POSTO SOLO (b.576, FASE 3)
 //
@@ -55,3 +51,12 @@ export const REGIA = {
 // Capitolo 19, e vale piu di tutti i pesi messi insieme: se hai
 // scritto una domanda, la risposta viene prima della personalizzazione.
 export const QUERY_ESPLICITA_COMANDA = true;
+
+// ═══ FASE 5 — L'INTERRUTTORE ═══
+// Il documento (cap. 40) vuole la migrazione a pezzi e il vecchio
+// tenuto accanto per confronto. Questo e' il pezzo: gli ARTICOLI
+// passano dal motore nuovo, i video no (quella e' la FASE 6).
+// Sta qui e non dentro un componente perche' tornare indietro deve
+// costare una riga e nessun ragionamento — la sera in cui serve un
+// rollback non e' la sera in cui si legge il codice.
+export const MOTORE_NUOVO_ARTICOLI = true;

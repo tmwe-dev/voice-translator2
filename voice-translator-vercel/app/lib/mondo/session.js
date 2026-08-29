@@ -1,7 +1,8 @@
-// CANTIERE — collegato alla FASE 5 del documento di Mondo (b.575).
-// Finche' quella fase non arriva questo file esiste e non lo chiama
-// ancora nessuno: e' voluto, il documento dice «nessun cambio UI».
-// Quando verra collegato, questa riga se ne va con la fase.
+// CANTIERE — collegato alla FASE 9 del documento di Mondo (b.577).
+// Lo stato di sessione esce dalle preferenze quando escono anche
+// bacheca e nascosti: prima sarebbe meta lavoro, e meta lavoro qui
+// vuol dire due fonti di verita — cioe' il difetto che stiamo
+// togliendo. Quando la fase arriva, questa riga se ne va con lei.
 // ═══════════════════════════════════════════════════════════════
 // SESSION — SOLO QUELLO CHE STA SUCCEDENDO ADESSO (b.575, FASE 1)
 //

@@ -1,7 +1,3 @@
-// CANTIERE — collegato alla FASE 5 del documento di Mondo (b.575).
-// Finche' quella fase non arriva questo file esiste e non lo chiama
-// ancora nessuno: e' voluto, il documento dice «nessun cambio UI».
-// Quando verra collegato, questa riga se ne va con la fase.
 // ═══════════════════════════════════════════════════════════════
 // LE PAROLE PER CERCARE, SEPARATE DALLE PAROLE PER LEGGERE
 // (b.575, FASE 1)
@@ -105,4 +101,25 @@ export function domandePer(topics, lingua = 'en') {
     fuori.push({ topic: t, query: q });
   }
   return fuori;
+}
+
+// ═══ b.577 — LA STRADA A RITROSO ═══
+// Le schede portano con se il SEME che le ha prodotte: la domanda
+// vera, in lingua. Da li si risale al topic senza indovinare niente —
+// e' la stessa tabella letta al contrario, quindi o e' esatta o dice
+// «non lo so», che e' cio che serve (FASE 5).
+const A_RITROSO = (() => {
+  const m = {};
+  for (const [topic, lingue] of Object.entries(DOMANDE)) {
+    for (const q of Object.values(lingue)) {
+      const k = String(q || '').trim().toLowerCase();
+      if (k && !m[k]) m[k] = topic;
+    }
+  }
+  return m;
+})();
+
+/** Il topic di una domanda, se e' esattamente una delle nostre. */
+export function topicDallaDomanda(query) {
+  return A_RITROSO[String(query || '').trim().toLowerCase()] || '';
 }
