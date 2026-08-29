@@ -52,7 +52,7 @@ export const DOMANDE = {
   space:       { en: 'space astronomy', it: 'spazio astronomia', es: 'espacio astronomía', fr: 'espace astronomie', de: 'weltraum astronomie', pt: 'espaço astronomia' },
   environment: { en: 'environment climate', it: 'ambiente clima', es: 'medio ambiente clima', fr: 'environnement climat', de: 'umwelt klima', pt: 'meio ambiente clima' },
   nature:      { en: 'nature planet', it: 'natura pianeta', es: 'naturaleza planeta', fr: 'nature planète', de: 'natur planet', pt: 'natureza planeta' },
-  animals:     { en: 'animals wildlife', it: 'animali fauna', es: 'animales fauna', fr: 'animaux fauna', de: 'tiere wildtiere', pt: 'animais fauna' },
+  animals:     { en: 'animals wildlife', it: 'animali fauna', es: 'animales fauna', fr: 'animaux faune', de: 'tiere wildtiere', pt: 'animais fauna' },
   history:     { en: 'history stories past', it: 'storia racconti', es: 'historia relatos', fr: 'histoire récits', de: 'geschichte', pt: 'história' },
 
   culture:     { en: 'culture entertainment', it: 'cultura spettacolo', es: 'cultura espectáculo', fr: 'culture spectacle', de: 'kultur unterhaltung', pt: 'cultura espetáculo' },
