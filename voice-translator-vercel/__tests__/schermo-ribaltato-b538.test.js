@@ -45,7 +45,7 @@ describe('b.538 → b.580 — ribaltare lo schermo non crea due slide attive', (
   });
 });
 
-describe('b.580 — fullscreen dove esiste ancora un player video', () => {
+describe('b.580 — fullscreen dove esiste un player video', () => {
   it('Feed e SchedaArgomento consentono fullscreen al player ufficiale', () => {
     for (const nome of ['FeedNotizieMondo', 'SchedaArgomento']) {
       const src = leggi(`app/components/${nome}.js`);
@@ -54,9 +54,13 @@ describe('b.580 — fullscreen dove esiste ancora un player video', () => {
     }
   });
 
-  it('FinestraSulMondo non incorpora piu un video: mostra evento e fonti', () => {
+  it('FinestraSulMondo incorpora il video solo nella lettura aperta e lascia disponibili le fonti', () => {
     const f = leggi('app/components/FinestraSulMondo.js');
-    expect(f).not.toMatch(/<iframe|youtube-nocookie|\/api\/topics\/video/);
+    expect(f).toMatch(/if \(!aperta\?\.title\) return undefined;/);
+    expect(f).toMatch(/\/api\/topics\/video\?q=/);
+    expect(f).toMatch(/youtube-nocookie\.com\/embed/);
+    expect(f).toMatch(/allowFullScreen/);
+    expect(f).toMatch(/settings\.autoplayVideo \? '\?autoplay=1' : ''/);
     expect(f).toMatch(/\(aperta\.sources \|\| \[\]\)\.slice\(0, 6\)/);
   });
 });
