@@ -30,7 +30,7 @@ const TESTI = {
   es: { recovering: 'Reconectando', updated: 'actualizado', new: 'nuevos', important: 'importantes', followed: 'Sigo', community: 'Comunidad', sources: 'fuentes', confirmed: 'confirmado', developing: 'en desarrollo', emerging: 'por verificar', since: 'Desde que te fuiste', none: 'Ningún evento nuevo' },
   fr: { recovering: 'Reconnexion', updated: 'mis à jour', new: 'nouveaux', important: 'importants', followed: 'Suivis', community: 'Communauté', sources: 'sources', confirmed: 'confirmé', developing: 'en cours', emerging: 'à vérifier', since: 'Depuis votre absence', none: 'Aucun nouvel événement' },
   de: { recovering: 'Verbindung wird wiederhergestellt', updated: 'aktualisiert', new: 'neu', important: 'wichtig', followed: 'Folge ich', community: 'Community', sources: 'Quellen', confirmed: 'bestätigt', developing: 'in Entwicklung', emerging: 'zu prüfen', since: 'Seit du weg warst', none: 'Keine neuen Ereignisse' },
-  pt: { recovering: 'Reconectando', updated: 'atualizado', new: 'novos', important: 'importantes', followed: 'Seguindo', community: 'Comunidade', sources: 'fontes', confirmed: 'confirmado', developing: 'em desenvolvimento', emerging: 'a verificar', since: 'Desde que você saiu', none: 'Nenhum evento novo' },
+  pt: { recovering: 'Reconectando', updated: 'atualizado', new: 'novos', important: 'importantes', followed: 'Seguindo', community: 'Comunidade', sources: 'fontes', confirmed: 'confirmado', developing: 'em desenvolvimento', emerging: 'a verificar', since: 'Desde que você saiu', none: 'Nenhum novo evento' },
 };
 
 function diz(lingua) {
@@ -92,7 +92,7 @@ export default function FinestraSulMondo({ C, L, lingua, prefs, attiva, paese, o
   useEffect(() => { occupatoRef.current = occupato; }, [occupato]);
 
   const visibileNelLayer = useCallback((e) => {
-    if (e?.important) return true; // emergenze globali sempre visibili
+    if (e?.important) return true;
     if (layer === 'community') return false;
     if (layer === 'following') return matchesFollowed(e, profile);
     return true;
@@ -129,8 +129,6 @@ export default function FinestraSulMondo({ C, L, lingua, prefs, attiva, paese, o
     if (!cartelloRef.current && !apertaRef.current && !aspettandoRef.current && !occupatoRef.current) avanza();
   }, [avanza, visibileNelLayer]);
 
-  // Se il layer cambia, la coda viene ricostruita dagli eventi gia noti:
-  // nessuna nuova ricerca, cambia soltanto cosa stiamo guardando.
   useEffect(() => {
     if (!attiva) return;
     try { window.localStorage.setItem(KEY_LAYER, layer); }
@@ -139,13 +137,9 @@ export default function FinestraSulMondo({ C, L, lingua, prefs, attiva, paese, o
     shownRef.current = new Set(cartello ? [cartello.id] : []);
     const candidati = events.filter(visibileNelLayer);
     accoda(candidati);
-    // Il rebuild deve avvenire al gesto sul layer, non a ogni evento che
-    // arriva: gli eventi nuovi passano gia da accoda() nel listener SSE.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [layer]);
 
-  // Il globo conserva esattamente il renderer/animazioni esistenti: gli
-  // passiamo solo il significato dei puntini da mostrare in quel momento.
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const following = events.filter((e) => matchesFollowed(e, profile));
@@ -209,7 +203,6 @@ export default function FinestraSulMondo({ C, L, lingua, prefs, attiva, paese, o
     });
     source.onerror = () => {
       if (!closed) setStatus((s) => ({ ...s, state: 'recovering', when: Date.now() }));
-      // EventSource si riconnette da solo; nessun timer di polling qui.
     };
 
     return () => {
@@ -220,7 +213,6 @@ export default function FinestraSulMondo({ C, L, lingua, prefs, attiva, paese, o
     };
   }, [attiva, settings.breaking, lingua, topicsKey, countriesKey, accoda, topics, countries]);
 
-  // Se il browser aveva gia il permesso, sincronizza senza aprire popup.
   useEffect(() => {
     if (!attiva || settings.breaking === 'off' || !pushDisponibile()) return;
     const preferences = { topics, countries, breaking: settings.breaking, lang: lingua };
@@ -252,20 +244,19 @@ export default function FinestraSulMondo({ C, L, lingua, prefs, attiva, paese, o
 
   return (
     <>
-      {/* STATO DEL RADAR: il silenzio non puo piu sembrare un mondo calmo. */}
       <div style={{ position: 'absolute', top: 78, left: 0, right: 0, zIndex: 58, pointerEvents: 'none', display: 'flex', justifyContent: 'center' }}>
         <div style={{ pointerEvents: 'auto', display: 'flex', alignItems: 'center', gap: 6, maxWidth: '94%', padding: '5px 7px',
           borderRadius: 999, background: 'rgba(6,9,18,0.70)', border: `1px solid ${C.cardBorder}`, fontFamily: FONT,
           boxShadow: '0 8px 24px rgba(0,0,0,.20)' }}>
           <span style={{ width: 7, height: 7, borderRadius: 9, flexShrink: 0, background: live ? '#2EE59D' : '#F59E0B', boxShadow: live ? '0 0 9px #2EE59D' : 'none' }} />
-          <span style={{ fontSize: 10.5, fontWeight: 600, color: C.textPrimary, whiteSpace: 'nowrap' }}>
+          <span style={{ fontSize: 10.5, fontWeight: 500, color: C.textPrimary, whiteSpace: 'nowrap' }}>
             {live ? 'LIVE' : T.recovering}
             {live && ageSeconds !== null ? ` · ${T.updated} ${ageSeconds}s` : ''}
           </span>
 
           {catchup.length > 0 && (
             <button onClick={() => setCatchupOpen(true)} style={{ border: 'none', cursor: 'pointer', borderRadius: 999, padding: '4px 7px',
-              background: `${C.accent}18`, color: C.accent, fontSize: 10, fontWeight: 600, fontFamily: FONT, whiteSpace: 'nowrap' }}>
+              background: `${C.accent}18`, color: C.accent, fontSize: 10, fontWeight: 500, fontFamily: FONT, whiteSpace: 'nowrap' }}>
               {catchup.length} {T.new}{importantiCatchup ? ` · ${importantiCatchup} ${T.important}` : ''}
             </button>
           )}
@@ -278,7 +269,7 @@ export default function FinestraSulMondo({ C, L, lingua, prefs, attiva, paese, o
             <button key={id} onClick={() => { vibrate(6); setLayer(id); }} aria-pressed={layer === id}
               style={{ width: 30, height: 30, borderRadius: 999, padding: 0, border: `1px solid ${layer === id ? C.accent + '66' : C.cardBorder}`,
                 background: layer === id ? `${C.accent}18` : 'transparent', cursor: 'pointer', color: layer === id ? C.accent : C.textMuted,
-                fontSize: id === 'live' ? 8 : 0, fontWeight: 700, fontFamily: FONT, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                fontSize: id === 'live' ? 8 : 0, fontWeight: 500, fontFamily: FONT, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
               title={label} aria-label={label}>
               {id === 'live' ? 'LIVE' : <Icon name={id === 'following' ? 'star' : 'chat'} size={13} color={layer === id ? C.accent : C.textMuted} />}
             </button>
@@ -308,7 +299,7 @@ export default function FinestraSulMondo({ C, L, lingua, prefs, attiva, paese, o
               </span>
             )}
             <button onClick={() => { vibrate(8); setAperta(cartello); }} style={{ flex: 1, minWidth: 0, textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', fontFamily: FONT, padding: 0, minHeight: 44 }}>
-              <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 10, fontWeight: 600, letterSpacing: 1, textTransform: 'uppercase', color: cartello.important ? '#ff806d' : C.accent }}>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 10, fontWeight: 500, letterSpacing: 1, textTransform: 'uppercase', color: cartello.important ? '#ff806d' : C.accent }}>
                 {bandiera && <span aria-hidden="true" style={{ fontSize: 12 }}>{bandiera}</span>}
                 {L('breakingWord')} · {cartello.sourceCount || 1} {T.sources} · {statoEvento}
               </span>
@@ -331,7 +322,7 @@ export default function FinestraSulMondo({ C, L, lingua, prefs, attiva, paese, o
               style={{ width: 44, height: 44, borderRadius: 12, cursor: 'pointer', background: C.card, border: `1px solid ${C.cardBorder}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <Icon name="back" size={18} color={C.textMuted} />
             </button>
-            <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, fontWeight: 600, letterSpacing: 1.2, textTransform: 'uppercase', color: aperta.important ? '#ff806d' : C.accent }}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, fontWeight: 500, letterSpacing: 1.2, textTransform: 'uppercase', color: aperta.important ? '#ff806d' : C.accent }}>
               {bandieraPaese((aperta.countries || [aperta.country]).filter(Boolean)[0])} {L('breakingWord')} · {aperta.sourceCount || 1} {T.sources} · {T[aperta.status] || T.emerging}
             </span>
           </header>
@@ -356,7 +347,7 @@ export default function FinestraSulMondo({ C, L, lingua, prefs, attiva, paese, o
           onClick={() => setCatchupOpen(false)}>
           <div onClick={(e) => e.stopPropagation()} style={{ width: '100%', maxWidth: 440, maxHeight: '72vh', overflowY: 'auto', background: C.card, border: `1px solid ${C.cardBorder}`, borderRadius: 18, padding: 14, backdropFilter: 'blur(22px)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-              <div style={{ flex: 1, fontSize: 14, fontWeight: 600, color: C.textPrimary }}>{T.since}</div>
+              <div style={{ flex: 1, fontSize: 14, fontWeight: 500, color: C.textPrimary }}>{T.since}</div>
               <button onClick={() => setCatchupOpen(false)} style={{ width: 38, height: 38, border: 'none', background: 'none', cursor: 'pointer' }}><Icon name="x" size={16} color={C.textMuted} /></button>
             </div>
             {!catchup.length && <div style={{ padding: 20, color: C.textMuted, textAlign: 'center', fontSize: 13 }}>{T.none}</div>}
