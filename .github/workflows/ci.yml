@@ -58,7 +58,22 @@ jobs:
         run: npx eslint app/ middleware.js --max-warnings 200
 
       - name: Unit + integration tests
-        run: npm test
+        shell: bash
+        run: |
+          set -o pipefail
+          npm test 2>&1 | tee vitest.log
+
+      # Diagnostica soltanto: non rende verde una prova rossa. Conserva
+      # l'output di Vitest cosi un errore del cancello resta leggibile
+      # anche dai client che non espongono i log grezzi di Actions.
+      - name: Preserve Vitest log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vitest-log
+          path: voice-translator-vercel/vitest.log
+          if-no-files-found: ignore
+          retention-days: 1
 
       # b.408 — LA DOMANDA CHE NESSUNO FACEVA: si costruisce?
       # Va dopo le prove (che sono piu veloci a dire di no) e prima di
