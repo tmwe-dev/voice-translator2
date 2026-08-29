@@ -1,0 +1,120 @@
+name: temp-b579-feed-fix
+
+on:
+  push:
+    branches: [b864-pronto]
+
+permissions:
+  contents: write
+
+jobs:
+  fix-feed-opening:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: b864-pronto
+          fetch-depth: 0
+
+      - name: Corregge apertura feed e audio fuori schermo
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          def replace_once(text, old, new, label):
+              if old not in text:
+                  raise SystemExit(f'{label}: frammento non trovato')
+              if text.count(old) != 1:
+                  raise SystemExit(f'{label}: frammento non univoco ({text.count(old)})')
+              return text.replace(old, new, 1)
+
+          feed = Path('voice-translator-vercel/app/components/FeedNotizieMondo.js')
+          text = feed.read_text()
+
+          text = replace_once(
+              text,
+              "  const [indiceAttivo, setIndiceAttivo] = useState(0);\n  const [seme, setSeme] = useState('');   // b.541 — il campo dell'ultima slide",
+              "  const [indiceAttivo, setIndiceAttivo] = useState(0);\n  // ═══ b.579 — INDICE LOGICO E SLIDE VISIBILE NON SONO LA STESSA COSA ═══\n  // Se il browser conserva per un istante lo snap in fondo, indiceAttivo\n  // puo essere ancora 0 mentre gli occhi sono altrove. Il player puo\n  // esistere soltanto quando l'osservatore ha confermato che quella stessa\n  // diapositiva e davvero visibile. null = nessun video autorizzato a suonare.\n  const [indiceVisibile, setIndiceVisibile] = useState(null);\n  const [seme, setSeme] = useState('');   // b.541 — il campo dell'ultima slide",
+              'stato indiceVisibile',
+          )
+
+          text = replace_once(
+              text,
+              "      if (miglioreIdx >= 0) setIndiceAttivo((prima) => (prima === miglioreIdx ? prima : miglioreIdx));",
+              "      if (miglioreIdx >= 0) {\n        setIndiceVisibile(miglioreIdx);\n        setIndiceAttivo((prima) => (prima === miglioreIdx ? prima : miglioreIdx));\n      } else {\n        // Nessuna diapositiva di contenuto e realmente in vista (per\n        // esempio sulla slide di ricerca in fondo): nessun player suona.\n        setIndiceVisibile(null);\n      }",
+              'observer visibilita',
+          )
+
+          text = replace_once(
+              text,
+              "    setIndiceAttivo(0);\n    // b.545 — l'indice da solo non basta: senza riportare anche lo",
+              "    setIndiceVisibile(null);\n    setIndiceAttivo(0);\n    // b.545 — l'indice da solo non basta: senza riportare anche lo",
+              'reset apertura filtro',
+          )
+
+          occ = text.count('i === indiceAttivo')
+          if occ < 4:
+              raise SystemExit(f'gate player: attese almeno 4 occorrenze, trovate {occ}')
+          text = text.replace('i === indiceAttivo', 'i === indiceAttivo && i === indiceVisibile')
+
+          text = replace_once(
+              text,
+              "        WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain', scrollbarWidth: 'none',",
+              "        WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain', scrollbarWidth: 'none',\n        // b.579 — il browser non deve tenere agganciata la slide finale\n        // mentre il caricamento viene sostituito dalle vere diapositive.\n        overflowAnchor: 'none',",
+              'scroll anchoring',
+          )
+
+          text = replace_once(
+              text,
+              "        {elementi.length > 0 && onCerca && (",
+              "        {pronto && elementi.length > 0 && onCerca && (",
+              'ultima ratio solo a feed pronto',
+          )
+
+          feed.write_text(text)
+
+          test = Path('voice-translator-vercel/__tests__/feed-apertura-b579.test.js')
+          test.write_text("""// b.579 — il feed non puo mostrare il fondo mentre suona il primo video\nimport { describe, it, expect } from 'vitest';\nimport { readFileSync } from 'node:fs';\nimport { join } from 'node:path';\n\nconst feed = readFileSync(join(process.cwd(), 'app/components/FeedNotizieMondo.js'), 'utf8');\n\ndescribe('b.579 — apertura coerente del feed', () => {\n  it('separa indice logico dalla diapositiva realmente visibile', () => {\n    expect(feed).toMatch(/const \\[indiceVisibile, setIndiceVisibile\\] = useState\\(null\\)/);\n    expect(feed).toMatch(/setIndiceVisibile\\(miglioreIdx\\)/);\n    expect(feed).toMatch(/setIndiceVisibile\\(null\\)/);\n  });\n\n  it('un player autoplay esiste solo se la sua slide e anche visibile', () => {\n    expect(feed).toContain('i === indiceAttivo && i === indiceVisibile ? (');\n    expect(feed).toContain('autoplay=1&playsinline=1&enablejsapi=1');\n  });\n\n  it('la slide di ricerca finale non nasce durante la fase instabile', () => {\n    expect(feed).toContain('{pronto && elementi.length > 0 && onCerca && (');\n  });\n\n  it('disattiva lo scroll anchoring che puo trattenere il fondo', () => {\n    expect(feed).toContain(\"overflowAnchor: 'none'\");\n  });\n});\n""")
+
+          constants = Path('voice-translator-vercel/app/lib/constants.js')
+          c = constants.read_text()
+          c = replace_once(c, "export const APP_VERSION = 'b.578';", "export const APP_VERSION = 'b.579';", 'APP_VERSION')
+          c = replace_once(c, 'export const PUSH = 863;', 'export const PUSH = 864;', 'PUSH')
+          constants.write_text(c)
+
+          sw = Path('voice-translator-vercel/public/sw.js')
+          s = sw.read_text()
+          s = replace_once(s, 'const CACHE_VERSION = 863;', 'const CACHE_VERSION = 864;', 'CACHE_VERSION')
+          sw.write_text(s)
+
+          claude = Path('voice-translator-vercel/CLAUDE.md')
+          d = claude.read_text()
+          marker = '## Stato corrente (aggiornare a ogni versione)\n\n'
+          if marker not in d:
+              raise SystemExit('CLAUDE.md: Stato corrente non trovato')
+          stato = '''- Versione: **b.579** (push #864) — APERTURA FEED MONDO: niente fondo vuoto con audio fuori schermo.\n\n  Collaudo reale: all'apertura compariva la slide finale «Cosa vuoi seguire?» mentre si sentiva un pezzo del primo video. La causa era una gara fra caricamento, scroll-snap e autoplay: la slide finale nasceva prima che il feed fosse stabile e il browser poteva conservarla come snap target; intanto `indiceAttivo` restava 0 e montava il primo iframe con `autoplay=1`.\n\n  Correzione: indice logico separato da `indiceVisibile`; YouTube puo montarsi/autoplay solo se l'IntersectionObserver conferma la stessa slide realmente in vista. La slide di ricerca finale nasce solo a feed pronto e il contenitore disabilita lo scroll anchoring. Nessun cambio grafico.\n\n  PROVA: `feed-apertura-b579.test.js` verifica i quattro guardrail del difetto.\n\n'''
+          if 'Versione: **b.579** (push #864)' not in d:
+              d = d.replace(marker, marker + stato, 1)
+              claude.write_text(d)
+
+          wf = Path('.github/workflows/_temp_b579_fix.yml')
+          if wf.exists(): wf.unlink()
+          PY
+
+      - name: Test mirato
+        working-directory: voice-translator-vercel
+        run: npx vitest run __tests__/feed-apertura-b579.test.js __tests__/filtro-e-clessidra-b574.test.js __tests__/feed-passaggio-b546.test.js
+
+      - name: Lint
+        working-directory: voice-translator-vercel
+        run: npm run lint
+
+      - name: Commit correzione
+        shell: bash
+        run: |
+          git config user.name "tmwe-release-bot"
+          git config user.email "release-bot@users.noreply.github.com"
+          git add -A
+          git commit -m "b.579 — corregge apertura feed e audio fuori schermo"
+          git push origin HEAD:b864-pronto
