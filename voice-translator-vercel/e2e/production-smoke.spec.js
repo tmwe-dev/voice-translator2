@@ -147,10 +147,22 @@ test.describe('Life — le porte ci sono e sanno dire di no', () => {
   });
 
   test('e la sezione Life e raggiungibile dalla home', async ({ page }) => {
+    // Un browser nuovo non entra nella Home: per progetto vede prima la
+    // scelta del paese. Il vecchio smoke cercava quindi Life nella pagina
+    // di onboarding e falliva pur con la Home corretta. Prepariamo invece
+    // una persona che l'onboarding l'ha gia concluso, senza account e senza
+    // chiamate a pagamento: e' la condizione reale in cui la Home esiste.
+    await page.addInitScript(() => {
+      window.localStorage.setItem('vt-prefs', JSON.stringify({
+        name: 'Smoke', lang: 'en', uiLang: 'en', country: 'US',
+        avatar: '/avatars/avatar-1.webp', voice: 'nova', autoPlay: true,
+      }));
+      window.localStorage.setItem('vt-tutorial-done', '1');
+    });
     await page.goto(PROD);
     await page.waitForLoadState('networkidle');
-    // L'immagine della sezione: un riferimento stabile, che non dipende
-    // dalla lingua dell'interfaccia ne dal testo dei pulsanti.
+    // L'immagine della sezione resta un riferimento stabile, indipendente
+    // dalla lingua dell'interfaccia e dal testo dei pulsanti.
     await expect(page.locator('img[src*="sez-life"]').first()).toBeVisible({ timeout: 15000 });
   });
 });
