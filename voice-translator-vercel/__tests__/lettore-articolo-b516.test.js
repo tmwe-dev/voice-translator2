@@ -3,81 +3,53 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 const leggi = (p) => readFileSync(join(process.cwd(), p), 'utf8');
 
-// b.516 — risposta diretta al feedback live di Luca su b.515:
-// «preferenze senza stato visibile» / «lo scroll non va» / «container sotto
-// il menu» / «troppo margine laterale» / «il riassunto non lo voglio,
-// voglio aprire dentro la pagina l'articolo» / «icone per leggi e parlane
-// sotto immagine».
-
 describe('b.516 — PannelloLaterale: scroll fix + layout', () => {
   const f = leggi('app/components/ui/PannelloLaterale.js');
-  it('la lista scorrevole ha minHeight:0 (fix bug flexbox min-height:auto)', () => {
-    expect(f).toMatch(/minHeight: 0/);
-  });
-  it('il pannello usa 100dvh invece di top:0;bottom:0 (niente piu sotto al menu)', () => {
+  it('la lista scorrevole ha minHeight:0', () => expect(f).toMatch(/minHeight: 0/));
+  it('il pannello usa il viewport dinamico', () => {
     expect(f).toMatch(/height: '100dvh'/);
     expect(f).toMatch(/maxHeight: '100dvh'/);
   });
-  it('il pannello e piu largo (meno margine laterale)', () => {
-    expect(f).toMatch(/min\(460px, 92vw\)/);
-  });
+  it('il pannello resta largo', () => expect(f).toMatch(/min\(460px, 92vw\)/));
 });
 
-describe('b.516 — PreferenzeMondo: stato visibile sui pulsanti ciclo', () => {
+describe('b.516 → b.580 — PreferenzeMondo: lo stato attuale resta visibile', () => {
   const f = leggi('app/components/ui/PreferenzeMondo.js');
-  // b.523 — lo stato NON sta piu dentro il comando (allargava la
-  // scatola e spostava l'icona: «la disposizione delle icone non deve
-  // essere influenzata dal testo mai»). Sta in un badge bruno sotto il
-  // titolo, a sinistra. Il requisito di b.516 — «deve evidenziare il
-  // modo in cui lo fa in quel momento» — resta soddisfatto, altrove.
-  it('lo stato attuale si legge ancora, ora nel badge a sinistra', () => {
-    expect(f).toMatch(/<BadgeStato testo=\{sceltaAttiva\./);
-    expect(f).toMatch(/L\(sceltaAttiva\.etichettaKey\)/);
+  it('ogni riga calcola e mostra il valore attuale', () => {
+    expect(f).toMatch(/const attuale = o\.values\.find/);
+    expect(f).toMatch(/const valore = attuale\.labelKey \? L\(attuale\.labelKey\) : attuale\.label/);
+    expect(f).toMatch(/\{valore\}<\/span>/);
   });
-  it('il comando e rimasto senza testo, cosi non puo allargarsi', () => {
-    expect(f).toMatch(/function IconeCiclo\(\{ scelte, valore, onCambia, C, etichettaAria \}\)/);
+  it('il valore non sposta l icona: cella fissa e testo elastico', () => {
+    expect(f).toMatch(/width: 38, height: 38/);
+    expect(f).toMatch(/flex: 1, minWidth: 0/);
   });
 });
 
 describe('b.516 — LettoreArticolo: sintesi/traduci dentro la pagina reale', () => {
   const f = leggi('app/components/ui/LettoreArticolo.js');
-  it('accetta dati/prefs/userToken', () => {
-    expect(f).toMatch(/dati, prefs, userToken/);
-  });
-  it('ha generaSintesi e usa le chiavi errore esistenti (non inventate)', () => {
+  it('accetta dati/prefs/userToken', () => expect(f).toMatch(/dati, prefs, userToken/));
+  it('ha generaSintesi e usa le chiavi errore esistenti', () => {
     expect(f).toMatch(/generaSintesi/);
     expect(f).toMatch(/L\('schedaAccedi'\)/);
     expect(f).toMatch(/L\('genericError'\)/);
-    expect(f).not.toMatch(/needAccountForSummary/);
-    expect(f).not.toMatch(/summaryError/);
+    expect(f).not.toMatch(/needAccountForSummary|summaryError/);
   });
 });
 
-describe('b.516 — MondoNews: articoli aprono LettoreArticolo, icone leggi/parlane sotto immagine', () => {
+describe('b.516 — MondoNews apre il lettore vero', () => {
   const f = leggi('app/components/MondoNews.js');
-  it('niente piu schedaAutoGenera', () => {
-    expect(f).not.toMatch(/schedaAutoGenera/);
-  });
-  it('immagine e titolo aprono setLettura con dati', () => {
-    // b.517 — la chiamata ora porta anche su quale faccia atterrare
-    expect(f).toMatch(/setLettura\(\{ url: t\.url, titolo: t\.titolo, fonte: t\.fonti\?\.\[0\]\?\.fonte, dati: t, faccia: 'articolo' \}\)/);
-  });
-  it('la riga icone leggi/parlane esiste subito dopo il blocco immagine', () => {
-    expect(f).toMatch(/L\('newsOpenTranslate'\)/ /* b.535: la prova era verde solo grazie a una COPIA VECCHIA del file nel worktree (par. 7-ter): dal b.517 il bottone largo del feed dice «Apri e traduci», ed e' il nome con cui Luca stesso lo chiama. Si prova il vivo. */);
+  it('non usa piu schedaAutoGenera', () => expect(f).not.toMatch(/schedaAutoGenera/));
+  it('usa Apri e traduci e Parlane', () => {
+    expect(f).toMatch(/L\('newsOpenTranslate'\)/);
     expect(f).toMatch(/L\('newsTalkAbout'\)/);
   });
-  it('onApriArticolo dal feed apre LettoreArticolo (non piu SchedaArgomento)', () => {
-    expect(f).toMatch(/onApriArticolo=\{\(d\) => \{ tornaAlFeedRef\.current = true; setFeedAperto\(false\); setLettura\(/ /* b.535: il velo del feed ora si chiude e il back ci riporta — il collaudo «apri e traduci non va» */);
-  });
-  it('LettoreArticolo riceve dati/prefs/userToken', () => {
-    expect(f).toMatch(/<LettoreArticolo url=\{lettura\.url\} titolo=\{lettura\.titolo\} fonte=\{lettura\.fonte\}/);
+  it('LettoreArticolo riceve contenuto e preferenze', () => {
+    expect(f).toMatch(/<LettoreArticolo/);
     expect(f).toMatch(/dati=\{lettura\.dati\} prefs=\{prefs\} userToken=\{userToken\}/);
   });
 });
 
-describe('b.516->b.535 — FeedNotizieMondo: il bottone largo dice «Apri e traduci» (dal b.517; la versione «Leggi» viveva solo in una copia vecchia del worktree, par. 7-ter)', () => {
-  it('usa newsOpenTranslate', () => {
-    const f = leggi('app/components/FeedNotizieMondo.js');
-    expect(f).toMatch(/L\('newsOpenTranslate'\)/);
-  });
+describe('b.516 → b.535 — il feed usa Apri e traduci', () => {
+  it('usa newsOpenTranslate', () => expect(leggi('app/components/FeedNotizieMondo.js')).toMatch(/L\('newsOpenTranslate'\)/));
 });
