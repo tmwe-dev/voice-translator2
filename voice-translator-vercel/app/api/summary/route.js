@@ -6,7 +6,7 @@ import { getSession, getUser } from '../../lib/users.js';
 import { MIN_CHARGE, ERRORS, calcGptCost, usdToEurCents } from '../../lib/config.js';
 import { trackDailySpend } from '../../lib/apiAuth.js';
 import { createLogger } from '../../lib/logger.js';
-import { assertElaborazioneConsentita, DirectModeError } from '../../lib/sessionGuard.js';
+import { assertCloudProcessingAllowed, assertElaborazioneConsentita, DirectModeError } from '../../lib/sessionGuard.js';
 import { riserva, commit, release } from '../../wallet/riserva.js';
 import { costoRiassunto } from '../../wallet/consumo.js';
 
@@ -17,6 +17,18 @@ async function handlePost(req) {
   // errore la restituisce (release). Stesso schema di tts/route.js.
   let riservaId = null;
   try {
+    // b.580 — la modalita Diretta si blocca PRIMA di leggere il body.
+    // Il client non e una fonte autorevole, ma questa prima barriera ha
+    // un compito preciso: se dichiara Direct, il server non deve nemmeno
+    // deserializzare contenuto destinato a elaborazione cloud. Subito dopo,
+    // appena abbiamo convId, resta anche la verifica autorevole sulla stanza.
+    try {
+      assertCloudProcessingAllowed(req);
+    } catch (e) {
+      if (e instanceof DirectModeError) return NextResponse.json({ error: e.message }, { status: 403 });
+      throw e;
+    }
+
     const { convId, userToken } = await req.json();
 
     if (!convId) return NextResponse.json({ error: 'convId required' }, { status: 400 });
