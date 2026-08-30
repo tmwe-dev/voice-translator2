@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════════════
-// b.556 — UNA PORTA SOLA, IN BASSO, E LA TRADUZIONE DENTRO
+// b.581 — UNA PORTA PER LE AZIONI, TRADUZIONE SEMPRE FUORI
 // ═══════════════════════════════════════════════════════════════
 import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest';
 import { render, screen, cleanup, fireEvent } from '@testing-library/react';
@@ -20,32 +20,36 @@ const L = (k) => k;
 const video = { id: 'abcdefghijk', titolo: 'Un video', canale: 'euronews', miniatura: 'https://i/x.jpg' };
 const monta = () => render(e(FeedNotizieMondo, { aperto: true, C, L, filtro: 'video', video: [video], argomenti: [] }));
 
-describe('chiusa, si vede il video e basta', () => {
-  it('c e una porta sola, e le altre non ci sono', () => {
+describe('chiusa, le azioni secondarie restano dietro una porta sola', () => {
+  it('la porta azioni e unica, ma Traduci resta sempre visibile fuori', () => {
     monta();
     expect(screen.getByLabelText('actionsWord')).toBeTruthy();
+    expect(screen.getByTestId('traduci-video')).toBeTruthy();
     for (const k of ['likeWord', 'newsTalkAbout', 'boardSave', 'hideForever', 'interpreteTitolo']) {
       expect(screen.queryByLabelText(k), `${k} non deve ingombrare da chiusa`).toBe(null);
     }
   });
+
+  it('Traduci non sparisce quando YouTube non offre sottotitoli: resta visibile ma disabilitato', () => {
+    monta();
+    const t = screen.getByTestId('traduci-video');
+    expect(t).toBeTruthy();
+    expect(t.getAttribute('aria-disabled')).toBe('true');
+  });
 });
 
-describe('aperta, ogni voce dice cosa fa', () => {
-  it('compaiono tutte le azioni disponibili', () => {
+describe('aperta, il menu contiene solo le azioni secondarie', () => {
+  it('compaiono le azioni disponibili senza duplicare Traduci', () => {
     monta();
     fireEvent.click(screen.getByLabelText('actionsWord'));
     for (const k of ['likeWord', 'newsTalkAbout', 'boardSave', 'hideForever']) {
       expect(screen.getByLabelText(k), `${k} deve esserci da aperta`).toBeTruthy();
     }
-  });
-
-  it('l interprete compare solo se quel video ha davvero i sottotitoli', () => {
-    monta();
-    fireEvent.click(screen.getByLabelText('actionsWord'));
+    expect(screen.getAllByTestId('traduci-video')).toHaveLength(1);
     expect(screen.queryByLabelText('interpreteTitolo')).toBe(null);
   });
 
-  it('ogni azione ha la parola scritta accanto, non solo l icona', () => {
+  it('ogni azione secondaria ha la parola scritta accanto', () => {
     monta();
     fireEvent.click(screen.getByLabelText('actionsWord'));
     const parole = [...document.querySelectorAll('span')].map((x) => x.textContent);
@@ -53,31 +57,26 @@ describe('aperta, ogni voce dice cosa fa', () => {
     expect(parole).toContain('hideForever');
   });
 
-  it('toccare una voce la esegue e richiude il menu', () => {
+  it('toccare una voce secondaria la esegue e richiude il menu', () => {
     monta();
     fireEvent.click(screen.getByLabelText('actionsWord'));
     fireEvent.click(screen.getByLabelText('boardSave'));
     expect(screen.queryByLabelText('boardSave')).toBe(null);
+    expect(screen.getByTestId('traduci-video')).toBeTruthy();
   });
 });
 
-describe('il comando della traduzione vive nella stessa porta delle azioni', () => {
+describe('b.581 — Traduci e un comando primario', () => {
   const i = fs.readFileSync(path.join(__dirname, '..', 'app/components/ui/InterpreteVideo.js'), 'utf8');
   const f = fs.readFileSync(path.join(__dirname, '..', 'app/components/FeedNotizieMondo.js'), 'utf8');
 
-  it('l interprete puo avere il comando nascosto e aprirsi dall esterno', () => {
-    expect(i).toMatch(/comandoNascosto = false, apriOra = 0/);
-    expect(i).toMatch(/useEffect\(\(\) => \{ if \(apriOra\) setAperto\(true\); \}, \[apriOra\]\)/);
-    expect(i).toMatch(/\{!comandoNascosto && \(/);
+  it('InterpreteVideo disegna direttamente Traduci e chiude la vecchia porta dei tre puntini', () => {
+    expect(i).toMatch(/data-testid="traduci-video"/);
+    expect(i).toMatch(/onDisponibile\?\.\(false\)/);
+    expect(i).not.toMatch(/comandoNascosto = false, apriOra = 0/);
   });
 
-  it('il feed usa un contatore e autorizza il comando solo sulla slide attiva e visibile', () => {
-    expect(f).toMatch(/const \[apriInterprete, setApriInterprete\] = useState\(0\)/);
-    expect(f).toMatch(/setApriInterprete\(\(n\) => n \+ 1\)/);
-    expect(f).toMatch(/comandoNascosto apriOra=\{i === indiceAttivo && i === indiceVisibile \? apriInterprete : 0\}/);
-  });
-
-  it('la porta chiusa segnala se qualcosa e acceso', () => {
+  it('la porta delle azioni continua a segnalare se una delle sue azioni secondarie e accesa', () => {
     expect(f).toMatch(/vive\.some\(\(v\) => v\.acceso\) && !aperto \? VETRO_ACCESO : VETRO/);
   });
 });
