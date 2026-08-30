@@ -52,6 +52,10 @@ import Tavolo from './Tavolo.js';
 import { conRipiego } from '../../lib/ripiego.js';
 import Ascolta from '../Ascolta.js';  // b.404 — una sola grafica per ascoltare
 
+// b.580 — Pianoforte resta una sezione autonoma: per ora Life offre solo
+// l'ingresso alla nuova area Spartito, senza cambiare Impara.
+const PIANOFORTE_URL = 'https://bizcard-scanner-git-feature-music-score-tmweapps-projects.vercel.app';
+
 // ═══════════════════════════════════════════════════════════════
 // LifeView — la sezione Life (Luca). Autonoma: usa SOLO il dominio
 // Compagni (catalogo, corsi, cliente) e le rotte /api/compagni/*.
@@ -236,6 +240,7 @@ function LifeView({ onApriStanza }) {
           { id: 'amico', icon: 'chat', label: L('lifeFriendTab') },
           { id: 'tavolo', icon: 'users', label: L('lifeTableTab') },
           { id: 'impara', icon: 'graduation', label: L('lifeLearn') },
+          { id: 'pianoforte', icon: 'music', label: 'Pianoforte', url: PIANOFORTE_URL },
           { id: 'obiettivi', icon: 'target', label: L('lifeGoalsTab'), numero: conteggi.obiettivi },
           { id: 'compiti', icon: 'history', label: L('lifeHomeworkTab'), numero: conteggi.compiti, materiali: conteggi.materiali },
           { id: 'compagni', icon: 'star', label: L('lifeCompanionsTab') },
@@ -264,7 +269,12 @@ function LifeView({ onApriStanza }) {
                   const on = scheda === t.id;
                   return (
                     <button key={t.id}
-                      onClick={() => { vibrate(8); setScheda(t.id); setPannelloAperto(false); }}
+                      onClick={() => {
+                        vibrate(8);
+                        if (t.url) window.open(t.url, '_blank', 'noopener,noreferrer');
+                        else setScheda(t.id);
+                        setPannelloAperto(false);
+                      }}
                       aria-current={on ? 'page' : undefined}
                       style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%', textAlign: 'left',
                         padding: '12px 14px', minHeight: 48, borderRadius: 12, cursor: 'pointer', fontFamily: FONT,
