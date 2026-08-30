@@ -284,7 +284,7 @@ export default function InterpreteVideo({ videoId, lingua, attivo, onCambia, C, 
     const chiudi = () => {
       if (chiuso) return;
       chiuso = true;
-      try { URL.revokeObjectURL(indirizzo); } catch { /* gia revocato */ }
+      try { URL.revokeObjectURL(indirizzo); } catch { /* URL gia revocato: nessuna risorsa da liberare */ }
     };
     a.onended = chiudi;
     a.onerror = chiudi;
@@ -313,7 +313,7 @@ export default function InterpreteVideo({ videoId, lingua, attivo, onCambia, C, 
       // appartiene al vecchio ordine e non deve uscire sul video.
       if (modoRef.current !== modoPreparazione || modoPreparazione === 'spento') {
         if (audioUrl) {
-          try { URL.revokeObjectURL(audioUrl); } catch { /* niente */ }
+          try { URL.revokeObjectURL(audioUrl); } catch { /* lavoro scartato: URL audio non piu necessario */ }
         }
         return;
       }
@@ -345,7 +345,7 @@ export default function InterpreteVideo({ videoId, lingua, attivo, onCambia, C, 
         if (stato === 'presto') continue;
         if (stato === 'persa' || stato === 'invalida') {
           if (pronta.audioUrl) {
-            try { URL.revokeObjectURL(pronta.audioUrl); } catch { /* niente */ }
+            try { URL.revokeObjectURL(pronta.audioUrl); } catch { /* frase scaduta: URL audio non serve piu */ }
           }
           pronte.current.delete(chiave);
           dette.current.add(chiave);
@@ -361,7 +361,7 @@ export default function InterpreteVideo({ videoId, lingua, attivo, onCambia, C, 
           pronta.audioUrl = '';
           riproduciVoce(audioUrl);
         } else if (pronta.audioUrl) {
-          try { URL.revokeObjectURL(pronta.audioUrl); } catch { /* niente */ }
+          try { URL.revokeObjectURL(pronta.audioUrl); } catch { /* modalita testo: URL audio non deve restare allocato */ }
         }
         pronte.current.delete(chiave);
         dette.current.add(chiave);
@@ -396,7 +396,7 @@ export default function InterpreteVideo({ videoId, lingua, attivo, onCambia, C, 
     setModo(nuovo);
     setAperto(false);
     try { window.localStorage.setItem(MODO_KEY, nuovo); } catch { /* preferenza solo in memoria */ }
-    try { window.dispatchEvent(new CustomEvent(MODO_EVENTO, { detail: { modo: nuovo } })); } catch { /* vecchio browser */ }
+    try { window.dispatchEvent(new CustomEvent(MODO_EVENTO, { detail: { modo: nuovo } })); } catch { /* browser senza CustomEvent: localStorage conserva la scelta */ }
     if (typeof onCambia === 'function') onCambia(nuovo);
   }, [onCambia]);
 
@@ -413,8 +413,8 @@ export default function InterpreteVideo({ videoId, lingua, attivo, onCambia, C, 
     <>
       {/* b.581 — COMANDO PRIMARIO: sempre fuori dai tre puntini. */}
       <div style={{
-        position: 'absolute', right: 12, top: 132, zIndex: 7,
-        fontFamily: FONT, display: 'flex', flexDirection: 'column', alignItems: 'flex-end',
+        position: 'absolute', left: 12, top: 116, zIndex: 7,
+        fontFamily: FONT, display: 'flex', flexDirection: 'column', alignItems: 'flex-start',
       }}>
         <button
           data-testid="traduci-video"
@@ -429,7 +429,7 @@ export default function InterpreteVideo({ videoId, lingua, attivo, onCambia, C, 
             minHeight: 44, padding: '0 13px', borderRadius: 999,
             background: acceso && pronto ? `${accento}32` : 'rgba(0,0,0,0.52)',
             border: `1px solid ${acceso && pronto ? `${accento}88` : 'rgba(255,255,255,0.22)'}`,
-            color: '#fff', fontFamily: FONT, fontSize: 13, fontWeight: 600,
+            color: '#fff', fontFamily: FONT, fontSize: 13, fontWeight: 500,
             cursor: pronto ? 'pointer' : 'default',
             opacity: cercati && !pronto ? 0.48 : 1,
             WebkitTapHighlightColor: 'transparent',
@@ -460,7 +460,7 @@ export default function InterpreteVideo({ videoId, lingua, attivo, onCambia, C, 
                     WebkitTapHighlightColor: 'transparent',
                   }}>
                   <span style={{
-                    display: 'block', fontSize: 13.5, fontWeight: 600,
+                    display: 'block', fontSize: 13.5, fontWeight: 500,
                     color: scelto ? accento : 'rgba(236,243,255,0.98)',
                   }}>{v.titolo}</span>
                   <span style={{
