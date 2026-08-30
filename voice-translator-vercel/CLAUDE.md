@@ -267,6 +267,12 @@ perche il working tree lo conteneva ancora.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.580** (push #865) — PIANOFORTE ENTRA IN LIFE SENZA TOCCARE IMPARA.
+
+  Nel pannello laterale di Life compare la nuova voce autonoma «Pianoforte». Il tocco apre in una nuova scheda l'area Spartito gia costruita nel progetto BizCard; non cambia scheda, stato, corsi, lingue o scanner documenti di Impara.
+
+  PROVA CODICE: la voce ha un URL esplicito e il gestore distingue i collegamenti esterni dalle sezioni interne; il ramo non contiene modifiche nel componente Impara.
+
 - Versione: **b.579** (push #864) — APERTURA FEED MONDO: niente fondo vuoto con audio fuori schermo.
 
   Collaudo reale: all'apertura compariva la slide finale «Cosa vuoi seguire?» mentre si sentiva un pezzo del primo video. La causa era una gara fra caricamento, scroll-snap e autoplay: la slide finale nasceva prima che il feed fosse stabile e il browser poteva conservarla come snap target; intanto `indiceAttivo` restava 0 e montava il primo iframe con `autoplay=1`.
