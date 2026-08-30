@@ -8,23 +8,15 @@
 //     POST /api/translate  →  400
 //     {"code":"INVALID_INPUT","message":"Invalid fields: sourceLang"}
 //
-// LA CAUSA. Quattro pezzi dell'applicazione mandano
-// `sourceLang: 'auto'` — i titoli del feed, i sottotitoli
-// dell'interprete video, e due punti del tassista — perche' NON SANNO
-// in che lingua sia il testo: e' esattamente il caso in cui si chiede
-// alla macchina di riconoscerla. Ma il controllo voleva due o tre
-// lettere (`^[a-z]{2,3}...`) e «auto» ne ha quattro. Rifiutate tutte,
-// in silenzio, dal giorno in cui il controllo e' stato scritto.
+// LA CAUSA. I pezzi dell'applicazione che NON SANNO in che lingua sia
+// il testo mandano `sourceLang: 'auto'`: e' esattamente il caso in cui
+// si chiede alla macchina di riconoscerla. Il controllo originario
+// voleva due o tre lettere (`^[a-z]{2,3}...`) e «auto» ne ha quattro.
 //
-// COSA SPIEGA. Il collaudo di Luca «i testi non vengono tradotti anche
-// se il setting dice di farlo»: in b.548 avevo riparato l'aggancio —
-// e l'aggancio era giusto — ma la chiamata non e' MAI passata dalla
-// porta. E spiega anche perche' i sottotitoli tradotti del video non si
-// vedevano mai.
-//
-// LEZIONE: un errore 400 non e' rumore. Sono le nostre richieste, fatte
-// male da noi, e nessuno le guardava perche' «400» sembra colpa di chi
-// chiama — e chi chiama eravamo noi.
+// b.581 — l'interprete video adesso e' un caso migliore: la rotta dei
+// sottotitoli ci restituisce anche la lingua realmente trovata. Quando
+// c'e', la usiamo; quando manca, il ripiego resta `auto`. Non torniamo
+// quindi al difetto b.563 e non paghiamo un rilevamento lingua inutile.
 // ═══════════════════════════════════════════════════════════════
 import { describe, it, expect } from 'vitest';
 import fs from 'fs';
@@ -59,14 +51,19 @@ describe('«auto» e una lingua di partenza legittima', () => {
   });
 });
 
-describe('chi manda «auto», e sono quattro', () => {
-  it('i titoli del feed', () => {
+describe('chi non conosce la lingua manda auto; chi la conosce la dichiara', () => {
+  it('i titoli del feed continuano a usare auto', () => {
     expect(leggi('app/components/MondoNews.js')).toMatch(/sourceLang: 'auto', targetLang: mia/);
   });
-  it('i sottotitoli dell interprete video', () => {
-    expect(leggi('app/components/ui/InterpreteVideo.js')).toMatch(/sourceLang: 'auto'/);
+
+  it('l interprete video usa la lingua dei sottotitoli e ripiega su auto', () => {
+    const i = leggi('app/components/ui/InterpreteVideo.js');
+    expect(i).toMatch(/const sorgente = linguaSottotitoli\.current/);
+    expect(i).toMatch(/const sourceLang = sorgente \|\| 'auto'/);
+    expect(i).toMatch(/sourceLang,/);
   });
-  it('e il tassista, in due punti', () => {
+
+  it('e il tassista usa auto nei suoi due punti', () => {
     expect((leggi('app/components/TaxiDriverView.js').match(/sourceLang: 'auto'/g) || [])).toHaveLength(2);
   });
 });
