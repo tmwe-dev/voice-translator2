@@ -22,6 +22,23 @@ async function handleGet(req) {
   const lang = LINGUE.has(url.searchParams.get('lang')) ? url.searchParams.get('lang') : 'en';
   if (!q) return NextResponse.json({ disponibile: !!chiaveYouTube(), video: [] });
 
+  // b.580 — Le Preview Vercel non ricevono sempre i segreti di produzione.
+  // In quel caso si riusa l'endpoint pubblico della produzione: nessuna
+  // chiave viene copiata o esposta e il collaudo dei video resta possibile.
+  if (!chiaveYouTube() && process.env.VERCEL_ENV === 'preview') {
+    try {
+      const remoto = new URL('/api/topics/video', 'https://voice-translator2.vercel.app');
+      remoto.searchParams.set('q', q);
+      remoto.searchParams.set('lang', lang);
+      remoto.searchParams.set('ore', url.searchParams.get('ore') || '48');
+      const risposta = await fetch(remoto, { cache: 'no-store', signal: AbortSignal.timeout(10000) });
+      if (risposta.ok) {
+        const dati = await risposta.json();
+        if (Array.isArray(dati?.video)) return NextResponse.json({ ...dati, daProduzione: true });
+      }
+    } catch { /* se la produzione non risponde, resta la degradazione controllata */ }
+  }
+
   // b.557 — se la domanda e' di cronaca, i video valgono 48 ore. La
   // stessa funzione che decide se aprire l'enciclopedia (b.541) sa gia
   // distinguere «ultime notizie dal Congo» da «tom cruise»: si riusa
