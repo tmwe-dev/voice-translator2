@@ -12,106 +12,100 @@ const log = createLogger('webrtc');
 
 // ICE servers: STUN for NAT traversal + TURN for relay fallback
 // Custom TURN via env vars: NEXT_PUBLIC_TURN_URL, NEXT_PUBLIC_TURN_USER, NEXT_PUBLIC_TURN_PASS
-// ═══ b.281 — IL PONTE GRATUITO ERA MORTO, E LO SPEDIVAMO AI TELEFONI ═══
-// Scoperto dalla scatola nera (chiamata verso Android: "strada: NESSUNA")
-// e verificato dal DNS: openrelay.metered.ca NON ESISTE PIU — il progetto
-// del relay pubblico gratuito e stato chiuso. L'app consegnava ai telefoni
-// QUATTRO indirizzi morti (1 STUN + 3 TURN): ogni chiamata perdeva tempo a
-// bussare a porte inesistenti, e il "ponte" per le reti difficili non
-// c'era proprio.
-// Ora restano solo ponti VIVI e gratuiti, verificati: gli STUN di Google
-// e quello di Cloudflare (pubblico, senza account). Bastano per tutte le
-// reti in cui i telefoni possono vedersi (stessa rete, wi-fi domestici,
-// la maggior parte degli operatori). NON coprono il caso peggiore — due
-// reti mobili chiuse — per quello serve un relay: o uno proprio su un
-// server gia nostro (coturn, software libero), o le variabili
-// NEXT_PUBLIC_TURN_* qui sotto.
 const ICE_SERVERS = [
   { urls: 'stun:stun.l.google.com:19302' },
   { urls: 'stun:stun1.l.google.com:19302' },
   { urls: 'stun:stun.cloudflare.com:3478' },
 ];
 
-// ═══════════════════════════════════════════════
-// b.111 — IL RELAY PROPRIO SOSTITUISCE QUELLO PUBBLICO
-//
-// Prima il TURN privato si AGGIUNGEVA a quello pubblico ("supplements
-// free TURN"). Detto in chiaro: anche dopo aver pagato un relay
-// proprio, una parte del traffico continuava a passare da un server di
-// terzi con credenziali pubbliche — openrelayproject / openrelayproject,
-// le stesse per chiunque al mondo.
-//
-// Il traffico resta cifrato due volte (DTLS di WebRTC piu AES-GCM
-// nostro), quindi il relay non legge i contenuti. Ma vede CHI parla con
-// CHI, quando e per quanto: metadati, che spesso dicono piu del testo.
-// E non ha SLA, ne quote garantite, ne una politica di conservazione
-// che possiamo mostrare a un utente che la chieda.
-//
-// Ora: se c'e un relay nostro, quello pubblico esce dalla lista.
-// ═══════════════════════════════════════════════
-
-/** Vero se stiamo usando il relay pubblico gratuito, cioe nessuno di nostro. */
-// b.363 — non piu esportata: la legge solo questo file. Era offerta a
-// tutto il progetto senza che nessuno la chiedesse.
+// Vero finche non abbiamo almeno un relay nostro utilizzabile.
 let RELAY_PUBBLICO = true;
+let pontePronto = Promise.resolve(false);
 
-// ═══ b.282 — IL PONTE ARRIVA DALLA PORTA /api/turn, NON DAL PACCHETTO ═══
-// Le credenziali temporanee (HMAC, 4 ore) si chiedono al server appena
-// l'app parte: se il relay e configurato (TURN_SECRET + TURN_URLS su
-// Vercel), entrano nella lista PRIMA della prima chiamata. Se la porta
-// risponde vuoto o non risponde, non cambia niente: restano gli STUN.
-// Le variabili NEXT_PUBLIC_TURN_* qui sotto restano come strada di
-// prova manuale, ma quella buona e questa: il segreto non tocca mai il
-// browser.
-if (typeof window !== 'undefined') {
-  fetch('/api/turn')
-    .then(r => (r.ok ? r.json() : null))
-    .then(d => {
-      const voci = d?.iceServers;
-      if (!Array.isArray(voci) || !voci.length) return;
-      // via ogni relay precedente: comanda quello appena ricevuto
-      for (let i = ICE_SERVERS.length - 1; i >= 0; i--) {
-        const u = String(ICE_SERVERS[i].urls || '');
-        if (u.startsWith('turn:') || u.startsWith('turns:')) ICE_SERVERS.splice(i, 1);
-      }
-      for (const v of voci) ICE_SERVERS.push(v);
-      RELAY_PUBBLICO = false;
-      log.debug('ponte ricevuto da /api/turn:', voci.map(x => x.urls).flat().join(' '));
-    })
-    .catch(() => { /* la porta non c'e o la rete manca: si prosegue con i soli STUN */ });
+function togliRelayCorrenti() {
+  for (let i = ICE_SERVERS.length - 1; i >= 0; i--) {
+    const u = String(ICE_SERVERS[i].urls || '');
+    if (u.startsWith('turn:') || u.startsWith('turns:')) ICE_SERVERS.splice(i, 1);
+  }
 }
 
+function installaRelay(voci) {
+  if (!Array.isArray(voci) || !voci.length) return false;
+  togliRelayCorrenti();
+  for (const v of voci) ICE_SERVERS.push(v);
+  RELAY_PUBBLICO = false;
+  return true;
+}
+
+// b.582 — IL TURN NON E PIU UNA CORSA CONTRO IL PRIMO CLICK.
+// Prima /api/turn partiva in background, ma createPeerConnection poteva
+// nascere e negoziare prima che la risposta arrivasse: una chiamata aperta
+// subito dopo il caricamento restava STUN-only proprio sulle reti difficili.
+// Ora il caricamento parte ancora subito, ma createOffer/createAnswer
+// aspettano il suo esito (massimo 2,5 s) PRIMA della localDescription.
+// Quindi l'ICE gathering vede il relay se esiste; se la porta e assente o
+// lenta si degrada esplicitamente agli STUN invece di restare appesi.
 if (typeof window !== 'undefined') {
   const turnUrl = process.env.NEXT_PUBLIC_TURN_URL;
   const turnUser = process.env.NEXT_PUBLIC_TURN_USER;
   const turnPass = process.env.NEXT_PUBLIC_TURN_PASS;
 
+  // Strada di prova/manuale: se presente e gia un relay utilizzabile e non
+  // serve trattenere la chiamata aspettando la porta temporanea.
   if (turnUrl) {
-    // Fuori i relay di terzi: restano solo gli STUN, che non
-    // trasportano traffico ma dicono soltanto "il tuo indirizzo
-    // pubblico e questo".
-    for (let i = ICE_SERVERS.length - 1; i >= 0; i--) {
-      const u = ICE_SERVERS[i].urls || '';
-      if (String(u).startsWith('turn:') || String(u).startsWith('turns:')) {
-        ICE_SERVERS.splice(i, 1);
-      }
-    }
-    ICE_SERVERS.push({ urls: turnUrl, username: turnUser || '', credential: turnPass || '' });
+    const statici = [{ urls: turnUrl, username: turnUser || '', credential: turnPass || '' }];
     if (turnUrl.startsWith('turn:')) {
-      ICE_SERVERS.push({
+      statici.push({
         urls: turnUrl.replace('turn:', 'turns:'),
         username: turnUser || '',
         credential: turnPass || '',
       });
     }
-    RELAY_PUBBLICO = false;
-  } else {
-    // Non e un dettaglio da scoprire in produzione: si dice subito.
-    log.warn(
-      'Nessun relay configurato (NEXT_PUBLIC_TURN_URL): niente ponte. ' +
-      'Le chiamate fra reti che non si vedono direttamente (doppia rete mobile) non si allacceranno. ' +
-      'Il vecchio relay pubblico gratuito non esiste piu: b.281.'
-    );
+    installaRelay(statici);
+  }
+
+  pontePronto = fetch('/api/turn', { signal: AbortSignal.timeout(2500) })
+    .then(r => (r.ok ? r.json() : null))
+    .then(d => {
+      const voci = d?.iceServers;
+      if (!installaRelay(voci)) return false;
+      log.debug('ponte ricevuto da /api/turn:', voci.map(x => x.urls).flat().join(' '));
+      return true;
+    })
+    .catch(() => false)
+    .then(ok => {
+      if (!ok && RELAY_PUBBLICO) {
+        log.warn(
+          'Nessun relay configurato: si procede con STUN. ' +
+          'Le reti con NAT restrittivo possono non collegarsi.'
+        );
+      }
+      return ok;
+    });
+}
+
+/**
+ * Porta la configurazione ICE piu aggiornata dentro una connessione gia
+ * creata, ma PRIMA che inizi la raccolta dei candidati locali.
+ */
+export async function preparaIcePerPc(pc) {
+  if (!pc) return false;
+  try {
+    // Se abbiamo gia un TURN statico non ritardiamo la chiamata. Altrimenti
+    // aspettiamo il caricamento temporaneo, che ha gia il proprio timeout.
+    if (typeof window !== 'undefined' && RELAY_PUBBLICO) await pontePronto;
+    else pontePronto.catch(() => {});
+  } catch { /* il ripiego STUN e intenzionale */ }
+
+  try {
+    if (typeof pc.setConfiguration === 'function') {
+      const attuale = typeof pc.getConfiguration === 'function' ? pc.getConfiguration() : {};
+      pc.setConfiguration({ ...attuale, iceServers: ICE_SERVERS.map(s => ({ ...s })) });
+    }
+    return !RELAY_PUBBLICO;
+  } catch (e) {
+    log.warn('configurazione ICE non aggiornata:', e?.message || e);
+    return false;
   }
 }
 
@@ -364,6 +358,7 @@ export function preferisciH264(pc) {
 }
 
 export async function createOffer(pc) {
+  await preparaIcePerPc(pc);
   const offer = await pc.createOffer();
   await pc.setLocalDescription(offer);
   return JSON.stringify(pc.localDescription);
@@ -375,6 +370,7 @@ export async function createOffer(pc) {
 export async function createAnswer(pc, offerSdpStr, primaDiRispondere) {
   let offer; try { offer = JSON.parse(offerSdpStr); } catch { throw new Error('Invalid offer SDP'); }
   await pc.setRemoteDescription(new RTCSessionDescription(offer));
+  await preparaIcePerPc(pc);
   // b.272 — i canali video esistono solo ora, dopo l'offerta ricevuta: e
   // questo l'unico istante in cui si puo esprimere la preferenza sul
   // codec, prima che la risposta venga scritta.
