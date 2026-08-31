@@ -56,6 +56,23 @@ export async function fontiDelPosto({ paese = '', settore = '', quante = 12 } = 
 }
 
 /**
+ * b.585 — il contatore di copertura costa una HEAD, non il caricamento
+ * di cento righe. Serve soltanto ai giri automatici per capire quando un
+ * Paese/settore ha gia abbastanza patrimonio da non dover essere
+ * riscoperto a ogni apertura.
+ */
+export async function contaFontiDelPosto({ paese = '', settore = '' } = {}) {
+  const db = getSupabaseAdmin();
+  if (!db || (!paese && !settore)) return 0;
+  const { count, error } = await db
+    .from('mondo_fonti_ambito')
+    .select('*', { count: 'exact', head: true })
+    .eq('paese', paese || '')
+    .eq('settore', settore || '');
+  return error ? 0 : (count || 0);
+}
+
+/**
  * DISCOVER: le fonti viste in una ricerca entrano nel registro.
  * Si contano i domini e si manda tutto in una chiamata sola: la
  * scoperta non deve costare piu della ricerca che l'ha prodotta.
