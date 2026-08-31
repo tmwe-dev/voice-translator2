@@ -5,19 +5,18 @@
 // fra cui il REGALO CREDITI — una funzione scritta per intero e mai
 // raggiungibile da nessun pulsante.
 //
-// Questo test costruisce il grafo degli import (compresi quelli
-// dinamici) e fallisce se un file di app/ non è raggiungibile.
-// Se un file serve davvero, collegalo. Se non serve, CANCELLALO: in
-// b.109 la discarica app/attic/ (2.130 righe, zero importatori) e stata
-// eliminata, perche una discarica dentro app/ viene comunque compilata,
-// cercata e inclusa in ogni ricerca. Quello che vale la pena tenere sta
-// in attic/ alla radice del repository, fuori dal progetto.
+// b.583 — la prima versione della guardia aveva un buco strutturale:
+// verificava soltanto che QUALCUNO importasse il file. Due file morti che
+// si importavano a vicenda risultavano entrambi vivi. Ora si parte dagli
+// ingressi reali di Next e si percorre il grafo: vivo significa davvero
+// raggiungibile dal prodotto, non semplicemente nominato da un altro file.
 // ═══════════════════════════════════════════════════════════════
 import { describe, it, expect } from 'vitest';
 import fs from 'fs';
 import path from 'path';
 
 const APP = path.join(__dirname, '..', 'app');
+const ESTENSIONI = ['.js', '.jsx', '.mjs'];
 
 function tuttiIFile(dir, trovati = []) {
   for (const voce of fs.readdirSync(dir, { withFileTypes: true })) {
@@ -25,80 +24,100 @@ function tuttiIFile(dir, trovati = []) {
     if (voce.isDirectory()) {
       if (voce.name === 'node_modules') continue;
       tuttiIFile(p, trovati);
-    } else if (voce.name.endsWith('.js')) {
-      trovati.push(p);
+    } else if (ESTENSIONI.some((e) => voce.name.endsWith(e))) {
+      trovati.push(path.resolve(p));
     }
   }
   return trovati;
 }
 
-// Next.js entra da questi file: non hanno bisogno di essere importati.
-const INGRESSI = /(^|\/)(page|layout|route|not-found|error|global-error|loading|template|default|sitemap|robots|opengraph-image|icon|manifest)\.js$/;
+// Next.js entra da questi file: sono le radici del grafo, non hanno bisogno
+// di essere importati da un altro modulo applicativo.
+const INGRESSI = /(^|\/)(page|layout|route|not-found|error|global-error|loading|template|default|sitemap|robots|opengraph-image|icon|manifest)\.(?:js|jsx|mjs)$/;
+
+function riferimenti(src) {
+  return [
+    ...src.matchAll(/from\s+['"]([^'"]+)['"]/g),
+    ...src.matchAll(/import\(\s*['"]([^'"]+)['"]\s*\)/g),
+    ...src.matchAll(/require\(\s*['"]([^'"]+)['"]\s*\)/g),
+    ...src.matchAll(/(?:^|\n)\s*import\s+['"]([^'"]+)['"]/g),
+  ].map((m) => m[1]);
+}
+
+function risolviLocale(importatore, spec, insieme) {
+  if (!spec?.startsWith('.')) return null;
+  const base = path.resolve(path.dirname(importatore), spec);
+  const candidati = [
+    base,
+    ...ESTENSIONI.map((e) => base + e),
+    ...ESTENSIONI.map((e) => path.join(base, 'index' + e)),
+  ];
+  return candidati.find((p) => insieme.has(path.resolve(p))) || null;
+}
 
 describe('nessun file orfano in app/', () => {
   it('ogni file è raggiungibile da un ingresso di Next', () => {
     const file = tuttiIFile(APP);
-    const importati = new Set();
+    const insieme = new Set(file);
+    const grafo = new Map();
 
     for (const f of file) {
       const src = fs.readFileSync(f, 'utf8');
-      const riferimenti = [
-        ...src.matchAll(/from\s+['"](\.[^'"]+)['"]/g),
-        ...src.matchAll(/import\(\s*['"](\.[^'"]+)['"]/g),
-        ...src.matchAll(/require\(\s*['"](\.[^'"]+)['"]/g),
-      ];
-      for (const r of riferimenti) {
-        const base = path.resolve(path.dirname(f), r[1]);
-        importati.add(base);
-        importati.add(base + '.js');
-        importati.add(path.join(base, 'index.js'));
+      const vicini = riferimenti(src)
+        .map((spec) => risolviLocale(f, spec, insieme))
+        .filter(Boolean);
+      grafo.set(f, [...new Set(vicini)]);
+    }
+
+    const ingressi = file.filter((f) => INGRESSI.test(f));
+    const raggiunti = new Set(ingressi);
+    const coda = [...ingressi];
+    while (coda.length) {
+      const corrente = coda.shift();
+      for (const prossimo of grafo.get(corrente) || []) {
+        if (raggiunti.has(prossimo)) continue;
+        raggiunti.add(prossimo);
+        coda.push(prossimo);
       }
     }
 
     // ── Le LAPIDI non sono codice orfano ──
-    // Il disco su cui gira questo lavoro non permette di cancellare i
-    // file. Quando un file va rimosso ma non si puo, ci si lascia una
-    // lapide: un blocco di commenti che dice cosa c'era, perche se ne va
-    // e il comando per toglierlo. Il criterio e stretto — deve portare
-    // quella frase esatta E non contenere NEMMENO UNA riga eseguibile —
-    // cosi non si puo usare per nascondere codice vero.
+    // Il criterio resta stretto: la frase esatta e nessuna riga eseguibile.
     const eLapide = (f) => {
       const src = fs.readFileSync(f, 'utf8');
       if (!src.includes('LAPIDE — questo file va CANCELLATO')) return false;
       const codice = src.split('\n')
-        .filter(r => r.trim() && !r.trim().startsWith('//') && !r.trim().startsWith('*'));
+        .filter((r) => r.trim() && !r.trim().startsWith('//') && !r.trim().startsWith('*'));
       return codice.length === 0;
     };
 
-    // ── b.575 — UN CANTIERE NON E UN ORFANO, MA QUASI ──
-    // Il documento di Mondo impone una migrazione a fasi: «FASE 1:
-    // creare i nuovi modelli. Nessun cambio UI». Per un tratto quei
-    // file esistono e nessuno li chiama ancora — che e' esattamente
-    // l'aspetto del codice morto, ed e' il motivo per cui questa
-    // guardia esiste.
-    // La differenza non puo essere una lista di eccezioni (diventa
-    // subito il posto dove si nasconde la polvere). Deve essere una
-    // PROVA: il file dichiara a quale fase e' attaccato, e c'e' un test
-    // che lo monta davvero. Un cantiere ha degli operai dentro; una
-    // rovina no. Il giorno che la fase collega il file, la riga di
-    // dichiarazione se ne va con lei.
+    // ── Un CANTIERE e ammesso solo se dichiara la fase ed e provato ──
     const TEST = path.join(__dirname);
     const provati = new Set();
-    for (const t of fs.readdirSync(TEST).filter(x => x.endsWith('.test.js'))) {
-      const src = fs.readFileSync(path.join(TEST, t), 'utf8');
-      for (const r of src.matchAll(/from\s+['"](\.[^'"]+)['"]/g)) {
-        provati.add(path.resolve(path.dirname(path.join(TEST, t)), r[1]));
+    for (const nome of fs.readdirSync(TEST).filter((x) => /\.test\.(?:js|jsx|mjs)$/.test(x))) {
+      const t = path.join(TEST, nome);
+      const src = fs.readFileSync(t, 'utf8');
+      for (const spec of riferimenti(src)) {
+        if (!spec.startsWith('.')) continue;
+        const base = path.resolve(path.dirname(t), spec);
+        for (const candidato of [base, ...ESTENSIONI.map((e) => base + e)]) {
+          if (insieme.has(path.resolve(candidato))) provati.add(path.resolve(candidato));
+        }
       }
     }
     const eCantiere = (f) => {
       const src = fs.readFileSync(f, 'utf8');
-      return /CANTIERE — collegato alla FASE \d+/.test(src) && provati.has(path.resolve(f));
+      return /CANTIERE — collegato alla FASE \d+/.test(src) && provati.has(f);
     };
 
     const orfani = file
-      .filter(f => !importati.has(path.resolve(f)) && !INGRESSI.test(f) && !eLapide(f) && !eCantiere(f))
-      .map(f => path.relative(APP, f));
+      .filter((f) => !raggiunti.has(f) && !eLapide(f) && !eCantiere(f))
+      .map((f) => path.relative(APP, f))
+      .sort();
 
-    expect(orfani, `File mai importati. Collegali, oppure cancellali:\n  ${orfani.join('\n  ')}`).toEqual([]);
+    expect(
+      orfani,
+      `File non raggiungibili da nessun ingresso Next. Collegali, oppure cancellali:\n  ${orfani.join('\n  ')}`,
+    ).toEqual([]);
   });
 });
