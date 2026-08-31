@@ -6,6 +6,7 @@ const leggi = (p) => readFileSync(join(process.cwd(), p), 'utf8');
 
 describe('b.587 — il Globo non resta piu vuoto', () => {
   const f = leggi('app/components/FinestraSulMondo.js');
+  const g = leggi('app/components/GloboMondo.js');
 
   it('il cursore personale non cancella la fotografia recente del mondo', () => {
     expect(f).toMatch(/FINESTRA_AMBIENTE_MS\s*=\s*2 \* 60 \* 60 \* 1000/);
@@ -17,6 +18,11 @@ describe('b.587 — il Globo non resta piu vuoto', () => {
   it('una scheda Paese caricata non puo piu fermare la coda Live', () => {
     expect(f).not.toMatch(/!occupatoRef\.current\) avanza\(\)/);
     expect(f).toMatch(/if \(!cartelloRef\.current && !apertaRef\.current && !aspettandoRef\.current\) avanza\(\)/);
+  });
+
+  it('un evento Live prende temporaneamente il focus anche se un Paese e gia selezionato', () => {
+    expect(g).toMatch(/code: focusEsterno \|\| paese \|\| null/);
+    expect(g).not.toMatch(/code: paese \|\| focusEsterno \|\| null/);
   });
 
   it('rientrando nel Globo la coda e gli id gia mostrati ripartono puliti', () => {
