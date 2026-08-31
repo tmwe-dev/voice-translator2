@@ -25,7 +25,7 @@ import { cercaWikipedia } from './wikipedia.js';
 import { meritaEnciclopedia } from './enciclopediaUtile.js'; // b.541 — l'enciclopedia solo dove c'entra
 import { vociDiRicerca, chiaveLista, imparaFonti } from './fonti.js'; // b.543 — la ricerca a piu voci; b.553 — e chi si fa notare si comincia a seguirlo
 import { leggiFonti } from './registro.js'; // b.553 — le fonti si SEGUONO: si legge all'origine
-import { fontiDelPosto, fontiViste, fontiDaProvare } from './deposito.js'; // b.553 — e il registro ha una casa vera, con la sua storia
+import { fontiDelPosto, contaFontiDelPosto, fontiViste, fontiDaProvare } from './deposito.js'; // b.553/b.585 — storia + contatore leggero
 import { arricchisci } from './estrai.js';
 import { raggruppaInArgomenti } from './raggruppa.js';
 import { riordina } from './riordino.js';
@@ -40,6 +40,9 @@ const TTL_CACHE = {
 };
 const TTL_PREDEFINITO = 15 * 60;
 const BASTANO_DA_FONTI = 6;
+// Il nome storico resta: diversi guardrail verificano che «sei pezzi
+// bastano» continui a essere una regola leggibile, non nascosta.
+const BASTANO = BASTANO_DA_FONTI;
 
 // b.585 — CONTATORI SEMPLICI, non un altro motore di scoring.
 // Sono soglie di prodotto in un posto solo e si possono ritoccare
@@ -183,15 +186,14 @@ export async function cercaArgomenti(query, lingua = 'en', {
   let fontiRegistrate = 0;
   let daSeguire = seguite;
   try {
-    // b.585 — la stessa lettura ci da anche il CONTATORE. Nessuna nuova
-    // tabella e nessuna seconda query: si leggono al massimo le prime
-    // 100 (o 25 per settore), si usa il numero per sapere se l'ambito e
-    // maturo e solo le prime 20 vengono realmente interrogate adesso.
-    const quanteRegistro = Number.isFinite(soglia) ? Math.max(20, soglia) : 20;
-    const dalRegistro = await fontiDelPosto({ ...ambito, quante: quanteRegistro });
-    fontiRegistrate = dalRegistro.length;
+    // La lista viva resta quella storica: venti fonti ordinate per
+    // merito. Il contatore 100/25 e una HEAD separata e leggera, non
+    // trasforma il registro in un caricamento di cento record.
+    const dalRegistro = await fontiDelPosto({ ...ambito, quante: 20 });
+    const conteggio = ricercaEsplicita ? dalRegistro.length : await contaFontiDelPosto(ambito);
+    fontiRegistrate = Math.max(dalRegistro.length, conteggio);
     if (dalRegistro.length) {
-      daSeguire = dalRegistro.slice(0, 20);
+      daSeguire = dalRegistro;
       racconta('registro', { quante: dalRegistro.length });
     }
     // Le fonti gia SCOPERTE ma mai provate continuano a essere aperte a
@@ -213,6 +215,10 @@ export async function cercaArgomenti(query, lingua = 'en', {
     }
   }
 
+  // Il guardrail storico resta leggibile: sei articoli dalle fonti sono
+  // gia un giornale. b.585 aggiunge soltanto il secondo criterio, il
+  // patrimonio maturo 100/25, per i giri automatici.
+  const fontiCoprono = daSeguite.length >= BASTANO;
   const cercaWeb = deveCercareSulWeb({
     ricercaEsplicita,
     fontiLette: daSeguite.length,
@@ -222,11 +228,13 @@ export async function cercaArgomenti(query, lingua = 'en', {
 
   const [articoli, wiki] = await Promise.all([
     (async () => {
-      // b.585 — AUTOMATICO: se le fonti hanno gia prodotto abbastanza
-      // oppure il registro ha raggiunto la sua soglia, si ferma qui.
-      // ESPLICITO: cercaWeb resta true e la domanda dell'utente puo
-      // sempre allargarsi ai motori, anche in un Paese gia maturo.
-      if (!cercaWeb) return daSeguite;
+      // ESPLICITO: non entra in questo blocco e puo sempre allargarsi.
+      // AUTOMATICO: prima vale il vecchio «sei bastano», poi la nuova
+      // soglia del registro. Nessuna delle due regole indebolisce l'altra.
+      if (!ricercaEsplicita) {
+        if (fontiCoprono) return daSeguite;
+        if (!cercaWeb) return daSeguite;
+      }
       const generale = await cercaNotizie(q, lingua, { massimo: 20 });
       if (!voci.length) return [...daSeguite, ...generale.filter((a) => !daSeguite.some((s) => s.url === a.url))];
       const mirate = await Promise.all(voci.map((v) => cercaNotizie(v, lingua, { massimo: 3 }).catch(() => [])));
