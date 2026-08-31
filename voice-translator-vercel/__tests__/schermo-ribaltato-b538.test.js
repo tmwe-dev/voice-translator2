@@ -60,7 +60,7 @@ describe('b.580 — fullscreen dove esiste un player video', () => {
     expect(f).toMatch(/\/api\/topics\/video\?q=/);
     expect(f).toMatch(/youtube-nocookie\.com\/embed/);
     expect(f).toMatch(/allowFullScreen/);
-    expect(f).toMatch(/settings\.autoplayVideo \? '\?autoplay=1' : ''/);
+    expect(f).toMatch(/settings\.autoplayVideo \? '\?autoplay=1&playsinline=1' : '\?playsinline=1'/);
     expect(f).toMatch(/\(aperta\.sources \|\| \[\]\)\.slice\(0, 6\)/);
   });
 });
