@@ -1,29 +1,14 @@
 // ═══════════════════════════════════════════════════════════════
-// GET /api/video/sottotitoli?id=<idYouTube>&lang=<lingua> (b.551)
+// GET /api/video/sottotitoli?id=<idYouTube>&lang=<lingua> (b.551 → b.586)
 //
-// «potremmo darla dove disponibile no??» (Luca). Questa rotta e' la
-// risposta a quel «dove»: prima di offrire l'interprete bisogna sapere
-// se il video ha davvero dei sottotitoli. Se non li ha, il tasto non
-// compare — meglio niente che un tasto che non fa niente.
+// L'interprete vive solo se esiste testo temporizzato. Da b.586 non si
+// indovina piu la traccia: prima si legge l'elenco di YouTube e poi si
+// chiede QUELLA traccia con lingua, kind (per esempio `asr`) e name.
 //
-// TRE TENTATIVI, IN QUEST'ORDINE:
-//   1. la lingua chiesta (se il video ce l'ha, e' la migliore: nessuna
-//      traduzione a monte, meno errori a valle);
-//   2. l'inglese, che e' la lingua che i video hanno piu' spesso;
-//   3. la prima che esiste, chiesta all'elenco (`?type=list`) — anche
-//      una lingua che non capiamo va bene: tanto poi traduciamo noi.
-//
-// NON SI RISPONDE MAI CON UN ERRORE IN FACCIA. Un video senza
-// sottotitoli non e' un guasto, e' la normalita': si risponde
-// `{disponibili:false, righe:[]}` e chi guarda non vede niente di rotto.
-// Vale anche quando YouTube e' lento o ci chiude la porta: l'interprete
-// e' un di piu', non deve poter rompere il feed.
-//
-// LA MEMORIA E' LUNGA, e a ragione: i sottotitoli di un video non
-// cambiano piu' una volta pubblicati. Sette giorni per quelli trovati.
-// Per quelli NON trovati la memoria e' corta (sei ore): un video appena
-// caricato riceve i sottotitoli automatici dopo un po', e non vogliamo
-// dirgli di no per una settimana per una domanda fatta troppo presto.
+// Un guasto di YouTube non e' «questo video non ha sottotitoli».
+// I due casi restano distinti: un no certo puo avere una memoria corta;
+// un timeout/403/risposta anomala torna `temporaneo:true` e non viene
+// congelato in cache come falso negativo.
 // ═══════════════════════════════════════════════════════════════
 
 import { NextResponse } from 'next/server';
@@ -31,34 +16,26 @@ import { withApiGuard } from '../../../lib/apiGuard.js';
 import { redis } from '../../../lib/redis.js';
 import { createLogger } from '../../../lib/logger.js';
 import { sanaSottotitoli } from '../../../lib/interpreteVideo.js';
+import { tracceDaElenco, ordinaTracce, parametriTraccia } from '../../../lib/tracceSottotitoli.js';
 
 const log = createLogger('video/sottotitoli');
 
-const TTL_TROVATI = 7 * 24 * 3600;   // i sottotitoli di un video non cambiano
-const TTL_VUOTI = 6 * 3600;          // ma possono ARRIVARE: si richiede presto
-const ATTESA_MS = 8000;              // oltre, il feed ha gia' cambiato slide
-const MAX_RIGHE = 3000;              // un'ora e mezza di parlato: piu' non serve
+const TTL_TROVATI = 7 * 24 * 3600;
+const TTL_VUOTI = 5 * 60;            // un no certo si ricontrolla presto
+const ATTESA_MS = 8000;
+const MAX_RIGHE = 3000;
+const VERSIONE_CACHE = 'v2';         // scarta i falsi negativi b.551/b.581
 
-/** Un id YouTube e' fatto di lettere, cifre, trattino e trattino basso.
- *  Tutto il resto e' qualcuno che prova a farci comporre un indirizzo che
- *  non abbiamo scelto noi. */
 function idValido(x) {
   const s = String(x || '').trim();
   return /^[A-Za-z0-9_-]{6,24}$/.test(s) ? s : '';
 }
 
-/** Un codice lingua, con o senza regione ('it', 'pt-BR', 'zh-Hans'). */
 function linguaValida(x) {
   const s = String(x || '').trim();
   return /^[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})?$/.test(s) ? s : '';
 }
 
-/**
- * Il formato `json3` di YouTube: un elenco di `events`, ognuno con
- * l'inizio in millesimi, la durata in millesimi e il testo spezzato in
- * pezzetti (`segs`) — i pezzetti vanno riattaccati senza spazi in mezzo,
- * perche' lo spazio, quando serve, sta gia' dentro il pezzetto.
- */
 function daJson3(corpo) {
   let dati = null;
   try { dati = JSON.parse(corpo); } catch { return []; }
@@ -68,9 +45,6 @@ function daJson3(corpo) {
     const inizioMs = Number(e?.tStartMs);
     if (!Number.isFinite(inizioMs)) continue;
     const durataMs = Number(e?.dDurationMs);
-    // certi eventi non dichiarano la durata (sono marcatori): due
-    // secondi e' la durata media di una riga, e comunque la ricucitura
-    // in interpreteVideo.js rimette insieme i pezzi
     const durata = Number.isFinite(durataMs) && durataMs > 0 ? durataMs : 2000;
     const testo = (Array.isArray(e?.segs) ? e.segs : [])
       .map((s) => String(s?.utf8 || '')).join('');
@@ -80,40 +54,51 @@ function daJson3(corpo) {
       testo,
     });
   }
-  // la pulizia e' quella dell'interprete: una sola, non due che
-  // divergono (le righe vuote di json3 sono tantissime)
   return sanaSottotitoli(righe);
 }
 
-/** La prima lingua che l'elenco dichiara. L'elenco e' XML, e per leggere
- *  un attributo non serve un lettore di XML: serve l'attributo. */
-function primaLinguaDellElenco(xml) {
-  const m = String(xml || '').match(/lang_code="([^"]+)"/);
-  return m ? linguaValida(m[1]) : '';
-}
-
+/**
+ * Restituisce anche se la richiesta e' ARRIVATA davvero a YouTube.
+ * Prima un 403 e un video senza tracce diventavano entrambi stringa
+ * vuota: era impossibile non mettere in cache un falso «non disponibile».
+ */
 async function chiediAYouTube(indirizzo) {
   try {
     const r = await fetch(indirizzo, {
-      // senza un'intestazione da browser YouTube risponde vuoto piu'
-      // spesso: non e' un trucco, e' la stessa richiesta che farebbe il
-      // lettore incorporato
-      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; BarTalk/1.0)', 'Accept-Language': 'en' },
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (compatible; BarTalk/1.0)',
+        'Accept-Language': 'en',
+      },
       signal: AbortSignal.timeout(ATTESA_MS),
     });
-    if (!r.ok) return '';
-    return await r.text();
+    if (!r.ok) {
+      log.warn('YouTube non ha risposto', { stato: r.status });
+      return { ok: false, corpo: '', stato: r.status };
+    }
+    return { ok: true, corpo: await r.text(), stato: r.status };
   } catch (e) {
     if (e?.name !== 'AbortError') log.warn('YouTube muto', { errore: e?.message || String(e) });
-    return '';
+    return { ok: false, corpo: '', stato: 0 };
   }
 }
 
-async function scaricaLingua(id, lingua) {
+async function scaricaTraccia(id, traccia) {
+  const p = parametriTraccia(id, traccia);
+  const esito = await chiediAYouTube(`https://www.youtube.com/api/timedtext?${p.toString()}`);
+  if (!esito.ok || !esito.corpo) return { ok: esito.ok, righe: [] };
+  return { ok: true, righe: daJson3(esito.corpo) };
+}
+
+/**
+ * Ripiego soltanto se l'elenco delle tracce non e' raggiungibile.
+ * Alcuni video continuano a rispondere all'indirizzo diretto anche se
+ * `type=list` viene filtrato a monte.
+ */
+async function scaricaAllaCieca(id, lingua) {
   const p = new URLSearchParams({ v: id, lang: lingua, fmt: 'json3' });
-  const corpo = await chiediAYouTube(`https://www.youtube.com/api/timedtext?${p.toString()}`);
-  if (!corpo) return [];
-  return daJson3(corpo);
+  const esito = await chiediAYouTube(`https://www.youtube.com/api/timedtext?${p.toString()}`);
+  if (!esito.ok || !esito.corpo) return [];
+  return daJson3(esito.corpo);
 }
 
 async function handleGet(req) {
@@ -124,7 +109,7 @@ async function handleGet(req) {
     const chiesta = linguaValida(url.searchParams.get('lang')) || 'en';
     if (!id) return NextResponse.json(vuoto);
 
-    const chiave = `sottotitoli:${id}:${chiesta.toLowerCase()}`;
+    const chiave = `sottotitoli:${VERSIONE_CACHE}:${id}:${chiesta.toLowerCase()}`;
     try {
       const memoria = await redis('GET', chiave);
       if (memoria) {
@@ -132,46 +117,83 @@ async function handleGet(req) {
         if (d && Array.isArray(d.righe)) return NextResponse.json(d);
       }
     } catch (e) {
-      // memoria illeggibile: si va a chiedere, non si fallisce
       log.warn('memoria non letta', { errore: e?.message || String(e) });
     }
 
-    // ── i tre tentativi ──
-    const provate = new Set();
+    // PRIMA si chiede quali tracce esistono: e' l'unico modo per non
+    // perdere `kind=asr` dei sottotitoli automatici.
+    const lista = await chiediAYouTube(
+      `https://www.youtube.com/api/timedtext?type=list&v=${encodeURIComponent(id)}`,
+    );
+
     let righe = [];
     let lingua = '';
-    for (const candidata of [chiesta, 'en']) {
-      const c = candidata.toLowerCase();
-      if (provate.has(c)) continue;
-      provate.add(c);
-      righe = await scaricaLingua(id, candidata);
-      if (righe.length) { lingua = candidata; break; }
-    }
-    if (!righe.length) {
-      const elenco = await chiediAYouTube(`https://www.youtube.com/api/timedtext?type=list&v=${encodeURIComponent(id)}`);
-      const prima = primaLinguaDellElenco(elenco);
-      if (prima && !provate.has(prima.toLowerCase())) {
-        righe = await scaricaLingua(id, prima);
-        if (righe.length) lingua = prima;
+    let tracceDichiarate = [];
+    let downloadRiuscito = false;
+
+    if (lista.ok) {
+      tracceDichiarate = tracceDaElenco(lista.corpo);
+      for (const traccia of ordinaTracce(tracceDichiarate, chiesta)) {
+        const esito = await scaricaTraccia(id, traccia);
+        downloadRiuscito = downloadRiuscito || esito.ok;
+        if (!esito.righe.length) continue;
+        righe = esito.righe;
+        lingua = traccia.lingua;
+        break;
+      }
+    } else {
+      // L'elenco e' irraggiungibile: proviamo due porte dirette, ma un
+      // loro fallimento NON diventa un «no» da ricordare.
+      const provate = new Set();
+      for (const candidata of [chiesta, 'en']) {
+        const c = candidata.toLowerCase();
+        if (provate.has(c)) continue;
+        provate.add(c);
+        const trovate = await scaricaAllaCieca(id, candidata);
+        if (!trovate.length) continue;
+        righe = trovate;
+        lingua = candidata;
+        break;
       }
     }
 
-    const risposta = righe.length
-      ? { disponibili: true, righe: righe.slice(0, MAX_RIGHE), lingua }
-      : vuoto;
-
-    try {
-      await redis('SET', chiave, JSON.stringify(risposta), 'EX', String(righe.length ? TTL_TROVATI : TTL_VUOTI));
-    } catch (e) {
-      // non aver salvato non cambia la risposta di oggi: si richiedera'
-      log.warn('memoria non scritta', { errore: e?.message || String(e) });
+    if (righe.length) {
+      const risposta = {
+        disponibili: true,
+        righe: righe.slice(0, MAX_RIGHE),
+        lingua,
+      };
+      try {
+        await redis('SET', chiave, JSON.stringify(risposta), 'EX', String(TTL_TROVATI));
+      } catch (e) {
+        log.warn('memoria non scritta', { errore: e?.message || String(e) });
+      }
+      return NextResponse.json(risposta);
     }
 
-    return NextResponse.json(risposta);
+    // Lista raggiunta e ZERO tracce: e' l'unico «no» sufficientemente
+    // certo da ricordare. Cinque minuti, non sei ore.
+    if (lista.ok && tracceDichiarate.length === 0) {
+      try {
+        await redis('SET', chiave, JSON.stringify(vuoto), 'EX', String(TTL_VUOTI));
+      } catch (e) {
+        log.warn('memoria vuota non scritta', { errore: e?.message || String(e) });
+      }
+      return NextResponse.json(vuoto);
+    }
+
+    // C'erano tracce ma il download e' arrivato vuoto, oppure YouTube non
+    // ha risposto: non si mente dicendo che il video non le possiede.
+    return NextResponse.json({
+      ...vuoto,
+      temporaneo: true,
+      motivo: lista.ok && tracceDichiarate.length && downloadRiuscito
+        ? 'traccia_vuota'
+        : 'sorgente_non_raggiungibile',
+    });
   } catch (e) {
-    // Nessun errore in faccia a chi guarda: l'interprete e' un di piu'.
     log.warn('sottotitoli non recuperati', { errore: e?.message || String(e) });
-    return NextResponse.json(vuoto);
+    return NextResponse.json({ ...vuoto, temporaneo: true, motivo: 'errore_temporaneo' });
   }
 }
 
