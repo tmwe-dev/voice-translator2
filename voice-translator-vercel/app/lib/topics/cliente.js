@@ -23,6 +23,8 @@
 // tolto quello che c'era e messo in comune.
 // ═══════════════════════════════════════════════════════════════
 
+import { consumaQueryAutomatica, segnaQueryAutomatica } from './rami.js';
+
 /**
  * Legge una risposta a righe e restituisce lo stadio «fine».
  *
@@ -108,7 +110,12 @@ export async function chiediRami({ seme, lingua = 'it', paese = '', livello = 1,
     });
     if (!r.ok) return [];
     const d = await r.json().catch(() => null);
-    return Array.isArray(d?.rami) ? d.rami : [];
+    const rami = Array.isArray(d?.rami) ? d.rami : [];
+    // b.585 — questi rami non sono una domanda digitata dalla persona:
+    // sono stati chiesti dal Giardino per crescere. Il marchio e monouso
+    // e verra consumato dalla prima ricerca corrispondente.
+    for (const ramo of rami) segnaQueryAutomatica(ramo?.query);
+    return rami;
   } catch { return []; }
 }
 
@@ -116,22 +123,25 @@ export async function chiediRami({ seme, lingua = 'it', paese = '', livello = 1,
  * Cerca su Topics e restituisce lo stadio «fine».
  * `automatico=true` non significa «non cercare mai»: dice al server che
  * il giro e nato dal feed e che puo evitare i motori quando il registro
- * delle fonti e gia maturo. Se l'utente scrive una domanda resta false.
+ * delle fonti e gia maturo. Se il chiamante non specifica nulla, il
+ * Giardino riconosce soltanto le query che ha generato lui; il marchio
+ * e monouso, quindi una ricerca manuale successiva resta esplicita.
  */
 export async function cercaTopics({
   q, lingua = 'it', cat = 'notizie',
   fresca = false, profonda = false, fonti = 0, segnale = null,
-  paeseFonti = '', settoreFonti = '', automatico = false,
+  paeseFonti = '', settoreFonti = '', automatico = null,
 } = {}, suStadio) {
   const pulita = String(q || '').trim();
   if (!pulita) return null;
+  const giroAutomatico = automatico === null ? consumaQueryAutomatica(pulita) : !!automatico;
   const parametri = new URLSearchParams({ q: pulita, lang: lingua, cat });
   if (fresca) parametri.set('fresh', '1');
   if (profonda) parametri.set('deep', '1');
   if (profonda || fonti) parametri.set('fonti', String(fonti || 6));
   if (paeseFonti) parametri.set('paeseFonti', paeseFonti);
   if (settoreFonti) parametri.set('settoreFonti', settoreFonti);
-  if (automatico) parametri.set('auto', '1');
+  if (giroAutomatico) parametri.set('auto', '1');
   const risposta = await fetch(`/api/topics/search?${parametri.toString()}`, segnale ? { signal: segnale } : undefined);
   if (!risposta.ok || !risposta.body) throw new Error(`HTTP ${risposta.status}`);
   return leggiARighe(risposta, suStadio);
