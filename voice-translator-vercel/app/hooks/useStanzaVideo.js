@@ -5,6 +5,7 @@ import {
   rilevaPiattaforma, serveH264, preferisciH264,
   addMediaTracks, collectIceCandidates, addIceCandidate, sendViaDataChannel,
 } from '../lib/webrtc.js';
+import { applicaProfiloVideoGruppo } from '../lib/videoGruppoQualita.js';
 import { subscribeTick } from '../lib/ticker.js';
 // b.138 — gli avvisi di questo hook si leggono a schermo: vanno tradotti.
 import { tFuori } from '../lib/i18n.js';
@@ -31,6 +32,8 @@ import { tFuori } from '../lib/i18n.js';
 const MAX_PARTECIPANTI = 8;
 const RITMO_SEGNALI = 1200;   // quanto spesso si guarda la cassetta
 const RITMO_PRESENZE = 5000;
+const RITARDO_RIPRESA = 3500; // disconnected puo essere transitorio
+const MAX_RIPRESE_PEER = 2;
 
 export default function useStanzaVideo({ roomId, roomSessionToken, mioNome, attiva, conVideo = true }) {
   const [partecipanti, setPartecipanti] = useState([]);
@@ -85,6 +88,8 @@ export default function useStanzaVideo({ roomId, roomSessionToken, mioNome, atti
   const chiudiPeer = useCallback((nome) => {
     const p = peersRef.current.get(nome);
     if (p) {
+      if (p.ripresaTimer) clearTimeout(p.ripresaTimer);
+      p.ripresaTimer = null;
       try { p.pc.close(); } catch { /* la connessione era gia chiusa */ }
       peersRef.current.delete(nome);
     }
@@ -97,7 +102,50 @@ export default function useStanzaVideo({ roomId, roomSessionToken, mioNome, atti
     const esistente = peersRef.current.get(nome);
     if (esistente) return esistente;
 
-    const pc = createPeerConnection(
+    let pc;
+
+    const chiediRipresa = () => {
+      const voce = peersRef.current.get(nome);
+      if (!voce || voce.pc !== pc || voce.iniziatore !== false) return;
+      const ora = Date.now();
+      if (ora - (voce.ultimaRichiestaRipresa || 0) < RITARDO_RIPRESA) return;
+      voce.ultimaRichiestaRipresa = ora;
+      api('manda', { a: nome, segnale: { tipo: 'ricollega', dati: '' } });
+      if (voce.ripresaTimer) clearTimeout(voce.ripresaTimer);
+      voce.ripresaTimer = setTimeout(() => {
+        const corrente = peersRef.current.get(nome);
+        const statoPc = corrente?.pc?.connectionState;
+        const statoIce = corrente?.pc?.iceConnectionState;
+        if (corrente && (statoPc === 'failed' || statoPc === 'disconnected'
+          || statoIce === 'failed' || statoIce === 'disconnected')) chiediRipresa();
+      }, RITMO_PRESENZE);
+    };
+
+    const riprendi = async () => {
+      const voce = peersRef.current.get(nome);
+      if (!voce || voce.pc !== pc || voce.iniziatore !== true) return false;
+      if (voce.riprese >= MAX_RIPRESE_PEER) {
+        chiudiPeer(nome);
+        return false;
+      }
+      voce.riprese++;
+      if (voce.ripresaTimer) { clearTimeout(voce.ripresaTimer); voce.ripresaTimer = null; }
+      aggiornaPartecipante(nome, { stato: 'ricollego' });
+      try {
+        if (typeof pc.restartIce === 'function') pc.restartIce();
+        const offerta = await createOffer(pc);
+        const d = await api('manda', { a: nome, segnale: { tipo: 'offerta', dati: offerta } });
+        if (!d?.ok) throw new Error('segnale di ripresa non consegnato');
+        return true;
+      } catch (e) {
+        console.warn('[StanzaVideo] ripresa peer non riuscita:', nome, e?.message || e);
+        if (voce.riprese >= MAX_RIPRESE_PEER) chiudiPeer(nome);
+        else voce.ripresaTimer = setTimeout(() => { riprendi(); }, RITARDO_RIPRESA);
+        return false;
+      }
+    };
+
+    pc = createPeerConnection(
       // testo che arriva dal canale dati di QUELLA persona
       (messaggio) => {
         try {
@@ -111,9 +159,38 @@ export default function useStanzaVideo({ roomId, roomSessionToken, mioNome, atti
         // b.288 — lo stato arriva come scheda { source, state }, non come
         // parola: il confronto diretto non scattava MAI, e un partecipante
         // caduto restava appeso nella griglia della stanza di gruppo.
-        const stato = typeof nuovoStato === 'object' ? nuovoStato.state : nuovoStato;
-        aggiornaPartecipante(nome, { stato });
-        if (stato === 'failed' || stato === 'closed') chiudiPeer(nome);
+        const statoPeer = typeof nuovoStato === 'object' ? nuovoStato.state : nuovoStato;
+        aggiornaPartecipante(nome, { stato: statoPeer });
+        const voce = peersRef.current.get(nome);
+        if (!voce) return;
+
+        if (statoPeer === 'connected' || statoPeer === 'completed') {
+          if (voce.ripresaTimer) clearTimeout(voce.ripresaTimer);
+          voce.ripresaTimer = null;
+          voce.riprese = 0;
+          voce.ultimaRichiestaRipresa = 0;
+          return;
+        }
+
+        if (statoPeer === 'disconnected') {
+          if (voce.ripresaTimer) clearTimeout(voce.ripresaTimer);
+          voce.ripresaTimer = setTimeout(() => {
+            const corrente = peersRef.current.get(nome);
+            if (!corrente) return;
+            if (corrente.iniziatore) riprendi();
+            else chiediRipresa();
+          }, RITARDO_RIPRESA);
+          return;
+        }
+
+        if (statoPeer === 'failed') {
+          if (voce.ripresaTimer) { clearTimeout(voce.ripresaTimer); voce.ripresaTimer = null; }
+          if (voce.iniziatore) riprendi();
+          else chiediRipresa();
+          return;
+        }
+
+        if (statoPeer === 'closed') chiudiPeer(nome);
       },
       (traccia, flusso) => {
         // Il flusso di QUELLA persona finisce nel SUO riquadro: e la
@@ -128,7 +205,11 @@ export default function useStanzaVideo({ roomId, roomSessionToken, mioNome, atti
 
     if (mioStreamRef.current) addMediaTracks(pc, mioStreamRef.current);
 
-    const voce = { pc, canale: null, nome };
+    const voce = {
+      pc, canale: null, nome, iniziatore: null,
+      riprese: 0, ripresaTimer: null, ultimaRichiestaRipresa: 0,
+      riprendi, chiediRipresa,
+    };
     peersRef.current.set(nome, voce);
     aggiornaPartecipante(nome, { stato: 'collego' });
     return voce;
@@ -150,6 +231,7 @@ export default function useStanzaVideo({ roomId, roomSessionToken, mioNome, atti
   // ── Io chiamo lui ──
   const proponi = useCallback(async (nome) => {
     const voce = apriPeer(nome);
+    voce.iniziatore = true;
     voce.canale = createDataChannel(voce.pc, 'parlato');
     ascoltaCanale(voce.canale, nome);
     // b.248 — CONFERMATO (audit esterno): apriPeer aveva GIA messo le
@@ -178,6 +260,7 @@ export default function useStanzaVideo({ roomId, roomSessionToken, mioNome, atti
   // ── Lui chiama me ──
   const rispondi = useCallback(async (nome, offertaJson) => {
     const voce = apriPeer(nome);
+    if (voce.iniziatore === null) voce.iniziatore = false;
     voce.pc.ondatachannel = (e) => {
       voce.canale = e.channel;
       ascoltaCanale(e.channel, nome);
@@ -210,6 +293,7 @@ export default function useStanzaVideo({ roomId, roomSessionToken, mioNome, atti
           const voce = peersRef.current.get(da);
           if (voce) {
             await acceptAnswer(voce.pc, s.dati);
+            voce.riprese = 0;
             const coda = codaIceRef.current.get(da) || [];
             for (const c of coda) { try { await addIceCandidate(voce.pc, c); } catch { /* la richiesta e scaduta: il giro successivo riprova */ } }
             codaIceRef.current.delete(da);
@@ -224,6 +308,9 @@ export default function useStanzaVideo({ roomId, roomSessionToken, mioNome, atti
             coda.push(s.dati);
             codaIceRef.current.set(da, coda);
           }
+        } else if (s.tipo === 'ricollega') {
+          const voce = peersRef.current.get(da);
+          if (voce?.iniziatore) voce.riprendi?.();
         } else if (s.tipo === 'esco') {
           chiudiPeer(da);
         }
@@ -309,8 +396,8 @@ export default function useStanzaVideo({ roomId, roomSessionToken, mioNome, atti
       if (!d?.ok) { spegniMioFlusso(); setErrore(tFuori('cannotEnter')); setStato('errore'); return; }
 
       setStato('dentro');
-      // Propongo solo a chi mi tocca: l'ordine alfabetico evita che due
-      // persone si offrano insieme e non si colleghi nessuno.
+      // Propongo a chi era gia dentro: chi arriva dopo resta il chiamante
+      // stabile della coppia e cosi si evita il glare.
       for (const nome of d.devoChiamare || []) await proponi(nome);
     } catch (e) {
       // Anche un errore a meta (permesso negato, offerta fallita) non
@@ -344,7 +431,7 @@ export default function useStanzaVideo({ roomId, roomSessionToken, mioNome, atti
     for (const voce of peersRef.current.values()) {
       if (voce.canale) sendViaDataChannel(voce.canale, pacchetto);
     }
-  }, []);
+  }, [mioNome]);
 
   const quandoArrivaTesto = useCallback((fn) => { suTestoRef.current = fn; }, []);
 
@@ -354,6 +441,15 @@ export default function useStanzaVideo({ roomId, roomSessionToken, mioNome, atti
     if (d?.ok && d.palco) setPalco(d.palco);
     return d?.palco || null;
   }, [api]);
+
+  // La mesh cresce quadraticamente: quando entrano piu persone riduciamo
+  // banda e fotogrammi di OGNI sender gia esistente, non solo dei nuovi.
+  useEffect(() => {
+    const totale = Math.min(MAX_PARTECIPANTI, partecipanti.length + 1);
+    for (const voce of peersRef.current.values()) {
+      applicaProfiloVideoGruppo(voce.pc, totale).catch(() => {});
+    }
+  }, [partecipanti.length]);
 
   // ── I due battiti: segnali svelti, presenze lente ──
   useEffect(() => {
