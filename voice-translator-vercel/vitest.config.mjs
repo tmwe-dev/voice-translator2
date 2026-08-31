@@ -1,6 +1,12 @@
 import { defineConfig } from 'vitest/config';
 import { transformWithOxc } from 'vite';
 import path from 'path';
+import { fileURLToPath } from 'url';
+
+// b.583 — il file e ESM per davvero: con estensione .js Vite lo caricava
+// attraverso il vecchio percorso CJS e avvisava a ogni esecuzione che quel
+// caricamento sara rimosso. .mjs elimina l'ambiguita senza cambiare i test.
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // ═══════════════════════════════════════════════════════════════
 // b.406 — I COMPONENTI DI QUESTO PROGETTO HANNO JSX DENTRO FILE `.js`.
