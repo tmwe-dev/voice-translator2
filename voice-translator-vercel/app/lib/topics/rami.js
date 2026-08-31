@@ -56,6 +56,29 @@ export const RAMI = [
   { id: 'motori',     q: { it: 'motori auto novità', en: 'cars motors news', es: 'motor coches', fr: 'automobile actualités', de: 'auto news', pt: 'carros novidades' } },
 ];
 
+// b.585 — un marchio MONOUSO, in memoria soltanto. Non e un nuovo stato
+// utente e non finisce in localStorage/Supabase: serve solo a dire al
+// client Topics «questa query e stata inventata dal Giardino». Se la
+// stessa frase viene cercata a mano dopo, il marchio e gia consumato e
+// la ricerca torna esplicita come deve essere.
+const automatiche = new Map();
+const chiaveAutomatica = (q) => String(q || '').trim().toLowerCase();
+
+export function segnaQueryAutomatica(q) {
+  const k = chiaveAutomatica(q);
+  if (!k) return;
+  automatiche.set(k, (automatiche.get(k) || 0) + 1);
+}
+
+export function consumaQueryAutomatica(q) {
+  const k = chiaveAutomatica(q);
+  const n = automatiche.get(k) || 0;
+  if (!k || n < 1) return false;
+  if (n === 1) automatiche.delete(k);
+  else automatiche.set(k, n - 1);
+  return true;
+}
+
 /** Le parole di un ramo nella lingua di chi guarda. */
 export function ramoParla(ramo, lingua) {
   const l = String(lingua || 'it').split('-')[0].toLowerCase();
@@ -105,6 +128,10 @@ export function mescolaSemi(semiUtente, rami, { quanti = 4 } = {}) {
     const k = String(x.query).trim().toLowerCase();
     if (!k || visti.has(k) || fuori.length >= quanti) return;
     visti.add(k); fuori.push(x);
+    // Si marca SOLO il ramo che entra davvero nel mazzo. Se una query
+    // coincide con un preferito/seme gia inserito, il ramo viene deduplicato
+    // e non puo trasformare per errore una richiesta personale in automatica.
+    if (x.origine === 'ramo') segnaQueryAutomatica(x.query);
   };
   // al massimo META di quello che si chiede viene da te: l'altra meta e'
   // il mondo. Senza questo tetto, tre preferiti riempirebbero tutto e
