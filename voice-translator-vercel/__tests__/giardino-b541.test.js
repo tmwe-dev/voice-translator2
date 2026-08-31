@@ -11,6 +11,20 @@ describe('b.541 — i semi dell utente vengono prima', () => {
     expect(semi.map((s) => s.origine)).toEqual(['preferita', 'recente', 'predefinita']);
   });
 
+  it('Oggi voglio viene prima e scade senza diventare un interesse stabile', async () => {
+    const { semiDi, preferenzaOggi } = await import('../app/lib/giardino.js');
+    const adesso = 1_800_000_000_000;
+    const prefs = {
+      mondoOggi: { q: 'musica jazz', scade: adesso + 60_000 },
+      ricerchePreferite: [{ q: 'formula 1' }, { q: 'Musica Jazz' }],
+    };
+    expect(preferenzaOggi(prefs, adesso)).toBe('musica jazz');
+    const semi = semiDi(prefs);
+    expect(semi[0]).toMatchObject({ query: 'musica jazz', origine: 'oggi', peso: 4 });
+    expect(semi.filter((s) => s.query.toLowerCase() === 'musica jazz')).toHaveLength(1);
+    expect(preferenzaOggi(prefs, adesso + 120_000)).toBe('');
+  });
+
   it('prossimaQuery non ripete e alla fine si ferma', async () => {
     const { prossimaQuery } = await import('../app/lib/giardino.js');
     const semi = [{ query: 'a', peso: 2 }];
