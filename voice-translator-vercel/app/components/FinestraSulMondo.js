@@ -21,16 +21,17 @@ import { disableMondoPush, enableMondoPush, pushDisponibile, syncMondoPush } fro
 
 const ATTESA_VOLO_MS = 1500;
 const DURATA_CARTELLO_MS = 18000;
+const FINESTRA_AMBIENTE_MS = 2 * 60 * 60 * 1000;
 const KEY_LAST_SEEN = 'vt-mondo-live-last-seen';
 const KEY_LAYER = 'vt-mondo-live-layer';
 
 const TESTI = {
-  it: { recovering: 'Connessione in ripristino', updated: 'aggiornato', new: 'nuovi', important: 'importanti', followed: 'Seguo', community: 'Community', sources: 'fonti', confirmed: 'confermato', developing: 'in sviluppo', emerging: 'da verificare', since: 'Da quando eri via', none: 'Nessun nuovo evento' },
-  en: { recovering: 'Reconnecting', updated: 'updated', new: 'new', important: 'important', followed: 'Following', community: 'Community', sources: 'sources', confirmed: 'confirmed', developing: 'developing', emerging: 'unconfirmed', since: 'Since you were away', none: 'No new events' },
-  es: { recovering: 'Reconectando', updated: 'actualizado', new: 'nuevos', important: 'importantes', followed: 'Sigo', community: 'Comunidad', sources: 'fuentes', confirmed: 'confirmado', developing: 'en desarrollo', emerging: 'por verificar', since: 'Desde que te fuiste', none: 'Ningún evento nuevo' },
-  fr: { recovering: 'Reconnexion', updated: 'mis à jour', new: 'nouveaux', important: 'importants', followed: 'Suivis', community: 'Communauté', sources: 'sources', confirmed: 'confirmé', developing: 'en cours', emerging: 'à vérifier', since: 'Depuis votre absence', none: 'Aucun nouvel événement' },
-  de: { recovering: 'Verbindung wird wiederhergestellt', updated: 'aktualisiert', new: 'neu', important: 'wichtig', followed: 'Folge ich', community: 'Community', sources: 'Quellen', confirmed: 'bestätigt', developing: 'in Entwicklung', emerging: 'zu prüfen', since: 'Seit du weg warst', none: 'Keine neuen Ereignisse' },
-  pt: { recovering: 'Reconectando', updated: 'atualizado', new: 'novos', important: 'importantes', followed: 'Seguindo', community: 'Comunidade', sources: 'fontes', confirmed: 'confirmado', developing: 'em desenvolvimento', emerging: 'a verificar', since: 'Desde que você saiu', none: 'Nenhum novo evento' },
+  it: { recovering: 'Connessione in ripristino', updated: 'aggiornato', new: 'nuovi', important: 'importanti', followed: 'Seguo', community: 'Community', sources: 'fonti', confirmed: 'confermato', developing: 'in sviluppo', emerging: 'da verificare', since: 'Da quando eri via', none: 'Nessun nuovo evento', waiting: 'Radar attivo · cerco gli eventi più recenti' },
+  en: { recovering: 'Reconnecting', updated: 'updated', new: 'new', important: 'important', followed: 'Following', community: 'Community', sources: 'sources', confirmed: 'confirmed', developing: 'developing', emerging: 'unconfirmed', since: 'Since you were away', none: 'No new events', waiting: 'Live radar · looking for recent events' },
+  es: { recovering: 'Reconectando', updated: 'actualizado', new: 'nuevos', important: 'importantes', followed: 'Sigo', community: 'Comunidad', sources: 'fuentes', confirmed: 'confirmado', developing: 'en desarrollo', emerging: 'por verificar', since: 'Desde que te fuiste', none: 'Ningún evento nuevo', waiting: 'Radar activo · buscando eventos recientes' },
+  fr: { recovering: 'Reconnexion', updated: 'mis à jour', new: 'nouveaux', important: 'importants', followed: 'Suivis', community: 'Communauté', sources: 'sources', confirmed: 'confirmé', developing: 'en cours', emerging: 'à vérifier', since: 'Depuis votre absence', none: 'Aucun nouvel événement', waiting: 'Radar actif · recherche des événements récents' },
+  de: { recovering: 'Verbindung wird wiederhergestellt', updated: 'aktualisiert', new: 'neu', important: 'wichtig', followed: 'Folge ich', community: 'Community', sources: 'Quellen', confirmed: 'bestätigt', developing: 'in Entwicklung', emerging: 'zu prüfen', since: 'Seit du weg warst', none: 'Keine neuen Ereignisse', waiting: 'Radar aktiv · suche aktuelle Ereignisse' },
+  pt: { recovering: 'Reconectando', updated: 'atualizado', new: 'novos', important: 'importantes', followed: 'Seguindo', community: 'Comunidade', sources: 'fontes', confirmed: 'confirmado', developing: 'em desenvolvimento', emerging: 'a verificar', since: 'Desde que você saiu', none: 'Nenhum novo evento', waiting: 'Radar ativo · buscando eventos recentes' },
 };
 
 function diz(lingua) {
@@ -127,8 +128,33 @@ export default function FinestraSulMondo({ C, L, lingua, prefs, attiva, paese, o
     for (const e of aggiunte) shownRef.current.add(e.id);
     queueRef.current = [...queueRef.current, ...aggiunte]
       .sort((a, b) => (Number(b.important) - Number(a.important)) || (Number(b.score) || 0) - (Number(a.score) || 0) || tempo(b) - tempo(a));
-    if (!cartelloRef.current && !apertaRef.current && !aspettandoRef.current && !occupatoRef.current) avanza();
+    // b.587 — il vecchio `occupato` bloccava la coda. MondoView lo
+    // teneva vero semplicemente perche esisteva la scheda del Paese
+    // selezionato (che all'apertura e quasi sempre il proprio Paese):
+    // eventi ricevuti, coda piena, schermo vuoto per sempre. Un pannello
+    // laterale puo coprire il cartello per qualche secondo; non puo
+    // fermare il mondo. La coda parte sempre quando e libera.
+    if (!cartelloRef.current && !apertaRef.current && !aspettandoRef.current) avanza();
   }, [avanza, visibileNelLayer]);
+
+  // Entrando di nuovo nel Globo si ricomincia da una fotografia fresca.
+  // Senza questo, shownRef conservava gli id della visita precedente e
+  // poteva scartare proprio tutti gli eventi recenti appena rispediti.
+  useEffect(() => {
+    if (!attiva) {
+      if (voloRef.current) clearTimeout(voloRef.current);
+      voloRef.current = null;
+      aspettandoRef.current = false;
+      queueRef.current = [];
+      setCartello(null);
+      setAperta(null);
+      onPuntaGlobo?.(null);
+      return;
+    }
+    queueRef.current = [];
+    shownRef.current = new Set();
+    primoBatchRef.current = true;
+  }, [attiva, onPuntaGlobo]);
 
   useEffect(() => {
     if (!attiva) return;
@@ -165,8 +191,16 @@ export default function FinestraSulMondo({ C, L, lingua, prefs, attiva, paese, o
       try { return Number(window.localStorage.getItem(KEY_LAST_SEEN)) || 0; }
       catch { return 0; }
     })();
+    // b.587 — il cursore serve a dire «cosa e nuovo per me», NON a
+    // decidere cosa esiste sul globo. Prima tornare dopo aver gia visto
+    // gli eventi chiedeva solo `since=ultima_uscita`: se nel frattempo
+    // non era successo niente, il Globo era perfettamente vuoto. Qui si
+    // chiede sempre anche una finestra ambiente di due ore; oldSeen resta
+    // usato sotto per il catch-up personale.
+    const ambienteDa = Date.now() - FINESTRA_AMBIENTE_MS;
+    const richiestaSince = oldSeen ? Math.min(oldSeen, ambienteDa) : 0;
     const params = new URLSearchParams({
-      since: String(oldSeen),
+      since: String(richiestaSince),
       lang: String(lingua || 'en'),
       topics: topics.join(','),
       countries: countries.join(','),
@@ -306,6 +340,16 @@ export default function FinestraSulMondo({ C, L, lingua, prefs, attiva, paese, o
         </div>
       </div>
 
+      {!cartello && !aperta && events.length === 0 && (
+        <div aria-live="polite" style={{ position: 'absolute', left: 20, right: 20, bottom: 'calc(120px + env(safe-area-inset-bottom))', zIndex: 59,
+          display: 'flex', justifyContent: 'center', pointerEvents: 'none' }}>
+          <div style={{ maxWidth: 360, padding: '9px 14px', borderRadius: 999, background: 'rgba(6,9,18,0.72)', border: `1px solid ${C.cardBorder}`,
+            backdropFilter: 'blur(12px)', color: C.textSecondary, fontFamily: FONT, fontSize: 11.5, fontWeight: 500, textAlign: 'center' }}>
+            {status.state === 'recovering' ? T.recovering : T.waiting}
+          </div>
+        </div>
+      )}
+
       {cartello && !aperta && (
         <div style={{ position: 'absolute', left: 20, right: 20, bottom: 'calc(120px + env(safe-area-inset-bottom))', display: 'flex', justifyContent: 'center', zIndex: 60, pointerEvents: 'none' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, pointerEvents: 'auto', width: '100%', maxWidth: 420, padding: '10px 12px',
@@ -351,7 +395,7 @@ export default function FinestraSulMondo({ C, L, lingua, prefs, attiva, paese, o
             {videoLettura ? (
               <div style={{ position: 'relative', aspectRatio: '16/9', borderRadius: 16, overflow: 'hidden', background: '#000', marginBottom: 14 }}>
                 <iframe
-                  src={`https://www.youtube-nocookie.com/embed/${videoLettura.id}${settings.autoplayVideo ? '?autoplay=1' : ''}`}
+                  src={`https://www.youtube-nocookie.com/embed/${videoLettura.id}${settings.autoplayVideo ? '?autoplay=1&playsinline=1' : '?playsinline=1'}`}
                   title={videoLettura.titolo || aperta.title}
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                   allowFullScreen
