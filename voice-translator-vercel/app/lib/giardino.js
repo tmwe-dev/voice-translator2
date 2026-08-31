@@ -14,10 +14,9 @@
 //    interessi globali, separati in ordine per origine e per lingua e
 //    posizione geografica.»
 //
-// b.585 — «Oggi voglio» non crea un altro profilo e non entra nelle
-// preferenze permanenti. E' soltanto il seme piu importante di QUESTA
-// sessione: viene passato qui da chi disegna Mondo e sparisce quando la
-// sessione finisce. Meno stato, nessun nuovo algoritmo.
+// b.585 — «Oggi voglio» non crea un altro profilo e non un altro motore.
+// E' un seme temporaneo con una scadenza: finche e valido viene prima di
+// tutto, poi sparisce da solo e restano preferiti, memoria e mondo.
 // ═══════════════════════════════════════════════════════════════
 
 /** Le famiglie di ramo. L'ordine conta: si alterna per non fare monocultura. */
@@ -27,15 +26,23 @@ export function normalizza(q) {
   return String(q || '').toLowerCase().replace(/\s+/g, ' ').trim();
 }
 
+/** La richiesta temporanea e viva solo fino alla sua scadenza. */
+export function preferenzaOggi(prefs, adesso = Date.now()) {
+  const o = prefs?.mondoOggi;
+  const q = String(o?.q || '').trim().slice(0, 80);
+  const scade = Number(o?.scade) || 0;
+  return q && scade > adesso ? q : '';
+}
+
 /**
  * I SEMI dell'utente, in ordine di priorita:
- *   0. «Oggi voglio» della sessione          — vale adesso, non per sempre
- *   1. le ricerche salvate con la stella     — le ha scelte lui
- *   2. le ultime ricerche / interessi        — quello che ha fatto/scelto
- *   3. i giri predefiniti                    — il ripiego per non essere vuoti
+ *   0. «Oggi voglio» ancora valido            — vale adesso, non per sempre
+ *   1. le ricerche salvate con la stella      — le ha scelte lui
+ *   2. le ultime ricerche / interessi         — quello che ha fatto/scelto
+ *   3. i giri predefiniti                     — il ripiego per non essere vuoti
  *
  * Niente doppioni: se «musica» e anche un preferito resta una sola volta,
- * con la priorita temporanea piu alta finche dura questa sessione.
+ * con la priorita temporanea piu alta finche dura la richiesta di oggi.
  */
 export function semiDi(prefs, predefinite = [], oggi = '') {
   const visti = new Set();
@@ -46,7 +53,7 @@ export function semiDi(prefs, predefinite = [], oggi = '') {
     visti.add(n);
     fuori.push({ query: String(q).trim(), origine, peso });
   };
-  aggiungi(oggi, 'oggi', 4);
+  aggiungi(oggi || preferenzaOggi(prefs), 'oggi', 4);
   for (const r of (Array.isArray(prefs?.ricerchePreferite) ? prefs.ricerchePreferite : [])) aggiungi(r?.q, 'preferita', 3);
   for (const r of (Array.isArray(prefs?.ricercheRecenti) ? prefs.ricercheRecenti : [])) aggiungi(r?.q, 'recente', 2);
   // b.562 — GLI INTERESSI SCELTI ALL'INGRESSO sono semi a tutti gli
