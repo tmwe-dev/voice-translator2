@@ -14,6 +14,7 @@ import { raggruppaInArgomenti, impronta } from '../app/lib/topics/raggruppa.js';
 import { pulisciTestoWeb, rilevaIniezione } from '../app/lib/topics/iniezione.js';
 import { isSSRFSafe } from '../app/lib/topics/ssrf.js';
 import { normalizzaQuery } from '../app/lib/topics/servizio.js';
+import { politicaContenuti } from '../security-headers.mjs';
 
 // ── Il parser RSS ───────────────────────────────────────────────
 
@@ -238,10 +239,10 @@ describe('Scheda e video (b.153)', () => {
     expect(src).toContain('trackDailySpend');
   });
 
-  it('la CSP consente il player nocookie in ENTRAMBE le definizioni', () => {
-    for (const f of ['../middleware.js', '../next.config.mjs']) {
-      expect(fs.readFileSync(path.resolve(__dirname, f), 'utf8')).toContain('youtube-nocookie.com');
-    }
+  it('la CSP canonica consente il player nocookie', () => {
+    const csp = politicaContenuti({ inSviluppo: false });
+    const frame = csp.split('; ').find((pezzo) => pezzo.startsWith('frame-src ')) || '';
+    expect(frame).toContain('https://www.youtube-nocookie.com');
   });
 
   it('i video arrivano dalla Data API, non piu dalla pagina risultati', async () => {
