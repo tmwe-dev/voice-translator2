@@ -67,16 +67,6 @@ export async function leggiARighe(risposta, suStadio) {
 }
 
 /**
- * Cerca su Topics e restituisce lo stadio «fine».
- * Un solo posto dove si compone l'indirizzo: se un giorno cambia un
- * parametro, cambia qui e non in due schermate diverse.
- */
-/**
- * b.541 — I RAMI di un seme: dove puo crescere questa ricerca.
- * Non lancia mai: un giardino che non cresce non deve fermare il
- * giornale — si torna un elenco vuoto e chi guarda continua coi semi.
- */
-/**
  * b.543 — IL FONTIERE. `leggi` guarda la lista che c'e gia (gratis, per
  * sapere se l'icona va accesa); senza `leggi` fa il deep search vero.
  * Non lancia mai: senza fonti si cerca come si e sempre cercato.
@@ -103,6 +93,11 @@ export async function chiediFonti({ paese = '', settore = '', nomePaese = '', li
   } catch { return { fonti: [] }; }
 }
 
+/**
+ * b.541 — I RAMI di un seme: dove puo crescere questa ricerca.
+ * Non lancia mai: un giardino che non cresce non deve fermare il
+ * giornale — si torna un elenco vuoto e chi guarda continua coi semi.
+ */
 export async function chiediRami({ seme, lingua = 'it', paese = '', livello = 1, userToken = null }) {
   try {
     const r = await fetch('/api/topics/rami', {
@@ -117,11 +112,16 @@ export async function chiediRami({ seme, lingua = 'it', paese = '', livello = 1,
   } catch { return []; }
 }
 
+/**
+ * Cerca su Topics e restituisce lo stadio «fine».
+ * `automatico=true` non significa «non cercare mai»: dice al server che
+ * il giro e nato dal feed e che puo evitare i motori quando il registro
+ * delle fonti e gia maturo. Se l'utente scrive una domanda resta false.
+ */
 export async function cercaTopics({
   q, lingua = 'it', cat = 'notizie',
   fresca = false, profonda = false, fonti = 0, segnale = null,
-  // b.543 — da quale lista di testate pescare le voci mirate (il Fontiere)
-  paeseFonti = '', settoreFonti = '',
+  paeseFonti = '', settoreFonti = '', automatico = false,
 } = {}, suStadio) {
   const pulita = String(q || '').trim();
   if (!pulita) return null;
@@ -131,6 +131,7 @@ export async function cercaTopics({
   if (profonda || fonti) parametri.set('fonti', String(fonti || 6));
   if (paeseFonti) parametri.set('paeseFonti', paeseFonti);
   if (settoreFonti) parametri.set('settoreFonti', settoreFonti);
+  if (automatico) parametri.set('auto', '1');
   const risposta = await fetch(`/api/topics/search?${parametri.toString()}`, segnale ? { signal: segnale } : undefined);
   if (!risposta.ok || !risposta.body) throw new Error(`HTTP ${risposta.status}`);
   return leggiARighe(risposta, suStadio);
