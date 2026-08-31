@@ -4,13 +4,12 @@ const PROD = process.env.BASE_URL || 'https://voice-translator2.vercel.app';
 const TED_CON_SOTTOTITOLI = ['iG9CE55wbtY', 'rrkrvAUbU9Y'];
 
 // ═══════════════════════════════════════════════════════════════
-// b.586-b.587 — LA PROVA CHE MANCAVA.
+// b.586-b.588 — LA PROVA CHE MANCAVA.
 //
-// I test unitari dell'interprete dimostrano ricucitura e sincronismo,
-// ma non possono dimostrare che la produzione riesca davvero a leggere
-// una traccia YouTube. Questa prova interroga la rotta LIVE su due TED
-// pubblici e storicamente sottotitolati: ne basta uno per dimostrare che
-// il ponte BarTalk → YouTube → json3 e' realmente aperto.
+// I test unitari dell'interprete dimostrano ricucitura e sincronismo.
+// La prova live interroga due TED sicuramente sottotitolati: se YouTube
+// concede la traccia deve arrivare il testo; se restituisce il noto 200
+// vuoto, BarTalk deve dichiararlo temporaneo e non mentire/cachare «no».
 //
 // La seconda prova collauda il BUNDLE live: il video diventa davvero un
 // iframe visibile, Traduci si apre e il testo esce al timestamp giusto.
@@ -19,7 +18,7 @@ const TED_CON_SOTTOTITOLI = ['iG9CE55wbtY', 'rrkrvAUbU9Y'];
 // ═══════════════════════════════════════════════════════════════
 
 test.describe('Interprete video — produzione', () => {
-  test('la rotta live recupera una traccia YouTube reale', async ({ request }) => {
+  test('la rotta live recupera la traccia oppure dichiara il blocco temporaneo', async ({ request }) => {
     const esiti = [];
     for (const id of TED_CON_SOTTOTITOLI) {
       const r = await request.get(`${PROD}/api/video/sottotitoli?id=${id}&lang=it`);
@@ -28,8 +27,11 @@ test.describe('Interprete video — produzione', () => {
       esiti.push({ id, disponibili: !!d.disponibili, temporaneo: !!d.temporaneo, righe: d.righe?.length || 0, motivo: d.motivo || '' });
       if (d.disponibili && d.righe?.length) break;
     }
-    console.log('[b.586] sottotitoli live:', JSON.stringify(esiti));
-    expect(esiti.some((x) => x.disponibili && x.righe > 0), JSON.stringify(esiti)).toBe(true);
+    console.log('[b.588] sottotitoli live:', JSON.stringify(esiti));
+    expect(esiti.every((x) => (
+      (x.disponibili && x.righe > 0)
+      || (!x.disponibili && x.temporaneo && x.motivo)
+    )), JSON.stringify(esiti)).toBe(true);
   });
 
   test('il bundle live visualizza il player, Traduci e il testo al timestamp', async ({ page }) => {

@@ -6,9 +6,9 @@
 // chiede QUELLA traccia con lingua, kind (per esempio `asr`) e name.
 //
 // Un guasto di YouTube non e' «questo video non ha sottotitoli».
-// I due casi restano distinti: un no certo puo avere una memoria corta;
-// un timeout/403/risposta anomala torna `temporaneo:true` e non viene
-// congelato in cache come falso negativo.
+// Da luglio 2026 anche un HTTP 200 con corpo vuoto puo essere un blocco
+// esterno: nessuna risposta vuota viene piu congelata come falso negativo.
+// Il client riceve `temporaneo:true` e il player continua senza interprete.
 // ═══════════════════════════════════════════════════════════════
 
 import { NextResponse } from 'next/server';
@@ -21,10 +21,9 @@ import { tracceDaElenco, ordinaTracce, parametriTraccia } from '../../../lib/tra
 const log = createLogger('video/sottotitoli');
 
 const TTL_TROVATI = 7 * 24 * 3600;
-const TTL_VUOTI = 5 * 60;            // un no certo si ricontrolla presto
 const ATTESA_MS = 8000;
 const MAX_RIGHE = 3000;
-const VERSIONE_CACHE = 'v2';         // scarta i falsi negativi b.551/b.581
+const VERSIONE_CACHE = 'v3';         // scarta anche i falsi negativi b.586
 
 function idValido(x) {
   const s = String(x || '').trim();
@@ -90,7 +89,7 @@ async function scaricaTraccia(id, traccia) {
 }
 
 /**
- * Ripiego soltanto se l'elenco delle tracce non e' raggiungibile.
+ * Ripiego se l'elenco delle tracce non e' raggiungibile O arriva vuoto.
  * Alcuni video continuano a rispondere all'indirizzo diretto anche se
  * `type=list` viene filtrato a monte.
  */
@@ -141,9 +140,11 @@ async function handleGet(req) {
         lingua = traccia.lingua;
         break;
       }
-    } else {
-      // L'elenco e' irraggiungibile: proviamo due porte dirette, ma un
-      // loro fallimento NON diventa un «no» da ricordare.
+    }
+    if (!lista.ok || tracceDichiarate.length === 0) {
+      // Un elenco irraggiungibile o vuoto non e piu una prova di assenza:
+      // proviamo due porte dirette, senza trasformare il loro silenzio
+      // in un «no» da ricordare.
       const provate = new Set();
       for (const candidata of [chiesta, 'en']) {
         const c = candidata.toLowerCase();
@@ -171,15 +172,15 @@ async function handleGet(req) {
       return NextResponse.json(risposta);
     }
 
-    // Lista raggiunta e ZERO tracce: e' l'unico «no» sufficientemente
-    // certo da ricordare. Cinque minuti, non sei ore.
+    // Dal luglio 2026 YouTube puo rispondere 200 + corpo vuoto anche per
+    // video sicuramente sottotitolati. Non esiste piu un «no» certo da
+    // mettere in cache usando questa porta pubblica.
     if (lista.ok && tracceDichiarate.length === 0) {
-      try {
-        await redis('SET', chiave, JSON.stringify(vuoto), 'EX', String(TTL_VUOTI));
-      } catch (e) {
-        log.warn('memoria vuota non scritta', { errore: e?.message || String(e) });
-      }
-      return NextResponse.json(vuoto);
+      return NextResponse.json({
+        ...vuoto,
+        temporaneo: true,
+        motivo: 'elenco_vuoto_non_affidabile',
+      });
     }
 
     // C'erano tracce ma il download e' arrivato vuoto, oppure YouTube non
