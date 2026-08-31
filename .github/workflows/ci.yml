@@ -26,6 +26,12 @@
 # non ha MAI eseguito: i flussi di lavoro si leggono solo dalla
 # `.github/workflows` alla radice del deposito. Era un controllo che
 # sembrava esserci e non c'era.
+#
+# b.583 — IL CONTROLLO E IL COMANDO LOCALE DEVONO ESSERE LO STESSO.
+# Prima la CI lintava solo app/ e middleware.js, mentre `npm run lint`
+# controllava anche __tests__/ ed e2e/. Inoltre Node 20 era gia sotto il
+# requisito dichiarato da dipendenze installate. Da qui in avanti il
+# workflow usa Node 22 e chiama il comando canonico del package.
 # ═══════════════════════════════════════════════════════════════
 name: CI
 
@@ -47,15 +53,15 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
           cache-dependency-path: voice-translator-vercel/package-lock.json
 
       - name: Install dependencies
         run: npm ci
 
-      - name: Lint (zero errors required)
-        run: npx eslint app/ middleware.js --max-warnings 200
+      - name: Lint (stesso comando usato in locale)
+        run: npm run lint
 
       - name: Unit + integration tests
         shell: bash
@@ -96,7 +102,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
           cache-dependency-path: voice-translator-vercel/package-lock.json
 
