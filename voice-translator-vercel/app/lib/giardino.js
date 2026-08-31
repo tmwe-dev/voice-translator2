@@ -14,18 +14,10 @@
 //    interessi globali, separati in ordine per origine e per lingua e
 //    posizione geografica.»
 //
-// IL DIFETTO CHE CHIUDE. Fino a ieri il feed mostrava i risultati di UNA
-// ricerca: l'ultima. Le ricerche salvate con la stella e quelle recenti
-// stavano nella sidebar come promemoria, e nel giornale non entravano
-// mai — Luca: «se le mie ricerche ultime sono dentro perche nei reel non
-// vedo piu questi contenuti?». Perche' nessuno le ripiantava.
-//
-// QUI C'E' SOLO LA LOGICA, e non parla con nessuno: quali semi ci sono,
-// in che ordine si piantano, quando un ramo e' esaurito, quale ramo tocca
-// adesso, come si evitano le ripetizioni. I rami VERI (le query derivate)
-// li propone il server con un modello — /api/topics/rami — perche' sapere
-// che accanto a Tom Cruise ci sono Brad Pitt e Mission Impossible e' una
-// conoscenza del mondo, non una regola che si puo scrivere a mano.
+// b.585 — «Oggi voglio» non crea un altro profilo e non entra nelle
+// preferenze permanenti. E' soltanto il seme piu importante di QUESTA
+// sessione: viene passato qui da chi disegna Mondo e sparisce quando la
+// sessione finisce. Meno stato, nessun nuovo algoritmo.
 // ═══════════════════════════════════════════════════════════════
 
 /** Le famiglie di ramo. L'ordine conta: si alterna per non fare monocultura. */
@@ -37,13 +29,15 @@ export function normalizza(q) {
 
 /**
  * I SEMI dell'utente, in ordine di priorita:
- *   1. le ricerche salvate con la stella  — le ha scelte lui, valgono di piu
- *   2. le ultime ricerche fatte           — quello che gli interessa ADESSO
- *   3. i giri predefiniti (casa e viaggio) — perche il giardino non sia mai vuoto
- * Niente doppioni: la stessa query in piu elenchi resta un seme solo, con
- * la priorita piu alta che ha ottenuto.
+ *   0. «Oggi voglio» della sessione          — vale adesso, non per sempre
+ *   1. le ricerche salvate con la stella     — le ha scelte lui
+ *   2. le ultime ricerche / interessi        — quello che ha fatto/scelto
+ *   3. i giri predefiniti                    — il ripiego per non essere vuoti
+ *
+ * Niente doppioni: se «musica» e anche un preferito resta una sola volta,
+ * con la priorita temporanea piu alta finche dura questa sessione.
  */
-export function semiDi(prefs, predefinite = []) {
+export function semiDi(prefs, predefinite = [], oggi = '') {
   const visti = new Set();
   const fuori = [];
   const aggiungi = (q, origine, peso) => {
@@ -52,6 +46,7 @@ export function semiDi(prefs, predefinite = []) {
     visti.add(n);
     fuori.push({ query: String(q).trim(), origine, peso });
   };
+  aggiungi(oggi, 'oggi', 4);
   for (const r of (Array.isArray(prefs?.ricerchePreferite) ? prefs.ricerchePreferite : [])) aggiungi(r?.q, 'preferita', 3);
   for (const r of (Array.isArray(prefs?.ricercheRecenti) ? prefs.ricercheRecenti : [])) aggiungi(r?.q, 'recente', 2);
   // b.562 — GLI INTERESSI SCELTI ALL'INGRESSO sono semi a tutti gli
@@ -77,15 +72,10 @@ export function esaurito({ trovati = 0, nuovi = 0 } = {}) {
 /**
  * LA PIANTA. Dato lo stato del giardino, dice QUALE query si pianta
  * adesso. Le regole, nell'ordine:
- *   1. prima tutti i SEMI dell'utente, per peso (preferite, poi recenti,
- *      poi predefinite): Tom Cruise e il Chelsea si vedono subito;
- *   2. poi i RAMI, alternando le famiglie (stesso / vicino / ambito /
- *      evento / luogo) e alternando il seme di provenienza — cosi non
- *      escono sei ricerche di fila sullo stesso attore;
+ *   1. prima tutti i SEMI dell'utente, per peso;
+ *   2. poi i RAMI, alternando le famiglie e il seme di provenienza;
  *   3. mai una query gia usata;
  *   4. i rami di un seme piu importante vengono prima.
- * Torna null quando non c'e piu niente: e il momento in cui chi guarda
- * vede il campo «cerca ancora».
  */
 export function prossimaQuery({ semi = [], rami = [], usate = [] } = {}) {
   const fatte = new Set(usate.map(normalizza));
@@ -115,9 +105,6 @@ export function prossimaQuery({ semi = [], rami = [], usate = [] } = {}) {
     const quantoSeme = contaSeme.get(normalizza(r.seme)) || 0;
     const importanza = pesoSeme.get(normalizza(r.seme)) || 0;
     const profondita = r.livello || 1;
-    // meno hai pescato da questa famiglia e da questo seme, meglio e';
-    // piu il seme e' importante, meglio e'; piu il ramo e' lontano dal
-    // seme, dopo viene.
     return (quantoTipo * 10) + (quantoSeme * 6) + (profondita * 3) - (importanza * 2);
   };
   return [...liberi].sort((a, b) => punteggio(a) - punteggio(b) || TIPI_RAMO.indexOf(a.tipo) - TIPI_RAMO.indexOf(b.tipo))[0];
