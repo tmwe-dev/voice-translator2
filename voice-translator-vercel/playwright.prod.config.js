@@ -10,8 +10,8 @@ import { defineConfig, devices } from '@playwright/test';
 export default defineConfig({
   testDir: './e2e',
   // b.587 — il vecchio pattern eseguiva soltanto lo smoke generale:
-  // production-video.spec.js esisteva ma non veniva mai lanciato dalla CI.
-  testMatch: ['production-smoke.spec.js', 'production-video.spec.js'],
+  // video e Globo avevano prove dedicate che la CI non lanciava.
+  testMatch: ['production-smoke.spec.js', 'production-video.spec.js', 'production-mondo.spec.js'],
   fullyParallel: true,
   retries: 1,
   reporter: 'list',
