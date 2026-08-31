@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { deveCercareSulWeb, sogliaFonti, SOGLIE_FONTI } from '../app/lib/topics/servizio.js';
+import { consumaQueryAutomatica, mescolaSemi, segnaQueryAutomatica } from '../app/lib/topics/rami.js';
 
 describe('b.585 — discovery semplice', () => {
   it('una ricerca esplicita puo sempre allargarsi al web', () => {
@@ -42,5 +43,25 @@ describe('b.585 — discovery semplice', () => {
     expect(sogliaFonti({ paese: 'IT' })).toBe(SOGLIE_FONTI.paese);
     expect(sogliaFonti({ paese: 'IT', settore: 'cinema' })).toBe(SOGLIE_FONTI.settore);
     expect(sogliaFonti({})).toBe(Infinity);
+  });
+
+  it('solo il ramo realmente scelto viene marcato automatico', () => {
+    const ramo = 'ramo automatico prova b585';
+    const mia = 'mia scelta prova b585';
+    mescolaSemi(
+      [{ query: mia, origine: 'preferita' }],
+      [{ query: ramo, origine: 'ramo' }],
+      { quanti: 2 },
+    );
+    expect(consumaQueryAutomatica(mia)).toBe(false);
+    expect(consumaQueryAutomatica(ramo)).toBe(true);
+    expect(consumaQueryAutomatica(ramo), 'il marchio si usa una sola volta').toBe(false);
+  });
+
+  it('anche un ramo AI puo essere marcato e poi torna esplicito', () => {
+    const q = 'ramo ai prova b585';
+    segnaQueryAutomatica(q);
+    expect(consumaQueryAutomatica(q)).toBe(true);
+    expect(consumaQueryAutomatica(q)).toBe(false);
   });
 });
