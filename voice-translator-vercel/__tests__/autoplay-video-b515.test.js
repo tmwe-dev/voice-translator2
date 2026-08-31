@@ -22,7 +22,7 @@ describe('b.515 → b.580 — autoplay video breaking news come scelta della per
     expect(f).toMatch(/const \[videoLettura, setVideoLettura\] = useState\(null\);/);
     expect(f).toMatch(/if \(!aperta\?\.title\) return undefined;/);
     expect(f).toMatch(/\/api\/topics\/video\?q=\$\{encodeURIComponent\(aperta\.title\)\}/);
-    expect(f).toMatch(/settings\.autoplayVideo \? '\?autoplay=1' : ''/);
+    expect(f).toMatch(/settings\.autoplayVideo \? '\?autoplay=1&playsinline=1' : '\?playsinline=1'/);
     const primaDellApertura = f.slice(0, f.indexOf("if (!aperta?.title) return undefined;"));
     expect(primaDellApertura).not.toMatch(/\/api\/topics\/video\?q=/);
   });

@@ -37,15 +37,16 @@ describe('b.517 → b.580 — il radar Live porta il globo al Paese dell evento'
   });
 });
 
-describe('b.517 → b.580 — il globo non interrompe quello che sto facendo', () => {
+describe('b.517 → b.587 — il globo resta vivo anche con una scheda Paese aperta', () => {
   const f = leggi('app/components/FinestraSulMondo.js');
   const v = leggi('app/components/MondoView.js');
   it('la finestra conserva occupato in un ref', () => {
     expect(f).toMatch(/occupato = false/);
     expect(f).toMatch(/occupatoRef\.current = occupato/);
   });
-  it('la coda avanza solo se non ci sono cartello, lettura, volo o occupazione', () => {
-    expect(f).toMatch(/!cartelloRef\.current && !apertaRef\.current && !aspettandoRef\.current && !occupatoRef\.current/);
+  it('la coda avanza se non ci sono cartello, lettura o volo; una scheda Paese non la ferma', () => {
+    expect(f).toMatch(/!cartelloRef\.current && !apertaRef\.current && !aspettandoRef\.current\) avanza\(\)/);
+    expect(f).not.toMatch(/!aspettandoRef\.current && !occupatoRef\.current/);
   });
   it('MondoView alimenta occupato', () => {
     expect(v).toMatch(/occupato=\{strumenti \|\| !!schedaPaese\}/);

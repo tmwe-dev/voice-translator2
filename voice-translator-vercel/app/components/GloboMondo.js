@@ -71,13 +71,17 @@ export default function GloboMondo({ sfondo = false, titolo = 'Il mondo ora', et
     return radar.live || {};
   }, [radar, traffico]);
 
-  // Il paese scelto a mano ha precedenza sul focus temporaneo di una
-  // breaking. Lo zoom resta quello originale del pianeta.
+  // b.587 — il focus Live e TEMPORANEO e deve vincere sul Paese scelto.
+  // Prima l'ordine era `paese || focusEsterno`: siccome all'ingresso viene
+  // gia selezionato il proprio Paese, un breaking dagli USA o dal Giappone
+  // chiedeva il volo ma il renderer continuava a ricevere IT. Quando il
+  // cartello finisce focusEsterno torna null e il pianeta rientra sul
+  // Paese scelto: nessuna preferenza viene persa.
   useEffect(() => {
     const finestra = ref.current?.contentWindow;
     if (!finestra) return;
     const manda = () => {
-      try { finestra.postMessage({ tipo: 'bartalk:paese', code: paese || focusEsterno || null }, ORIGINE); }
+      try { finestra.postMessage({ tipo: 'bartalk:paese', code: focusEsterno || paese || null }, ORIGINE); }
       catch { /* iframe in caricamento: il messaggio verra ripetuto a globo-pronto */ }
     };
     manda();
@@ -197,7 +201,7 @@ export default function GloboMondo({ sfondo = false, titolo = 'Il mondo ora', et
                   padding: '9px 10px', borderRadius: 9, border: 'none', cursor: 'pointer',
                   background: i === stato ? 'rgba(255,255,255,0.07)' : 'transparent',
                   color: i === stato ? '#eaf0ff' : 'rgba(214,226,245,0.85)',
-                  fontSize: 13, fontWeight: i === stato ? 800 : 600,
+                  fontSize: 13, fontWeight: 500,
                   textAlign: 'left', WebkitTapHighlightColor: 'transparent',
                 }}>
                 <IconaCielo tipo={v.icona} size={17} color={i === stato ? '#eaf0ff' : 'rgba(214,226,245,0.8)'} />

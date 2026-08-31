@@ -91,6 +91,29 @@ async function chiedi(percorso, parametri) {
   return await r.json();
 }
 
+// b.587 — una voce nella playlist non significa che il video si possa
+// davvero mostrare dentro BarTalk: puo essere diventato privato oppure
+// l'autore puo aver vietato l'incorporamento. Prima lo scoprivamo solo
+// quando il player mostrava «Video non disponibile» in mezzo al feed.
+// `videos.list` costa una sola unita per tutto il mazzetto: la spendiamo
+// per non consegnare una diapositiva che sappiamo gia non poter suonare.
+async function soloIncorporabili(video) {
+  const lista = Array.isArray(video) ? video.filter((v) => v?.id) : [];
+  if (!lista.length) return [];
+  try {
+    const d = await chiedi('videos', { part: 'status', id: lista.map((v) => v.id).join(',') });
+    const buoni = new Set((d?.items || [])
+      .filter((v) => v?.status?.embeddable !== false && v?.status?.privacyStatus === 'public')
+      .map((v) => v.id));
+    return lista.filter((v) => buoni.has(v.id));
+  } catch {
+    // Se YouTube non concede la verifica non buttiamo via un mazzetto gia
+    // ottenuto. Le ricerche hanno comunque i filtri embeddable/syndicated;
+    // sulle playlist il player resta l'ultima difesa.
+    return lista;
+  }
+}
+
 /** SEGUIRE un canale: 1 unita. E' la strada normale. */
 export async function ultimiDelCanale(canale, { massimo = 6 } = {}) {
   const playlist = playlistCaricamenti(canale);
@@ -98,7 +121,8 @@ export async function ultimiDelCanale(canale, { massimo = 6 } = {}) {
   const d = await chiedi('playlistItems', {
     part: 'snippet', playlistId: playlist, maxResults: Math.min(massimo, 50),
   });
-  return daApi(d?.items).slice(0, massimo);
+  const candidati = daApi(d?.items).slice(0, massimo);
+  return (await soloIncorporabili(candidati)).slice(0, massimo);
 }
 
 /** CERCARE: 100 unita e un tetto di 100 al giorno. Solo se serve davvero. */
@@ -118,6 +142,10 @@ export async function cercaSuYouTube(query, lingua = 'it', { massimo = 8, dallOr
   const parametri = {
     part: 'snippet', q, type: 'video', maxResults: Math.min(massimo, 50),
     relevanceLanguage: String(lingua || 'it').slice(0, 2), safeSearch: 'moderate',
+    // b.587 — il feed usa un iframe: un risultato che YouTube non permette
+    // di incorporare o distribuire fuori da youtube.com non e' un risultato
+    // per noi. Filtrarlo a monte evita player neri/«non disponibile».
+    videoEmbeddable: 'true', videoSyndicated: 'true',
   };
   if (recenti) {
     const da = dallOra || (Date.now() - 48 * 3600 * 1000);

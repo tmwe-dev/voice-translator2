@@ -241,7 +241,9 @@ describe('il deposito: la storia non scade', () => {
   });
 
   it('senza Supabase non si rompe niente: il deposito e un vantaggio, non una condizione', () => {
-    expect((d.match(/if \(!db/g) || []).length, 'ogni porta controlla').toBe(6);
+    // b.585 ha aggiunto contaFontiDelPosto: anche la settima porta deve
+    // degradare senza trasformare Supabase in una condizione del Mondo.
+    expect((d.match(/if \(!db/g) || []).length, 'ogni porta controlla').toBe(7);
     expect(d).toMatch(/if \(!db\) return \[\];/);
   });
 

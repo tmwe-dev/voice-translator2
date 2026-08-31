@@ -22,15 +22,16 @@ describe('b.515 → b.580 — il pianeta vola verso la breaking news prima del c
     expect(f).toMatch(/voloRef\.current = setTimeout\(\(\) => \{/);
   });
 
-  it('FinestraSulMondo: mentre si legge o un pannello occupa il mondo non parte un nuovo volo', () => {
+  it('FinestraSulMondo: lettura e volo restano esclusivi, una scheda Paese non spegne il Live', () => {
     const f = leggi('app/components/FinestraSulMondo.js');
-    expect(f).toMatch(/if \(!cartelloRef\.current && !apertaRef\.current && !aspettandoRef\.current && !occupatoRef\.current\) avanza\(\);/);
+    expect(f).toMatch(/if \(!cartelloRef\.current && !apertaRef\.current && !aspettandoRef\.current\) avanza\(\);/);
+    expect(f).not.toMatch(/!aspettandoRef\.current && !occupatoRef\.current/);
   });
 
-  it('GloboMondo: il paese scelto a mano vince sul focus temporaneo della notizia', () => {
+  it('GloboMondo: il focus temporaneo della notizia vince senza cancellare il paese scelto', () => {
     const g = leggi('app/components/GloboMondo.js');
     expect(g).toMatch(/focusEsterno = null/);
-    expect(g).toMatch(/code: paese \|\| focusEsterno \|\| null/);
+    expect(g).toMatch(/code: focusEsterno \|\| paese \|\| null/);
     expect(g).toMatch(/\[paese, focusEsterno\]/);
   });
 
