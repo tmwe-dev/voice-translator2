@@ -4,12 +4,13 @@
 // Risponde in NDJSON: una riga JSON per ogni stadio del lavoro
 // (stanze → cache|cerca → fonti → leggo×N → raggruppo → fine), cosi
 // l'interfaccia puo mostrare il processo di Cobra mentre avviene,
-// invece di una rotellina muta. L'ultima riga porta i risultati.
+// invece di una rotellina muta.
 //
 //   ?q=formula+1        la query (obbligatoria)
 //   &lang=de            lingua dell'interfaccia (predefinita: en)
 //   &cat=sport          categoria per il TTL della cache
 //   &fresh=1            salta la cache condivisa (bottone Aggiorna)
+//   &auto=1             giro generato da Mondo: prima le fonti note
 //
 // La guardia comune limita la frequenza: la ricerca fresca costa
 // banda, e un limite stretto tiene il conto in ordine.
@@ -36,6 +37,7 @@ async function handleGet(req) {
   const lang = LINGUE.has(url.searchParams.get('lang')) ? url.searchParams.get('lang') : 'en';
   const cat = CATEGORIE.has(url.searchParams.get('cat')) ? url.searchParams.get('cat') : 'notizie';
   const fresca = url.searchParams.get('fresh') === '1';
+  const automatico = url.searchParams.get('auto') === '1';
   // b.185 — seconda modalita opt-in: ?deep=1 apre piu fonti (Wikipedia
   // accanto alle notizie); &fonti=N (3..10) dice quanto approfondire.
   const profonda = url.searchParams.get('deep') === '1';
@@ -63,6 +65,7 @@ async function handleGet(req) {
       try {
         const esito = await cercaArgomenti(q, lang, {
           categoria: cat, fresca, profonda, fonti, paeseFonti, settoreFonti,
+          ricercaEsplicita: !automatico,
           racconta: (stadio, dati) => riga({ stadio, ...dati }),
         });
         riga({ stadio: 'fine', ...esito });
