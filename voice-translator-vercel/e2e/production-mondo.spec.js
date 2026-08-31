@@ -58,7 +58,12 @@ test.describe('Mondo — Globo Live in produzione', () => {
 
     await page.goto(PROD);
     await page.waitForLoadState('networkidle');
-    await page.locator('button:has(img[src*="menu-cuore.webp"])').click();
+    // La barra e gia collaudata dallo smoke del player. Qui isoliamo il
+    // contratto del Globo da eventuali veli PWA/onboarding della Home:
+    // il gestore React deve aprire Mondo, non ci interessa l'hit-testing.
+    const community = page.locator('button:has(img[src*="menu-cuore.webp"])');
+    await expect(community).toBeVisible({ timeout: 15000 });
+    await community.evaluate((button) => button.click());
 
     // Mondo apre il giornale a tutta pagina per progetto. Torniamo alla
     // sua testata e passiamo dalla scheda Notizie alla scheda Globo.
