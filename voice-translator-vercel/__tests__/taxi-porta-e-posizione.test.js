@@ -26,17 +26,14 @@
 // chiederla, nemmeno questa origine. In due punti, per giunta —
 // middleware.js e next.config.mjs.
 //
-// E la stessa applicazione chiama getCurrentPosition in SpeakerView e
-// in TaxiDriverView, e watchPosition in TaxiMap.
-//
-// Il browser rifiutava senza nemmeno mostrare la richiesta di permesso.
-// Per chi lo usava, TaxiTalk semplicemente "non trovava la posizione",
-// e non c'era modo di risalire al perche: non compariva nessun errore,
-// solo una cosa che non succedeva.
+// b.583 — oggi quelle due copie non esistono piu: entrambi i consumatori
+// leggono security-headers.mjs. La prova quindi controlla la fonte vera,
+// non pretende che la stessa stringa venga riscritta in due file.
 // ═══════════════════════════════════════════════════════════════
 import { describe, it, expect } from 'vitest';
 import fs from 'fs';
 import path from 'path';
+import { intestazioniSicurezza, intestazioniNext } from '../security-headers.mjs';
 
 const RADICE = path.join(__dirname, '..');
 const leggi = (p) => fs.readFileSync(path.join(RADICE, p), 'utf8');
@@ -81,23 +78,19 @@ describe('il QR ha una porta dove atterrare', () => {
 });
 
 describe('la posizione si puo chiedere', () => {
-  it('le intestazioni non la vietano piu, in nessuna delle due configurazioni', () => {
-    // Erano due, e correggerne una sola avrebbe lasciato il divieto in
-    // piedi a seconda di quale percorso serve la richiesta.
-    for (const f of ['middleware.js', 'next.config.mjs']) {
-      const t = leggi(f).split('\n').filter((r) => !r.trim().startsWith('//')).join('\n');
-      expect(t, `${f} vieta ancora la geolocalizzazione`).not.toMatch(/geolocation=\(\)/);
-      expect(t, `${f} deve consentirla all'origine`).toMatch(/geolocation=\(?self\)?/);
-    }
+  it('la policy canonica consente geolocation soltanto a self', () => {
+    const policy = intestazioniSicurezza({ inSviluppo: false })['Permissions-Policy'];
+    expect(policy).not.toMatch(/geolocation=\(\)/);
+    expect(policy).toContain('geolocation=(self)');
+    expect(policy).not.toMatch(/geolocation=\(\*\)/);
   });
 
-  it('e resta ristretta a questa origine', () => {
-    // `self` e non `*`: puo chiederla questa applicazione, non un
-    // riquadro incorporato da qualcun altro. Il permesso vero lo da
-    // comunque l'utente.
-    for (const f of ['middleware.js', 'next.config.mjs']) {
-      expect(leggi(f), `${f} non deve aprire a tutti`).not.toMatch(/geolocation=\(?\*\)?/);
-    }
+  it('la configurazione Next deriva esattamente dalla stessa policy', () => {
+    const canonica = intestazioniSicurezza({ inSviluppo: false });
+    const next = Object.fromEntries(
+      intestazioniNext({ inSviluppo: false }).map(({ key, value }) => [key, value]),
+    );
+    expect(next['Permissions-Policy']).toBe(canonica['Permissions-Policy']);
   });
 
   it('e c\'e davvero chi la usa: non stiamo aprendo un permesso per niente', () => {
