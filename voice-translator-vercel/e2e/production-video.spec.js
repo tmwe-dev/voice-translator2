@@ -4,7 +4,7 @@ const PROD = process.env.BASE_URL || 'https://voice-translator2.vercel.app';
 const TED_CON_SOTTOTITOLI = ['iG9CE55wbtY', 'rrkrvAUbU9Y'];
 
 // ═══════════════════════════════════════════════════════════════
-// b.586 — LA PROVA CHE MANCAVA.
+// b.586-b.587 — LA PROVA CHE MANCAVA.
 //
 // I test unitari dell'interprete dimostrano ricucitura e sincronismo,
 // ma non possono dimostrare che la produzione riesca davvero a leggere
@@ -12,7 +12,8 @@ const TED_CON_SOTTOTITOLI = ['iG9CE55wbtY', 'rrkrvAUbU9Y'];
 // pubblici e storicamente sottotitolati: ne basta uno per dimostrare che
 // il ponte BarTalk → YouTube → json3 e' realmente aperto.
 //
-// La seconda prova collauda il BUNDLE live fino alla scritta tradotta.
+// La seconda prova collauda il BUNDLE live: il video diventa davvero un
+// iframe visibile, Traduci si apre e il testo esce al timestamp giusto.
 // Le risposte esterne sono simulate apposta: cosi non consuma modelli e
 // separa il cablaggio dell'interfaccia dalla disponibilita di YouTube.
 // ═══════════════════════════════════════════════════════════════
@@ -31,7 +32,7 @@ test.describe('Interprete video — produzione', () => {
     expect(esiti.some((x) => x.disponibili && x.righe > 0), JSON.stringify(esiti)).toBe(true);
   });
 
-  test('il bundle live mostra Traduci e consegna il testo al timestamp', async ({ page }) => {
+  test('il bundle live visualizza il player, Traduci e il testo al timestamp', async ({ page }) => {
     await page.route('**/api/topics/search**', async (route) => {
       await route.fulfill({
         status: 200,
@@ -82,7 +83,14 @@ test.describe('Interprete video — produzione', () => {
 
     await page.goto(PROD);
     await page.waitForLoadState('networkidle');
-    await page.getByRole('button', { name: /community/i }).click();
+    // Il testo della voce cambia con la lingua; l'icona del Mondo e il
+    // contratto stabile della barra inferiore.
+    await page.locator('button:has(img[src*="menu-cuore.webp"])').click();
+
+    // Non basta avere una miniatura: la prima slide deve promuoversi a
+    // player YouTube vero quando l'osservatore la dichiara visibile.
+    const player = page.locator('iframe[src*="youtube-nocookie.com/embed/iG9CE55wbtY"]').first();
+    await expect(player).toBeVisible({ timeout: 20000 });
 
     const traduci = page.getByTestId('traduci-video').first();
     await expect(traduci).toBeVisible({ timeout: 20000 });
