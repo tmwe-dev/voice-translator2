@@ -1088,8 +1088,16 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
             border: `1px solid ${recording ? `${S.colors.accent3 || '#ff5470'}88` : S.colors.cardBorder}`,
             background: recording ? `${S.colors.accent3 || '#ff5470'}14` : S.colors.inputBg }}>
             {/* il piu: da qui entrano foto, file, posizione, contatto */}
+            {/* b.589 — CONFERMATO leggendo il codice: aria-label diceva
+                "addShort" (aggiungi: foto/file/posizione/contatto, per
+                l'assistivita e il tooltip) ma il tocco apriva invece il
+                pannello di Azioni AI (riassunto/report/analisi/consigli/
+                vocabolario). Un'etichetta sbagliata su UNO dei soli due
+                punti d'ingresso della rotta spiega, almeno in parte,
+                perche' /api/chat-action ha zero chiamate in produzione
+                da 7 giorni nonostante sia cablata correttamente. */}
             <button onClick={() => { vibrate(); setShowChatActions(true); }}
-              aria-label={L('addShort')}
+              aria-label={L('chatActionsTitle')} title={L('chatActionsTitle')}
               style={{ width: 44, height: 44, borderRadius: 12, flexShrink: 0, padding: 0,
                 border: `1px solid ${S.colors.cardBorder}`, background: 'transparent',
                 color: S.colors.textSecondary, cursor: 'pointer',
@@ -1122,8 +1130,10 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
                 padding: '8px 0' }}
             />
             {/* la fotocamera, come nel template */}
+            {/* b.589 — stessa etichetta sbagliata del bottone gemello sopra:
+                vedi commento li'. */}
             <button onClick={() => { vibrate(); setShowChatActions(true); }}
-              aria-label={L('addShort')}
+              aria-label={L('chatActionsTitle')} title={L('chatActionsTitle')}
               style={{ width: 44, height: 44, borderRadius: 12, flexShrink: 0, padding: 0,
                 border: `1px solid ${S.colors.accent1}57`, background: `${S.colors.accent1}14`,
                 color: S.colors.textPrimary, cursor: 'pointer',

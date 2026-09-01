@@ -50,7 +50,14 @@ describe('il giro in sottofondo non tocca cio che si vede', () => {
   });
 
   it('un guasto in sottofondo resta in sottofondo', () => {
-    expect(news).toMatch(/if \(e\.name !== 'AbortError' && !dietro\) setErrore\('guasto'\)/);
+    // b.589 — si aggiunge "&& !silenziosa" alla guardia: una ricerca
+    // automatica di ramo (silenziosa=true) NON e' "dietro" (dietro
+    // significa solo "accodata"), quindi senza questo pezzo la prima
+    // ricerca automatica del giro mostrava il banner rosso ad ogni 429
+    // — confermato nei log live. La regola di questo file resta
+    // invariata (il guasto in sottofondo non deve interrompere): si
+    // allarga solo la definizione di "sottofondo".
+    expect(news).toMatch(/if \(e\.name !== 'AbortError' && !dietro && !silenziosa\) setErrore\('guasto'\)/);
   });
 
   it('i due giri hanno due freni distinti: il primo piano comanda', () => {

@@ -67,6 +67,23 @@ export async function resolveRoomIdentity(token, name, roomId) {
     // (non bloccato). Un'unica funzione, cosi la stessa regola vale per
     // ogni consumatore invece di essere ricopiata (e dimenticata) rotta
     // per rotta.
+    //
+    // b.589 — TENTATO E RITIRATO: ho provato a generalizzare qui la
+    // riammissione di b.250 (sotto) a QUALUNQUE azione protetta, per
+    // abbattere il 68% di 401 live su /api/room causato da chi viene
+    // "potato" per silenzio (schermo spento) e poi chiama qualcosa di
+    // diverso dall'heartbeat. La suite completa ha bocciato il
+    // tentativo: __tests__/lib/sessionTokens.test.js protegge
+    // esplicitamente un P1 dell'audit esterno del 15/8 ("un gettone
+    // valido di chi e' stato ESPULSO non deve piu autorizzare nulla")
+    // con uno scenario indistinguibile, a livello di dati, da un
+    // "potato per silenzio": token valido, non in blacklist, ma tolto
+    // da room.members. Il sistema oggi non ha modo di separare le due
+    // situazioni — servirebbe un segnale in piu (es. una soglia sul
+    // lastSeen, o un flag esplicito scritto da chi espelle) prima di
+    // poter estendere la riammissione in sicurezza oltre l'heartbeat.
+    // Non e' una scelta che si fa da soli: il 68% di 401 resta
+    // diagnosticato ma NON corretto in questo giro — vedi CLAUDE.md.
     if (!(await eAncoraMembroStanza(roomId, session.name))) return null;
     return { name: session.name, role: session.role, verified: true };
   }

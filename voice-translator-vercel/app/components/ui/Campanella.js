@@ -1,5 +1,5 @@
 'use client';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FONT, vibrate } from '../../lib/constants.js';
 import { conRipiego } from '../../lib/ripiego.js';
 import Icon from '../Icon.js';
@@ -79,12 +79,30 @@ export default function Campanella({ C = {}, L, chiaviSeguite, onApriContenuto }
     }
   }, [chiaviTesto]);
 
+  // b.589 — CONFERMATO nei log live: 553/557 (99%) di risposte 429 su
+  // /api/mondo/avvisi. Causa: questo effetto dipendeva da `carica`, e
+  // `carica` dipende da `chiaviTesto` — che cambia quasi a ogni crescita
+  // del feed (nuovo argomento seguito). Ogni cambio smontava
+  // l'intervallo (clearInterval) e ne rimontava uno nuovo CHIAMANDO
+  // SUBITO carica(): con un feed che cresce in continuazione, il giro
+  // di 60s (OGNI) non veniva quasi mai rispettato, si chiamava l'API
+  // a raffica invece che una volta al minuto.
+  //
+  // La cura: l'intervallo si crea una volta sola quando compaiono le
+  // prime chiavi (o si ferma quando spariscono tutte) e legge sempre
+  // la versione piu recente di `carica` da un ref — cosi il CONTENUTO
+  // delle chiavi non tocca piu il timer, solo la sua presenza/assenza.
+  const caricaRef = useRef(carica);
+  useEffect(() => { caricaRef.current = carica; }, [carica]);
+
+  const cheHaChiavi = !!chiaviTesto;
   useEffect(() => {
-    if (!chiaviTesto) return undefined;
-    carica();
-    const t = setInterval(carica, OGNI);
+    if (!cheHaChiavi) return undefined;
+    caricaRef.current();
+    const t = setInterval(() => caricaRef.current(), OGNI);
     return () => clearInterval(t);
-  }, [carica, chiaviTesto]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cheHaChiavi]);
 
   // Esc chiude, come ogni pannello di questa applicazione (PannelloLaterale).
   useEffect(() => {

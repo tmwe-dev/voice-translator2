@@ -299,6 +299,10 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
       (async () => {
         await cerca(scelti[0].query, 'notizie', false, true);
         for (const altro of scelti.slice(1)) {
+          // b.589 (rifix b.578) — senza pausa, 4 ricerche automatiche in
+          // sequenza sforano i 15 req/min di /api/topics/search e tornano
+          // 429: confermato nei log live (22% di errore su questa rotta).
+          await new Promise((r) => setTimeout(r, 1500));
           await cerca(altro.query, 'notizie', false, true, true);   // accodato
         }
         // ═══ b.561 — IL GIRO DEL MONDO ═══
@@ -312,6 +316,9 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
         const fuori = ['en', 'es', 'fr', 'de', 'pt', 'ja', 'ar'].filter((x) => x !== mia);
         const scelta = fuori[n % fuori.length];
         const domanda = (QUERY_RAPIDE.mondo || {})[scelta] || QUERY_RAPIDE.mondo.en;
+        // b.589 (rifix b.578) — stessa pausa: e' comunque una ricerca
+        // automatica in coda alle altre, non la prima del giro.
+        await new Promise((r) => setTimeout(r, 1500));
         await cerca(domanda, 'notizie', false, true, true, scelta);
       })();
     } catch { /* senza default si resta sull'invito a cercare */ }
@@ -783,7 +790,7 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
               .map((a) => ({ ...a, seme: a.seme || pulita, lingua: a.lingua || linguaAlt || lingua }));
             if (primi.length) {
               const gusti = prefsRef.current?.gusti || {};
-              const opz = { prefs: prefsRef.current, miaLingua: lingua, query: pulita };
+              const opz = { prefs: prefsRef.current, miaLingua: lingua, query: silenziosa ? '' : pulita };
               setArgomenti((prima) => {
                 if (MOTORE_NUOVO_ARTICOLI) {
                   return (accoda || dietro)
@@ -870,7 +877,7 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
           // quando si accoda — chi sta guardando non deve vedersi
           // spostare niente sotto il dito (regola di b.552).
           if (MOTORE_NUOVO_ARTICOLI) {
-            const opz = { prefs: prefsRef.current, miaLingua: lingua, query: pulita };
+            const opz = { prefs: prefsRef.current, miaLingua: lingua, query: silenziosa ? '' : pulita };
             if (!accoda) return ordinaArticoli(puliti, opz);
             return [...(prima || []), ...ordinaArticoli(nuovi, opz)];
           }
@@ -921,7 +928,7 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
       if (e?.name !== 'AbortError') console.warn('[b.363] /api/topics/search:', e?.message || e);
       // b.552 — un giro in sottofondo che non riesce resta in sottofondo:
       // non si mette un cartello di guasto davanti a chi sta guardando.
-      if (e.name !== 'AbortError' && !dietro) setErrore('guasto');
+      if (e.name !== 'AbortError' && !dietro && !silenziosa) setErrore('guasto');
     } finally {
       cercandoRef.current = false;
       if (!dietro) setCercando(false);
@@ -1032,7 +1039,12 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
     if (semi.length) {
       (async () => {
         await cerca(semi[0].query, 'notizie', false, true);
-        for (const altro of semi.slice(1, 3)) await cerca(altro.query, 'notizie', false, true, true);
+        for (const altro of semi.slice(1, 3)) {
+          // b.589 (rifix b.578) — stessa pausa del giro Gazzetta: qui
+          // erano fino a 2 ricerche accodate senza attesa.
+          await new Promise((r) => setTimeout(r, 1500));
+          await cerca(altro.query, 'notizie', false, true, true);
+        }
       })();
     }
   }, [savePrefs, L, cerca]);

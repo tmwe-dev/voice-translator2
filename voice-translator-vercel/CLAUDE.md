@@ -267,6 +267,78 @@ perche il working tree lo conteneva ancora.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.589** (push #865) — QUATTRO BUCHI TROVATI DAI LOG VIVI,
+  NON DA UN COLLAUDO A OCCHIO. Audit richiesto da Luca su Home/Chat/Chat
+  di gruppo/Video Chat/Traduzione simultanea: 24h di log Vercel reali,
+  non supposizioni.
+
+  ① **`/api/topics/search`: 27/123 (22%) di 429 in produzione.** Il fix
+  di questo stesso difetto era gia stato scritto (b.578) ma non era mai
+  arrivato su `main`: il ramo che lo conteneva e' rimasto locale mentre
+  lo sviluppo proseguiva con ChatGPT (`git show origin/main:.../MondoNews.js`
+  confermava zero tracce). Riapplicato: pausa di 1500ms fra le ricerche
+  automatiche di ramo in sequenza, e le ricerche automatiche non si
+  firmano piu "perCercato" (`query: silenziosa ? '' : pulita`), ne
+  mostrano il banner rosso di errore.
+
+  ② **`/api/mondo/avvisi`: 553/557 (99%) di 429.** La Campanella
+  ricreava il suo `setInterval` a ogni crescita del feed seguito
+  (`carica` dipende da `chiaviTesto`, che cambia quasi ad ogni giro):
+  con un giornale che cresce in continuazione, i 60 secondi dichiarati
+  (`OGNI`) non venivano quasi mai rispettati — si richiamava l'API a
+  raffica. Ora l'intervallo si monta una volta sola (dipende solo da
+  "ci sono chiavi si/no", non dal loro contenuto) e legge sempre
+  l'ultima `carica()` da un ref.
+
+  ③ **`/api/room`: 65/96 (68%) di 401 — DIAGNOSTICATO, NON CORRETTO.**
+  Ipotesi: la riammissione del "potato per errore" (b.250 — schermo
+  spento, timer rallentati, membro tolto dall'elenco senza essere
+  bloccato) e' cablata SOLO dentro `handleHeartbeat`; ogni altra azione
+  protetta (speaking, changeMode, changeLang, raiseHand, grantSpeak,
+  leave, e le rotte di `/api/messages`) risponde 401 a chi il prossimo
+  heartbeat riammetterebbe comunque. Ho scritto il fix (riammissione
+  generalizzata in `resolveRoomIdentity`) e la suite l'ha bocciato subito:
+  `__tests__/lib/sessionTokens.test.js` protegge un P1 dell'audit esterno
+  del 15/8 ("un gettone valido di chi e' stato ESPULSO non deve piu
+  autorizzare nulla") con uno scenario indistinguibile, a livello di
+  dati, da un "potato per silenzio" — token valido, non in blacklist, ma
+  fuori da `room.members`. Il sistema oggi non separa le due situazioni:
+  generalizzare la riammissione oltre l'heartbeat riapre il buco che
+  b.170 aveva chiuso. Fix ritirato prima del commit. Serve una decisione
+  di prodotto (es. una soglia sul `lastSeen`, o un flag esplicito scritto
+  da chi espelle) prima di poter estendere la riammissione in sicurezza.
+
+  ④ **`/api/chat-action`: zero chiamate in 7 giorni**, nonostante sia
+  cablata correttamente (userToken vero dal b.248 in poi). Letto il
+  codice dei due unici punti d'ingresso in `RoomView.js`: entrambi i
+  bottoni che aprono il pannello Azioni AI (riassunto/report/analisi/
+  consigli/vocabolario) avevano `aria-label={L('addShort')}` — la
+  stessa etichetta di "aggiungi allegato" (foto/file/posizione/
+  contatto), che quel bottone non fa piu da tempo. Corretta l'etichetta
+  su entrambi (`chatActionsTitle`, gia tradotta in ~37 lingue). Non
+  dichiarato "risolto": l'effetto sul traffico si vede nei prossimi
+  giorni, non subito.
+
+  **Tentativo scartato, e vale la pena scriverlo:** la stessa indagine
+  aveva anche trovato che `eMembro`/`membroDi` (decisioni.js) confrontano
+  i nomi ALLA LETTERA mentre `eAncoraMembroStanza` (store.js, usata da
+  `resolveRoomIdentity`) confronta senza guardare le maiuscole — sembrava
+  la causa di parte dei 403 "Sender is not a room member" su
+  `/api/messages`. Corretto, poi la suite ha bocciato il fix:
+  `una-sola-fonte-decisionale.test.js` protegge ESPLICITAMENTE il
+  confronto alla lettera ("non e' una svista": l'elenco lo scrive
+  `JOIN_ROOM` con `m.name == name`, case-sensitive per progetto — due
+  omonimi che differiscono solo per maiuscole sono membri DISTINTI).
+  Normalizzare li' sarebbe stato piu permissivo del punto che crea il
+  dato. Fix ritirato prima del commit; la causa vera del 403 resta da
+  isolare in un giro successivo.
+
+  PROVE: `produzione-live-b589.test.js` (i tre fix applicati sopra:
+  ①②④), suite completa (3.622 test) e build di produzione verdi prima
+  del push. Il fix di ③ e' stato scritto, provato in isolamento, bocciato
+  dalla suite completa e ritirato — la sua stessa storia e' la prova che
+  "suite verde prima del push" serve a qualcosa.
+
 - Versione: **b.579** (push #864) — APERTURA FEED MONDO: niente fondo vuoto con audio fuori schermo.
 
   Collaudo reale: all'apertura compariva la slide finale «Cosa vuoi seguire?» mentre si sentiva un pezzo del primo video. La causa era una gara fra caricamento, scroll-snap e autoplay: la slide finale nasceva prima che il feed fosse stabile e il browser poteva conservarla come snap target; intanto `indiceAttivo` restava 0 e montava il primo iframe con `autoplay=1`.
