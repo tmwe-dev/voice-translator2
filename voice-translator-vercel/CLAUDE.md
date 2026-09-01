@@ -267,6 +267,48 @@ perche il working tree lo conteneva ancora.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.590** (push #866) — LA CAMPANELLA ANCORA MUTA DOPO IL
+  FIX: IL CONTATORE, NON LA FREQUENZA. Continuazione diretta di b.589 ②:
+  il fix aveva davvero fermato la raffica (i log di produzione lo
+  confermano — dopo il deploy `/api/mondo/avvisi` viene chiamata
+  esattamente una volta al minuto, non piu a raffica), ma il tasso di
+  429 e' rimasto al 100% (67/67 nelle due ore successive al deploy). Un
+  limite di 120 richieste al minuto non puo mai bloccare un solo
+  utente al minuto se il contatore funziona: verificato dal vivo anche
+  con `curl` da un IP del tutto nuovo (il Mac di Luca, mai arrivato
+  prima su questa rotta) — 429 al primissimo colpo.
+
+  **BUG PRE-ESISTENTE non notato prima** (in `app/lib/rateLimit.js`,
+  non toccato da b.589): `EXPIRE` viene impostato SOLO quando
+  `count === 1`. Se quella singola scrittura non va a segno — il
+  processo serverless tagliato fra `INCR` ed `EXPIRE`, un timeout verso
+  Upstash, o una chiave nata prima che questo controllo esistesse — la
+  chiave resta senza scadenza e continua a salire per sempre: da quel
+  momento chiunque condivida quella chiave trova il tetto gia superato,
+  per sempre, indipendentemente da quante richieste fa davvero.
+  Spiega sia il 99% originale sia il 100% di oggi.
+
+  **Fix**: quando il contatore supera il tetto, prima di bloccare si
+  controlla il TTL della chiave. Se e' senza scadenza (`< 0`) non e'
+  un utente che ha davvero esaurito il limite: e' il contatore rotto.
+  Gli si rimette la scadenza in quel momento e si lascia passare QUELLA
+  richiesta, invece di bloccarla e aspettare un'altra finestra intera.
+  Se invece il TTL e' un numero positivo, il blocco resta un blocco
+  come prima — non e' stato allentato il limite, solo riparata la sua
+  rottura. [VERIFICATO] `__tests__/lib/rateLimit.test.js` copre sia il
+  caso di riparazione sia quello di blocco normale; suite intera 3619/3619
+  verde. [ATTESO] l'effetto in produzione (curl post-deploy) non ancora
+  rieseguito al momento di scrivere questa riga — Luca lo trova
+  confermato o smentito nella prossima verifica live.
+
+  Nota sulla numerazione: questo e' push #866. Il push #865 (b.589)
+  risultava gia assegnato a un ramo remoto mai unito
+  (`origin/b865-pronto`, "Ripara i video nelle anteprime Vercel", non
+  toccato da questo push) — collisione scoperta a cose fatte,
+  documentata qui invece di essere corretta retroattivamente
+  (riscrivere una storia gia pubblica su `main` e piu rischioso che
+  conviverci). Da questo push in poi il numero riparte pulito da #866.
+
 - Versione: **b.589** (push #865) — QUATTRO BUCHI TROVATI DAI LOG VIVI,
   NON DA UN COLLAUDO A OCCHIO. Audit richiesto da Luca su Home/Chat/Chat
   di gruppo/Video Chat/Traduzione simultanea: 24h di log Vercel reali,

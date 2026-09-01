@@ -44,6 +44,30 @@ describe('checkRateLimit', () => {
     expect(result.retryAfterMs).toBeGreaterThan(0);
   });
 
+  it('b.590 — ripara da solo un contatore oltre il tetto ma SENZA scadenza (bug dal vivo del 1/9)', async () => {
+    // INCR oltre il tetto, ma TTL torna -1: la chiave non ha mai preso
+    // una scadenza (l'EXPIRE del primo colpo non e' mai arrivato).
+    // Senza la riparazione bloccherebbe per sempre chiunque condivida
+    // quella chiave, anche con un solo utente al minuto.
+    mockRedis.mockResolvedValueOnce(999) // INCR - ben oltre il tetto
+      .mockResolvedValueOnce(-1) // TTL - nessuna scadenza mai impostata
+      .mockResolvedValueOnce(1); // EXPIRE riparatore
+    const result = await checkRateLimit('test:senza-scadenza', 30, 60000);
+    expect(result.allowed).toBe(true);
+    expect(mockRedis).toHaveBeenCalledWith('EXPIRE', 'rl:test:senza-scadenza', 60);
+  });
+
+  it('non ripara (blocca normalmente) se la chiave ha davvero una scadenza in corso', async () => {
+    // Stesso INCR oltre il tetto, ma stavolta TTL torna un numero
+    // positivo: la finestra e' sana, sta solo davvero esaurendo il
+    // tetto. Qui il blocco resta un blocco, come prima di b.590.
+    mockRedis.mockResolvedValueOnce(999)
+      .mockResolvedValueOnce(45);
+    const result = await checkRateLimit('test:scadenza-sana', 30, 60000);
+    expect(result.allowed).toBe(false);
+    expect(result.retryAfterMs).toBe(45000);
+  });
+
   it('allows exactly at limit', async () => {
     mockRedis.mockResolvedValueOnce(30); // INCR returns exactly maxRequests
     const result = await checkRateLimit('test:ip4', 30);
