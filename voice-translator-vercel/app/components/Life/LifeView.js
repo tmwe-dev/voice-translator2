@@ -28,9 +28,9 @@ const IDEE_CORSO = [
   { etK: 'lifeIdeaComputer', et: 'Computer', qK: 'lifeIdeaComputerTopic', q: 'Usare il computer e internet senza paura, passo dopo passo' },
   { etK: 'lifeIdeaArt', et: 'Arte', qK: 'lifeIdeaArtTopic', q: 'Storia dell\'arte: opere famose e artisti da conoscere' },
 ];
-import { aggiornaRiassunto, generaTurnoPodcast, generaSyllabus, generaLezione, generaQuiz, parlaTurno, parlaBilingue, elencoMiei, corsiDisponibili, pubblicaCorso, generaIllustrazione, generaTavola, arricchisciLezione, registraEsito, chiediAlMaestro, salvaCorsoMio, mieiCorsiUtente, segnaLibroCorso, progressoCorso, profiloStudente, salvaProfiloStudente } from '../../lib/compagni/cliente.js';
+import { aggiornaRiassunto, generaTurnoPodcast, generaSyllabus, generaLezione, generaQuiz, parlaTurno, parlaBilingue, elencoMiei, corsiDisponibili, pubblicaCorso, generaIllustrazione, generaTavola, arricchisciLezione, registraEsito, chiediAlMaestro, salvaCorsoMio, mieiCorsiUtente, segnaLibroCorso, progressoCorso, profiloStudente, salvaProfiloStudente, valutaCinqueAssi } from '../../lib/compagni/cliente.js';
 import { pausa as pausaAudio, ferma as fermaAudio, fermaElemento, suInterruzione, apriCiclo } from '../../lib/voce.js';
-import { rilevaLinguaStudiata, testoVisibile, staccaLettura } from '../../lib/compagni/corsi/lingua.js';
+import { rilevaLinguaStudiata, testoVisibile, staccaLettura, turniDaGiudicare } from '../../lib/compagni/corsi/lingua.js';
 import PannelloLettura from './PannelloLettura.js';
 import PannelloLaterale, { LinguettaPannello } from '../ui/PannelloLaterale.js';
 import TestoLingua from './TestoLingua.js';
@@ -745,6 +745,37 @@ function Impara({ compagni, L, C, lingua, userToken, testoP, muto, accent, card,
   const [parlaAssist, setParlaAssist] = useState(false);
   const micRecRef = useRef(null);
   const micStreamRef = useRef(null);
+
+  // b.592 — I 5 ASSI ANCHE QUI. Il motore (valutaCinqueAssi) e la
+  // schermata del risultato esistono gia e sono gia in produzione dentro
+  // Amico (AmicoChat.js): un tasto "5 assi" legge gli ultimi messaggi
+  // scritti e li giudica su grammatica/vocabolario/fluidita/contenuto/
+  // comprensibilita, mai un numero solo. In Amico funzionava perche il
+  // dal-vivo scarica i turni parlati DENTRO una chat scritta persistente
+  // (onFine -> accogliTurniDalVivo), e il tasto "5 assi" li rilegge da li
+  // quando l'utente vuole.
+  //
+  // Qui, nel ruolo-play della lezione, non c'e nessuna chat scritta: la
+  // conversazione vive e muore dentro CompagnoLive, e "Parla con
+  // l'Assistente" e gia esattamente cio che serve per "verificare il
+  // livello di preparazione" — bastava agganciare l'onFine che gia
+  // esisteva (la consegna dei turni) a valutaCinqueAssi, che gia esisteva,
+  // e non era mai stato collegato da questa parte. Zero rete nuova, zero
+  // rotta nuova, zero riga di schema: si chiama la stessa /api/compagni/
+  // corso azione:'cinqueAssi' gia in produzione, e si mostra lo stesso
+  // riquadro (stesse chiavi di traduzione, gia tradotte in tutti i
+  // pacchetti — nessuna chiave nuova).
+  const [assiLezione, setAssiLezione] = useState(null);
+  const [assiLezioneLavoro, setAssiLezioneLavoro] = useState(false);
+  const valutaConversazioneLezione = useCallback(async (turni, linguaStudiata) => {
+    if (assiLezioneLavoro || !linguaStudiata) return;
+    const detti = turniDaGiudicare(turni);
+    if (!detti) return;
+    setAssiLezioneLavoro(true);
+    try { setAssiLezione(await valutaCinqueAssi({ turni: detti, linguaStudiata, lingua, userToken })); }
+    catch { /* la valutazione e un di piu: la conversazione resta comunque fatta */ }
+    finally { setAssiLezioneLavoro(false); }
+  }, [assiLezioneLavoro, lingua, userToken]);
   const dettaDomanda = useCallback(async () => {
     if (micDomanda === 'registro') { try { micRecRef.current?.stop(); } catch { /* gia fermo: non e un guasto */ } return; }
     if (micDomanda) return;
@@ -1421,7 +1452,7 @@ function Impara({ compagni, L, C, lingua, userToken, testoP, muto, accent, card,
             // b.482 — le parole di questo tasto erano scritte in italiano dentro
             // il codice: chi usa l'app in un'altra lingua leggeva l'italiano.
             return (
-              <button onClick={() => { vibrate(8); fermaLettura(); setParlaAssist((v) => !v); }}
+              <button onClick={() => { vibrate(8); fermaLettura(); setAssiLezione(null); setParlaAssist((v) => !v); }}
                 title={`${tt('lifeSpeakLiveWith', 'Parla dal vivo con')} ${assist.nome}`}
                 style={{ display: 'flex', alignItems: 'center', gap: 6, minHeight: 44, padding: '4px 9px', borderRadius: 999, background: parlaAssist ? `${accent}22` : card, border: parlaAssist ? `1px solid ${accent}` : bordo, flexShrink: 0, cursor: 'pointer', fontFamily: FONT }}>
                 <img src={assist.avatar} alt="" width={22} height={22} style={{ borderRadius: '50%', objectFit: 'cover' }} />
@@ -1476,9 +1507,44 @@ function Impara({ compagni, L, C, lingua, userToken, testoP, muto, accent, card,
           // della lezione e la parte di testo su cui si sta lavorando.
           const brano = (paragrafiLezione[sezioneAttiva >= 0 ? sezioneAttiva : 0] || paragrafiLezione[0] || '').slice(0, 1200);
           return <CompagnoLive L={L} compagno={finto} lingua={l2c} onChiudi={() => setParlaAssist(false)}
+            onFine={(turni) => valutaConversazioneLezione(turni, l2c)}
             contesto={`Lezione in corso: "${aperta.lezione?.titolo || argomento}".\nBrano su cui stiamo lavorando:\n${brano}`}
             {...{ testoP, muto, accent, card, bordo }} />;
         })()}
+
+        {/* b.592 — stesso riquadro di AmicoChat.js (stesse chiavi, gia
+            tradotte in tutti i pacchetti): qui compare da solo a fine
+            conversazione, perche il ruolo-play non ha una chat scritta a
+            cui tornare piu tardi con un tasto "5 assi" — la conversazione
+            vive e finisce dentro CompagnoLive. */}
+        {assiLezione && (
+          <div style={{ padding: '12px 20px', borderRadius: 12, background: card, border: `1px solid ${accent}44`, marginBottom: 10 }}>
+            <div style={{ display: 'flex', alignItems: 'center', marginBottom: 8 }}>
+              <span style={{ flex: 1, fontSize: 12, fontWeight: 500, color: testoP }}>{L('lifeAxesTitle')}</span>
+              <button onClick={() => setAssiLezione(null)} aria-label={L('closeWord')} title={L('closeWord')}
+                style={{ background: 'none', border: 'none', color: muto, cursor: 'pointer',
+                  width: 44, height: 44, flexShrink: 0, padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Icon name="x" size={16} color={muto} />
+              </button>
+            </div>
+            {[['comprensibilita', L('lifeAxisClarity')], ['grammatica', L('lifeAxisGrammar')], ['vocabolario', L('lifeAxisVocabulary')], ['fluidita', L('lifeAxisFluency')], ['contenuto', L('lifeAxisContent')]].map(([k, et]) => {
+              const a = assiLezione[k] || { voto: 0, consiglio: '' };
+              const col = a.voto >= 70 ? accent : a.voto >= 45 ? '#f59e0b' : '#f87171';
+              return (
+                <div key={k} style={{ marginBottom: 7 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: testoP }}>
+                    <span style={{ fontWeight: 500 }}>{et}</span><span style={{ fontWeight: 500, color: col }}>{a.voto}</span>
+                  </div>
+                  <div style={{ height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.08)', overflow: 'hidden', margin: '3px 0' }}>
+                    <div style={{ width: `${a.voto}%`, height: '100%', background: col }} />
+                  </div>
+                  {a.consiglio && <div style={{ fontSize: 11, color: muto }}>{a.consiglio}</div>}
+                </div>
+              );
+            })}
+            <div style={{ fontSize: 10, color: muto, marginTop: 4 }}>{L('lifeAxesPronNote')}</div>
+          </div>
+        )}
 
         {/* b.315 — CONTROLLI IN ALTO: ascolta/ferma, evidenzia, alza la mano.
             Restano in cima mentre il testo scorre sotto. */}

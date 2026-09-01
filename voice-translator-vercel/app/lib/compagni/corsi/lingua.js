@@ -283,3 +283,28 @@ export function segmentiPerVoce(testo, { linguaParlata = 'it', linguaStudiata = 
   }
   return uniti;
 }
+
+// b.592 — DAL RUOLO-PLAY AL GIUDIZIO: cosa manda `onFine` di CompagnoLive
+// (turni grezzi {ruolo:'persona'|'compagno', testo}) non e' cio che
+// valutaCinqueAssi vuole (solo le battute dello studente, ripulite, un
+// tetto per non pagare/mandare piu del dovuto). PURO e testabile: nessuna
+// rete, nessuno stato — stessa disciplina di pronuncia.js.
+//
+// Il tetto MINIMO non e arbitrario: meno di due battute non e una
+// conversazione da giudicare, ed e la stessa cautela della Home ("fa
+// silenzio, aspetta che sia vero") — mai un voto su un campione troppo
+// piccolo per dire qualcosa di vero.
+/**
+ * @param {{ruolo?:string, testo?:string}[]} turni  consegnati da onFine
+ * @param {{minimo?:number, massimo?:number}} opz
+ * @returns {string[]|null}  le battute pronte per valutaCinqueAssi, o
+ *   null se il campione e troppo piccolo per giudicare qualcosa
+ */
+export function turniDaGiudicare(turni, { minimo = 2, massimo = 8 } = {}) {
+  const detti = (Array.isArray(turni) ? turni : [])
+    .filter((t) => t?.ruolo === 'persona')
+    .map((t) => String(t?.testo || '').trim())
+    .filter(Boolean)
+    .slice(-massimo);
+  return detti.length >= minimo ? detti : null;
+}

@@ -267,6 +267,59 @@ perche il working tree lo conteneva ancora.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.592** (push #868) — I 5 ASSI ANCHE NELLE LEZIONI DI
+  LINGUA: il gap trovato analizzando Ermes (Jose_master, tmwe-dev) e
+  chiuso con codice gia in produzione altrove, non nuovo.
+
+  Luca ha chiesto un'analisi in profondita dell'agente vocale di
+  Jose_master ("Ermes"/"Hermes", tool ElevenLabs + canvas di conferma +
+  KB on-demand) e se BarTalk potesse fare lo stesso nelle lezioni per
+  "verificare il livello di preparazione". Verificato nel codice, non a
+  memoria (regola 10 dell'audit): il motore di giudizio esisteva gia,
+  in produzione — `valutaCinqueAssi` (azione `cinqueAssi` su
+  `/api/compagni/corso`, b.335) giudica una conversazione su CINQUE
+  assi separati (comprensibilita, grammatica, vocabolario, fluidita,
+  contenuto — mai un voto solo), ed e gia agganciato dentro Amico
+  (`AmicoChat.js`: tasto "5 assi", riquadro col risultato). Ma non era
+  MAI stato collegato al ruolo-play delle lezioni di lingua ("Parla con
+  l'Assistente" dentro Impara) — un `valutaCinqueAssi` scritto e
+  testato, ma orfano in quel punto: `git grep` confermava zero
+  occorrenze fuori da Amico prima di questa versione.
+
+  **Il perche' era rimasto scoperto:** in Amico la conversazione dal
+  vivo (`CompagnoLive`) consegna i turni parlati via `onFine`, che li
+  riversa in una chat SCRITTA persistente — e il tasto "5 assi" rilegge
+  da li, quando l'utente vuole. Nel ruolo-play di Impara non esiste
+  nessuna chat scritta: la conversazione vive e finisce dentro
+  `CompagnoLive`, e quell'`onFine` non era agganciato a niente.
+
+  **Fix, additivo, zero rete/rotta/schema nuovi:** `onFine` ora chiama
+  `valutaConversazioneLezione`, che passa i turni per una nuova
+  funzione PURA — `turniDaGiudicare` (`app/lib/compagni/corsi/
+  lingua.js`) — che tiene solo le battute dello studente, scarta le
+  vuote, tetto di 8 (come in Amico), e sotto **due** battute vere
+  restituisce `null`: mai un voto su un campione troppo piccolo, stessa
+  cautela della Home ("fa silenzio, aspetta che sia vero"). Il
+  risultato si mostra nello STESSO riquadro gia in produzione in Amico
+  — stesse chiavi di traduzione (`lifeAxesTitle`,
+  `lifeAxisClarity/Grammar/Vocabulary/Fluency/Content`,
+  `lifeAxesPronNote`), gia tradotte nei 38 pacchetti: zero chiavi
+  nuove.
+
+  **Cosa NON e' stato deciso in silenzio:** il risultato oggi e SOLO
+  mostrato (lettura), non scritto nel progresso del corso
+  (`registraEsito`/azione `esito`) — se un ruolo-play debba contare
+  come "lezione completata" e' una decisione di prodotto che resta
+  aperta, non presa per conto di Luca.
+
+  [VERIFICATO] eslint 0 errori sui file toccati; suite intera 294 file
+  / 3635 test verdi (da 293/3629 di b.591), incluso il nuovo
+  `__tests__/valuta-conversazione-lezione-b592.test.js` (6 test, puro:
+  filtra solo lo studente, scarta le vuote, soglia minima, tetto di 8,
+  soglia/tetto configurabili). [ATTESO] l'effetto dal vivo — nessun
+  collaudo reale ancora fatto: serve una conversazione vera nel
+  ruolo-play per vedere il riquadro comparire in produzione.
+
 - Versione: **b.591** (push #867) — I DUE PUNTI RIMASTI APERTI DA b.589,
   CHIUSI. Su richiesta esplicita di Luca ("completa i punti aperti"),
   dopo aver posto le due domande di prodotto necessarie e ricevuto il
