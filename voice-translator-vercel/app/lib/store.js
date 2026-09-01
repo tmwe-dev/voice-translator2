@@ -68,24 +68,40 @@ export async function resolveRoomIdentity(token, name, roomId) {
     // ogni consumatore invece di essere ricopiata (e dimenticata) rotta
     // per rotta.
     //
-    // b.589 — TENTATO E RITIRATO: ho provato a generalizzare qui la
-    // riammissione di b.250 (sotto) a QUALUNQUE azione protetta, per
-    // abbattere il 68% di 401 live su /api/room causato da chi viene
-    // "potato" per silenzio (schermo spento) e poi chiama qualcosa di
-    // diverso dall'heartbeat. La suite completa ha bocciato il
-    // tentativo: __tests__/lib/sessionTokens.test.js protegge
-    // esplicitamente un P1 dell'audit esterno del 15/8 ("un gettone
-    // valido di chi e' stato ESPULSO non deve piu autorizzare nulla")
-    // con uno scenario indistinguibile, a livello di dati, da un
-    // "potato per silenzio": token valido, non in blacklist, ma tolto
-    // da room.members. Il sistema oggi non ha modo di separare le due
-    // situazioni — servirebbe un segnale in piu (es. una soglia sul
-    // lastSeen, o un flag esplicito scritto da chi espelle) prima di
-    // poter estendere la riammissione in sicurezza oltre l'heartbeat.
-    // Non e' una scelta che si fa da soli: il 68% di 401 resta
-    // diagnosticato ma NON corretto in questo giro — vedi CLAUDE.md.
-    if (!(await eAncoraMembroStanza(roomId, session.name))) return null;
-    return { name: session.name, role: session.role, verified: true };
+    // b.589 — TENTATO E RITIRATO: generalizzare qui la riammissione di
+    // b.250 (sotto) a QUALUNQUE azione protetta, per abbattere il 68% di
+    // 401 live su /api/room. La suite completa bocciava il tentativo:
+    // __tests__/lib/sessionTokens.test.js protegge un P1 dell'audit
+    // esterno del 15/8 ("un gettone valido di chi e' stato ESPULSO non
+    // deve piu autorizzare nulla") con uno scenario indistinguibile, a
+    // livello di dati, da un "potato per silenzio": token valido, non in
+    // blacklist, ma tolto da room.members. Il sistema NON aveva modo di
+    // separare le due situazioni.
+    //
+    // b.591 — il segnale in piu, deciso da Luca: una soglia sul lastSeen
+    // scritta da CHI POTA, non ricalcolata qui. `potaMembriAssenti`
+    // (sotto) e' l'UNICO punto che rimuove per inattivita, mai per
+    // decisione umana: quando toglie un fantasma, lascia una traccia a
+    // scadenza breve (`segnaPotatoPerSilenzio`). Un'espulsione vera
+    // (blocca(), moderazione.js) non passa mai di li — resta un gettone
+    // valido su un nome assente, ma SENZA traccia: qui sotto si nega
+    // come prima. Un'uscita volontaria (handleLeave) nemmeno: nessuna
+    // traccia, stessa negazione. Solo chi e' sparito per silenzio ha la
+    // traccia, e solo per la sua finestra di grazia (10 minuti — vedi
+    // POTATO_GRAZIA_MS): oltre quella finestra la traccia scade da sola
+    // e si torna a negare, come per qualunque token ordinario scaduto.
+    if (await eAncoraMembroStanza(roomId, session.name)) {
+      return { name: session.name, role: session.role, verified: true };
+    }
+    // eAncoraMembroStanza nega gia' chi e' bloccato: qui sotto arriva
+    // solo chi e' assente e non bloccato. riammettiConGettone ricontrolla
+    // comunque il blocco un'ultima volta prima di far rientrare (stessa
+    // garanzia di b.250, non indebolita).
+    const traccia = await leggiPotatoPerSilenzio(roomId, session.name);
+    if (!traccia) return null;
+    const riammesso = await riammettiConGettone(roomId, token, traccia.lang, traccia.avatar);
+    if (!riammesso) return null;
+    return { name: riammesso.name, role: riammesso.role, verified: true };
   }
   return null;
 }
@@ -330,6 +346,54 @@ export async function setSpeaking(roomId, memberName, speaking, liveText = null,
 // ═══════════════════════════════════════════════════════════════
 export const SOGLIA_PRESENZA_MS = 60 * 1000;
 
+// b.591 — la finestra di grazia per chi e' stato potato per silenzio (non
+// per decisione umana). Piu larga di SOGLIA_PRESENZA_MS (che decide SE
+// potare) perche' qui si decide per QUANTO TEMPO chi torna viene fatto
+// rientrare senza dover ripetere il join da capo. Dieci minuti coprono un
+// telefono rimasto a schermo spento in tasca senza tenere fuori per
+// sempre chi ci mette di piu a riaprire l'app.
+export const POTATO_GRAZIA_MS = 10 * 60 * 1000;
+
+const chiavePotato = (roomId, nome) => `stanza:${roomId.toUpperCase()}:potato:${String(nome).toLowerCase()}`;
+
+// Scrive la traccia "l'ho tolto io per silenzio, non per un blocco".
+// Un errore qui non deve rompere la potatura: al peggio quella persona
+// dovra rientrare a mano invece che in automatico — mai il contrario.
+async function segnaPotatoPerSilenzio(roomId, membro) {
+  try {
+    await redis('SET', chiavePotato(roomId, membro.name),
+      JSON.stringify({ lang: membro.lang || null, avatar: membro.avatar || null }),
+      'EX', Math.ceil(POTATO_GRAZIA_MS / 1000));
+  } catch (e) {
+    log.warn('traccia potato-per-silenzio non scritta:', e.message);
+  }
+}
+
+/**
+ * C'e' una traccia valida di "potato per silenzio" per questo nome in
+ * questa stanza? Usata SOLO da resolveRoomIdentity per decidere se
+ * riammettere chi si presenta con un gettone valido ma non piu fra i
+ * membri (vedi b.591 li' sopra). Non tocca mai la traccia (niente DEL):
+ * se il rientro fallisce per un altro motivo (bloccato nel frattempo,
+ * stanza scaduta), la finestra resta aperta per il prossimo tentativo.
+ */
+export async function leggiPotatoPerSilenzio(roomId, nome) {
+  if (!roomId || !nome) return null;
+  try {
+    const dato = await redis('GET', chiavePotato(roomId, nome));
+    if (!dato) return null;
+    try { return JSON.parse(dato); } catch { return {}; }
+  } catch (e) {
+    // Redis irraggiungibile: nessuna prova di "e' stato potato per
+    // silenzio" — si nega, come fa gia eAncoraMembroStanza per il caso
+    // simmetrico (nessuna prova di espulsione → si resta dentro; qui,
+    // nessuna prova di silenzio → non si riammette). Un blip non deve
+    // pero mai TOGLIERE nessuno: quello resta un problema diverso.
+    log.warn('lettura traccia potato-per-silenzio non riuscita:', e.message);
+    return null;
+  }
+}
+
 /**
  * Toglie dalla stanza i membri muti oltre soglia. Chiamata alla lettura
  * (heartbeat, e check in roomActions.js): non c'e un demone, e chi legge
@@ -369,6 +433,11 @@ export async function potaMembriAssenti(roomId, room, adesso = Date.now()) {
       // null = gia sparito da solo (o stanza scaduta): l'esito voluto
       // c'e comunque, si tiene l'ultima fotografia buona.
       if (dopo) aggiornata = dopo;
+      // b.591 — QUESTA e' la sola rimozione per silenzio (mai per
+      // decisione umana): lascia la traccia che permette a
+      // resolveRoomIdentity di riammettere questo nome, e solo questo,
+      // per la sua finestra di grazia.
+      await segnaPotatoPerSilenzio(roomId, fantasma);
     }
     return aggiornata;
   } catch (e) {

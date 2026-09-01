@@ -182,7 +182,12 @@ describe('Espulsione: un gettone di stanza valido non autorizza piu chi non e pi
   });
 
   it('resolveRoomIdentity richiama il controllo di appartenenza (codice)', () => {
-    expect(leggi('app/lib/store.js')).toMatch(/if \(!\(await eAncoraMembroStanza\(roomId, session\.name\)\)\) return null;/);
+    // b.591 — la forma esatta e' cambiata (non piu un return null secco:
+    // ora, se non e' piu membro, si prova la riammissione per silenzio
+    // prima di negare — vedi riammissione-generale-b591.test.js per il
+    // comportamento). Qui si controlla solo che il controllo di
+    // appartenenza resti al suo posto, non la forma letterale del ramo.
+    expect(senzaCommentiDiRiga(leggi('app/lib/store.js'))).toMatch(/await eAncoraMembroStanza\(roomId, session\.name\)/);
   });
 
   it('stanza-video e reazioni passano dallo stesso controllo (codice)', () => {

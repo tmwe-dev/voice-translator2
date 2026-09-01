@@ -267,6 +267,54 @@ perche il working tree lo conteneva ancora.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.591** (push #867) — I DUE PUNTI RIMASTI APERTI DA b.589,
+  CHIUSI. Su richiesta esplicita di Luca ("completa i punti aperti"),
+  dopo aver posto le due domande di prodotto necessarie e ricevuto il
+  via libera implicito.
+
+  ① **`/api/room`: 68% di 401 — la riammissione generalizzata, col
+  segnale che mancava.** Il tentativo b.589 era stato ritirato perche'
+  "potato per silenzio" ed "espulso davvero" erano indistinguibili a
+  livello di dati (token valido, non in blacklist, assente da
+  `room.members`, in entrambi i casi). Il segnale scelto da Luca: una
+  TRACCIA, non un ricalcolo. `potaMembriAssenti` — la SOLA funzione che
+  rimuove per inattivita, mai per decisione umana — lascia ora una
+  traccia a scadenza breve (`POTATO_GRAZIA_MS`, 10 minuti) col nome,
+  lingua e avatar di chi ha tolto. Un'espulsione vera (`blocca()`,
+  moderazione.js) o un'uscita volontaria (`handleLeave`) non passano mai
+  da li' e non lasciano traccia: `resolveRoomIdentity` riammette SOLO se
+  trova la traccia, e ricontrolla comunque il blocco un'ultima volta
+  prima di far rientrare (stessa garanzia del 15/8, non indebolita). La
+  riammissione resta scoperta per `stanza-video` e `reazioni` — chiamano
+  `eAncoraMembroStanza` direttamente, non passano da `resolveRoomIdentity`
+  — lasciate intenzionalmente fuori da questo giro: sono adiacenti a
+  WebRTC e la regola 8 del Codex vieta di toccare quell'area senza
+  collaudo dal vivo a due dispositivi. [VERIFICATO] suite intera
+  3629/3629 verde, incluso `__tests__/riammissione-generale-b591.test.js`
+  (nuovo: scrittura della traccia, riammissione con traccia, negazione
+  senza traccia, negazione anche con traccia se nel frattempo bloccato)
+  e `__tests__/lib/sessionTokens.test.js` (il test "espulso" del 15/8
+  resta verde, invariato). [ATTESO] l'effetto sul tasso di 401 in
+  produzione — non ancora osservato dal vivo.
+
+  ② **Video nelle anteprime Vercel — riapplicato da un ramo remoto mai
+  unito.** `origin/b865-pronto` ("Ripara i video nelle anteprime
+  Vercel", 30/8) non era un piccolo fix isolato pronto per essere unito:
+  divergeva da un punto precedente a b.516, e un merge meccanico
+  avrebbe cancellato test e file esistenti oggi su main (fra cui il
+  fix ① qui sopra). Isolato pero' il SUO commit utile — 17 righe,
+  additive, in un solo file, attive solo quando `VERCEL_ENV ===
+  'preview'` (mai in produzione) — e riapplicato pulito su
+  `app/api/topics/video/route.js`: in anteprima, senza chiave YouTube,
+  la rotta riusa l'endpoint pubblico di produzione invece di restituire
+  una lista vuota. I due commit rimanenti di quel ramo (accesso
+  "Pianoforte" in Life) non sono stati toccati: stato non noto, fuori
+  scopo. Il ramo resta com'e', non unito — se emerge altro da salvarci,
+  va isolato commit per commit come qui, mai unito in blocco.
+  [VERIFICATO] `__tests__/video-anteprima-b591.test.js` (nuovo,
+  comportamentale: chiama la produzione solo senza chiave E in preview,
+  mai altrimenti, degrada senza esplodere se la produzione non risponde).
+
 - Versione: **b.590** (push #866) — LA CAMPANELLA ANCORA MUTA DOPO IL
   FIX: IL CONTATORE, NON LA FREQUENZA. Continuazione diretta di b.589 ②:
   il fix aveva davvero fermato la raffica (i log di produzione lo
