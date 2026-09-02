@@ -54,24 +54,20 @@ function vocePannello(S) {
   };
 }
 
-const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingMsg,
-  recording, isListening, partnerConnected, partnerSpeaking, partnerLiveText, partnerTyping,
-  playingMsgId, audioEnabled, setAudioEnabled, audioReady, isTrial, isTopPro, canUseElevenLabs,
-  useOwnKeys, apiKeyInputs,
-  elevenLabsVoices, selectedELVoice, setSelectedELVoice,
-  showModeSelector,
-  setShowModeSelector, textInput, setTextInput, sendingText, sendTextMessage, sendTypingState,
-  toggleRecording, cancelRecording, startFreeTalk, stopFreeTalk, endChatAndSave, leaveRoomTemporary, changeRoomMode, playMessage,
-  unlockAudio, exportConversation, msgsEndRef,
-  freeCharsUsed, freeLimitExceeded, freeResetTime,
-  syncLangChange, retranslateForNewLang,
-  clonedVoiceId, clonedVoiceName,
-  duckingLevel, setDuckingLevel,
-  vadLivelloRef, vadSilenceCountdown, vadSensitivity, setVadSensitivity,
-  realtimeConnected, webrtc, isHostVerified, verifiedName,
-  setLiveMode, interpreter, onMessageRead,
-  showChatActions, setShowChatActions, localChat, ProviderBadge,
-  roomSessionToken, userToken }) {
+const RoomView = memo(function RoomView({
+  // b.608 — Modulo F3 dell'audit di architettura (b.598): 78 props →
+  // 4 oggetti per dominio + 21 props proprie. page.js passava, uno per
+  // uno, 45 campi che erano gia' i campi di quattro hook (translation,
+  // roomPolling, audio, auth): ora passa i quattro oggetti e qui si
+  // destrutturano con gli STESSI nomi di prima — il corpo del componente
+  // non cambia di una riga.
+  translation, roomPolling, audio, auth,
+  showModeSelector, setShowModeSelector, endChatAndSave, leaveRoomTemporary, changeRoomMode, exportConversation, msgsEndRef, freeCharsUsed, freeLimitExceeded, freeResetTime, retranslateForNewLang, webrtc, isHostVerified, verifiedName, interpreter, onMessageRead, showChatActions, setShowChatActions, localChat, ProviderBadge, roomSessionToken }) {
+  const { streamingMsg, recording, isListening, textInput, setTextInput, sendingText, sendTextMessage, toggleRecording, cancelRecording, startFreeTalk, stopFreeTalk, vadLivelloRef, vadSilenceCountdown, vadSensitivity, setVadSensitivity } = translation;
+  const { roomId, roomInfo, messages, partnerConnected, partnerSpeaking, partnerLiveText, partnerTyping, sendTypingState, syncLangChange, realtimeConnected } = roomPolling;
+  const { playingMsgId, audioEnabled, setAudioEnabled, audioReady, playMessage, unlockAudio, duckingLevel, setDuckingLevel, setLiveMode } = audio;
+  const { userToken, isTrial, isTopPro, canUseElevenLabs, useOwnKeys, apiKeyInputs, elevenLabsVoices, selectedELVoice, setSelectedELVoice, clonedVoiceId, clonedVoiceName } = auth;
+
   const { L, S, prefs, myLang, setView, setMyLang, savePrefs, status, theme, setTheme } = useApp();
   // b.468 — il pannello laterale della chat: dentro ci sono le voci.
   const [pannelloVoci, setPannelloVoci] = useState(false);

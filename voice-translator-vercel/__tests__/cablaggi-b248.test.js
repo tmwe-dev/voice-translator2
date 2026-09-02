@@ -119,7 +119,10 @@ describe('le azioni AI della chat non partono piu a mani vuote', () => {
     const s = senzaCommenti(leggi('app/page.js'));
     const iRoom = s.indexOf('<RoomView');
     expect(iRoom).toBeGreaterThan(-1);
-    expect(s.slice(iRoom, s.indexOf('/>', iRoom))).toContain('userToken={auth.userToken}');
+    // b.608 — page.js passa l'intero `auth`; RoomView ne prende userToken.
+    expect(s.slice(iRoom, s.indexOf('/>', iRoom))).toContain('auth={auth}');
+    const r = senzaCommenti(leggi('app/components/RoomView.js'));
+    expect(r).toMatch(/const \{ userToken,[^}]*\} = auth;/);
   });
 
   it('il pannello inoltra al server proprio cio che riceve', () => {

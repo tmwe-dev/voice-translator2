@@ -1369,37 +1369,16 @@ function HomeInner() {
 
   if (view === 'room') return wrap(
     <Suspense fallback={<LazyFallback />}>
-    <RoomView roomId={roomPolling.roomId} roomInfo={roomPolling.roomInfo}
+    <RoomView translation={translation} roomPolling={roomPolling} audio={audio} auth={auth}
       roomSessionToken={roomPolling.roomSessionTokenRef?.current}
-      userToken={auth.userToken}
-      messages={roomPolling.messages} streamingMsg={translation.streamingMsg} recording={translation.recording}
-      isListening={translation.isListening} partnerConnected={roomPolling.partnerConnected}
-      partnerSpeaking={roomPolling.partnerSpeaking} partnerLiveText={roomPolling.partnerLiveText}
-      partnerTyping={roomPolling.partnerTyping} playingMsgId={audio.playingMsgId}
-      audioEnabled={audio.audioEnabled} setAudioEnabled={audio.setAudioEnabled} audioReady={audio.audioReady}
-      isTrial={auth.isTrial} isTopPro={auth.isTopPro} canUseElevenLabs={auth.canUseElevenLabs}
-      useOwnKeys={auth.useOwnKeys} apiKeyInputs={auth.apiKeyInputs}
-      elevenLabsVoices={auth.elevenLabsVoices} selectedELVoice={auth.selectedELVoice}
-      setSelectedELVoice={auth.setSelectedELVoice}
       showModeSelector={showModeSelector}
-      setShowModeSelector={setShowModeSelector} textInput={translation.textInput} setTextInput={translation.setTextInput}
-      sendingText={translation.sendingText} sendTextMessage={translation.sendTextMessage} sendTypingState={roomPolling.sendTypingState}
-      toggleRecording={translation.toggleRecording} cancelRecording={translation.cancelRecording}
-      startFreeTalk={translation.startFreeTalk} stopFreeTalk={translation.stopFreeTalk}
-      endChatAndSave={endChatAndSave} leaveRoomTemporary={leaveRoomTemporary} changeRoomMode={changeRoomMode} playMessage={audio.playMessage}
-      unlockAudio={audio.unlockAudio} exportConversation={exportConversation}
+      setShowModeSelector={setShowModeSelector}
+      endChatAndSave={endChatAndSave} leaveRoomTemporary={leaveRoomTemporary} changeRoomMode={changeRoomMode} exportConversation={exportConversation}
       msgsEndRef={msgsEndRef} freeCharsUsed={freeCharsUsed} freeLimitExceeded={freeLimitExceeded}
-      freeResetTime={freeResetTime}
-      syncLangChange={roomPolling.syncLangChange} retranslateForNewLang={retranslateForNewLang}
-      clonedVoiceId={auth.clonedVoiceId} clonedVoiceName={auth.clonedVoiceName}
-      duckingLevel={audio.duckingLevel} setDuckingLevel={audio.setDuckingLevel}
-      vadLivelloRef={translation.vadLivelloRef} vadSilenceCountdown={translation.vadSilenceCountdown}
-      vadSensitivity={translation.vadSensitivity} setVadSensitivity={translation.setVadSensitivity}
-      realtimeConnected={roomPolling.realtimeConnected}
+      freeResetTime={freeResetTime} retranslateForNewLang={retranslateForNewLang}
       webrtc={webrtc}
       isHostVerified={roomPolling.isHostRef?.current || false}
       verifiedName={roomPolling.verifiedNameRef?.current || prefs.name}
-      setLiveMode={audio.setLiveMode}
       interpreter={interpreter}
       onMessageRead={(msgId) => {
         if (!msgId) return;

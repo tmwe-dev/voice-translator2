@@ -267,6 +267,25 @@ perche il working tree lo conteneva ancora.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.608** (push #884) — Modulo F3: RoomView da 66 props a 25.
+
+  Delle 66 props della firma (l'audit ne contava 78 coi default), 45
+  erano campi di quattro hook che page.js smontava uno per uno:
+  `translation.*` (15), `roomPolling.*` (10), `audio.*` (9), `auth.*`
+  (11). Ora page.js passa i quattro oggetti e RoomView li destruttura in
+  quattro righe con gli STESSI nomi di prima: il corpo del componente
+  (1.300 righe) non cambia di una riga, e nessuna delle 27 prove che lo
+  leggono e' stata toccata tranne una (cablaggi-b248: cercava
+  `userToken={auth.userToken}` nel JSX, ora chiede che `auth` arrivi e
+  che RoomView ne prenda `userToken`). Le 21 props restanti sono
+  proprie (webrtc, interpreter, localChat, handlers di page.js,
+  derivati dai ref). Effetto su `memo`: i quattro oggetti sono quelli
+  che gli hook tornano; se un hook ricostruisce l'oggetto a ogni
+  render, RoomView si ridisegna come prima si ridisegnava per i campi
+  che cambiavano — dichiarato, non misurato.
+  [VERIFICATO] eslint 0 errori, build ok, suite 304 file / 3719 prove, 0
+  regressioni. [ATTESO] stanza vera: non collaudata in questa sessione.
+
 - Versione: **b.607** (push #883) — Modulo F2: la stanza "al volo" in
   una sequenza sola. page.js non chiama piu' `roomPolling.handleCreateRoom`
   direttamente: 0 chiamate (erano 5 in b.604).
