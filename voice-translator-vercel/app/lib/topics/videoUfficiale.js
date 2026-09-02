@@ -97,6 +97,11 @@ async function chiedi(percorso, parametri) {
 // quando il player mostrava «Video non disponibile» in mezzo al feed.
 // `videos.list` costa una sola unita per tutto il mazzetto: la spendiamo
 // per non consegnare una diapositiva che sappiamo gia non poter suonare.
+// b.600 — DEBITO DICHIARATO: l'unica chiamante era `ultimiDelCanale`, che
+// nessuno importava. Quindi questo filtro (b.587) non e' MAI stato sul
+// percorso vivo: la funzione che lo dovrebbe usare e' quella sotto
+// (`daApi(d?.items).slice(...)` a fine file). Collegarlo costa un'unita
+// YouTube per mazzetto: e' una scelta, non una pulizia — non fatta qui.
 async function soloIncorporabili(video) {
   const lista = Array.isArray(video) ? video.filter((v) => v?.id) : [];
   if (!lista.length) return [];
@@ -114,16 +119,8 @@ async function soloIncorporabili(video) {
   }
 }
 
-/** SEGUIRE un canale: 1 unita. E' la strada normale. */
-export async function ultimiDelCanale(canale, { massimo = 6 } = {}) {
-  const playlist = playlistCaricamenti(canale);
-  if (!playlist) return [];
-  const d = await chiedi('playlistItems', {
-    part: 'snippet', playlistId: playlist, maxResults: Math.min(massimo, 50),
-  });
-  const candidati = daApi(d?.items).slice(0, massimo);
-  return (await soloIncorporabili(candidati)).slice(0, massimo);
-}
+// b.600 — qui c'era `ultimiDelCanale` (SEGUIRE un canale): esportata,
+// mai importata da nessuno (audit di architettura b.598, knip + grep).
 
 /** CERCARE: 100 unita e un tetto di 100 al giorno. Solo se serve davvero. */
 export async function cercaSuYouTube(query, lingua = 'it', { massimo = 8, dallOra = 0, recenti = false } = {}) {

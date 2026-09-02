@@ -391,7 +391,8 @@ export const ROTTE_VIETATE_IN_DIRETTA = [
   // audio DIRETTO verso Deepgram: in modalita Diretta e la voce, dal
   // vivo, verso un terzo. Era la falla piu grande e non era nell'elenco.
   '/api/stt-token',
-  '/api/translate-stream',
+  // b.600 — '/api/translate-stream' stava qui ma la rotta era un moncone
+  // 410 dal b.53 (0 chiamanti): cancellata la rotta, tolta dall'elenco.
   // La clonazione carica una registrazione della propria voce.
   '/api/voice-clone',
   // Le reazioni conservano il TESTO del messaggio per la vetrina

@@ -197,7 +197,8 @@ describe('Privacy contract', () => {
       // b.112 — le quattro che mancavano. stt-token era la piu grave:
       // consegna un gettone per aprire un flusso audio dal vivo verso
       // Deepgram, cioe la voce, mentre si promette che non esce niente.
-      '/api/stt-token', '/api/translate-stream', '/api/voice-clone', '/api/reazioni',
+      // b.600 — translate-stream non esiste piu (moncone 410 cancellato).
+      '/api/stt-token', '/api/voice-clone', '/api/reazioni',
     ];
     for (const r of routes) {
       expect(BLOCKED_IN_DIRECT, `${r} deve essere vietata in modalita Diretta`).toContain(r);

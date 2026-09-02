@@ -267,6 +267,49 @@ perche il working tree lo conteneva ancora.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.600** (push #876) — Modulo B1 del "correggi tutto":
+  SOLO rimozioni (regola: mai mescolare togliere e cambiare).
+
+  Tolte, ognuna verificata con grep su app/, __tests__/, public/ prima
+  di toccarla: le 3 rotte moncone a 410 dal b.53 (`/api/process`,
+  `/api/provider-route`, `/api/translate-stream` — 0 chiamanti; restano
+  solo due commenti storici che le nominano) e `translate-stream`
+  dall'elenco `ROTTE_VIETATE_IN_DIRETTA` + dalla prova sessionGuard;
+  `ultimiDelCanale` in lib/topics/videoUfficiale.js (esportata, mai
+  importata).
+
+  **Scoperto togliendola — DEBITO DICHIARATO, non toccato**: il filtro
+  `soloIncorporabili` (b.587, "non consegnare video privati o non
+  incorporabili") aveva come UNICA chiamante proprio `ultimiDelCanale`.
+  Cioe' quel filtro non e' mai stato sul percorso vivo del feed.
+  Collegarlo costa un'unita' YouTube per mazzetto: e' una scelta, va
+  fatta a parte. Lasciato in loco con il commento che lo dice.
+
+  **NON tolte, e perche'** (l'audit knip le dava per morte, il grep no):
+  - le 5 "dipendenze inutilizzate": `gsap` (Carosello3D), `three`
+    (Carosello3D), `maplibre-gl` (TaxiMap + public/maplibre),
+    `@elevenlabs/client` (CompagnoLive), `@capacitor/cli` (strumento da
+    riga di comando, capacitor.config.json). Tutti falsi positivi.
+  - i 9 export in app/wallet/* (CAMBIO_EUR_USD, contatore*, tariffe):
+    wallet resta escluso dai giri bulk (regola gia' dichiarata in b.596:
+    pricing/riconciliazione non si tocca senza un giro suo).
+  - le 3 coppie di alias in wallet/tariffe.js (LIVE_TRATTO_/LIVE_TETTO_,
+    MOLTIPLICATORE_PREMIUM/DAL_VIVO): entrambi i nomi di ogni coppia
+    sono USATI (ponte.js, CreditsView, landing, 5 prove). Unificarli e'
+    una rinomina, cioe' un cambiamento: non in un modulo di rimozioni.
+
+  **E una prova che mentiva**: `mondo-video-globo-b587.test.js` cercava
+  `await soloIncorporabili(candidati)` nel sorgente e lo trovava — dentro
+  la funzione morta. Verde da b.587, senza che il feed passasse mai di
+  li'. E' il caso concreto della sezione test dell'audit (73% di prove
+  ancorate al testo): riscritta per chiedere il debito dichiarato, e
+  tornera' a chiedere la chiamata quando il filtro sara' collegato.
+
+  [VERIFICATO] eslint 0 errori. `next build` ok (45 rotte api → 42).
+  Suite 298 file / 3674 prove (-3: le due prove-moncone delle rotte
+  cancellate non esistevano; -3 sono le `it` di sessionGuard/b587
+  riscritte in meno asserzioni), 0 regressioni.
+
 - Versione: **b.599** (push #875) — Modulo A del "correggi tutto"
   (audit di architettura b.598): la voce tradotta e' UN modulo, non due
   copie; i nomi degli eventi in un posto solo; closure stantia chiusa.

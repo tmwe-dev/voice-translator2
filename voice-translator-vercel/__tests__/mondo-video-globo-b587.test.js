@@ -49,6 +49,14 @@ describe('b.587 — il feed non riceve video che YouTube vieta di incorporare', 
     expect(y).toMatch(/chiedi\('videos', \{ part: 'status'/);
     expect(y).toMatch(/status\?\.embeddable !== false/);
     expect(y).toMatch(/privacyStatus === 'public'/);
-    expect(y).toMatch(/await soloIncorporabili\(candidati\)/);
+    // b.600 — QUESTA RIGA MENTIVA. Cercava `await soloIncorporabili(candidati)`
+    // e lo trovava dentro `ultimiDelCanale`, una funzione che NESSUNO ha
+    // mai importato: il filtro esisteva, la prova era verde, e il feed
+    // vivo non passava mai di li'. Una prova sul testo del sorgente non
+    // sa se il testo viene eseguito. Ora si chiede che il debito sia
+    // dichiarato nel file; quando il filtro verra' collegato alla ricerca
+    // viva, questa riga torna a chiedere la chiamata.
+    expect(y).toMatch(/b\.600 — DEBITO DICHIARATO: l'unica chiamante era `ultimiDelCanale`/);
+    expect(y).not.toMatch(/await soloIncorporabili\(/);
   });
 });
