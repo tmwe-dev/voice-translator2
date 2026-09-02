@@ -5,6 +5,7 @@
 import { createLogger } from './logger.js';
 import { redis } from './redis.js';
 import { normalizzaCapienza, normalizzaTipoStanza } from './decisioni.js';
+import { eBloccato } from './blocchi.js';   // b.601 — foglia: niente piu import pigro di moderazione
 import { randomUUID, randomBytes } from 'crypto';
 import { safeCompare } from './apiGuard.js';
 
@@ -124,7 +125,6 @@ export async function riammettiConGettone(roomId, token, lang, avatar) {
   const session = await verifyRoomSession(token);
   if (!session || session.roomId !== roomId.toUpperCase()) return null;
   try {
-    const { eBloccato } = await import('./moderazione.js');
     if (await eBloccato(roomId, session.name)) return null;
   } catch (e) {
     // fallimento del controllo blocchi: si nega la riammissione (chiusa),
@@ -168,7 +168,6 @@ export async function riammettiConGettone(roomId, token, lang, avatar) {
 export async function eAncoraMembroStanza(roomId, nome) {
   if (!nome) return false;
   try {
-    const { eBloccato } = await import('./moderazione.js');
     if (await eBloccato(roomId, nome)) return false;
     const room = await getRoom(roomId);
     // Nessuna prova contraria (stanza scaduta/sfrattata): si resta dentro.

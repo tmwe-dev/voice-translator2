@@ -28,7 +28,8 @@ import path from 'path';
 import {
   montaCancelloDiretta, smontaCancello, impostaModalita, modalitaCorrente,
 } from '../app/lib/modalitaSessione.js';
-import { BLOCKED_IN_DIRECT } from '../app/lib/sessionGuard.js';
+// b.601 — l'alias BLOCKED_IN_DIRECT e' stato tolto: la lista ha un nome solo.
+import { ROTTE_VIETATE_IN_DIRETTA as BLOCKED_IN_DIRECT } from '../app/lib/decisioni.js';
 
 const app = (p) => fs.readFileSync(path.join(__dirname, '..', 'app', p), 'utf8');
 
@@ -148,8 +149,8 @@ describe('una sola verita sulla modalita, non due', () => {
     // e mai collegate.
     // b.139 — l'elenco non e piu importato da sessionGuard ma da
     // decisioni.js, insieme al CONFRONTO che prima era riscritto qui
-    // dentro e che percio il server non poteva usare. Il nome
-    // BLOCKED_IN_DIRECT resta valido: sessionGuard lo ri-esporta.
+    // dentro e che percio il server non poteva usare. b.601 — il nome
+    // BLOCKED_IN_DIRECT non esiste piu: qui e' solo l'alias locale.
     const m = app('lib/modalitaSessione.js');
     expect(m).toMatch(/rottaVietataInDiretta/);
     expect(m).toMatch(/from '\.\/decisioni\.js'/);

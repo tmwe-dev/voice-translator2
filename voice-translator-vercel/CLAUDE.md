@@ -267,6 +267,42 @@ perche il working tree lo conteneva ancora.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.601** (push #877) — Modulo B2 del "correggi tutto":
+  i 4 cicli di dipendenza in lib/ sciolti. madge --circular: 0.
+
+  I quattro cicli (decisioni↔store, decisioni→store→moderazione,
+  store↔moderazione, redisLua→decisioni→store) erano tenuti insieme da
+  tre `await import(...)` e da un commento in moderazione.js che diceva
+  "store.js non importa mai moderazione.js" — falso: lo faceva in due
+  punti. Due mosse:
+  - `modalitaAutorevole` esce da decisioni.js (che era la "foglia
+    decisionale" e dipendeva dal livello sopra) e va in sessionGuard.js,
+    la guardia che la usa. decisioni.js ora non importa NIENTE: foglia
+    vera. L'import dello store resta pigro in sessionGuard, ma per un
+    motivo diverso e dichiarato: sessionGuard e' importato anche dal
+    client (useTranslationAPI → isDirectMode) e lo store tira dentro
+    Redis — nel bundle del browser non deve finire.
+  - Nuovo `lib/blocchi.js` (foglia: redis + normalizzaNome): `eBloccato`
+    e la chiave. store.js e moderazione.js lo importano staticamente;
+    moderazione importa `removeMember` dallo store staticamente e
+    ri-esporta `eBloccato` con lo stesso nome (nessun importatore cambia).
+  - Tolto l'alias `BLOCKED_IN_DIRECT` da sessionGuard: lo importavano
+    SOLO tre prove; un nome solo per la lista, in decisioni.js.
+
+  **NON toccato, e perche'**: lib↔wallet (apiAuth/ponte importano
+  wallet; wallet importa lib/logger e lib/supabase). Non e' un ciclo:
+  logger e supabase sono infrastruttura-foglia. Spostarli in una
+  cartella "infra" per la sola pulizia dello strato e' una rinomina di
+  massa senza guadagno funzionale: dichiarato accettabile.
+
+  Prove: nuovo `nessun-ciclo-lib-b601.test.js` con un rilevatore di
+  cicli di casa (import statici E pigri, commenti esclusi; niente
+  madge nel package.json per una prova) + 3 ancore. 3 prove esistenti
+  riallineate (modalitaAutorevole da sessionGuard; ROTTE_VIETATE_IN_DIRETTA
+  al posto dell'alias; "decisioni.js non tira dentro Redis" ora chiede
+  ZERO import). [VERIFICATO] madge 0 cicli, eslint 0 errori, build ok,
+  suite 299 file / 3678 prove, 0 regressioni.
+
 - Versione: **b.600** (push #876) — Modulo B1 del "correggi tutto":
   SOLO rimozioni (regola: mai mescolare togliere e cambiare).
 

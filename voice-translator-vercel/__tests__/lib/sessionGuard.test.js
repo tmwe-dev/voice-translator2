@@ -13,8 +13,9 @@ import {
   assertCloudProcessingAllowed,
   DirectModeError,
   isDirectMode,
-  BLOCKED_IN_DIRECT,
 } from '../../app/lib/sessionGuard.js';
+// b.601 — l'alias BLOCKED_IN_DIRECT e' stato tolto: la lista ha un nome solo.
+import { ROTTE_VIETATE_IN_DIRETTA as BLOCKED_IN_DIRECT } from '../../app/lib/decisioni.js';
 
 describe('sessionGuard', () => {
   describe('assertCloudProcessingAllowed', () => {

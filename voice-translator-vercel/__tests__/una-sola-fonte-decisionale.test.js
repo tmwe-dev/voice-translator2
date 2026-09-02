@@ -248,9 +248,11 @@ describe('5 · trasporto: quale strada puo prendere un messaggio', () => {
 // ═══════════════════════════════════════════════════════════════
 describe('6 · l\'elenco delle rotte vietate vive in un posto solo', () => {
 
-  it('sessionGuard lo ri-esporta, non lo ricopia', () => {
+  it('sessionGuard non lo ricopia e non lo rinomina', () => {
+    // b.601 — prima lo ri-esportava come BLOCKED_IN_DIRECT: due nomi per
+    // la stessa lista. Ora nessun alias: un nome solo, in decisioni.js.
     const s = senzaCommenti(leggi('app/lib/sessionGuard.js'));
-    expect(s).toContain('export const BLOCKED_IN_DIRECT = ROTTE_VIETATE_IN_DIRETTA;');
+    expect(s).not.toContain('BLOCKED_IN_DIRECT');
     expect(s, 'nessuna seconda copia dell\'elenco').not.toMatch(/'\/api\/tts-elevenlabs'/);
   });
 
@@ -291,13 +293,14 @@ describe('7 · il SERVER e l\'autorita, non l\'intestazione del client', () => {
 
   it('modalitaAutorevole crede subito a chi si dichiara piu riservato', async () => {
     // Dichiararsi in Diretta non fa danno: si concede senza leggere nulla.
-    const { modalitaAutorevole } = await import('../app/lib/decisioni.js');
+    // b.601 — vive in sessionGuard.js (decisioni.js e' una foglia pura).
+    const { modalitaAutorevole } = await import('../app/lib/sessionGuard.js');
     const req = { headers: { get: (n) => (n === 'x-session-mode' ? 'direct' : null) } };
     expect(await modalitaAutorevole(req, {})).toBe('direct');
   });
 
   it('ma senza un riferimento alla stanza non inventa una Diretta', async () => {
-    const { modalitaAutorevole } = await import('../app/lib/decisioni.js');
+    const { modalitaAutorevole } = await import('../app/lib/sessionGuard.js');
     const req = { headers: { get: () => 'translate' } };
     expect(await modalitaAutorevole(req, {})).toBe('translate');
   });
@@ -362,7 +365,10 @@ describe('8 · nessuno ha ricominciato a scrivere la regola per conto suo', () =
     // dinamico, quindi non finisce nel bundle del client.
     const s = leggi('app/lib/decisioni.js');
     expect(s).not.toMatch(/^import .*(store|redis)\.js/m);
-    expect(s).toContain("await import('./store.js')");
+    // b.601 — ora non importa proprio NIENTE: foglia pura. La lettura
+    // dello store e' in sessionGuard.js, pigra per lo stesso motivo.
+    expect(s).not.toMatch(/^import /m);
+    expect(leggi('app/lib/sessionGuard.js')).toContain("await import('./store.js')");
   });
 });
 

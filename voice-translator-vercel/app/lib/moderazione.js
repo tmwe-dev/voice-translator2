@@ -1,5 +1,10 @@
 import { redis } from './redis.js';
 import { normalizzaNome, puoModerare } from './decisioni.js';
+import { eBloccato, chiaveBloccati } from './blocchi.js';
+import { removeMember } from './store.js';
+// b.601 — `eBloccato` sta in blocchi.js (foglia) e da qui si ri-esporta
+// con lo stesso nome: chi la importava da moderazione non cambia riga.
+export { eBloccato };
 
 // ═══════════════════════════════════════════════════════════════
 // MODERAZIONE DELLE STANZE
@@ -30,7 +35,7 @@ export const SOGLIA_SEGNALAZIONI = 5;
 
 const chiave = {
   regole: (r) => `stanza:${r}:regole`,
-  bloccati: (r) => `stanza:${r}:bloccati`,
+  bloccati: chiaveBloccati,   // b.601 — la chiave e' in blocchi.js
   richieste: (r) => `stanza:${r}:richieste`,
   esito: (r, n) => `stanza:${r}:esito:${n}`,
   segnalazioni: (n) => `segnalazioni:${n}`,
@@ -94,13 +99,13 @@ export async function blocca(roomId, nome) {
   // l'ingresso FUTURO. Chi era GIA' dentro restava con piena capability
   // (parlare, essere ascoltato, e col suo roomSessionToken ancora valido)
   // finche non scadeva da solo. "Bloccare" deve voler dire anche
-  // "espellere ora": import dinamico per evitare un ciclo store↔moderazione
-  // al caricamento del modulo (store.js non importa mai moderazione.js,
-  // ma questo file e importato PRESTO, prima che l'ordine di init sia
-  // garantito). Se fallisce, il blocco resta comunque applicato (sopra):
-  // non entrera piu, anche se stavolta l'espulsione immediata non e riuscita.
+  // "espellere ora". b.601 — qui c'era un import pigro di store.js con
+  // un commento che diceva "store.js non importa mai moderazione.js":
+  // era FALSO (lo faceva in due punti, anche lui con import pigro). Il
+  // ciclo e' sciolto in blocchi.js; l'import e' statico. Se l'espulsione
+  // fallisce, il blocco resta comunque applicato (sopra): non entrera
+  // piu, anche se stavolta l'espulsione immediata non e riuscita.
   try {
-    const { removeMember } = await import('./store.js');
     await removeMember(roomId, nome);
   } catch { /* il blocco vale comunque; vedi nota sopra */ }
   return true;
@@ -112,13 +117,6 @@ export async function sblocca(roomId, nome) {
   await redis('SREM', chiave.bloccati(roomId), n);
   await redis('DEL', chiave.esito(roomId, n));
   return true;
-}
-
-export async function eBloccato(roomId, nome) {
-  const n = normalizza(nome);
-  if (!n) return false;
-  const dentro = await redis('SISMEMBER', chiave.bloccati(roomId), n);
-  return dentro === 1 || dentro === true;
 }
 
 export async function elencoBloccati(roomId) {
