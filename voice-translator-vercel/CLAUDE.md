@@ -267,6 +267,36 @@ perche il working tree lo conteneva ancora.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.594** (push #870) — MODULO 3 del piano qualita:
+  trackDailySpend non piu bloccante ovunque.
+
+  Domanda del Modulo 3: il timeout ricorrente su "Daily spend tracking"
+  (41 volte in un mese, log live) blocca la risposta all'utente o e'
+  un effetto collaterale silenzioso? Letto ogni punto di chiamata di
+  `trackDailySpend` (apiAuth.js): gia in transcribe/translate/tts/
+  chat-action era fuoco-e-dimentica (`.catch(() => {})`, non awaited).
+  Solo 3 punti erano rimasti `await` con try/catch attorno — non
+  potevano MAI far cadere la richiesta (l'errore resta dentro
+  trackDailySpend stesso, vedi apiAuth.js:424), ma un Redis lento li
+  allungava per niente: `/api/tts-elevenlabs` (2 punti) e
+  `/api/summary`, `/api/topics/riassunto`. Allineati tutti allo stesso
+  pattern gia in uso altrove — nessuna logica nuova, solo tolto un
+  `await` che non serviva.
+
+  Controllato anche un sospetto secondario: `summary` e
+  `topics/riassunto` chiamano `trackDailySpend` SENZA i parametri di
+  riserva (`riservatoUtenteCents`/`riservatoPiattaformaCents`) usati
+  altrove da b.170 — sembrava un possibile doppio conteggio. Verificato
+  leggendo il codice: queste due rotte non passano mai da `resolveAuth`
+  (usano il proprio flusso riserva/commit del wallet), quindi non hanno
+  MAI riservato nulla sul contatore giornaliero che b.170 netta — il
+  comportamento e' esattamente il fallback documentato nel commento di
+  b.170 stesso ("rotta non aggiornata → si somma il costo vero, punto").
+  NESSUN bug: falso allarme chiuso da lettura diretta, non da supposizione.
+
+  [VERIFICATO] eslint pulito sui 3 file toccati. Suite completa vitest
+  294 file / 3635 test, 0 regressioni.
+
 - Versione: **b.593** (push #869) — RADAR DI QUALITA: dalla correzione di
   un mio errore di lettura date, al primo modulo del piano di
   miglioramento (Modulo 1 — l'audio che /api/transcribe rifiuta).

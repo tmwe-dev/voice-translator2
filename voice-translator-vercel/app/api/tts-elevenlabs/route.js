@@ -278,7 +278,9 @@ async function handlePost(req) {
             const cost = usdToEurCents(calcElevenLabsCost(cleanText.length));
             const charge1 = Math.max(MIN_CHARGE.TTS_ELEVENLABS, cost);
             // b.170 — netta la riserva fatta da resolveAuth (vedi apiAuth.js).
-            try { await trackDailySpend(billingEmail, charge1, riservatoUtenteCents, riservatoPiattaformaCents); } catch (e) { log.warn('Fallback daily-spend tracking failed:', e?.message); }
+            // b.594 — MODULO 3: fuoco-e-dimentica come /api/tts, non piu
+            // await che allunga la risposta se Redis e' lento.
+            trackDailySpend(billingEmail, charge1, riservatoUtenteCents, riservatoPiattaformaCents).catch((e) => log.warn('Fallback daily-spend tracking failed:', e?.message));
           }
           // b.164 — stesso audio dello stesso testo, solo un modello di
           // riserva: si conferma la STESSA riserva presa sopra, non se
@@ -315,7 +317,8 @@ async function handlePost(req) {
       // nota gemella sopra: il commit della riserva (poco sotto) e il conto vero.
       const charge = Math.max(MIN_CHARGE.TTS_ELEVENLABS, elCostEurCents);
       // b.170 — netta la riserva fatta da resolveAuth (vedi apiAuth.js).
-      try { await trackDailySpend(billingEmail, charge, riservatoUtenteCents, riservatoPiattaformaCents); } catch (e) { log.error('ElevenLabs daily-spend tracking error:', e); }
+      // b.594 — MODULO 3: fuoco-e-dimentica come /api/tts, non piu await.
+      trackDailySpend(billingEmail, charge, riservatoUtenteCents, riservatoPiattaformaCents).catch((e) => log.error('ElevenLabs daily-spend tracking error:', e));
     }
 
     const buffer = Buffer.from(await response.arrayBuffer());

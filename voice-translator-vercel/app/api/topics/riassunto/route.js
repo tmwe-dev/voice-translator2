@@ -124,10 +124,12 @@ REGOLE INVIOLABILI:
   // Contabilita DOPO il lavoro riuscito, come da ordine verificato.
   const costEurCents = usdToEurCents(calcGptCost(completion.usage));
   if (billingEmail && !isOwnKey) {
-    try {
-      const charge = Math.max(MIN_CHARGE.SUMMARY, costEurCents);
-      await trackDailySpend(billingEmail, charge);
-    } catch (e) { log.error('tracking sintesi fallito:', e); }
+    // b.594 — MODULO 3 (piano qualita): stesso motivo di /api/summary —
+    // fuoco-e-dimentica, non piu await, cosi un timeout Redis non
+    // allunga la risposta all'utente. trackDailySpend cattura gia i
+    // suoi errori (apiAuth.js).
+    const charge = Math.max(MIN_CHARGE.SUMMARY, costEurCents);
+    trackDailySpend(billingEmail, charge).catch((e) => log.error('tracking sintesi fallito:', e));
   }
   // ── Wallet: addebito vero, stesso conto fisso di /api/summary ──
   await addebitaRiassunto(isOwnKey ? null : billingEmail);

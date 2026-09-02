@@ -180,10 +180,14 @@ Output ONLY valid JSON, no markdown, no code blocks.`
     // b.157 — tolto il doppio addebito sul vecchio user.credits: il
     // wallet (il commit della riserva, subito sotto) e il conto vero.
     if (billingEmail && !isOwnKey) {
-      try {
-        const charge = Math.max(MIN_CHARGE.SUMMARY, costEurCents);
-        await trackDailySpend(billingEmail, charge);
-      } catch (e) { log.error('Summary daily-spend tracking error:', e); }
+      // b.594 — MODULO 3 (piano qualita): era `await`, quindi un timeout
+      // Redis qui (41 occ/mese in produzione) allungava la risposta
+      // all'utente per un contatore che non serve alla risposta stessa.
+      // trackDailySpend cattura gia i suoi errori internamente (vedi
+      // apiAuth.js) — fuoco-e-dimentica, stesso pattern gia in uso in
+      // transcribe/translate/tts/chat-action.
+      const charge = Math.max(MIN_CHARGE.SUMMARY, costEurCents);
+      trackDailySpend(billingEmail, charge).catch((e) => log.error('Summary daily-spend tracking error:', e));
     }
 
     // ── Wallet: conferma la riserva presa prima di OpenAI ──
