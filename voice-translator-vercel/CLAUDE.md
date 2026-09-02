@@ -267,6 +267,23 @@ perche il working tree lo conteneva ancora.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.607** (push #883) — Modulo F2: la stanza "al volo" in
+  una sequenza sola. page.js non chiama piu' `roomPolling.handleCreateRoom`
+  direttamente: 0 chiamate (erano 5 in b.604).
+
+  `creaStanzaRapida` in lib/stanze/creaEPubblica.js: crea e torna
+  `{ room, contesto }` (CONTEXTS → prompt gia' composto). Le tre chiamate
+  di page.js (Nuova conversazione, chat con un contatto, invito rapido)
+  decidono solo modo/contesto/descrizione e cosa fare dopo. Tre
+  divergenze chiuse, tutte trovate mettendo le copie una accanto
+  all'altra: il contatto NON aggiornava `roomInfoRef` (la stanza appena
+  creata restava sconosciuta ai ref finche' l'effetto non girava);
+  l'invito rapido NON aggiornava `roomContextRef` (il contesto della
+  stanza precedente restava in piedi); il contatto passava `prefs.name`
+  senza il ripiego 'Host'. **BUG PRE-ESISTENTI**, tutti e tre.
+  3 prove di comportamento nuove. [VERIFICATO] eslint 0 errori, build
+  ok, suite 303 file / 3716 prove, 0 regressioni.
+
 - Versione: **b.606** (push #882) — Modulo F-R: SOLO rimozioni.
   `startChatWithContact` (page.js, 20 righe: creava una stanza e copiava
   il link) e la prop omonima di HomeView, che la destrutturava e non la

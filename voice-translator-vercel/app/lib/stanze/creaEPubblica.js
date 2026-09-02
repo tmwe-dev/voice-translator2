@@ -16,6 +16,7 @@
 
 import { vaInVetrina } from '../decisioni.js';
 import { memGet } from '../memoria.js';
+import { CONTEXTS } from '../constants.js';
 
 export const SCADENZA_PUBBLICAZIONE_MS = 15000;
 
@@ -95,4 +96,31 @@ export async function creaEPubblicaStanza({
     avvisa?.('[Community] stanza non pubblicata:', e?.message);
     return { room, pubblicata: false, motivo: 'rete' };
   }
+}
+
+// ═══ b.607 — LA STANZA "AL VOLO" (senza foglio, senza vetrina) ═══
+// Modulo F2: page.js creava una stanza rapida in TRE punti (Nuova
+// conversazione, chat con un contatto, invito rapido) con la stessa
+// lista di undici argomenti ricopiata tre volte — e con tre piccole
+// divergenze: il contatto non aggiornava `roomInfoRef`, l'invito non
+// aggiornava `roomContextRef`, uno passava `prefs.name` senza il
+// ripiego 'Host'. Qui la sequenza e' una: crea, e torna la stanza con il
+// contesto gia' composto (CONTEXTS → prompt). Le tre chiamate di page.js
+// decidono solo modo, contesto, descrizione e cosa fare dopo.
+export async function creaStanzaRapida({
+  roomPolling, prefs, auth,
+  lang, mode = 'conversation', contextId = 'general', description = '', diretta = false,
+}) {
+  const room = await roomPolling.handleCreateRoom(
+    prefs.name || 'Host', lang, mode, prefs.avatar,
+    contextId, mode, description,
+    auth.isTrial, auth.isTopPro, auth.userAccount,
+    diretta
+  );
+  const contesto = {
+    contextId,
+    contextPrompt: CONTEXTS.find(c => c.id === contextId)?.prompt || '',
+    description,
+  };
+  return { room, contesto };
 }

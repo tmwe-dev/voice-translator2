@@ -49,7 +49,7 @@ import TutorialOverlay from './components/TutorialOverlay.js';
 import { initMonitoring, reportError } from './lib/monitor.js';
 import { memDel, memGet, memSet, sesDel } from './lib/memoria.js';
 import { segnaVisita } from './lib/mieStanze.js'; // b.537 — le tue stanze restano tue
-import { creaEPubblicaStanza } from './lib/stanze/creaEPubblica.js'; // b.605
+import { creaEPubblicaStanza, creaStanzaRapida } from './lib/stanze/creaEPubblica.js'; // b.605, b.607
 
 // ═══ b.605 — le schermate caricate su richiesta stanno in viste/registro.js ═══
 import {
@@ -766,12 +766,11 @@ function HomeInner() {
   async function handleStartChatWithContact(contact) {
     try {
       setStatus('...');
-      const room = await roomPolling.handleCreateRoom(
-        prefs.name, myLang, 'conversation', prefs.avatar,
-        'general', 'conversation', '',
-        auth.isTrial, auth.isTopPro, auth.userAccount
-      );
-      roomContextRef.current = { contextId: 'general', contextPrompt: '', description: '' };
+      // b.607 — una sequenza sola per le stanze al volo (lib/stanze).
+      // Divergenza chiusa: qui `roomInfoRef` non veniva aggiornato.
+      const { room, contesto } = await creaStanzaRapida({ roomPolling, prefs, auth, lang: myLang });
+      roomInfoRef.current = room;
+      roomContextRef.current = contesto;
       // Send invite link to the contact (could also push notification in future)
       setInviteLang(contact.lang || 'en');
       setView('lobby');
@@ -1050,14 +1049,14 @@ function HomeInner() {
   async function handleCreateRoom() {
     try {
       setStatus('...');
-      const room = await roomPolling.handleCreateRoom(
-        prefs.name || 'Host', myLang, selectedMode, prefs.avatar,
-        selectedContext, selectedMode, roomDescription,
-        auth.isTrial, auth.isTopPro, auth.userAccount
-      );
+      // b.607 — una sequenza sola per le stanze al volo (lib/stanze).
+      const { room, contesto } = await creaStanzaRapida({
+        roomPolling, prefs, auth, lang: myLang,
+        mode: selectedMode, contextId: selectedContext, description: roomDescription,
+      });
       // Immediately sync roomInfoRef (don't wait for useEffect re-render)
       roomInfoRef.current = room;
-      roomContextRef.current = { contextId: selectedContext, contextPrompt: CONTEXTS.find(c => c.id === selectedContext)?.prompt || '', description: roomDescription };
+      roomContextRef.current = contesto;
       setView('lobby');
       setStatus('');
     } catch (e) {
@@ -1714,13 +1713,14 @@ function HomeInner() {
             // sostituzione ha colpito tutti e due i punti di chiamata, e
             // il risultato era "Errore di connessione. Riprova." su ogni
             // invito. Una stanza creata al volo non e Diretta.
-            const room = await roomPolling.handleCreateRoom(
-              prefs.name || 'Host', langToUse, selectedMode, prefs.avatar,
-              selectedContext, selectedMode, '',
-              auth.isTrial, auth.isTopPro, auth.userAccount,
-              false
-            );
+            // b.607 — una sequenza sola (lib/stanze). Divergenza chiusa:
+            // qui `roomContextRef` non veniva aggiornato.
+            const { room, contesto } = await creaStanzaRapida({
+              roomPolling, prefs, auth, lang: langToUse,
+              mode: selectedMode, contextId: selectedContext, diretta: false,
+            });
             roomInfoRef.current = room;
+            roomContextRef.current = contesto;
             setStatus('');
             return room;
           } catch (e) { setStatus('Error: ' + e.message); throw e; }

@@ -8,7 +8,7 @@ const leggi = (p) => readFileSync(join(process.cwd(), p), 'utf8');
 // eseguirla) e diventa una funzione pura, provata QUI per comportamento.
 
 vi.mock('../app/lib/memoria.js', () => ({ memGet: vi.fn(() => 'TOKEN-LOCALE') }));
-import { creaEPubblicaStanza } from '../app/lib/stanze/creaEPubblica.js';
+import { creaEPubblicaStanza, creaStanzaRapida } from '../app/lib/stanze/creaEPubblica.js';
 
 function scenario({ roomType = 'public', room = { id: 'ABC123', diretta: false }, stato = 200, fetchErrore = null } = {}) {
   const chiamate = [];
@@ -95,9 +95,37 @@ describe('b.605 — page.js chiama la funzione, non ne tiene una copia', () => {
     const s = leggi('app/page.js').split('\n').filter(l => !l.trim().startsWith('//')).join('\n');
     expect(s).not.toMatch(/fetch\('\/api\/mondo'/);
     expect(s).toMatch(/await creaEPubblicaStanza\(\{/);
-    // DEBITO DICHIARATO (F2): page.js chiama ancora roomPolling.handleCreateRoom
-    // in altri 4 punti (invito automatico, Nuova conversazione, taxi/relatore):
-    // creano senza vetrina. Sono i prossimi candidati a uscire da page.js.
-    expect((s.match(/roomPolling\.handleCreateRoom\(/g) || []).length).toBe(3);   // b.606 — una era morta
+    // b.607 — le tre stanze "al volo" passano da creaStanzaRapida: in
+    // page.js non resta nessuna chiamata diretta a handleCreateRoom.
+    expect((s.match(/roomPolling\.handleCreateRoom\(/g) || []).length).toBe(0);
+    expect((s.match(/await creaStanzaRapida\(\{/g) || []).length).toBe(3);
+  });
+});
+
+describe('b.607 — creaStanzaRapida: la stanza al volo, una sequenza sola', () => {
+  const base = () => ({
+    roomPolling: { handleCreateRoom: vi.fn(async () => ({ id: 'R1' })) },
+    prefs: { name: '', avatar: 'A' },
+    auth: { isTrial: true, isTopPro: false, userAccount: null },
+  });
+  it('con i soli valori predefiniti: conversazione, contesto general, non Diretta, host "Host"', async () => {
+    const b = base();
+    const { room, contesto } = await creaStanzaRapida({ ...b, lang: 'it' });
+    expect(room).toEqual({ id: 'R1' });
+    expect(b.roomPolling.handleCreateRoom).toHaveBeenCalledWith('Host', 'it', 'conversation', 'A', 'general', 'conversation', '', true, false, null, false);
+    expect(contesto).toEqual({ contextId: 'general', contextPrompt: expect.any(String), description: '' });
+  });
+  it('il contesto scelto porta con se il suo prompt', async () => {
+    const b = base();
+    b.prefs.name = 'Luca';
+    const { contesto } = await creaStanzaRapida({ ...b, lang: 'en', mode: 'm', contextId: 'business', description: 'd' });
+    expect(b.roomPolling.handleCreateRoom.mock.calls[0].slice(0, 7)).toEqual(['Luca', 'en', 'm', 'A', 'business', 'm', 'd']);
+    expect(contesto.contextId).toBe('business');
+    expect(contesto.contextPrompt.length).toBeGreaterThan(0);
+    expect(contesto.description).toBe('d');
+  });
+  it('un contesto sconosciuto non esplode: prompt vuoto', async () => {
+    const { contesto } = await creaStanzaRapida({ ...base(), lang: 'it', contextId: 'boh' });
+    expect(contesto.contextPrompt).toBe('');
   });
 });
