@@ -3,6 +3,11 @@ import { useRef, useEffect, useCallback } from 'react';
 import { getLang } from '../lib/constants.js';
 import { deepgramAmmesso, USO } from '../lib/sttPolicy.js';
 import { createLogger } from '../lib/logger.js';
+// b.602 — chiave, socket e cattura PCM16: client Deepgram unico
+// (lib/audio/deepgramLive.js), lo stesso di interprete e relatore. Qui
+// c'era la seconda delle tre copie. La voce viene dal microfono unico.
+import { chiediChiaveDeepgram, apriDeepgram } from '../lib/audio/deepgramLive.js';
+import { prendiVoce, rendiVoce } from '../lib/microfonoMaster.js';
 const dbg = createLogger('deepgram');
 
 /**
@@ -29,10 +34,9 @@ export default function useDeepgramSTT({
   speakingKeepAliveRef,
 }) {
   const deepgramAvailableRef = useRef(null); // null = checking, true/false
-  const deepgramWsRef = useRef(null);
+  const sessioneRef = useRef(null);      // b.602 — { chiudi } dal client unico
   const deepgramStreamRef = useRef(null);
-  const deepgramProcessorRef = useRef(null);
-  const deepgramAudioCtxRef = useRef(null);
+  const daRendereRef = useRef(null);     // b.602 — copia del microfono unico da rendere
   const deepgramKeyRef = useRef(null);
 
   // b.172 — DEEPGRAM DISATTIVATO su richiesta esplicita dell'utente
@@ -69,6 +73,23 @@ export default function useDeepgramSTT({
   }, []);
 
   /**
+   * Stop Deepgram streaming and clean up all resources.
+   */
+  const stopDeepgramStreaming = useCallback(async () => {
+    // b.602 — socket + cattura nel client unico; la copia del microfono si
+    // RENDE al master (b.277), non si ferma a mano.
+    if (sessioneRef.current) {
+      const sess = sessioneRef.current; sessioneRef.current = null;
+      try { await sess.chiudi(); } catch { /* era gia chiusa: chiuderla due volte non e un guasto */ }
+    }
+    if (deepgramStreamRef.current) {
+      const st = deepgramStreamRef.current; deepgramStreamRef.current = null;
+      if (daRendereRef.current === st) { rendiVoce(st); daRendereRef.current = null; }
+      else st.getTracks().forEach(t => { try { t.stop(); } catch { /* era gia chiuso: chiudere due volte non e un guasto */ } });
+    }
+  }, []);
+
+  /**
    * Start Deepgram WebSocket streaming STT.
    * @param {string|object} langObj — language code or language object
    * @returns {Promise<boolean>} — true if connected, false if fallback needed
@@ -95,138 +116,56 @@ export default function useDeepgramSTT({
     streamingModeRef.current = true;
     setStreamingMsg({ original: '', translated: null, isStreaming: true });
 
+    if (!deepgramKeyRef.current) {
+      deepgramKeyRef.current = await chiediChiaveDeepgram({ userToken, roomId, roomSessionToken: roomSessionTokenRef?.current });
+    }
+    if (!deepgramKeyRef.current) return false;
+
     let stream;
-    try {
-      stream = await navigator.mediaDevices.getUserMedia({
-        audio: { channelCount: 1, sampleRate: 16000, echoCancellation: true, noiseSuppression: true },
-      });
-    } catch (e) {
-      console.error('[STT-Deepgram] Mic access error:', e);
-      return false;
+    try { stream = await prendiVoce(); daRendereRef.current = stream; }
+    catch {
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          audio: { channelCount: 1, sampleRate: 16000, echoCancellation: true, noiseSuppression: true },
+        });
+        daRendereRef.current = null;
+      } catch (e) {
+        console.error('[STT-Deepgram] Mic access error:', e);
+        return false;
+      }
     }
     deepgramStreamRef.current = stream;
 
-    const params = new URLSearchParams({
-      model: 'nova-2', language: dgLang, smart_format: 'true',
-      interim_results: 'true', utterance_end_ms: '1500',
-      encoding: 'linear16', sample_rate: '16000', channels: '1',
+    const sessione = await apriDeepgram({
+      chiave: deepgramKeyRef.current, stream, lingua: dgLang,
+      utteranceEndMs: 1500,
+      onTesto: (transcript, isFinal) => {
+        if (isFinal) {
+          allWordsRef.current += (allWordsRef.current ? ' ' : '') + transcript;
+          setStreamingMsg(prev => prev ? { ...prev, original: allWordsRef.current } : null);
+        } else {
+          const preview = allWordsRef.current + (allWordsRef.current ? ' ' : '') + transcript;
+          setStreamingMsg(prev => prev ? { ...prev, original: preview } : null);
+        }
+      },
+      onChiuso: () => { dbg.debug('[STT-Deepgram] WebSocket closed'); },
     });
-
-    const ws = new WebSocket(
-      `wss://api.deepgram.com/v1/listen?${params.toString()}`,
-      ['token', deepgramKeyRef.current]
-    );
-    deepgramWsRef.current = ws;
-
-    return new Promise((resolve) => {
-      let resolved = false;
-
-      ws.onopen = () => {
-        dbg.debug('[STT-Deepgram] WebSocket connected');
-        // Start audio capture
-        try {
-          const audioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
-          deepgramAudioCtxRef.current = audioCtx;
-          const source = audioCtx.createMediaStreamSource(stream);
-          const processor = audioCtx.createScriptProcessor(4096, 1, 1);
-          deepgramProcessorRef.current = processor;
-
-          processor.onaudioprocess = (e) => {
-            if (ws.readyState !== WebSocket.OPEN) return;
-            const input = e.inputBuffer.getChannelData(0);
-            const pcm16 = new Int16Array(input.length);
-            for (let i = 0; i < input.length; i++) {
-              const s = Math.max(-1, Math.min(1, input[i]));
-              pcm16[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
-            }
-            ws.send(pcm16.buffer);
-          };
-          source.connect(processor);
-          // Don't connect processor to destination - this causes echo!
-          // Processor only needs to capture audio, not output it
-        } catch (e) {
-          console.error('[STT-Deepgram] Audio capture error:', e);
-        }
-
-        // Keepalive
-        if (speakingKeepAliveRef.current) clearInterval(speakingKeepAliveRef.current);
-        speakingKeepAliveRef.current = setInterval(() => {
-          if (roomId && streamingModeRef.current) setSpeakingState(roomId, true);
-        }, 15000);
-
-        if (!resolved) {
-          resolved = true;
-          resolve(true);
-        }
-      };
-
-      ws.onmessage = (event) => {
-        try {
-          let data; try { data = JSON.parse(event.data); } catch { console.warn('[useDeepgramSTT] WS parse failed'); return; }
-          if (data.type === 'Results') {
-            const transcript = data.channel?.alternatives?.[0]?.transcript || '';
-            if (!transcript) return;
-            if (data.is_final) {
-              allWordsRef.current += (allWordsRef.current ? ' ' : '') + transcript;
-              setStreamingMsg(prev => prev ? { ...prev, original: allWordsRef.current } : null);
-            } else {
-              const preview = allWordsRef.current + (allWordsRef.current ? ' ' : '') + transcript;
-              setStreamingMsg(prev => prev ? { ...prev, original: preview } : null);
-            }
-          }
-        } catch (e) { /* message parse failed */ }
-      };
-
-      ws.onerror = () => {
-        console.warn('[STT-Deepgram] WebSocket error');
-        if (!resolved) {
-          resolved = true;
-          resolve(false);
-        }
-      };
-
-      ws.onclose = () => {
-        dbg.debug('[STT-Deepgram] WebSocket closed');
-      };
-
-      // Timeout: if WebSocket doesn't connect in 3s, fall back
-      setTimeout(() => {
-        if (!resolved) {
-          resolved = true;
-          resolve(false);
-        }
-      }, 3000);
-    });
-  }, [roomId, unlockAudio, setSpeakingState, setRecording, setStreamingMsg, allWordsRef, streamingModeRef, speakingKeepAliveRef]);
-
-  /**
-   * Stop Deepgram streaming and clean up all resources.
-   */
-  const stopDeepgramStreaming = useCallback(async () => {
-    if (deepgramProcessorRef.current) {
-      try { deepgramProcessorRef.current.disconnect(); } catch { /* era gia chiuso: chiudere due volte non e un guasto */ }
-      deepgramProcessorRef.current = null;
+    if (!sessione) {
+      console.warn('[STT-Deepgram] WebSocket error');
+      await stopDeepgramStreaming();
+      return false;
     }
-    if (deepgramAudioCtxRef.current && deepgramAudioCtxRef.current.state !== 'closed') {
-      try { deepgramAudioCtxRef.current.close(); } catch { /* era gia chiuso: chiudere due volte non e un guasto */ }
-      deepgramAudioCtxRef.current = null;
-    }
-    if (deepgramStreamRef.current) {
-      deepgramStreamRef.current.getTracks().forEach(t => { try { t.stop(); } catch { /* era gia chiuso: chiudere due volte non e un guasto */ } });
-      deepgramStreamRef.current = null;
-    }
-    if (deepgramWsRef.current) {
-      try {
-        if (deepgramWsRef.current.readyState === WebSocket.OPEN) {
-          // Send CloseStream and wait for Deepgram to flush final results
-          deepgramWsRef.current.send(JSON.stringify({ type: 'CloseStream' }));
-          await new Promise(r => setTimeout(r, 400)); // Wait for final transcription
-        }
-        deepgramWsRef.current.close();
-      } catch { /* era gia chiuso: chiudere due volte non e un guasto */ }
-      deepgramWsRef.current = null;
-    }
-  }, []);
+    sessioneRef.current = sessione;
+    dbg.debug('[STT-Deepgram] WebSocket connected');
+
+    // Keepalive
+    if (speakingKeepAliveRef.current) clearInterval(speakingKeepAliveRef.current);
+    speakingKeepAliveRef.current = setInterval(() => {
+      if (roomId && streamingModeRef.current) setSpeakingState(roomId, true);
+    }, 15000);
+    return true;
+  }, [roomId, roomSessionTokenRef, userToken, unlockAudio, setSpeakingState, setRecording, setStreamingMsg, allWordsRef, streamingModeRef, speakingKeepAliveRef, stopDeepgramStreaming]);
+
 
   // Cleanup on unmount
   useEffect(() => {

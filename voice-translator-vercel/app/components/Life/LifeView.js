@@ -41,6 +41,7 @@ import { assistentePer, vocePrestata } from '../../lib/compagni/corsi/assistenti
 import { staccaScena } from '../../lib/compagni/corsi/scena.js';
 import { apriScanner, ascoltaScansioni } from '../../lib/scanPonte.js';
 import { sesSet, sesGet, sesDel, memGet } from '../../lib/memoria.js';
+import { prendiVoce, rendiVoce } from '../../lib/microfonoMaster.js';   // b.602
 import { staccaEsercizio } from '../../lib/compagni/corsi/pronuncia.js';
 import PannelloPronuncia from './PannelloPronuncia.js';
 import GestioneCompagni from './GestioneCompagni.js';
@@ -813,13 +814,16 @@ function Impara({ compagni, L, C, lingua, userToken, testoP, muto, accent, card,
     }
     try {
       pausaAudio();
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      // b.602 — la voce e' una copia del microfono unico (b.277): niente
+      // apertura diretta senza vincoli (era uno dei 6 `getUserMedia`
+      // sparsi contati dall'audit di architettura).
+      const stream = await prendiVoce();
       micStreamRef.current = stream;
       const pezzi = [];
       const rec = new MediaRecorder(stream);
       rec.ondataavailable = (e) => { if (e.data.size > 0) pezzi.push(e.data); };
       rec.onstop = async () => {
-        try { micStreamRef.current?.getTracks().forEach((t) => t.stop()); } catch { /* microfono gia chiuso: non e un guasto */ }
+        try { rendiVoce(micStreamRef.current); micStreamRef.current = null; } catch { /* microfono gia reso: non e un guasto */ }
         const blob = new Blob(pezzi, { type: rec.mimeType || 'audio/webm' });
         if (blob.size < 800) { setMicDomanda(''); return; }
         setMicDomanda('trascrivo');

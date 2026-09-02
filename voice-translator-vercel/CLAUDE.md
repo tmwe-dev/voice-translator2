@@ -267,6 +267,51 @@ perche il working tree lo conteneva ancora.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.602** (push #878) — Modulo C del "correggi tutto": un
+  client Deepgram, una cattura PCM16, il microfono unico dappertutto.
+
+  **Nuovo `lib/audio/catturaPCM16.js`**: ScriptProcessor → Int16 →
+  callback. Era copiato identico in TRE file (SpeakerView,
+  useDeepgramSTT, useStreamingInterpreter) — identico tranne una riga:
+  SpeakerView collegava il processore all'uscita audio
+  (`processor.connect(audioCtx.destination)`), che gli altri due
+  evitavano con il commento «this causes echo». **BUG PRE-ESISTENTE**:
+  la modalita' dal vivo del Relatore aveva l'eco del proprio microfono
+  nelle casse. Sparito con la copia.
+  **Nuovo `lib/audio/deepgramLive.js`**: `chiediChiaveDeepgram` (sei
+  richieste diverse a /api/stt-token → una, con scadenza b.363 e corpo
+  b.161), `urlDeepgram`, `leggiMessaggioDeepgram`, `apriDeepgram` (una
+  porta d'uscita, b.247: risolve null dopo aver chiuso tutto, o
+  `{ chiudi }`; un `onopen` in ritardo dopo la scadenza non accende
+  piu' niente — trovato dalla prova, non dal codice). Le differenze
+  VOLUTE fra gli usi (pausa 1400/900/1500 ms, endpointing 500/400)
+  restano parametri. Tre client → uno; 0 `api.deepgram.com`, 0
+  `createScriptProcessor`, 0 `Int16Array` nei tre consumatori.
+  **Microfono unico**: SpeakerView (dal vivo), useDeepgramSTT, LifeView
+  (dettatura domanda), PannelloPronuncia, CompagnoLive (prova di
+  permesso) passano da `prendiVoce`/`rendiVoce` (b.277), con il ripiego
+  diretto se il master non parte. Restano diretti, e perche':
+  useVoiceRecorder (clonazione: vuole la voce SENZA controllo di
+  guadagno, e' una scelta di fedelta'), scan/page.js (camera), i
+  ripieghi "master fallito" in 5 hook, webrtc.js (e' il master stesso
+  per la chiamata). getUserMedia audio "a mano": da 10 siti a 1
+  scelto + ripieghi.
+
+  Prove: nuovo `deepgram-client-unico-b602.test.js`, 14 prove di
+  COMPORTAMENTO (AudioContext e WebSocket finti: saturazione PCM16,
+  nessun collegamento all'uscita, `attiva` che butta i blocchi, ferma()
+  idempotente; chiave con corpo giusto e mai eccezioni; url; parser;
+  apertura, scadenza, caduta prima/dopo l'apertura, ascoltatore che
+  scoppia) + 2 ancore. 5 prove esistenti riallineate (b247 x5 sulla
+  struttura interna dell'abort → ora sul client; b405, b244, b531).
+  `compagno-live-b406.test.jsx` (26 prove di comportamento, montano il
+  componente): il microfono finto non sapeva clonare la traccia —
+  arricchito il finto, le asserzioni sono le stesse.
+
+  [VERIFICATO] eslint 0 errori. build ok. Suite 300 file / 3692 prove,
+  0 regressioni. [ATTESO] Relatore dal vivo e interprete streaming con
+  Deepgram vero: non collaudati in questa sessione.
+
 - Versione: **b.601** (push #877) — Modulo B2 del "correggi tutto":
   i 4 cicli di dipendenza in lib/ sciolti. madge --circular: 0.
 

@@ -14,6 +14,10 @@ import { IconClose } from './Icons.js';
 import { PALETTE } from '../lib/palette.js';
 import { useApp } from '../contexts/AppContext.js';
 import { glossarioPerTesto } from '../lib/glossario.js'; // b.95
+// b.602 — chiave, socket e cattura PCM16: client Deepgram unico; la voce
+// dal microfono unico dell'app (copia), come fanno chiamata e interprete.
+import { chiediChiaveDeepgram, apriDeepgram } from '../lib/audio/deepgramLive.js';
+import { prendiVoce, rendiVoce } from '../lib/microfonoMaster.js';
 
 // ═══════════════════════════════════════════════════════════════
 // TaxiTalk — Redesigned: "Parla, Traduci, Mostra"
@@ -87,10 +91,9 @@ function SpeakerView({ userToken }) {
   // ── Refs ──
   const recorderRef = useRef(null);
   const chunksRef = useRef([]);
-  const wsRef = useRef(null);
+  const sessioneRef = useRef(null);   // b.602 — { chiudi } dal client Deepgram unico
   const streamRef = useRef(null);
-  const audioCtxRef = useRef(null);
-  const processorRef = useRef(null);
+  const daRendereRef = useRef(null);  // b.602 — la copia del microfono unico da rendere
   const dgKeyRef = useRef(null);
   const sentenceRef = useRef('');
   const translateTimerRef = useRef(null);
@@ -145,14 +148,9 @@ function SpeakerView({ userToken }) {
   // e /api/stt-token risponde 401 senza userToken ne roomSessionToken:
   // il ramo Deepgram non si attivava mai, si ripiegava sempre e solo
   // sulla registrazione a blocchi senza che nessuno se ne accorgesse.
+  // b.602 — la chiave si chiede in un modo solo (con scadenza, b.363).
   useEffect(() => {
-    fetch('/api/stt-token', { signal: AbortSignal.timeout(10000) /* b.363 — prima non c'era tetto di attesa: se la rete restava muta la chiamata pendeva per sempre e l'utente non vedeva mai un esito */,
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userToken: userToken || '' }),
-    }).then(r => r.ok ? r.json() : null)
-      .then(d => { if (d?.key) dgKeyRef.current = d.key; })
-      .catch(e => console.warn('[SpeakerView] STT token fetch failed:', e.message));
+    chiediChiaveDeepgram({ userToken }).then(k => { if (k) dgKeyRef.current = k; });
   }, [userToken]);
 
   // ── Auto-scroll history ──
@@ -503,83 +501,79 @@ function SpeakerView({ userToken }) {
   // ── Live mode (Deepgram streaming) ──
   const startLiveMode = useCallback(async () => {
     vibrate();
-    if (!dgKeyRef.current) {
-      try {
-        const res = await fetch('/api/stt-token', { signal: AbortSignal.timeout(10000) /* b.363 — prima non c'era tetto di attesa: se la rete restava muta la chiamata pendeva per sempre e l'utente non vedeva mai un esito */,
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ userToken: userToken || '' }),
-        });
-        // b.363 — prima la lettura non era protetta: la chiave restava vuota
-        // e si scivolava in registrazione a blocchi senza sapere perche'.
-        if (res.ok) { const d = await res.json().catch(() => null); if (d?.key) dgKeyRef.current = d.key; else console.warn('[b.363] stt-token: risposta illeggibile'); }
-      } catch (e) { console.warn('[SpeakerView] STT retry failed:', e.message); }
-    }
+    if (!dgKeyRef.current) dgKeyRef.current = await chiediChiaveDeepgram({ userToken });
     if (!dgKeyRef.current) { setMode('batch'); startBatchRecord(); return; }
     setRecording(true); setLiveText(''); setTranslatedText(''); sentenceRef.current = '';
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: { channelCount: 1, sampleRate: 16000, echoCancellation: true, noiseSuppression: true },
-      });
+      // b.602 — la voce e' una copia del microfono unico (b.277); se il
+      // master non parte si ripiega sull'apertura diretta di prima.
+      let stream;
+      try { stream = await prendiVoce(); daRendereRef.current = stream; }
+      catch {
+        stream = await navigator.mediaDevices.getUserMedia({
+          audio: { channelCount: 1, sampleRate: 16000, echoCancellation: true, noiseSuppression: true },
+        });
+        daRendereRef.current = null;
+      }
       streamRef.current = stream;
       const speechLang = getLang(sourceLang)?.speech || 'en-US';
-      const params = new URLSearchParams({
-        model: 'nova-2', language: speechLang.split('-')[0], smart_format: 'true',
-        interim_results: 'true', utterance_end_ms: '900',
-        endpointing: '400', encoding: 'linear16', sample_rate: '16000', channels: '1',
-      });
-      const ws = new WebSocket(`wss://api.deepgram.com/v1/listen?${params}`, ['token', dgKeyRef.current]);
-      wsRef.current = ws;
-      ws.onopen = () => {
-        const audioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
-        audioCtxRef.current = audioCtx;
-        const source = audioCtx.createMediaStreamSource(stream);
-        const processor = audioCtx.createScriptProcessor(4096, 1, 1);
-        processorRef.current = processor;
-        processor.onaudioprocess = (e) => {
-          if (ws.readyState !== WebSocket.OPEN) return;
-          const input = e.inputBuffer.getChannelData(0);
-          const pcm16 = new Int16Array(input.length);
-          for (let i = 0; i < input.length; i++) { const s = Math.max(-1, Math.min(1, input[i])); pcm16[i] = s < 0 ? s * 0x8000 : s * 0x7FFF; }
-          ws.send(pcm16.buffer);
-        };
-        source.connect(processor); processor.connect(audioCtx.destination);
-      };
-      ws.onmessage = (event) => {
-        try {
-          let data; try { data = JSON.parse(event.data); } catch { console.warn('[SpeakerView] WS message parse failed'); return; }
-          if (data.type === 'Results') {
-            const transcript = data.channel?.alternatives?.[0]?.transcript || '';
-            if (!transcript) return;
-            if (data.is_final) {
-              sentenceRef.current += (sentenceRef.current ? ' ' : '') + transcript;
-              setLiveText(sentenceRef.current);
-              clearTimeout(translateTimerRef.current);
-              translateTimerRef.current = setTimeout(async () => {
-                const t = await translateText(sentenceRef.current, false);
-                if (t) setTranslatedText(t);
-              }, 250);
-            } else {
-              setLiveText(sentenceRef.current + (sentenceRef.current ? ' ' : '') + transcript);
+      // b.602 — il socket, la cattura PCM16 e la lettura dei messaggi sono
+      // nel client unico. Qui c'era la TERZA copia, l'unica che collegava
+      // il processore all'uscita audio (eco): sparita con la copia.
+      const sessione = await apriDeepgram({
+        chiave: dgKeyRef.current, stream, lingua: speechLang,
+        utteranceEndMs: 900, endpointing: 400,
+        onTesto: (transcript, isFinal) => {
+          if (isFinal) {
+            sentenceRef.current += (sentenceRef.current ? ' ' : '') + transcript;
+            setLiveText(sentenceRef.current);
+            clearTimeout(translateTimerRef.current);
+            translateTimerRef.current = setTimeout(async () => {
+              const t = await translateText(sentenceRef.current, false);
+              if (t) setTranslatedText(t);
+            }, 250);
+          } else {
+            setLiveText(sentenceRef.current + (sentenceRef.current ? ' ' : '') + transcript);
+          }
+        },
+        onFineFrase: () => {
+          if (!sentenceRef.current.trim()) return;
+          const sentence = sentenceRef.current.trim();
+          sentenceRef.current = '';
+          (async () => {
+            const translated = await translateText(sentence, true);
+            if (translated) {
+              setTranslatedText(translated);
+              setHistory(prev => [...prev.slice(-50), { original: sentence, translated, sourceLang, targetLang, ts: Date.now() }]);
+              playTTS(translated, targetLang);
             }
-          }
-          if (data.type === 'UtteranceEnd' && sentenceRef.current.trim()) {
-            const sentence = sentenceRef.current.trim();
-            sentenceRef.current = '';
-            (async () => {
-              const translated = await translateText(sentence, true);
-              if (translated) {
-                setTranslatedText(translated);
-                setHistory(prev => [...prev.slice(-50), { original: sentence, translated, sourceLang, targetLang, ts: Date.now() }]);
-                playTTS(translated, targetLang);
-              }
-              setTimeout(() => { setLiveText(''); setTranslatedText(''); }, 3000);
-            })();
-          }
-        } catch (e) { console.warn('[SpeakerView] WebSocket message handling failed:', e?.message); }
-      };
-    } catch (e) { console.warn('[SpeakerView] WebSocket setup failed:', e?.message); setRecording(false); }
+            setTimeout(() => { setLiveText(''); setTranslatedText(''); }, 3000);
+          })();
+        },
+      });
+      if (!sessione) throw new Error('Deepgram non si e aperto');
+      sessioneRef.current = sessione;
+    } catch (e) {
+      console.warn('[SpeakerView] WebSocket setup failed:', e?.message);
+      if (streamRef.current) {
+        if (daRendereRef.current === streamRef.current) rendiVoce(streamRef.current);
+        else streamRef.current.getTracks().forEach(t => { try { t.stop(); } catch { /* era gia ferma: fermarla di nuovo non e un guasto */ } });
+        streamRef.current = null; daRendereRef.current = null;
+      }
+      setRecording(false);
+    }
   }, [sourceLang, targetLang, translateText, playTTS, startBatchRecord, userToken]);
+
+  // b.602 — socket + cattura si chiudono nel client unico; la copia del
+  // microfono si RENDE al master (b.277), non si ferma a mano.
+  const chiudiSessioneLive = useCallback(() => {
+    if (sessioneRef.current) { const sess = sessioneRef.current; sessioneRef.current = null; try { sess.chiudi(); } catch { /* era gia chiusa: chiuderla due volte non e un guasto */ } }
+    if (streamRef.current) {
+      const st = streamRef.current; streamRef.current = null;
+      if (daRendereRef.current === st) { rendiVoce(st); daRendereRef.current = null; }
+      else st.getTracks().forEach(t => { try { t.stop(); } catch { /* era gia ferma: fermarla di nuovo non e un guasto */ } });
+    }
+  }, []);
 
   const stopLiveMode = useCallback(() => {
     if (sentenceRef.current.trim()) {
@@ -594,26 +588,18 @@ function SpeakerView({ userToken }) {
       });
     }
     clearTimeout(translateTimerRef.current);
-    if (processorRef.current) { try { processorRef.current.disconnect(); } catch { /* si sta smontando: se era gia chiuso non cambia nulla */ } processorRef.current = null; }
-    if (audioCtxRef.current?.state !== 'closed') { try { audioCtxRef.current?.close(); } catch { /* si sta smontando: se era gia chiuso non cambia nulla */ } audioCtxRef.current = null; }
-    if (streamRef.current) { streamRef.current.getTracks().forEach(t => { try { t.stop(); } catch { /* si sta smontando: se era gia chiuso non cambia nulla */ } }); streamRef.current = null; }
-    if (wsRef.current) {
-      try { if (wsRef.current.readyState === WebSocket.OPEN) wsRef.current.send(JSON.stringify({ type: 'CloseStream' })); wsRef.current.close(); } catch { /* si sta smontando: se era gia chiuso non cambia nulla */ }
-      wsRef.current = null;
-    }
+    chiudiSessioneLive();
     setRecording(false);
-  }, [sourceLang, targetLang, translateText, playTTS]);
+  }, [sourceLang, targetLang, translateText, playTTS, chiudiSessioneLive]);
 
   // ── Cleanup ──
   useEffect(() => {
     return () => {
       if (audioRef.current) try { audioRef.current.pause(); } catch { /* si sta smontando: se era gia chiuso non cambia nulla */ }
-      if (wsRef.current) try { wsRef.current.close(); } catch { /* si sta smontando: se era gia chiuso non cambia nulla */ }
-      if (streamRef.current) streamRef.current.getTracks().forEach(t => { try { t.stop(); } catch { /* si sta smontando: se era gia chiuso non cambia nulla */ } });
-      if (audioCtxRef.current?.state !== 'closed') try { audioCtxRef.current?.close(); } catch { /* si sta smontando: se era gia chiuso non cambia nulla */ }
+      chiudiSessioneLive();
       clearTimeout(translateTimerRef.current);
     };
-  }, []);
+  }, [chiudiSessioneLive]);   // stabile ([]): l'effetto gira una volta sola
 
   // ── Bbox helper ──
   const computeBbox = useCallback((p1, p2, pad = 0.01) => {

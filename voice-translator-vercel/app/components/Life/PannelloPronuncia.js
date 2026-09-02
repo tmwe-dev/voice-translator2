@@ -13,6 +13,7 @@ import { zittisci, suona as registraAudio } from '../../lib/voce.js';
 import { analizza, confronta, qualityGate } from '../../lib/fonia.js';
 import GraficoFonia from './GraficoFonia.js';
 import Ascolta from '../Ascolta.js';
+import { prendiVoce, rendiVoce } from '../../lib/microfonoMaster.js';   // b.602
 
 // ═══════════════════════════════════════════════════════════════
 // PANNELLO PRONUNCIA — dillo ad alta voce (Luca, b.244)
@@ -73,7 +74,8 @@ export default function PannelloPronuncia({ frase, lingua, userToken, onEsito, v
 
   // Il microfono si chiude sempre, anche uscendo a metà registrazione.
   const chiudiMicrofono = useCallback(() => {
-    try { streamRef.current?.getTracks().forEach((t) => t.stop()); } catch { /* il microfono era gia stato chiuso: chiuderlo due volte non e un guasto */ }
+    // b.602 — la copia del microfono unico si RENDE al master (b.277).
+    try { if (streamRef.current) rendiVoce(streamRef.current); } catch { /* il microfono era gia stato reso: renderlo due volte non e un guasto */ }
     streamRef.current = null;
   }, []);
   // b.317 — audit 6.11: allo smontaggio si ferma anche il REGISTRATORE, non
@@ -211,7 +213,7 @@ export default function PannelloPronuncia({ frase, lingua, userToken, onEsito, v
       // Ora la voce di riferimento passa da `parlaTurno`, che la registra, e
       // qui si ASPETTA il silenzio prima di chiedere il microfono.
       await zittisci();
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const stream = await prendiVoce();   // b.602 — microfono unico
       streamRef.current = stream;
       const pezzi = [];
       const rec = new MediaRecorder(stream);

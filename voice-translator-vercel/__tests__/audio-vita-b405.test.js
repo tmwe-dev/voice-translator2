@@ -210,7 +210,9 @@ describe('L6 — il microfono della Pronuncia non deve sentire la voce modello',
     // aspettava nulla e `getUserMedia` stava nella riga dopo `pausa()`.
     const p = leggi('app/components/Life/PannelloPronuncia.js');
     const zitto = p.indexOf('await zittisci()');
-    const mic = p.indexOf('navigator.mediaDevices.getUserMedia');
+    // b.602 — il microfono si prende dal master unico (prendiVoce), non
+    // piu con getUserMedia diretto: l'ordine che conta e' lo stesso.
+    const mic = p.indexOf('await prendiVoce()');
     expect(zitto, 'il silenzio si aspetta').toBeGreaterThan(-1);
     expect(mic, 'e solo dopo si apre il microfono').toBeGreaterThan(zitto);
   });

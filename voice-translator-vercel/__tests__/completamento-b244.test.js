@@ -132,7 +132,8 @@ describe('pronuncia — una misura indiretta ma VERA', () => {
     expect(leggi('app/components/Life/LifeView.js')).toMatch(/PannelloPronuncia/);
     expect(leggi('app/lib/compagni/corsi/lingua.js')).toMatch(/ISTRUZIONE_PRONUNCIA/);
     // Il microfono si chiude sempre, anche uscendo a metà.
-    expect(leggi('app/components/Life/PannelloPronuncia.js')).toMatch(/getTracks\(\)\.forEach\(\(t\) => t\.stop\(\)\)/);
+    // b.602 — la copia del microfono unico si RENDE al master, non si ferma a mano.
+    expect(leggi('app/components/Life/PannelloPronuncia.js')).toMatch(/rendiVoce\(streamRef\.current\)/);
   });
 });
 

@@ -60,10 +60,16 @@ describe('un avvio fallito non lascia acceso un secondo microfono', () => {
     // Deve toccare tutte e quattro le risorse che prima restavano vive.
     const i = s.indexOf('const abortaStreaming = useCallback(');
     const corpo = s.slice(i, s.indexOf('const start = useCallback('));
-    expect(corpo, 'lo ScriptProcessor').toContain('processorRef.current.disconnect()');
-    expect(corpo, "l'AudioContext").toContain('.close()');
+    // b.602 — ScriptProcessor, AudioContext e WebSocket vivono nel client
+    // unico (lib/audio/deepgramLive.js) e si chiudono con `chiudi()`;
+    // qui restano il cancello del rumore e le tracce del microfono.
+    expect(corpo, 'la sessione Deepgram (socket + cattura)').toContain('sess.chiudi()');
     expect(corpo, 'le tracce del microfono').toContain('.getTracks().forEach');
-    expect(corpo, 'il WebSocket').toContain('.close()');
+    expect(corpo, 'il cancello del rumore').toContain('noiseGateRef.current.destroy()');
+    const client = leggi('app/lib/audio/catturaPCM16.js') + leggi('app/lib/audio/deepgramLive.js');
+    expect(client, 'lo ScriptProcessor').toContain('processor.disconnect()');
+    expect(client, "l'AudioContext").toContain('audioCtx.close()');
+    expect(client, 'il WebSocket').toContain('s.close()');
   });
 
   it("l'abort è idempotente: ogni risorsa viene azzerata dopo essere stata chiusa", () => {
@@ -72,31 +78,28 @@ describe('un avvio fallito non lascia acceso un secondo microfono', () => {
     const corpo = s.slice(i, s.indexOf('const start = useCallback('));
     // Chiamarla due volte non deve essere un guasto: la seconda volta i ref
     // sono null e ogni blocco viene saltato.
-    expect(corpo).toContain('processorRef.current = null');
-    expect(corpo).toContain('audioCtxRef.current = null');
+    expect(corpo).toContain('sessioneRef.current = null');   // b.602 — socket + cattura in un ref solo
     expect(corpo).toContain('streamRef.current = null');
-    expect(corpo).toContain('wsRef.current = null');
     expect(corpo).toContain('noiseGateRef.current = null');
   });
 
   it('OGNI esito negativo passa dall\'abort — era il difetto', () => {
     const s = streaming();
     // Prima gli esiti negativi erano due `resolve(false)` sparsi e nudi.
-    const uscite = [...s.matchAll(/(resolve|concludi)\(false\)/g)];
-    expect(uscite.length, 'un esito negativo deve esistere ancora').toBeGreaterThan(0);
-    for (const m of uscite) {
-      if (m[1] !== 'resolve') continue;
-      // Se qualcuno rimette un resolve(false) diretto, deve almeno chiudere.
-      expect(s.slice(Math.max(0, m.index - 300), m.index),
-        `il resolve(false) a ${m.index} non è preceduto da un abort`)
-        .toContain('abortaStreaming()');
-    }
-    // E la porta d'uscita unica aborta PRIMA di risolvere.
-    const i = s.indexOf('const concludi = (esito)');
+    // b.602 — la porta d'uscita unica sta nel client (apriDeepgram → null
+    // dopo aver chiuso tutto: provata per comportamento in
+    // deepgram-client-unico-b602.test.js). Qui: OGNI `return false` di
+    // start() e' preceduto dall'abort, e il null del client lo chiama.
+    const iStart = s.indexOf('const start = useCallback(');
+    const corpoStart = s.slice(iStart, s.indexOf('const stop = useCallback('));
+    expect(corpoStart).toContain('if (!sessione) {');
+    const iNull = corpoStart.indexOf('if (!sessione) {');
+    expect(corpoStart.slice(iNull, iNull + 200)).toContain('abortaStreaming();');
+    const c = leggi('app/lib/audio/deepgramLive.js');
+    const i = c.indexOf('const concludi = (esito)');
     expect(i, 'la porta d\'uscita unica deve esistere').toBeGreaterThan(-1);
-    const corpo = s.slice(i, i + 300);
-    expect(corpo).toContain('if (!esito) abortaStreaming();');
-    expect(corpo.indexOf('abortaStreaming()')).toBeLessThan(corpo.indexOf('resolve(esito)'));
+    const corpo = c.slice(i, i + 300);
+    expect(corpo).toContain('if (!esito) { chiudi(); resolve(null); }');
   });
 
   it('non c\'è più il temporizzatore che risolveva false senza chiudere niente', () => {
@@ -110,8 +113,9 @@ describe('un avvio fallito non lascia acceso un secondo microfono', () => {
 
   it('il temporizzatore di apertura viene ANNULLATO quando si conclude', () => {
     // Prima restava armato anche dopo una connessione riuscita.
-    const s = streaming();
-    expect(s).toContain('clearTimeout(timerAperturaId)');
+    // b.602 — nel client unico.
+    const s = leggi('app/lib/audio/deepgramLive.js');
+    expect(s).toContain('clearTimeout(timerApertura)');
     expect(s).toMatch(/let risolto = false/);
   });
 
@@ -251,7 +255,7 @@ describe('quale motore STT si usa lo decide un posto solo', () => {
     // Prima chiamava /api/stt-token comunque: ora la chiamata è dentro la
     // guardia della policy.
     const iGuardia = s.indexOf('if (!deepgramAmmesso(USO.INTERPRETE)) return;');
-    const iFetch = s.indexOf("fetch('/api/stt-token'");
+    const iFetch = s.indexOf('chiediChiaveDeepgram(');   // b.602 — la chiave si chiede al client unico
     expect(iGuardia, 'la guardia sulla chiave deve esistere').toBeGreaterThan(-1);
     expect(iGuardia, 'e precedere la richiesta della chiave').toBeLessThan(iFetch);
     // E anche start() non parte se la policy dice di no.

@@ -13,6 +13,9 @@ import {
   riproduciBase64, regolaVolumeInCorsa, fermaAudio,
 } from '../lib/audio/voceTradotta.js';
 import { EVENTO, MSG, avvisaVoceLocale } from '../lib/eventi.js';
+// b.602 — chiave, socket e cattura PCM16: un client solo (lib/audio/
+// deepgramLive.js), condiviso con SpeakerView e useDeepgramSTT.
+import { chiediChiaveDeepgram, apriDeepgram } from '../lib/audio/deepgramLive.js';
 const dbg = createLogger('streaming');
 
 // ═══════════════════════════════════════════════════════════════
@@ -71,10 +74,8 @@ export default function useStreamingInterpreter({
 
   // Refs
   const activeRef = useRef(false);
-  const wsRef = useRef(null);
+  const sessioneRef = useRef(null);      // b.602 — { chiudi } dal client Deepgram unico
   const streamRef = useRef(null);
-  const audioCtxRef = useRef(null);
-  const processorRef = useRef(null);
   const noiseGateRef = useRef(null);
   const convContextRef = useRef(conversationContext);
 
@@ -118,9 +119,8 @@ export default function useStreamingInterpreter({
     // Deepgram non arrivava mai e l'interprete non partiva, in silenzio.
     // La lettura del corpo ora e protetta: una pagina d'errore al posto
     // del JSON faceva esplodere la catena invece di ripiegare su null.
-    fetch('/api/stt-token', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userToken, roomId, roomSessionToken: roomSessionTokenRef?.current || undefined }), signal: AbortSignal.timeout(10000) }).then(r => r.ok ? r.json().catch(() => null) : null)
-      .then(d => { if (d?.key) deepgramKeyRef.current = d.key; })
-      .catch(e => console.warn('[Interpreter] STT token failed:', e.message));
+    chiediChiaveDeepgram({ userToken, roomId, roomSessionToken: roomSessionTokenRef?.current })
+      .then(k => { if (k) deepgramKeyRef.current = k; });
   }, [userToken, roomId, roomSessionTokenRef]);
 
   // ═══ INCREMENTAL TRANSLATION ═══
@@ -423,15 +423,12 @@ export default function useStreamingInterpreter({
   // chiamarla due volte (abort + stop, o abort + smontaggio) non e un
   // guasto. Nessuna dipendenza: lavora solo su ref.
   const abortaStreaming = useCallback(() => {
-    if (processorRef.current) {
-      try { processorRef.current.onaudioprocess = null; } catch { /* era gia chiuso: chiudere due volte non e un guasto */ }
-      try { processorRef.current.disconnect(); } catch { /* era gia chiuso: chiudere due volte non e un guasto */ }
-      processorRef.current = null;
-    }
-    if (audioCtxRef.current) {
-      const ctx = audioCtxRef.current;
-      audioCtxRef.current = null;
-      if (ctx.state !== 'closed') { try { ctx.close(); } catch { /* era gia chiuso: chiudere due volte non e un guasto */ } }
+    // b.602 — socket + cattura si chiudono in un colpo solo, nel client
+    // unico (CloseStream, attesa degli ultimi risultati, ascolto staccato).
+    if (sessioneRef.current) {
+      const sess = sessioneRef.current;
+      sessioneRef.current = null;
+      try { sess.chiudi(); } catch { /* era gia chiusa: chiuderla due volte non e un guasto */ }
     }
     if (noiseGateRef.current) {
       try { noiseGateRef.current.destroy(); } catch { /* era gia chiuso: chiudere due volte non e un guasto */ }
@@ -449,18 +446,6 @@ export default function useStreamingInterpreter({
         tracce.getTracks().forEach(t => { try { t.stop(); } catch { /* era gia chiuso: chiudere due volte non e un guasto */ } });
       }
     }
-    if (wsRef.current) {
-      const ws = wsRef.current;
-      wsRef.current = null;
-      try {
-        // Si stacca prima l'ascolto: un socket in chiusura puo ancora
-        // consegnare trascrizioni, e finirebbero sui sottotitoli di una
-        // sessione che l'utente ha gia abbandonato.
-        ws.onmessage = null; ws.onerror = null; ws.onclose = null; ws.onopen = null;
-        if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: 'CloseStream' }));
-        ws.close();
-      } catch { /* era gia chiuso: chiudere due volte non e un guasto */ }
-    }
     activeRef.current = false;
     setActive(false);
   }, []);
@@ -475,17 +460,8 @@ export default function useStreamingInterpreter({
     }
 
     if (!deepgramKeyRef.current) {
-      // Try to get key
-      try {
-        // b.363 — secondo tentativo per la chiave: era anch'esso senza
-        // scadenza, e l'avvio dell'interprete lo aspettava.
-        const res = await fetch('/api/stt-token', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userToken, roomId, roomSessionToken: roomSessionTokenRef?.current || undefined }), signal: AbortSignal.timeout(10000) });
-        if (res.ok) {
-          // b.363 — vedi sopra: corpo non-JSON non deve far esplodere.
-          const d = await res.json().catch(() => null);
-          if (d?.key) deepgramKeyRef.current = d.key;
-        }
-      } catch (e) { console.warn('[Interpreter] STT key retry failed:', e.message); }
+      // b.363 — secondo tentativo per la chiave (con scadenza, dentro il client unico).
+      deepgramKeyRef.current = await chiediChiaveDeepgram({ userToken, roomId, roomSessionToken: roomSessionTokenRef?.current });
     }
 
     if (!deepgramKeyRef.current) {
@@ -529,102 +505,29 @@ export default function useStreamingInterpreter({
         }
       } catch { /* filtro del rumore non applicabile: si registra il flusso cosi com e */ }
 
-      // Deepgram WebSocket
+      // b.602 — socket, cattura PCM16 e lettura dei messaggi: client unico.
+      // b.247 — una sola porta d'uscita: apriDeepgram risolve null se non
+      // si apre (e ha gia spento tutto), altrimenti { chiudi }.
       const speechLang = getLang(myLang)?.speech || 'en-US';
-      const dgLang = speechLang.split('-')[0];
-      const params = new URLSearchParams({
-        model: 'nova-2',
-        language: dgLang,
-        smart_format: 'true',
-        interim_results: 'true',
-        utterance_end_ms: String(SENTENCE_PAUSE_MS),
-        endpointing: '500',  // b.531 — 300 tagliava dentro i respiri
-        encoding: 'linear16',
-        sample_rate: '16000',
-        channels: '1',
+      const sessione = await apriDeepgram({
+        chiave: deepgramKeyRef.current,
+        stream: recordStream,
+        lingua: speechLang,
+        utteranceEndMs: SENTENCE_PAUSE_MS,
+        endpointing: 500,   // b.531 — 300 tagliava dentro i respiri
+        onTesto: (transcript, isFinal) => handleTranscript(transcript, isFinal),
+        onFineFrase: () => handleUtteranceEnd(),   // silenzio prolungato → frase finita
+        onChiuso: () => { dbg.debug('[StreamInterp] WS closed'); },
       });
-
-      const ws = new WebSocket(
-        `wss://api.deepgram.com/v1/listen?${params.toString()}`,
-        ['token', deepgramKeyRef.current]
-      );
-      wsRef.current = ws;
-
-      return new Promise((resolve) => {
-        // b.247 — UNA SOLA PORTA D'USCITA da questa promessa.
-        // Prima l'esito negativo si dava in due punti scollegati
-        // (`ws.onerror` e un `setTimeout(..., 4000)`) e nessuno dei due
-        // spegneva niente; per giunta il temporizzatore non veniva mai
-        // annullato, quindi continuava a scattare anche dopo una
-        // connessione riuscita. Ora: si esce una volta sola, il
-        // temporizzatore si annulla, e ogni esito NEGATIVO passa
-        // obbligatoriamente dall'abort completo.
-        let risolto = false;
-        let timerAperturaId = null;
-        const concludi = (esito) => {
-          if (risolto) return;
-          risolto = true;
-          clearTimeout(timerAperturaId);
-          if (!esito) abortaStreaming();
-          resolve(esito);
-        };
-
-        ws.onopen = () => {
-          dbg.debug('[StreamInterp] Connected to Deepgram');
-
-          // Audio capture → PCM16 → WebSocket
-          const audioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
-          audioCtxRef.current = audioCtx;
-          const source = audioCtx.createMediaStreamSource(recordStream);
-          const processor = audioCtx.createScriptProcessor(4096, 1, 1);
-          processorRef.current = processor;
-
-          processor.onaudioprocess = (e) => {
-            if (ws.readyState !== WebSocket.OPEN) return;
-            const input = e.inputBuffer.getChannelData(0);
-            const pcm16 = new Int16Array(input.length);
-            for (let i = 0; i < input.length; i++) {
-              const s = Math.max(-1, Math.min(1, input[i]));
-              pcm16[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
-            }
-            ws.send(pcm16.buffer);
-          };
-
-          source.connect(processor);
-          // Don't connect processor to destination - this causes echo!
-          // Processor only needs to capture audio, not output it
-          setActive(true);
-          concludi(true);
-        };
-
-        ws.onmessage = (event) => {
-          try {
-            const data = JSON.parse(event.data);
-            if (data.type === 'Results') {
-              const transcript = data.channel?.alternatives?.[0]?.transcript || '';
-              if (transcript) {
-                handleTranscript(transcript, data.is_final);
-              }
-            }
-            // Deepgram UtteranceEnd = silenzio prolungato → frase finita
-            if (data.type === 'UtteranceEnd') {
-              handleUtteranceEnd();
-            }
-          } catch { /* messaggio del riconoscitore in un formato inatteso: si aspetta il prossimo */ }
-        };
-
-        ws.onerror = () => { console.warn('[StreamInterp] WS error'); concludi(false); };
-        ws.onclose = () => {
-          dbg.debug('[StreamInterp] WS closed');
-          // Se si chiude PRIMA di essersi aperto (chiave rifiutata, rete
-          // caduta) non ha senso aspettare i 4 secondi: si dichiara subito
-          // il fallimento, cosi la pipeline di ripiego parte prima. Dopo
-          // l'apertura riuscita `risolto` e gia true e questa e una riga
-          // che non fa niente.
-          concludi(false);
-        };
-        timerAperturaId = setTimeout(() => concludi(false), 4000);
-      });
+      if (!sessione) {
+        console.warn('[StreamInterp] Deepgram non si e aperto');
+        abortaStreaming();
+        return false;
+      }
+      sessioneRef.current = sessione;
+      dbg.debug('[StreamInterp] Connected to Deepgram');
+      setActive(true);
+      return true;
     } catch (e) {
       console.error('[StreamInterp] Start failed:', e);
       // b.247 — anche qui il microfono poteva essere gia stato aperto da

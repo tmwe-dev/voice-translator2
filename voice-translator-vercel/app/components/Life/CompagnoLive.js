@@ -3,6 +3,7 @@ import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { FONT } from '../../lib/constants.js';
 import { zittisci, suInterruzione } from '../../lib/voce.js';
 import Icon from '../Icon.js';
+import { prendiVoce, rendiVoce } from '../../lib/microfonoMaster.js';   // b.602
 
 // ═══════════════════════════════════════════════════════════════
 // b.316 — COMPAGNO DAL VIVO (Luca): la chiacchierata 1-a-1 in Amico
@@ -221,8 +222,9 @@ function CompagnoLive({ compagno, lingua, userToken, contesto, onChiudi, onFine,
       // Prima il microfono, da solo: cosi un guasto di PERMESSO e distinto
       // da un guasto di COLLEGAMENTO, e il messaggio dice quello giusto.
       try {
-        const flusso = await navigator.mediaDevices.getUserMedia({ audio: true });
-        flusso.getTracks().forEach((t) => t.stop());
+        // b.602 — la prova di permesso passa dal microfono unico: se il
+        // master e' gia aperto (chiamata in corso) non si riapre l'hardware.
+        rendiVoce(await prendiVoce());
       } catch (e) {
         if (mioTurno()) { setStato('microfono_negato'); setDettaglio(`${L('liveMicUnavailable')} (${e?.name || ''}) ${L('liveMicCheckPermission')}`); }
         return;

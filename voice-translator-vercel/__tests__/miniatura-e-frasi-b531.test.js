@@ -21,7 +21,7 @@ describe('b.531 — le frasi non si spezzano piu sul respiro', () => {
   const f = leggi('app/hooks/useStreamingInterpreter.js');
   it('soglie umane: 1400ms di pausa, endpointing 500', () => {
     expect(f).toMatch(/const SENTENCE_PAUSE_MS = 1400;/);
-    expect(f).toMatch(/endpointing: '500'/);
+    expect(f).toMatch(/endpointing: 500,/);   // b.602 — parametro del client unico, numero
   });
   it('un moncone corto senza punto ASPETTA il seguito (fino a 2,5s)', () => {
     expect(f).toMatch(/const monconeRef = useRef\(''\);/);

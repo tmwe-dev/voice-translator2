@@ -110,11 +110,16 @@ beforeEach(() => {
     const corpo = typeof permesso.corpo === 'function' ? permesso.corpo() : permesso.corpo;
     return { ok: permesso.stato < 400, status: permesso.stato, json: async () => corpo };
   };
+  // b.602 — il pannello passa dal microfono UNICO (lib/microfonoMaster.js),
+  // che clona la traccia e la avvolge in un MediaStream: il finto deve
+  // sapere fare le due cose che fa un microfono vero.
+  const tracciaFinta = () => ({ kind: 'audio', readyState: 'live', stop: () => {}, clone() { return tracciaFinta(); } });
+  global.MediaStream = class { constructor(t = []) { this.t = t; } getTracks() { return this.t; } getAudioTracks() { return this.t; } };
   global.navigator.mediaDevices = {
     getUserMedia: async () => {
       if (micNega) { const e = new Error('negato'); e.name = 'NotAllowedError'; throw e; }
       micAperto = true;
-      return { getTracks: () => [{ stop: () => {} }] };
+      return new global.MediaStream([tracciaFinta()]);
     },
   };
 });
