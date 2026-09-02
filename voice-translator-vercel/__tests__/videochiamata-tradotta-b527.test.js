@@ -13,7 +13,10 @@ describe('b.527 — il silenzio della traduzione ora si spiega e si ripara', () 
     const f = leggi('app/hooks/useInterpreterMode.js');
     expect(f).toMatch(/const \[erroreAvvio, setErroreAvvio\] = useState\(null\)/);
     expect(f).toMatch(/setErroreAvvio\(e\?\.message \|\| 'avvio non riuscito'\)/);
-    expect(f).toMatch(/erroreAvvio,\n  \};/);
+    // b.598 — dopo erroreAvvio e' arrivato problemaAudio: entrambi escono
+    // dal hook, uno accanto all'altro.
+    expect(f).toMatch(/erroreAvvio,\n/);
+    expect(f).toMatch(/problemaAudio,\n  \};/);
   });
   it('un avvio fallito RIPROVA invece di restare muto per sempre', () => {
     const f = leggi('app/components/RoomView.js');

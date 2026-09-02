@@ -267,6 +267,99 @@ perche il working tree lo conteneva ancora.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.598** (push #874) — Voce anticipata in videochiamata +
+  i tre debiti residui di b.597 chiusi + tre difetti del ripiego trovati
+  dall'audit di architettura.
+
+  **1. La voce dell'utente attenua il partner SUBITO** (richiesta di
+  Luca: "quando rilevi la voce dell'utente, qualsiasi sia il volume
+  dell'audio lo riduci per permettere al microfono di ascoltare
+  l'utente"). Prima l'attenuazione partiva solo quando la voce TRADOTTA
+  era pronta a suonare — cioe' secondi dopo, a fine giro STT →
+  traduzione → sintesi. Il cancello del rumore (noiseGate.js) sapeva
+  gia' in tempo reale quando l'utente comincia a parlare: ora lo dice a
+  chi lo ha creato (`onCambio`), le due pipeline (useInterpreterMode,
+  useStreamingInterpreter) lanciano `bartalk:voce-locale`, e RoomView
+  attenua se parla l'utente OPPURE se suona la traduzione (OR dei due
+  segnali in `attenuazioneAttivaRef`). Nessun secondo rilevatore. Il
+  cancello gira SOLO con l'interprete acceso (interpreter.start e'
+  legato a interpreterActive): le chiamate senza traduzione non
+  cambiano di una virgola. Soglia -45 dB, preset attenuazione invariati.
+  `destroy()` del cancello manda `onCambio(false)` se era aperto: senza
+  questo, spegnere l'interprete a meta' frase lasciava il partner
+  attenuato per sempre. [VERIFICATO] con prova di comportamento
+  (AudioContext finto, 3 casi: transizioni, destroy, ascoltatore che
+  scoppia). [ATTESO] l'efficacia reale sul campo: non collaudato in una
+  chiamata vera in questa sessione.
+
+  **2. `/api/transcribe` non fallisce piu' in silenzio.** In
+  `processChunk` un 400 di Whisper era `return;` e basta. Ora si contano
+  i fallimenti CONSECUTIVI (non isolati: un blocco storto ogni tanto e'
+  normale) e al terzo la videochiamata scrive «Non riesco a sentirti
+  bene — controlla il microfono» (`problemaAudio` → `audioNonChiaro`,
+  chiave aggiunta in tutti e 38 i pacchetti lingua, intestazioni
+  1765→1766). Il primo blocco che passa lo spegne. NON e' la cura dei
+  ~205 errori/7gg: e' la fine del silenzio. La causa (audio del
+  MediaRecorder rifiutato da Whisper) resta [ASSUNTO], non correlabile
+  a sessioni specifiche coi log disponibili.
+
+  **3. `/api/tts-edge` "audio vuoto": pausa di 400 ms prima del secondo
+  tentativo.** MITIGAZIONE DICHIARATA, NON CAUSA CONFERMATA: il retry
+  b.552 era a zero millisecondi dal primo; se e' un servizio
+  momentaneamente occupato, ripetere subito e' la mossa peggiore. I log
+  grezzi per confermarlo NON sono recuperabili (get_runtime_logs: 7gg
+  timeout, 48h/24h "exceeds retention"). Da riprendere se i 112/7gg non
+  calano.
+
+  **4. La modalita' compatta ha l'interprete.** `latest` (ultimo
+  sottotitolo) e' salito a livello di componente in VideoCallOverlay;
+  la modalita' compatta ha ora un ControlBtn "Traduci" (stesso guard
+  Stanza Diretta/gruppo del tutto schermo) e una striscia con l'ultima
+  frase tradotta sopra il video. Solo andata: niente volumi, niente
+  voce, niente cassetto — per quello c'e' il tutto schermo.
+
+  **5. Audit di architettura** (richiesta di Luca: "trova tutti gli
+  errori nella architettura e nella sovrapposizione di funzioni").
+  Eseguito con madge/jscpd/knip/grep, report consegnato a parte
+  (numeri: 4 cicli in lib/, 15 file >800 righe, 199 cloni, 2 copie di
+  playBase64Audio, 10 getUserMedia in 8 file, 3 motori STT in 12 siti,
+  12 file che chiamano le rotte TTS, 73% dei test ancorati al testo del
+  sorgente). Di quel report, tre P0 nel ripiego a blocchi di
+  useInterpreterMode erano nella pipeline gia' aperta e li ho corretti
+  DOPO averli letti direttamente (regola 7):
+  - `campo: 'lang'` verso `/api/tts-elevenlabs`, che legge SOLO
+    `langCode` (route.js:94): la premium riceveva lingua vuota →
+    nessuna voce per lingua, nessun modello per lingua, voce di ripiego
+    globale. Ora `langCode` per entrambi i motori. **BUG PRE-ESISTENTE
+    non notato in b.597** (avevo letto quel file).
+  - `playBase64Audio` del ripiego NON aveva i fix b.381/b.404 (fatti
+    solo nello streaming): `play().catch(() => {})` inghiottiva il
+    rifiuto senza spegnere `bartalk:tts`, e il catch esterno non lo
+    spegneva → partner attenuato fino al giro dopo. Ora stessa uscita
+    unica `finito()`. **BUG PRE-ESISTENTE non notato in b.597.**
+  - Voce mancata nel ripiego: evento `bartalk:voce-non-disponibile`
+    senza NESSUN ascoltatore e `interpreter-voce-mancata` ignorato in
+    ricezione. Ora stesso contratto dello streaming (DataChannel +
+    `voceGuasta`/`partnerVoceMancata` in OR). L'evento vecchio resta
+    (una prova b.247 lo cerca; innocuo).
+  Il resto del report (cicli lib/, 6 pipeline gemelle, page.js
+  1967 righe, test ancorati al testo) e' DEBITO ARCHITETTURALE
+  dichiarato, non toccato: ogni voce li' e' un intervento a se', da
+  decidere con Luca.
+
+  **DEBITO RESIDUO (nuovo):**
+  - `useStreamingInterpreter.js:770` `handleIncomingMessage` con deps
+    `[myLang, partnerLang]` ma usa `playBase64Audio`/`handleAudioPart`
+    (closure stantia). Non provato che produca un sintomo (le deps di
+    quelle due sono stabili in pratica): registrato, non toccato.
+  - Tutto il report di architettura, sezioni P1/P2.
+
+  [VERIFICATO] eslint: 0 errori (solo warning pre-esistenti). `next
+  build` completa. Suite 297 file / 3656 test (+1 file con 14 prove:
+  3 di comportamento sul cancello, 11 ancore; 4 prove esistenti
+  riallineate — 2 per `latest` salito di scope, 1 per `problemaAudio`
+  nel return, 1 per la chiave nei 38 pacchetti), 0 regressioni.
+
 - Versione: **b.597** (push #873) — Audit della traduzione in
   videochiamata (richiesta di Luca: "non si capisce un cazzo... non si
   sa come attivarla... poi non traduce") + due difetti confermati e

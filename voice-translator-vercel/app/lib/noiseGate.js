@@ -7,9 +7,14 @@
  * @param {Object} opts - Options
  * @param {number} opts.threshold - Gate threshold in dB (default -50)
  * @param {number} opts.smoothing - Analyser smoothing (default 0.85)
+ * @param {Function} [opts.onCambio] - b.598: chiamata con `true`/`false` a
+ *   ogni apertura/chiusura del cancello — cioe' quando l'utente comincia o
+ *   smette di parlare. Il cancello gia sapeva rilevarlo (serviva solo a se
+ *   stesso, per abbassare/alzare il proprio guadagno); ora puo' avvisare
+ *   anche chi lo ha creato, senza un secondo rilevatore separato.
  * @returns {{ cleanStream: MediaStream, analyser: AnalyserNode, destroy: Function }}
  */
-export function createNoiseGate(stream, { threshold = -50, smoothing = 0.85 } = {}) {
+export function createNoiseGate(stream, { threshold = -50, smoothing = 0.85, onCambio } = {}) {
   const ctx = new AudioContext();
   const source = ctx.createMediaStreamSource(stream);
 
@@ -57,9 +62,11 @@ export function createNoiseGate(stream, { threshold = -50, smoothing = 0.85 } = 
     if (shouldOpen && !open) {
       gate.gain.setTargetAtTime(1, ctx.currentTime, 0.01); // Fast attack
       open = true;
+      try { onCambio?.(true); } catch { /* chi ascolta non deve mai fermare il cancello */ }
     } else if (!shouldOpen && open) {
       gate.gain.setTargetAtTime(0, ctx.currentTime, 0.05); // Slower release
       open = false;
+      try { onCambio?.(false); } catch { /* chi ascolta non deve mai fermare il cancello */ }
     }
 
     rafId = requestAnimationFrame(gateLoop);
@@ -68,6 +75,11 @@ export function createNoiseGate(stream, { threshold = -50, smoothing = 0.85 } = 
 
   function destroy() {
     if (rafId) cancelAnimationFrame(rafId);
+    // b.598 — se si chiude mentre il cancello era APERTO (l'utente stava
+    // parlando), chi ascolta onCambio deve saperlo: altrimenti resta
+    // convinto per sempre che si stia ancora parlando, e un'attenuazione
+    // accesa da questo segnale non si spegnerebbe mai.
+    if (open) { try { onCambio?.(false); } catch { /* smontaggio: nessuno deve bloccarlo */ } open = false; }
     try { source.disconnect(); } catch { /* il temporizzatore era gia scaduto */ }
     try { highPass.disconnect(); } catch { /* il temporizzatore era gia scaduto */ }
     try { lowPass.disconnect(); } catch { /* il temporizzatore era gia scaduto */ }

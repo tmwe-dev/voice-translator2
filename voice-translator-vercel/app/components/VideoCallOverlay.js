@@ -184,6 +184,20 @@ const VideoCallOverlay = memo(function VideoCallOverlay({
   // Il contatore € deve usare la tariffa VERA (premium se voce ElevenLabs)
   const { L, prefs, savePrefs } = useApp();
 
+  // b.598 — L'ULTIMO SOTTOTITOLO, CALCOLATO UNA VOLTA SOLA.
+  // Prima viveva SOLO dentro l'IIFE del ramo a tutto schermo: la
+  // modalita compatta non aveva modo di sapere se c'era un sottotitolo
+  // pronto. Portato qui (component scope) cosi entrambe le modalita
+  // possono leggerlo.
+  const inScheda = (x) => !x ? null
+    : (typeof x === 'string' ? { text: x, original: '' } : x);
+  const daInterpreteCompatto = interpreterActive && interpreter?.lastSubtitle
+    ? [inScheda(interpreter.lastSubtitle)] : null;
+  const subsCompatto = daInterpreteCompatto || (Array.isArray(lastTranslationSubtitle)
+    ? lastTranslationSubtitle.map(inScheda)
+    : lastTranslationSubtitle ? [inScheda(lastTranslationSubtitle)] : []);
+  const latest = subsCompatto.length > 0 ? subsCompatto[subsCompatto.length - 1] : null;
+
   // Attach local video stream to BOTH fullscreen and inline elements
   useEffect(() => {
     const stream = webrtc?.localStream;
@@ -357,14 +371,9 @@ const VideoCallOverlay = memo(function VideoCallOverlay({
             // b.276 — comunque arrivi (scheda o semplice testo), qui
             // diventa una scheda: cosi un mittente distratto non svuota
             // piu il sottotitolo a schermo.
-            const inScheda = (x) => !x ? null
-              : (typeof x === 'string' ? { text: x, original: '' } : x);
-            const daInterprete = interpreterActive && interpreter?.lastSubtitle
-              ? [inScheda(interpreter.lastSubtitle)] : null;
-            const subs = daInterprete || (Array.isArray(lastTranslationSubtitle)
-              ? lastTranslationSubtitle.map(inScheda)
-              : lastTranslationSubtitle ? [inScheda(lastTranslationSubtitle)] : []);
-            const latest = subs.length > 0 ? subs[subs.length - 1] : null;
+            // b.598 — `latest` non si calcola piu qui: e stato portato a
+            // livello di componente (sopra) cosi la modalita compatta lo
+            // puo leggere anche lei. Qui si usa quello.
             const acc = S?.colors?.accent2 || '#38e1ff';
             const acc1 = S?.colors?.accent1 || '#5b8cff';
             const pillOn = {
@@ -469,6 +478,16 @@ const VideoCallOverlay = memo(function VideoCallOverlay({
                       // riprovando da solo, vedi b.527 li).
                       <div style={{ fontSize: 12.5, color: '#ffc44d', fontStyle: 'italic' }}>
                         {L('interpreterFailed')}
+                      </div>
+                    ) : interpreterActive && interpreter?.problemaAudio ? (
+                      // b.598 — IL SILENZIO SPIEGATO ANCHE A META CHIAMATA.
+                      // Tre blocchi audio di fila che Whisper non riesce a
+                      // trascrivere ("audio corrotto o non supportato")
+                      // prima sparivano senza una riga a schermo: sembrava
+                      // che la traduzione avesse smesso di ascoltare, senza
+                      // nessun motivo visibile.
+                      <div style={{ fontSize: 12.5, color: '#ffc44d', fontStyle: 'italic' }}>
+                        {L('audioNonChiaro')}
                       </div>
                     ) : (
                       <div style={{ fontSize: 12.5, color: 'rgba(238,242,255,0.35)', fontStyle: 'italic' }}>
@@ -838,6 +857,25 @@ const VideoCallOverlay = memo(function VideoCallOverlay({
         <div style={{ position: 'absolute', top: 8, right: 8 }}>
           <RecordingIndicator L={L} recording={recording} isListening={isListening} />
         </div>
+
+        {/* b.598 — SOTTOTITOLO ANCHE IN MODALITA COMPATTA.
+            Prima la modalita compatta non aveva alcun accesso
+            all'interprete (ne comando ne testo): la traduzione esisteva
+            solo se l'utente passava a tutto schermo. Qui una striscia
+            minima, sola andata (nessun cassetto, nessun volume): solo
+            l'ultima frase tradotta, se c'e. */}
+        {interpreterActive && latest && (
+          <div style={{
+            position: 'absolute', bottom: 8, left: 8, right: 8,
+            background: 'rgba(5,7,15,0.82)', backdropFilter: 'blur(10px)',
+            border: '1px solid rgba(160,190,255,0.16)', borderRadius: 12,
+            padding: '6px 10px', zIndex: 3,
+          }}>
+            <div style={{ color: '#fff', fontSize: 12.5, fontWeight: 500, lineHeight: 1.35 }}>
+              {latest.text}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Controls area */}
@@ -871,6 +909,23 @@ const VideoCallOverlay = memo(function VideoCallOverlay({
             label={webrtc.videoEnabled ? L('cameraWord') : L('cameraOffWord')}
             color="#22c55e" activeColor="rgba(34,197,94,0.15)"
           />
+          {/* b.598 — LA TRADUZIONE, ANCHE QUI. Stesso comando, stesso
+              guard (Stanza Diretta / gruppo), della barra a tutto
+              schermo: la modalita compatta non deve piu essere un vicolo
+              cieco per l'interprete. */}
+          {setInterpreterActive && (
+            <ControlBtn size={48}
+              onClick={() => {
+                if (stanzaDiretta) { toast.info(L('directNoCloud')); return; }
+                if (stanzaConPiuDiDue) { toast.info(L('interpreterTwoOnly')); return; }
+                setInterpreterActive(!interpreterActive);
+              }}
+              active={interpreterActive && !stanzaDiretta && !stanzaConPiuDiDue}
+              icon={<IconGlobe size={20}/>}
+              label={interpreterActive ? L('translatingWord') : L('translateWord')}
+              color="#38e1ff" activeColor="rgba(56,225,255,0.15)"
+            />
+          )}
           <ControlBtn size={48}
             onClick={() => webrtc.flipCamera()}
             active={true}

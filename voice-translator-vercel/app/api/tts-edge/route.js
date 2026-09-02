@@ -95,7 +95,18 @@ async function handlePost(req) {
     try {
       audioBuffer = await sintetizza();
       if (!audioBuffer || audioBuffer.length === 0) {
-        log.warn('primo tentativo muto, riprovo', { voce: voiceName, lingua: lang2 });
+        // b.598 — MITIGAZIONE, NON CAUSA CONFERMATA. 112 «audio vuoto» su
+        // 11 utenti/7gg (Vercel, aggregato) restano un difetto vivo: i
+        // log grezzi per capire SE e' un rate-limit del servizio Edge non
+        // sono recuperabili (retention troppo corta per interrogare
+        // quell'intervallo). Il secondo tentativo (b.552) era IMMEDIATO,
+        // a zero millisecondi dal primo — se la causa fosse un servizio
+        // momentaneamente occupato, ripetere subito la stessa richiesta
+        // e' la mossa che ha meno probabilita di riuscire. Una pausa
+        // breve prima del secondo tentativo e' un'ipotesi ragionevole,
+        // non una conferma: da riprendere se i 112 non calano.
+        log.warn('primo tentativo muto, riprovo', { voce: voiceName, lingua: lang2, attesaMs: 400 });
+        await new Promise((resolve) => setTimeout(resolve, 400));
         audioBuffer = await sintetizza();
       }
     } catch (synthErr) {

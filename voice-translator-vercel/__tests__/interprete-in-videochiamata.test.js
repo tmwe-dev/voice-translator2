@@ -74,8 +74,10 @@ describe('e il sottotitolo giusto vince', () => {
     // videochiamata tradotta il testo che conta e quello della voce in
     // tempo reale.
     const s = senzaCommenti(leggi('app/components/VideoCallOverlay.js'));
-    expect(s).toMatch(/const daInterprete = interpreterActive && interpreter\?\.lastSubtitle/);
-    expect(s).toMatch(/const subs = daInterprete \|\|/);
+    // b.598 — il calcolo e' salito a livello di componente (cosi lo legge
+    // anche la modalita compatta): stesso criterio, nomi nuovi.
+    expect(s).toMatch(/const daInterpreteCompatto = interpreterActive && interpreter\?\.lastSubtitle/);
+    expect(s).toMatch(/const subsCompatto = daInterpreteCompatto \|\|/);
   });
 
   it('ma senza interprete si continua a vedere quello della chat', () => {

@@ -554,9 +554,20 @@ export default function useStreamingInterpreter({
       streamRef.current = rawStream;
 
       // Noise gate
+      // b.598 — onCambio avvisa la stanza appena l'utente COMINCIA a
+      // parlare, non secondi dopo quando la voce tradotta e pronta:
+      // vedi avvisaVoceLocale in useInterpreterMode.js (stesso evento,
+      // ascoltato da RoomView indipendentemente da quale pipeline —
+      // streaming o a blocchi — sia in uso in questo momento).
       let recordStream = rawStream;
       try {
-        const ng = createNoiseGate(rawStream, { threshold: -45 });
+        const ng = createNoiseGate(rawStream, {
+          threshold: -45,
+          onCambio: (parlando) => {
+            try { window.dispatchEvent(new CustomEvent('bartalk:voce-locale', { detail: { parlando: !!parlando } })); }
+            catch { /* fuori dal browser non c'e nessuno da avvisare */ }
+          },
+        });
         if (ng?.cleanStream) {
           noiseGateRef.current = ng;
           recordStream = ng.cleanStream;

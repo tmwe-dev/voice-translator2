@@ -193,6 +193,14 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
   const [taxiVisible, setTaxiVisible] = useState(false);
   const [taxiData, setTaxiData] = useState({ original: '', translated: '', fromLang: '', toLang: '' });
   const partnerVolumeBeforeMuteRef = useRef(0.7);
+  // b.598 — DUE segnali distinti chiedono l'attenuazione, non uno solo:
+  // la voce TRADOTTA sta suonando (bartalk:tts, gia c'era) e l'utente
+  // LOCALE ha appena cominciato a parlare (bartalk:voce-locale, nuovo —
+  // anticipa il ducking invece di aspettare tutto il giro STT->
+  // traduzione->sintesi). Un ref solo, letto da entrambi gli ascoltatori,
+  // cosi ne basta uno attivo per abbassare e serve che siano ENTRAMBI
+  // spenti per tornare al volume scelto dall'utente.
+  const attenuazioneAttivaRef = useRef({ tts: false, voceLocale: false });
   const subtitleTimerRef = useRef(null);
   const remoteAudioRef = useRef(null);
   const typingDebounceRef = useRef(null);
@@ -482,20 +490,34 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
     }
   }, [webrtc?.remoteStream]);
 
-  // ── Attenuazione REALE della voce del partner mentre parla la traduzione ──
+  // ── Attenuazione REALE della voce del partner: due segnali, un volume ──
   // Usa element.volume (funziona ovunque, iPhone compreso). Il livello lo
   // decide l'utente dai preset in chiamata (audioPrefs.getAttenuazione):
   // 0 = solo tradotta · 0.2 = originale attenuata · 0.55 = entrambe.
+  //
+  // b.598 — richiesta di Luca: "quando rilevi la voce dell'utente...
+  // la riduci per permettere al microfono di ascoltare l'utente". Prima
+  // l'unico segnale era bartalk:tts (la voce TRADOTTA e pronta a
+  // suonare) — arrivava secondi dopo che l'utente aveva gia cominciato a
+  // parlare, perche nel frattempo il giro STT->traduzione->sintesi era
+  // ancora in corso. bartalk:voce-locale (nuovo) anticipa: si accende
+  // nell'istante in cui il cancello del rumore rileva che l'utente ha
+  // COMINCIATO a parlare, prima ancora di sapere cosa dira.
   useEffect(() => {
-    const suTTS = (e) => {
+    const applica = () => {
       const el = remoteAudioRef.current;
       if (!el) return;
-      el.volume = e.detail?.attivo
-        ? partnerVolume * getAttenuazione()
-        : partnerVolume;
+      const attiva = attenuazioneAttivaRef.current.tts || attenuazioneAttivaRef.current.voceLocale;
+      el.volume = attiva ? partnerVolume * getAttenuazione() : partnerVolume;
     };
+    const suTTS = (e) => { attenuazioneAttivaRef.current.tts = !!e.detail?.attivo; applica(); };
+    const suVoceLocale = (e) => { attenuazioneAttivaRef.current.voceLocale = !!e.detail?.parlando; applica(); };
     window.addEventListener('bartalk:tts', suTTS);
-    return () => window.removeEventListener('bartalk:tts', suTTS);
+    window.addEventListener('bartalk:voce-locale', suVoceLocale);
+    return () => {
+      window.removeEventListener('bartalk:tts', suTTS);
+      window.removeEventListener('bartalk:voce-locale', suVoceLocale);
+    };
   }, [partnerVolume]);
 
   useEffect(() => {

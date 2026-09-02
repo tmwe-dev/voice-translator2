@@ -8,6 +8,20 @@ import { getVoceChiamata, getVolumeTTS } from '../lib/audioPrefs.js';
 import { prendiVoce, rendiVoce } from '../lib/microfonoMaster.js';
 const dbg = createLogger('interpreter');
 
+// b.598 — LA VOCE, ANTICIPATA. Prima l'attenuazione della voce del
+// partner partiva SOLO quando la voce TRADOTTA era pronta a suonare
+// (secondi dopo che l'utente aveva gia iniziato a parlare — l'intero
+// giro STT -> traduzione -> sintesi). Richiesta di Luca: "quando rilevi
+// la voce dell'utente... lo riduci per permettere al microfono di
+// ascoltare l'utente". Il cancello del rumore (noiseGate.js) sa gia,
+// in tempo reale, quando l'utente ha COMINCIATO a parlare — lo usa gia
+// per se stesso. Qui lo si ascolta anche da fuori: stesso segnale,
+// nessun secondo rilevatore.
+function avvisaVoceLocale(parlando) {
+  try { window.dispatchEvent(new CustomEvent('bartalk:voce-locale', { detail: { parlando: !!parlando } })); }
+  catch { /* fuori dal browser non c'e nessuno da avvisare: si prosegue */ }
+}
+
 // ═══════════════════════════════════════
 // useInterpreterMode — Bidirectional real-time STT → Translate → TTS
 //
@@ -45,6 +59,27 @@ export default function useInterpreterMode({
   // vedeva «le traduzioni appariranno...» e non apparivano mai, senza
   // un perche. Ora il guasto d'avvio e uno stato che la UI legge.
   const [erroreAvvio, setErroreAvvio] = useState(null);
+  // b.598 — IL SILENZIO SPIEGATO ANCHE A META CHIAMATA. Un blocco audio
+  // su tre puo fallire la trascrizione (Whisper: "audio corrotto o non
+  // supportato" — 400) senza che nulla in `processChunk` lo dicesse:
+  // il blocco spariva e la frase non veniva mai tradotta, senza un
+  // motivo visibile. Tre fallimenti CONSECUTIVI (non isolati: un blocco
+  // storto ogni tanto e normale, tre di fila e un problema vero) accende
+  // questo stato; il primo blocco che passa lo rispegne.
+  const [problemaAudio, setProblemaAudio] = useState(false);
+  const audioFallitiRef = useRef(0);
+  // b.598 — LA VOCE MANCATA, ANCHE NEL RIPIEGO. Lo streaming (b.352) ha
+  // due stati «la mia voce non e' partita» / «quella del partner non
+  // arrivera» e un messaggio DataChannel `interpreter-voce-mancata` per
+  // dirselo. Il ripiego a blocchi invece lanciava un evento finestra
+  // `bartalk:voce-non-disponibile` che NESSUNO ascolta (0 listener in
+  // tutta l'app) e ignorava `interpreter-voce-mancata` in ricezione:
+  // due contratti per lo stesso caso, uno dei due muto. Ora il ripiego
+  // usa lo stesso contratto dello streaming. Trovato dall'audit di
+  // architettura b.598 (sovrapposizione 4.8).
+  const [voceGuastaLegacy, setVoceGuastaLegacy] = useState(false);
+  const [partnerVoceMancataLegacy, setPartnerVoceMancataLegacy] = useState(false);
+  const voceMancataTimerRef = useRef(null);
   const [mySubtitles, setMySubtitles] = useState([]);
   const [partnerSubtitles, setPartnerSubtitles] = useState([]);
   const [lastSubtitle, setLastSubtitle] = useState(null);
@@ -114,15 +149,27 @@ export default function useInterpreterMode({
       };
       startDucking?.();
       avvisa(true);
-      audio.play().catch(() => {});
-      audio.onended = () => {
-        URL.revokeObjectURL(url);
-        stopDucking?.();
+      // b.598 — LA COPIA CHE B.381/B.404 NON AVEVANO TOCCATO. I due fix
+      // «l'avviso non si spegneva mai» sono stati fatti nello streaming
+      // (useStreamingInterpreter.playBase64Audio) e QUI, nel ripiego, no:
+      // `audio.play().catch(() => {})` inghiottiva il rifiuto senza
+      // spegnere l'avviso, e il `catch` in fondo spegneva il ducking
+      // interno ma non l'avviso alla stanza. Risultato: nel ripiego (che
+      // e' proprio la strada delle chiamate che gia vanno male) la voce
+      // del partner poteva restare attenuata fino al giro dopo. Trovato
+      // dall'audit di architettura b.598 (sovrapposizione 4.1). Stessa
+      // uscita unica dello streaming.
+      const finito = () => {
         avvisa(false);
+        stopDucking?.();
+        try { URL.revokeObjectURL(url); } catch { /* gia liberato: nulla da fare */ }
       };
-      audio.onerror = () => { stopDucking?.(); avvisa(false); };
+      audio.play().catch(() => { finito(); });
+      audio.onended = finito;
+      audio.onerror = finito;
     } catch (e) {
       console.warn('[Interpreter] Failed to play audio:', e);
+      try { window.dispatchEvent(new CustomEvent('bartalk:tts', { detail: { attivo: false } })); } catch { /* idem: si prosegue */ }
       stopDucking?.();
     }
   }, [startDucking, stopDucking]);
@@ -130,6 +177,14 @@ export default function useInterpreterMode({
   // Process incoming interpreter data from partner
   const handleInterpreterMessage = useCallback((msg) => {
     if (!msg) return;
+
+    // b.598 — stesso contratto dello streaming (vedi sopra).
+    if (msg.type === 'interpreter-voce-mancata') {
+      setPartnerVoceMancataLegacy(true);
+      clearTimeout(voceMancataTimerRef.current);
+      voceMancataTimerRef.current = setTimeout(() => setPartnerVoceMancataLegacy(false), 8000);
+      return;
+    }
 
     if (msg.type === 'interpreter-subtitle') {
       // Dedup: skip if we already showed this exact subtitle recently
@@ -217,13 +272,35 @@ export default function useInterpreterMode({
       // roomId (vedi apiAuth.js, punto 2 quarto audit).
       if (roomId && roomSessionTokenRef?.current) formData.append('roomSessionToken', roomSessionTokenRef.current);
 
-      const sttRes = await apiCircuitBreaker.execute('interpreter-stt', () =>
-        // b.363 — nessuna scadenza: un pezzo di audio appeso teneva
-        // occupata la coda dell'interprete e la voce non ripartiva piu.
-        fetch('/api/transcribe', { method: 'POST', body: formData, signal: AbortSignal.timeout(30000) })
-      );
+      // b.598 — IL SILENZIO SPIEGATO ANCHE QUI. Un fallimento della
+      // trascrizione (network, circuito aperto, o "audio corrotto"
+      // risposto da Whisper) usciva da qui con un `return` muto: il
+      // blocco spariva, nessun log visibile all'utente, nessun retry.
+      // Ora si conta: tre fallimenti DI FILA (non uno isolato — un
+      // blocco storto ogni tanto e normale) accendono problemaAudio,
+      // che la UI legge (vedi VideoCallOverlay). Il primo blocco che
+      // passa lo rispegne.
+      let sttRes;
+      try {
+        sttRes = await apiCircuitBreaker.execute('interpreter-stt', () =>
+          // b.363 — nessuna scadenza: un pezzo di audio appeso teneva
+          // occupata la coda dell'interprete e la voce non ripartiva piu.
+          fetch('/api/transcribe', { method: 'POST', body: formData, signal: AbortSignal.timeout(30000) })
+        );
+      } catch (e) {
+        console.warn('[Interpreter] STT fetch fallita:', e?.message || e);
+        audioFallitiRef.current++;
+        if (audioFallitiRef.current >= 3) setProblemaAudio(true);
+        return;
+      }
 
-      if (!sttRes.ok) { return; }
+      if (!sttRes.ok) {
+        audioFallitiRef.current++;
+        if (audioFallitiRef.current >= 3) setProblemaAudio(true);
+        return;
+      }
+      audioFallitiRef.current = 0;
+      setProblemaAudio(false);
       // b.363 — corpo non-JSON (il 429 del guardiano risponde in HTML):
       // la lettura esplodeva dentro il try e il pezzo di conversazione
       // spariva senza lasciare traccia.
@@ -296,9 +373,17 @@ export default function useInterpreterMode({
       // invece di restare in silenzio.
       // b.530 — vedi lo streaming: la voce scelta comanda anche qui.
       const voceScelta = getVoceChiamata();
+      // b.598 — LA LINGUA CHE ELEVENLABS NON RICEVEVA. Qui si mandava il
+      // campo `lang`, ma /api/tts-elevenlabs legge SOLO `langCode`
+      // (route.js: `const { text, voiceId, langCode, ... } = await
+      // req.json()`). Lingua vuota = niente voce predefinita per lingua,
+      // niente modello per lingua, niente codice di pronuncia: la
+      // premium parlava con la voce di ripiego globale. Solo nel
+      // ripiego a pezzi; lo streaming mandava gia `langCode`. Trovato
+      // dall'audit di architettura b.598 (sovrapposizione 4.3).
       const motori = (voceScelta || preferisciEleven)
-        ? [{ rotta: '/api/tts-elevenlabs', campo: 'lang' }, { rotta: '/api/tts-edge', campo: 'langCode' }]
-        : [{ rotta: '/api/tts-edge', campo: 'langCode' }, { rotta: '/api/tts-elevenlabs', campo: 'lang' }];
+        ? [{ rotta: '/api/tts-elevenlabs', campo: 'langCode' }, { rotta: '/api/tts-edge', campo: 'langCode' }]
+        : [{ rotta: '/api/tts-edge', campo: 'langCode' }, { rotta: '/api/tts-elevenlabs', campo: 'langCode' }];
 
       let ttsRes = null;
       for (const m of motori) {
@@ -332,6 +417,11 @@ export default function useInterpreterMode({
         console.warn('[interprete] nessun motore vocale disponibile: la traduzione resta scritta');
         try { window.dispatchEvent(new CustomEvent('bartalk:voce-non-disponibile')); }
         catch { /* fuori dal browser non c'e nessuno da avvisare */ }
+        // b.598 — l'evento sopra non lo ascolta nessuno: si dice anche
+        // nel modo che la UI e il partner capiscono davvero (b.352).
+        try { webrtc?.sendDirectMessage?.({ type: 'interpreter-voce-mancata' }); } catch { /* canale chiuso: il sottotitolo e' gia partito */ }
+        setVoceGuastaLegacy(true);
+        setTimeout(() => setVoceGuastaLegacy(false), 8000);
         return;
       }
       const ttsBlob = await ttsRes.blob();
@@ -435,9 +525,12 @@ export default function useInterpreterMode({
       streamRef.current = rawStream;
 
       // Apply noise gate for cleaner STT in noisy environments
+      // b.598 — onCambio avvisa la stanza appena l'utente COMINCIA a
+      // parlare (non quando la traduzione e pronta, secondi dopo):
+      // vedi avvisaVoceLocale in cima al file.
       let recordStream = rawStream;
       try {
-        const ng = createNoiseGate(rawStream, { threshold: -45 });
+        const ng = createNoiseGate(rawStream, { threshold: -45, onCambio: avvisaVoceLocale });
         if (ng?.cleanStream) {
           noiseGateRef.current = ng;
           recordStream = ng.cleanStream;
@@ -468,6 +561,8 @@ export default function useInterpreterMode({
       recorder.start(CHUNK_DURATION);
       setActive(true);
       setErroreAvvio(null);
+      audioFallitiRef.current = 0;
+      setProblemaAudio(false);
       dbg.debug('[Interpreter] Started');
     } catch (e) {
       console.error('[Interpreter] Failed to start:', e);
@@ -504,6 +599,7 @@ export default function useInterpreterMode({
 
   // Stop recording
   const stopInterpreter = useCallback(() => {
+    clearTimeout(voceMancataTimerRef.current);
     setActive(false);
     // b.247 — activeRef si allinea solo al render successivo: qui lo si
     // mette a posto subito, altrimenti un blocco consegnato in questo
@@ -525,6 +621,8 @@ export default function useInterpreterMode({
       else streamRef.current.getTracks().forEach(t => { try { t.stop(); } catch { /* era gia chiuso: chiudere due volte non e un guasto */ } });
       streamRef.current = null;
     }
+    audioFallitiRef.current = 0;
+    setProblemaAudio(false);
     dbg.debug('[Interpreter] Stopped');
   }, []);
 
@@ -636,9 +734,13 @@ export default function useInterpreterMode({
     stop: stopUnified,
     handleInterpreterMessage: handleUnifiedMessage,
     // b.352 — il silenzio spiegato: la voce non partita si dichiara.
-    voceGuasta: streaming.voceGuasta,
-    partnerVoceMancata: streaming.partnerVoceMancata,
+    voceGuasta: streaming.voceGuasta || voceGuastaLegacy,
+    partnerVoceMancata: streaming.partnerVoceMancata || partnerVoceMancataLegacy,
     // b.527 — il guasto d'avvio, leggibile dalla UI (vedi sopra).
     erroreAvvio,
+    // b.598 — vero solo nella pipeline a blocchi (Whisper): la
+    // pipeline in streaming usa Deepgram via WebSocket e non passa mai
+    // da /api/transcribe, quindi qui semplicemente non si accende mai.
+    problemaAudio,
   };
 }
