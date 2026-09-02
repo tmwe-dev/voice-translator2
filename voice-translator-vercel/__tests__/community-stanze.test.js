@@ -27,7 +27,10 @@ const senzaCommenti = (s) =>
   s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
 
 const sheet = leggi('components/CreateRoomSheet.js');
-const pagina = leggi('page.js');
+// b.605 — la creazione + vetrina e' uscita da page.js: vive in
+// lib/stanze/creaEPubblica.js, funzione pura provata per comportamento in
+// crea-e-pubblica-b605.test.js. Le ancore qui sotto leggono QUEL file.
+const pagina = leggi('lib/stanze/creaEPubblica.js');
 const rotta = leggi('api/mondo/route.js');
 const elenco = leggi('components/MondoView.js');
 
@@ -51,14 +54,15 @@ describe('creazione stanza Community', () => {
 
   it('la stanza viene davvero pubblicata in Community', () => {
     // Il buco originale: si creava la stanza e ci si fermava li.
-    expect(pagina, 'page.js deve chiamare /api/mondo').toMatch(/fetch\('\/api\/mondo'/);
+    expect(pagina, 'creaEPubblica deve chiamare /api/mondo').toMatch(/fetchImpl\('\/api\/mondo'/);
+    expect(leggi('page.js'), 'e page.js la chiama').toMatch(/await creaEPubblicaStanza\(/);
     expect(pagina).toMatch(/method: 'POST'/);
   });
 
   it('nessun campo del modulo viene piu buttato via', () => {
     // Prima arrivavano solo lang, mode e description.
     for (const campo of ['nome', 'roomType', 'categoria', 'maxPartecipanti', 'hostLang']) {
-      expect(pagina, `page.js non manda "${campo}" a /api/mondo`).toMatch(new RegExp(`${campo}:`));
+      expect(pagina, `creaEPubblica non manda "${campo}" a /api/mondo`).toMatch(new RegExp(`${campo}:`));
     }
   });
 

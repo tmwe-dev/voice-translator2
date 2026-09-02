@@ -147,7 +147,7 @@ describe('la stanza hot si riconosce da fuori', () => {
   });
 
   it('viaggia fino alle regole della stanza', () => {
-    expect(app('page.js')).toMatch(/hot: !!roomConfig\.hot/);
+    expect(app('lib/stanze/creaEPubblica.js')).toMatch(/hot: !!roomConfig\.hot/);   // b.605
     expect(app('api/mondo/route.js')).toMatch(/hot: !!hot/);
     expect(app('api/mondo/route.js')).toMatch(/salvaRegole\([^)]*hot: entry\.hot/);
     expect(app('lib/moderazione.js')).toMatch(/hot: !!hot/);

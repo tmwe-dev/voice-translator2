@@ -267,6 +267,53 @@ perche il working tree lo conteneva ancora.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.605** (push #881) — Modulo F1 del "correggi tutto": la
+  radice UI, primo taglio. page.js 1.969 → 1.863 righe.
+
+  **`lib/stanze/creaEPubblica.js`**: crea la stanza, applica la politica
+  Diretta (b.113/b.123), decide la vetrina con `vaInVetrina` (b.139-bis),
+  compone e manda la POST a /api/mondo con TUTTI i campi (b.96, b.110,
+  b.111, b.397). Prima: ~70 righe dentro l'`onCreate` del foglio in
+  page.js, che nessuna prova poteva eseguire — si cercavano `nome:` e
+  `roomType:` nel testo. Ora: funzione pura, 5 prove di COMPORTAMENTO
+  (tutti i campi, privata non in vetrina, stanza non nata, rete/HTTP che
+  falliscono senza far fallire la stanza, gettone dalla memoria locale).
+  Cambio dichiarato: una risposta non-ok di /api/mondo ora finisce nel
+  registro (prima: ignorata in silenzio, si guardava solo il catch).
+  **`viste/registro.js`**: le 25 schermate `lazy()` + LazyFallback in un
+  file che fa una cosa sola. page.js le importa. (E' anche il file che
+  knip legge senza inciampare, b.595.)
+  7 ancore riallineate (community-stanze x3, una-sola-fonte x2,
+  mondo-paese, stanza-diretta x2, hot-e-reati, stanze-casa).
+
+  **TROVATO, NON TOCCATO (e' una rimozione, va in un giro suo)**:
+  page.js ha DUE funzioni "avvia chat con contatto":
+  `handleStartChatWithContact` (viva, via ContactsView) e
+  `startChatWithContact` (passata a HomeView, che la destruttura e NON la
+  usa mai: 20 righe morte + una prop morta).
+
+  **PIANO F, dichiarato** (ogni voce e' una versione a se'):
+  - F-R (rimozioni): la funzione e la prop morte sopra.
+  - F2: gli altri 4 `roomPolling.handleCreateRoom` di page.js (invito
+    automatico, Nuova conversazione, contatti, taxi/relatore) in UNA
+    funzione `creaStanzaEEntra` accanto a creaEPubblica.
+  - F3: RoomView 78 props → 4 oggetti per dominio (audio, chat, chiamata,
+    interprete) o contesto; 24 prove leggono RoomView.
+  - F4: page.js — gli 11 blocchi `if (view === ...) return wrap(...)`
+    che passano piu' di 10 props diventano componenti-pagina in viste/
+    (uno per versione, partendo dai piu' grassi: room, lobby, home).
+  - F5: prove — le 100 che non importano nessun modulo di app/ (solo
+    readFileSync) si convertono a comportamento MAN MANO che il codice
+    che descrivono esce da page.js (come fatto qui: 5 prove nuove che
+    ESEGUONO, 7 ancore spostate). Non un giro bulk: 2.422 `toMatch` sul
+    sorgente non si riscrivono a mano senza rompere il metodo.
+  - Commenti-diario (P2.4): NON si tolgono. Sono la convenzione della
+    casa (Codex) e il diario e' quello che ha reso possibili A→F senza
+    rompere niente. Semmai: un riassunto per file in testa, un giorno.
+
+  [VERIFICATO] eslint 0 errori, build ok, suite 303 file / 3713 prove, 0
+  regressioni.
+
 - Versione: **b.604** (push #880) — Modulo E del "correggi tutto": un
   registro solo.
 

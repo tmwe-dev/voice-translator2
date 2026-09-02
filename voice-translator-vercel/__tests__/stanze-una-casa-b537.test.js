@@ -18,7 +18,7 @@ describe('b.537 — 1. le Stanze hanno una casa: il tasto «Chat»', () => {
   it('la vista esiste davvero, e monta StanzeView', () => {
     const p = leggi('app/page.js');
     expect(p).toMatch(/if \(view === 'stanze'\) return wrap\(/);
-    expect(p).toMatch(/const StanzeView = lazy/);
+    expect(leggi('app/viste/registro.js')).toMatch(/export const StanzeView = lazy/);   // b.605 — registro delle schermate
     expect(p).toMatch(/<StanzeView[\s\S]{0,240}onJoinRoom=/);
   });
   it('il foglio «crea stanza» NON viene rimontato: vive nell\'imbuto comune (b.326)', () => {

@@ -453,7 +453,8 @@ describe('9 · i quattro tipi di stanza, scritti una volta sola', () => {
   });
 
   it('client e server chiedono "va in vetrina?" allo stesso posto', () => {
-    for (const f of ['app/page.js', 'app/api/mondo/route.js']) {
+    // b.605 — il client e' lib/stanze/creaEPubblica.js (uscita da page.js)
+    for (const f of ['app/lib/stanze/creaEPubblica.js', 'app/api/mondo/route.js']) {
       expect({ f, usa: senzaCommenti(leggi(f)).includes('vaInVetrina(') }).toEqual({ f, usa: true });
     }
   });
@@ -512,7 +513,7 @@ describe('10 · quanti ci stanno: il numero che decideva era il terzo', () => {
   it('e la scelta dell\'host arriva fino alla stanza, non solo alla vetrina', () => {
     expect(senzaCommenti(leggi('app/hooks/useRoomPolling.js'))).toContain('maxPartecipanti,');
     expect(senzaCommenti(leggi('app/api/room/route.js'))).toContain('maxPartecipanti: body.maxPartecipanti');
-    expect(senzaCommenti(leggi('app/page.js'))).toContain('roomConfig.maxParticipants');
+    expect(senzaCommenti(leggi('app/lib/stanze/creaEPubblica.js'))).toContain('roomConfig.maxParticipants');   // b.605
   });
 
   it('nessuno dei tre punti riscrive piu il clamp a mano', () => {

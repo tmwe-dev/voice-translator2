@@ -58,9 +58,13 @@ describe('la scelta diventa effettiva', () => {
   // scritta in tre punti e a `rejoinRoom` mancava: rientrando, una
   // stanza Diretta ricominciava a passare dai server.
   it('creare una Stanza Diretta accende la modalita', () => {
+    // b.605 — la creazione e' in lib/stanze/creaEPubblica.js; la politica
+    // le arriva come argomento da page.js, che resta chi la definisce.
+    const c = senzaCommenti(app('lib/stanze/creaEPubblica.js'));
+    expect(c, 'la creazione applica la politica unica')
+      .toMatch(/applicaPoliticaStanza\?\.\(\{ \.\.\.room, diretta: room\?\.diretta \?\? roomConfig\.diretta \}\)/);
     const p = senzaCommenti(app('page.js'));
-    expect(p, 'la creazione applica la politica unica')
-      .toMatch(/applicaPoliticaStanza\(\{ \.\.\.room, diretta: room\?\.diretta \?\? roomConfig\.diretta \}\)/);
+    expect(p, 'page.js passa la sua politica alla funzione').toMatch(/creaEPubblicaStanza\(\{[\s\S]{0,200}applicaPoliticaStanza,/);
     // b.139 — il ternario e diventato `modalitaDiStanza()`, la stessa
     // funzione che usano il cancello e le rotte: la traduzione da stanza a
     // modalita si fa in un posto solo.
@@ -74,9 +78,9 @@ describe('la scelta diventa effettiva', () => {
     // Da quell'istante il cancello davanti a fetch deve gia sapere
     // quali rotte lasciar passare. Si guarda il CODICE, non i commenti:
     // la vecchia forma della riga e citata qui sopra per spiegarla.
-    const p = senzaCommenti(app('page.js'));
-    const accende = p.indexOf("applicaPoliticaStanza({ ...room");
-    const pubblica = p.indexOf("await fetch('/api/mondo'");
+    const p = senzaCommenti(app('lib/stanze/creaEPubblica.js'));   // b.605
+    const accende = p.indexOf("applicaPoliticaStanza?.({ ...room");
+    const pubblica = p.indexOf("await fetchImpl('/api/mondo'");
     expect(accende).toBeGreaterThan(0);
     expect(accende).toBeLessThan(pubblica);
   });

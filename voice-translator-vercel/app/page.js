@@ -4,9 +4,9 @@
 // se una conferma di lettura poteva passare da Realtime. E la stessa domanda
 // che si fanno useTranslationAPI e le rotte: ora la risposta viene dal file
 // unico delle decisioni, cosi non puo separarsi da loro.
-import { trasportoAmmesso, TRASPORTO, modalitaDiStanza, vaInVetrina } from './lib/decisioni.js';
+import { trasportoAmmesso, TRASPORTO, modalitaDiStanza } from './lib/decisioni.js';
 import { postoADestra } from './lib/righello.js';
-import { useState, useRef, useEffect, useCallback, lazy, Suspense } from 'react';
+import { useState, useRef, useEffect, useCallback, Suspense } from 'react';
 import { t, mapLang, preloadLang, ascoltaLingueCaricate } from './lib/i18n.js';
 import { metaScelta } from './lib/constants.js';
 import { APP_URL, LANGS, VOICES, AVATARS, AVATAR_NAMES, MODES, CONTEXTS, FONT, CREDIT_PACKAGES,
@@ -49,33 +49,13 @@ import TutorialOverlay from './components/TutorialOverlay.js';
 import { initMonitoring, reportError } from './lib/monitor.js';
 import { memDel, memGet, memSet, sesDel } from './lib/memoria.js';
 import { segnaVisita } from './lib/mieStanze.js'; // b.537 — le tue stanze restano tue
+import { creaEPubblicaStanza } from './lib/stanze/creaEPubblica.js'; // b.605
 
-// ═══ LAZY-LOADED: secondary views (loaded on demand → faster initial bundle) ═══
-const AccountView = lazy(() => import('./components/AccountView.js'));
-const CreditsView = lazy(() => import('./components/CreditsView.js'));
-const ApiKeysView = lazy(() => import('./components/ApiKeysView.js'));
-const SettingsView = lazy(() => import('./components/SettingsView.js'));
-const LobbyView = lazy(() => import('./components/LobbyView.js'));
-const PannelloModerazione = lazy(() => import('./components/PannelloModerazione.js'));
-// b.102 — modulo separato: la videochiamata a due resta intatta.
-const StanzaVideoGruppo = lazy(() => import('./components/StanzaVideoGruppo.js'));
-const RoomView = lazy(() => import('./components/RoomView.js'));
-// b.537 — la casa delle Stanze: il tasto «Chat» della barra porta qui.
-const StanzeView = lazy(() => import('./components/StanzeView.js'));
-const HistoryView = lazy(() => import('./components/HistoryView.js'));
-const SummaryView = lazy(() => import('./components/SummaryView.js'));
-const VoiceTestView = lazy(() => import('./components/VoiceTestView.js'));
-const ContactsView = lazy(() => import('./components/ContactsView.js'));
-const VoiceCloneView = lazy(() => import('./components/VoiceCloneView.js'));
-const MondoView = lazy(() => import('./components/MondoView.js'));
-const LifeView = lazy(() => import('./components/Life/LifeView.js'));
-const BusinessView = lazy(() => import('./components/BusinessView.js'));
-const SpeakerView = lazy(() => import('./components/SpeakerView.js'));
-const TaxiTalk = lazy(() => import('./components/TaxiTalk.js')); // b.205 — TaxiTalk rifatto
-const QuickInvite = lazy(() => import('./components/QuickInvite.js'));
-const HelpView = lazy(() => import('./components/HelpView.js'));
-const TaxiDriverView = lazy(() => import('./components/TaxiDriverView.js'));
-const CreateRoomSheet = lazy(() => import('./components/CreateRoomSheet.js'));
+// ═══ b.605 — le schermate caricate su richiesta stanno in viste/registro.js ═══
+import {
+  AccountView, CreditsView, ApiKeysView, SettingsView, LobbyView, PannelloModerazione, StanzaVideoGruppo, RoomView, StanzeView, HistoryView, SummaryView, VoiceTestView, ContactsView, VoiceCloneView, MondoView, LifeView, BusinessView, SpeakerView, TaxiTalk, QuickInvite, HelpView, TaxiDriverView, CreateRoomSheet, AIView, DetailView,
+  LazyFallback,
+} from './viste/registro.js';
 
 // ═══ Always-imported (lightweight, used within RoomView) ═══
 import ProviderBadge from './components/ProviderBadge.js';
@@ -84,24 +64,6 @@ import ProviderBadge from './components/ProviderBadge.js';
 import BottomNav from './components/BottomNav.js';
 import NewConversationSheet from './components/NewConversationSheet.js';
 import InvitaAmici, { INVITO_AMICI_VISTO } from './components/InvitaAmici.js';
-// TaxiMode is used inside RoomView, not standalone
-const AIView = lazy(() => import('./components/AIView.js'));
-const DetailView = lazy(() => import('./components/DetailView.js'));
-
-// ═══ Lazy loading fallback ═══
-// b.595 — MODULO 5 (piano qualita): spostato qui SOLO per far funzionare
-// knip (vedi knip.json e la nota in CLAUDE.md) — le graffe dentro il
-// template `<style>{\`@keyframes...{...}\`}</style>` confondevano il suo
-// parser e gli facevano perdere tutti gli import lazy() che venivano
-// dopo nel file (117 falsi "file inutilizzati"). Nessun comportamento
-// cambia: e' la stessa costante, dichiarata prima del suo unico uso
-// (riga ~1483), solo spostata dopo gli import invece che in mezzo.
-const LazyFallback = () => (
-  <div style={{display:'flex',alignItems:'center',justifyContent:'center',height:'100dvh',background:'#060810'}}>
-    <div style={{width:32,height:32,borderRadius:'50%',border:'3px solid rgba(38,217,176,0.2)',borderTopColor:'#26D9B0',animation:'vtSpin 0.8s linear infinite'}} />
-    <style>{`@keyframes vtSpin { to { transform: rotate(360deg); } }`}</style>
-  </div>
-);
 
 // ═══ Context provider for prop drilling elimination ═══
 import { AppProvider } from './contexts/AppContext.js';
@@ -1334,83 +1296,15 @@ function HomeInner() {
           preimpostato={topicPreset}
           onClose={() => { setShowCreateRoom(false); setTopicPreset(null); }}
           onCreate={async (roomConfig) => {
-            const room = await roomPolling.handleCreateRoom(
-              prefs.name || 'Host', roomConfig.lang || myLang,
-              roomConfig.mode || selectedMode, prefs.avatar,
-              selectedContext, roomConfig.mode || selectedMode,
-              roomConfig.description || '',
-              auth.isTrial, auth.isTopPro, auth.userAccount,
-              roomConfig.diretta,
-              roomConfig.maxParticipants,
-              roomConfig.ognunoPagaIlSuo
-            );
-            // ── b.113/b.123 · la scelta dell'utente diventa effettiva QUI ──
-            // Prima di b.113 la modalita Diretta era un meccanismo
-            // perfettamente funzionante che nessuno poteva accendere.
-            // Da b.123 la riga non e piu qui ma dentro la politica
-            // unica, cosi non puo restare indietro in uno dei tre
-            // ingressi (a rejoinRoom era gia successo).
-            // Si legge `diretta` dalla stanza tornata dal server, con
-            // ripiego sulla scelta locale se il server non la rimanda.
-            applicaPoliticaStanza({ ...room, diretta: room?.diretta ?? roomConfig.diretta });
-            roomInfoRef.current = { ...room, diretta: !!roomConfig.diretta };
-
-            // ── Fino a b.96 la storia finiva qui, e la stanza non nasceva ──
-            // Il modulo raccoglieva nome, tipo, categoria e numero massimo, e
-            // qui restavano lingua, modalita e descrizione: tutto il resto
-            // veniva buttato via. Risultato: nasceva una normale chat a due,
-            // Community restava eternamente "Nessuna stanza al momento", e la
-            // POST di /api/mondo non la chiamava nessuno.
-            const codice = room?.id;
-            // b.139-bis — qui c'era scritto `roomType !== 'private'`, e la
-            // stessa regola col segno opposto stava in /api/mondo. Il server
-            // resta l'autorita e rifiuta comunque; questo controllo evita solo
-            // una richiesta destinata a essere respinta, e ora legge la regola
-            // dallo stesso posto da cui la legge il server.
-            if (codice && vaInVetrina(roomConfig.roomType)) {
-              try {
-                await fetch('/api/mondo', {
-                  signal: AbortSignal.timeout(15000),
-                  method: 'POST', headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                    roomId: codice,
-                    host: prefs.name || 'Host',
-                    nome: roomConfig.nome,
-                    description: roomConfig.description || '',
-                    mode: roomConfig.mode,
-                    categoria: roomConfig.category,
-                    lang: roomConfig.lang || myLang,
-                    hostLang: prefs.lang || myLang,
-                    // b.397 — IL PAESE VIAGGIA CON LA STANZA. Finora una
-                    // stanza portava solo la LINGUA, e il posto veniva
-                    // indovinato da quella: tutte le stanze in spagnolo
-                    // finivano in Spagna, nessuna in Messico o Argentina.
-                    // Il Paese l'utente l'ha gia scelto all'ingresso e sta
-                    // qui sul telefono da sempre: non gli si chiede niente
-                    // di nuovo, si smette solo di buttarlo via.
-                    paese: prefs.country || '',
-                    roomType: roomConfig.roomType,
-                    maxPartecipanti: roomConfig.maxParticipants,
-                    // b.111 — stanza a litigio libero: nessuna tendina
-                    // grigia davanti al linguaggio pesante. I reati
-                    // restano vietati come in ogni altra stanza.
-                    hot: !!roomConfig.hot,
-                    // b.110 — `room.sessionToken` non esiste: handleCreateRoom
-                    // restituisce solo la stanza e mette il token nel ref
-                    // (useRoomPolling:661). Il campo era sempre vuoto, quindi
-                    // se l'host non era loggato /api/mondo rispondeva 401 e la
-                    // stanza non compariva mai in vetrina.
-                    roomSessionToken: roomPolling.roomSessionTokenRef?.current || '',
-                    userToken: auth.userAccount?.token
-                      || (typeof window !== 'undefined' ? memGet('vt-token') || '' : ''),
-                  }),
-                });
-              } catch (e) {
-                // La stanza esiste comunque: si entra col codice. Solo non
-                // compare in vetrina, e l'host deve poterlo sapere.
-                log.warn('[Community] stanza non pubblicata:', e?.message);
-              }
-            }
+            // b.605 — creazione + politica Diretta + vetrina: in
+            // lib/stanze/creaEPubblica.js, funzione pura provata per
+            // comportamento. Qui restava logica di dominio (b.96, b.110,
+            // b.111, b.113, b.123, b.139-bis, b.397) che nessuna prova
+            // poteva eseguire.
+            await creaEPubblicaStanza({
+              roomConfig, prefs, myLang, selectedMode, selectedContext, auth, roomPolling,
+              applicaPoliticaStanza, roomInfoRef, avvisa: (m, d) => log.warn(m, d),
+            });
             setView('lobby');
           }}
         />

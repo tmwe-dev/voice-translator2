@@ -5,7 +5,8 @@ const leggi = (p) => readFileSync(join(process.cwd(), p), 'utf8');
 
 describe('il Paese vero viaggia con le stanze', () => {
   it('il telefono manda il Paese del profilo quando crea la stanza', () => {
-    expect(leggi('app/page.js')).toMatch(/paese: prefs\.country \|\| ''/);
+    // b.605 — la creazione + vetrina e' in lib/stanze/creaEPubblica.js
+    expect(leggi('app/lib/stanze/creaEPubblica.js')).toMatch(/paese: prefs\.country \|\| ''/);
   });
   it('la rotta accetta solo due lettere e le conserva', () => {
     const r = leggi('app/api/mondo/route.js');
