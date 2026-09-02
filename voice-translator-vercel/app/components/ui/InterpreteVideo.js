@@ -5,6 +5,7 @@ import { FONT, vibrate } from '../../lib/constants.js';
 import AppContext from '../../contexts/AppContext.js';
 import { suona } from '../../lib/voce.js';
 import { EVENTO } from '../../lib/eventi.js';
+import { procuraVoce } from '../../lib/audio/voceTradotta.js';   // b.603
 import {
   frasiCompiute, prossimaDaDire, viaAsiatica, disponibile,
 } from '../../lib/interpreteVideo.js';
@@ -260,21 +261,14 @@ export default function InterpreteVideo({ videoId, lingua, attivo, onCambia, C, 
   // In modalita VOCE anche il file audio viene preparato nei cinque
   // secondi di vantaggio. `preparaVoce` non riproduce niente.
   const preparaVoce = useCallback(async (testo) => {
+    // b.603 — un motore solo, scelto qui (la via asiatica o la premium);
+    // il ciclo e' quello del modulo unico.
     const rotta = viaAsiatica(lingua) ? '/api/tts' : '/api/tts-elevenlabs';
-    try {
-      const r = await fetch(rotta, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: testo, langCode: lingua || 'en', userToken }),
-        signal: AbortSignal.timeout(20000),
-      });
-      if (!r.ok) return '';
-      const blob = await r.blob();
-      return URL.createObjectURL(blob);
-    } catch (e) {
-      if (e?.name !== 'AbortError') console.warn('[b.581] voce:', e?.message || e);
-      return '';
-    }
+    const blob = await procuraVoce(
+      [{ rotta, corpo: { text: testo, langCode: lingua || 'en', userToken } }],
+      { scadenzaMs: 20000 },
+    );
+    return blob ? URL.createObjectURL(blob) : '';
   }, [lingua, userToken]);
 
   const riproduciVoce = useCallback((indirizzo) => {

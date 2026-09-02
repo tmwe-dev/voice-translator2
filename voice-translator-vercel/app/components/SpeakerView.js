@@ -18,6 +18,8 @@ import { glossarioPerTesto } from '../lib/glossario.js'; // b.95
 // dal microfono unico dell'app (copia), come fanno chiamata e interprete.
 import { chiediChiaveDeepgram, apriDeepgram } from '../lib/audio/deepgramLive.js';
 import { prendiVoce, rendiVoce } from '../lib/microfonoMaster.js';
+import { ascolta as ascoltaDettatura } from '../lib/dettatura.js';   // b.603 — la dettatura in un posto solo
+import { procuraVoce, suonaBlob } from '../lib/audio/voceTradotta.js';   // b.603 — il ciclo dei motori e il lettore, in un posto solo
 
 // ═══════════════════════════════════════════════════════════════
 // TaxiTalk — Redesigned: "Parla, Traduci, Mostra"
@@ -286,53 +288,15 @@ function SpeakerView({ userToken }) {
   if (!codaRef.current) codaRef.current = creaCodaAudio();
   useEffect(() => () => codaRef.current?.ferma(), []);
 
-  const procura = useCallback(async (text, lang) => {
-    const langCode = getLang(lang)?.speech || lang || 'en';
-    try {
-      const edgeRes = await fetch('/api/tts-edge', { signal: AbortSignal.timeout(30000) /* b.363 — prima non c'era tetto di attesa: se la rete restava muta la chiamata pendeva per sempre e l'utente non vedeva mai un esito */,
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text, langCode, gender: 'female' }),
-      });
-      // b.552 — 204: dopo la pulizia non restava una parola (sole emoji o
-      // punteggiatura). Non si passa a OpenAI a pagamento per far dire il
-      // nulla: si torna a mani vuote e si sta zitti.
-      if (edgeRes.status === 204) return null;
-      if (edgeRes.ok) {
-        const blob = await edgeRes.blob();
-        if (blob.size > 0) return blob;
-      }
-    } catch (e) { console.warn('[SpeakerView] Edge TTS non disponibile:', e?.message); }
-    try {
-      const res = await fetch('/api/tts', { signal: AbortSignal.timeout(30000) /* b.363 — prima non c'era tetto di attesa: se la rete restava muta la chiamata pendeva per sempre e l'utente non vedeva mai un esito */,
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text, voice: prefs?.voice || 'nova', lang, userToken: userToken || '' }),
-      });
-      if (!res.ok) return null;
-      return await res.blob();
-    } catch (e) {
-      // b.363 — prima questo guasto non lasciava traccia da nessuna parte: nel
-      // registro non compariva nulla, e il motivo vero (rete caduta, attesa
-      // scaduta, credito finito, server rotto) restava irrecuperabile.
-      if (e?.name !== 'AbortError') console.warn('[b.363] /api/tts:', e?.message || e);
-      return null; }
-  }, [prefs?.voice, userToken]);
+  // b.603 — `procura` e `suona` erano il clone esatto di TaxiTalk (jscpd,
+  // 33 righe). L'ORDINE dei motori resta qui (Edge gratis, poi OpenAI a
+  // pagamento); il ciclo e il lettore stanno in lib/audio/voceTradotta.js.
+  const procura = useCallback((text, lang) => procuraVoce([
+    { rotta: '/api/tts-edge', corpo: { text, langCode: getLang(lang)?.speech || lang || 'en', gender: 'female' } },
+    { rotta: '/api/tts', corpo: { text, voice: prefs?.voice || 'nova', lang, userToken: userToken || '' } },
+  ]), [prefs?.voice, userToken]);
 
-  const suona = useCallback((blob) => new Promise((finito) => {
-    if (!blob || blob.size === 0) { finito(); return; }
-    const url = URL.createObjectURL(blob);
-    const audio = new Audio(url);
-    audioRef.current = audio;
-    audio.volume = 1.0;
-    const chiudi = () => { URL.revokeObjectURL(url); finito(); };
-    audio.onended = chiudi;
-    audio.onerror = chiudi;
-    // Rete di sicurezza: se il browser non chiama ne onended ne
-    // onerror, la coda resterebbe bloccata per sempre.
-    setTimeout(chiudi, 30000);
-    audio.play().catch(chiudi);
-  }), []);
+  const suona = useCallback((blob) => suonaBlob(blob, { onAudio: (a) => { audioRef.current = a; } }), []);
 
   const playTTS = useCallback(async (text, lang) => {
     if (!text) return;
@@ -460,42 +424,33 @@ function SpeakerView({ userToken }) {
   // ── Batch recording (Web Speech API) ──
   const startBatchRecord = useCallback(async () => {
     vibrate(); setRecording(true); setLiveText(''); setTranslatedText('');
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) { setMode('live'); setRecording(false); return; }
-    const rec = new SpeechRecognition();
-    speechRecRef.current = rec;
-    rec.lang = getLang(sourceLang)?.speech || 'en-US';
-    rec.continuous = true; rec.interimResults = true; rec.maxAlternatives = 1;
-    let finalText = '';
-    rec.onresult = (e) => {
-      let interim = '';
-      for (let i = 0; i < e.results.length; i++) {
-        if (e.results[i].isFinal) finalText += e.results[i][0].transcript;
-        else interim += e.results[i][0].transcript;
-      }
-      setLiveText(finalText + interim);
-    };
-    rec.onerror = (e) => { if (e.error === 'no-speech') return; };
-    rec.onend = async () => {
-      const original = finalText.trim();
-      if (!original) { setRecording(false); return; }
-      setProcessing(true); setLiveText(original);
-      const translated = await translateText(original, true);
-      setTranslatedText(translated);
-      if (translated) {
-        setHistory(prev => [...prev.slice(-50), {
-          original, translated, sourceLang, targetLang, ts: Date.now(),
-          destination: destCoords?.displayName?.split(',').slice(0, 2).join(',') || '',
-        }]);
-        playTTS(translated, targetLang);
-      }
-      setProcessing(false); setRecording(false);
-    };
-    try { rec.start(); } catch { setRecording(false); }
+    // b.603 — era la prima delle copie di SpeechRecognition contate
+    // dall'audit di architettura (b.598): ora usa lib/dettatura.js (b.432).
+    const d = ascoltaDettatura({
+      lingua: getLang(sourceLang)?.speech || 'en-US',
+      suTesto: (t) => setLiveText(t),
+      suFine: async (original) => {
+        speechRecRef.current = null;
+        if (!original) { setRecording(false); return; }
+        setProcessing(true); setLiveText(original);
+        const translated = await translateText(original, true);
+        setTranslatedText(translated);
+        if (translated) {
+          setHistory(prev => [...prev.slice(-50), {
+            original, translated, sourceLang, targetLang, ts: Date.now(),
+            destination: destCoords?.displayName?.split(',').slice(0, 2).join(',') || '',
+          }]);
+          playTTS(translated, targetLang);
+        }
+        setProcessing(false); setRecording(false);
+      },
+    });
+    if (!d) { setMode('live'); setRecording(false); return; }
+    speechRecRef.current = d;
   }, [sourceLang, targetLang, translateText, playTTS, destCoords]);
 
   const stopBatchRecord = useCallback(() => {
-    if (speechRecRef.current) { try { speechRecRef.current.stop(); } catch { /* si sta smontando: se era gia chiuso non cambia nulla */ } speechRecRef.current = null; }
+    if (speechRecRef.current) { try { speechRecRef.current.ferma(); } catch { /* si sta smontando: se era gia chiuso non cambia nulla */ } speechRecRef.current = null; }
   }, []);
 
   // ── Live mode (Deepgram streaming) ──

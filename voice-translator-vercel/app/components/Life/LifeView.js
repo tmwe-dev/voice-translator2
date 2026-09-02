@@ -42,6 +42,7 @@ import { staccaScena } from '../../lib/compagni/corsi/scena.js';
 import { apriScanner, ascoltaScansioni } from '../../lib/scanPonte.js';
 import { sesSet, sesGet, sesDel, memGet } from '../../lib/memoria.js';
 import { prendiVoce, rendiVoce } from '../../lib/microfonoMaster.js';   // b.602
+import { ascolta as ascoltaDettatura, dettaturaDisponibile } from '../../lib/dettatura.js';   // b.603
 import { staccaEsercizio } from '../../lib/compagni/corsi/pronuncia.js';
 import PannelloPronuncia from './PannelloPronuncia.js';
 import GestioneCompagni from './GestioneCompagni.js';
@@ -778,39 +779,25 @@ function Impara({ compagni, L, C, lingua, userToken, testoP, muto, accent, card,
     finally { setAssiLezioneLavoro(false); }
   }, [assiLezioneLavoro, lingua, userToken]);
   const dettaDomanda = useCallback(async () => {
-    if (micDomanda === 'registro') { try { micRecRef.current?.stop(); } catch { /* gia fermo: non e un guasto */ } return; }
+    if (micDomanda === 'registro') { try { micRecRef.current?.stop?.(); micRecRef.current?.ferma?.(); } catch { /* gia fermo: non e un guasto */ } return; }
     if (micDomanda) return;
     // b.342 — DETTATURA IN DIRETTA: prima il testo compariva tutto insieme
     // alla fine, "lasciando sorpreso l'utente" (collaudo di Luca). Dove il
     // browser sa trascrivere in tempo reale (Chrome/Safari), le parole
     // compaiono MENTRE si parla, gratis. Altrove resta la via registra-poi-
     // trascrivi, ma con lo stato bene in vista.
-    const SR = typeof window !== 'undefined' && (window.SpeechRecognition || window.webkitSpeechRecognition);
-    if (SR) {
-      try {
-        pausaAudio();
-        const rec = new SR();
-        rec.lang = linguaCorso || 'it';
-        rec.interimResults = true;
-        rec.continuous = true;
-        const base = domanda ? domanda + ' ' : '';
-        let definitivo = '';
-        rec.onresult = (ev) => {
-          let volatile = '';
-          for (let k = ev.resultIndex; k < ev.results.length; k++) {
-            const r = ev.results[k];
-            if (r.isFinal) definitivo += r[0].transcript + ' ';
-            else volatile += r[0].transcript;
-          }
-          setDomanda((base + definitivo + volatile).trimStart());
-        };
-        rec.onend = () => setMicDomanda('');
-        rec.onerror = () => setMicDomanda('');
-        micRecRef.current = rec;
-        rec.start();
-        setMicDomanda('registro');
-      } catch { setMicDomanda(''); }
-      return;
+    // b.603 — quinta copia di SpeechRecognition → lib/dettatura.js (b.432).
+    if (dettaturaDisponibile()) {
+      pausaAudio();
+      const d = ascoltaDettatura({
+        lingua: linguaCorso || 'it',
+        inizio: domanda,
+        suTesto: (t) => setDomanda(t),
+        suFine: () => { micRecRef.current = null; setMicDomanda(''); },
+      });
+      if (d) { micRecRef.current = d; setMicDomanda('registro'); return; }
+      setMicDomanda('');
+      // la dettatura non e' partita: si prosegue con registra-poi-trascrivi
     }
     try {
       pausaAudio();

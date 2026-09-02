@@ -13,6 +13,8 @@ import { creaCodaAudio } from '../lib/codaAudio.js';
 import { PALETTE } from '../lib/palette.js';
 import { useApp } from '../contexts/AppContext.js';
 import { immagineQR } from '../lib/codiceQR.js';
+import { ascolta as ascoltaDettatura } from '../lib/dettatura.js';   // b.603 — la dettatura in un posto solo
+import { procuraVoce, suonaBlob } from '../lib/audio/voceTradotta.js';   // b.603
 
 // ═══════════════════════════════════════════════════════════════
 // TaxiTalk — rifatto da capo, semplice e immediato (Luca).
@@ -234,43 +236,14 @@ function TaxiTalk({ userToken }) {
   }, [testo, myLang, driverLang, userToken, L]);
 
   // ── Voce (Edge → OpenAI, in coda: come SpeakerView) ──
-  const procura = useCallback(async (text, lang) => {
-    const langCode = getLang(lang)?.speech || lang || 'en';
-    try {
-      const edge = await fetch('/api/tts-edge', { signal: AbortSignal.timeout(30000) /* b.363 — prima non c'era tetto di attesa: se la rete restava muta la chiamata pendeva per sempre e l'utente non vedeva mai un esito */,
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text, langCode, gender: 'female' }),
-      });
-      // b.552 — 204: dopo la pulizia non restava una parola (sole emoji o
-      // punteggiatura). Non si passa a OpenAI a pagamento per far dire il
-      // nulla: si torna a mani vuote e si sta zitti.
-      if (edge.status === 204) return null;
-      if (edge.ok) { const b = await edge.blob(); if (b.size > 0) return b; }
-    } catch { /* Edge non disponibile: si passa a OpenAI */ }
-    try {
-      const res = await fetch('/api/tts', { signal: AbortSignal.timeout(30000) /* b.363 — prima non c'era tetto di attesa: se la rete restava muta la chiamata pendeva per sempre e l'utente non vedeva mai un esito */,
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text, voice: prefs?.voice || 'nova', lang, userToken: userToken || '' }),
-      });
-      if (!res.ok) return null;
-      return await res.blob();
-    } catch (e) {
-      // b.363 — prima questo guasto non lasciava traccia da nessuna parte: nel
-      // registro non compariva nulla, e il motivo vero (rete caduta, attesa
-      // scaduta, credito finito, server rotto) restava irrecuperabile.
-      if (e?.name !== 'AbortError') console.warn('[b.363] /api/tts:', e?.message || e);
-      return null; }
-  }, [prefs?.voice, userToken]);
+  // b.603 — stesso ciclo e stesso lettore di SpeakerView, dal modulo
+  // unico: qui restano solo l'ordine dei motori e i corpi.
+  const procura = useCallback((text, lang) => procuraVoce([
+    { rotta: '/api/tts-edge', corpo: { text, langCode: getLang(lang)?.speech || lang || 'en', gender: 'female' } },
+    { rotta: '/api/tts', corpo: { text, voice: prefs?.voice || 'nova', lang, userToken: userToken || '' } },
+  ]), [prefs?.voice, userToken]);
 
-  const suona = useCallback((blob) => new Promise((finito) => {
-    if (!blob || blob.size === 0) { finito(); return; }
-    const url = URL.createObjectURL(blob);
-    const audio = new Audio(url); audioRef.current = audio; audio.volume = 1.0;
-    const chiudi = () => { URL.revokeObjectURL(url); finito(); };
-    audio.onended = chiudi; audio.onerror = chiudi;
-    setTimeout(chiudi, 30000);
-    audio.play().catch(chiudi);
-  }), []);
+  const suona = useCallback((blob) => suonaBlob(blob, { onAudio: (a) => { audioRef.current = a; } }), []);
 
   const ascolta = useCallback((text) => {
     if (!text) return;
@@ -283,38 +256,28 @@ function TaxiTalk({ userToken }) {
 
   // ── Dettatura (Web Speech API, nella MIA lingua) ──
   const dettaturaOff = useCallback(() => {
-    if (speechRef.current) { try { speechRef.current.stop(); } catch { /* il riconoscimento era già chiuso: fermarlo di nuovo non serve */ } speechRef.current = null; }
+    if (speechRef.current) { try { speechRef.current.ferma(); } catch { /* il riconoscimento era già chiuso: fermarlo di nuovo non serve */ } speechRef.current = null; }
     setRegistrando(false);
   }, []);
 
   const dettatura = useCallback(() => {
     if (registrando) { dettaturaOff(); return; }
-    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SR) { setErroreTrad(L('speechNotSupported')); return; }
+    // b.603 — seconda copia di SpeechRecognition → lib/dettatura.js (b.432).
     vibrate(); setRegistrando(true);
-    const rec = new SR(); speechRef.current = rec;
-    rec.lang = getLang(myLang)?.speech || 'it-IT';
-    rec.continuous = true; rec.interimResults = true; rec.maxAlternatives = 1;
-    let finale = '';
-    rec.onresult = (e) => {
-      let interim = '';
-      for (let i = 0; i < e.results.length; i++) {
-        if (e.results[i].isFinal) finale += e.results[i][0].transcript;
-        else interim += e.results[i][0].transcript;
-      }
-      setTesto((finale + interim).trim());
-    };
-    rec.onerror = (e) => { if (e.error === 'no-speech') return; };
-    rec.onend = async () => {
-      speechRef.current = null; setRegistrando(false);
-      const t = finale.trim();
-      // b.248 — il campo si allinea al testo DAVVERO tradotto: onresult
-      // scrive (finale+interim), ma qui si traduce solo `finale`. Se un
-      // residuo provvisorio li facesse divergere, il cancello tradottoValido
-      // nasconderebbe una traduzione appena fatta.
-      if (t) { setTesto(t); const out = await traduci(t); if (out) ascolta(out); }
-    };
-    try { rec.start(); } catch { setRegistrando(false); }
+    const d = ascoltaDettatura({
+      lingua: getLang(myLang)?.speech || 'it-IT',
+      suTesto: (t) => setTesto(t.trim()),
+      suFine: async (t) => {
+        speechRef.current = null; setRegistrando(false);
+        // b.248 — il campo si allinea al testo DAVVERO tradotto: suTesto
+        // scrive (definitivo+provvisorio), qui si traduce solo il
+        // definitivo. Se un residuo provvisorio li facesse divergere, il
+        // cancello tradottoValido nasconderebbe una traduzione appena fatta.
+        if (t) { setTesto(t); const out = await traduci(t); if (out) ascolta(out); }
+      },
+    });
+    if (!d) { setRegistrando(false); setErroreTrad(L('speechNotSupported')); return; }
+    speechRef.current = d;
   }, [registrando, dettaturaOff, myLang, traduci, ascolta, L]);
 
   useEffect(() => () => dettaturaOff(), [dettaturaOff]);

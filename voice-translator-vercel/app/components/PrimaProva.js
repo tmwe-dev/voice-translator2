@@ -19,6 +19,8 @@ import CarouselLingue from './CarouselLingue.js';
 // mappa sul telefono di chi hai davanti.
 import TaxiMap from './TaxiMap.js';
 import { buildMapsUrl } from '../lib/mapsLink.js';
+import { ascolta as ascoltaDettatura, dettaturaDisponibile } from '../lib/dettatura.js';   // b.603
+import { procuraVoce } from '../lib/audio/voceTradotta.js';   // b.603
 import { parlaColSistema } from '../lib/voceSistema.js'; // b.417
 import { immagineQR } from '../lib/codiceQR.js';
 
@@ -193,31 +195,13 @@ export default function PrimaProva({ onChiudi }) {
     const tgt = getLang(codice);
     const lingua = tgt?.speech || codice;
 
-    // Chiede una voce a una rotta. Torna il suono, oppure null quando non
-    // c'e NIENTE DA SUONARE — che comprende il caso «200 con zero byte».
-    const chiediVoce = async (rotta) => {
-      try {
-        const v = await fetch(rotta, {
-          // b.363 — prima non c'era tetto di attesa: se la rete restava muta
-          // la chiamata pendeva per sempre e l'utente non vedeva mai un esito.
-          signal: AbortSignal.timeout(30000),
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text: t, langCode: lingua }),
-        });
-        if (!v.ok) return null;
-        const suono = await v.blob();
-        return suono && suono.size > 0 ? suono : null;
-      } catch (e) {
-        // b.363 — prima questo guasto non lasciava traccia da nessuna parte:
-        // nel registro non compariva nulla, e il motivo vero (rete caduta,
-        // attesa scaduta, credito finito, server rotto) restava irrecuperabile.
-        if (e?.name !== 'AbortError') console.warn(`[b.417] ${rotta}:`, e?.message || e);
-        return null;
-      }
-    };
-
-    let suono = await chiediVoce('/api/tts-elevenlabs');
-    if (!suono) suono = await chiediVoce('/api/tts-edge');
+    // b.603 — il ciclo (scadenza b.363, «200 con zero byte» = niente da
+    // suonare, 204 b.552) sta in lib/audio/voceTradotta.js; qui l'ordine:
+    // la premium prima, Edge di ripiego, poi la voce del telefono.
+    const suono = await procuraVoce([
+      { rotta: '/api/tts-elevenlabs', corpo: { text: t, langCode: lingua } },
+      { rotta: '/api/tts-edge', corpo: { text: t, langCode: lingua } },
+    ]);
 
     if (!suono) {
       // Nessun server ha una voce: parla il telefono. `parlaColSistema`
@@ -422,46 +406,32 @@ export default function PrimaProva({ onChiudi }) {
   // mai vista.
   const ospiteGiu = useCallback(() => {
     if (ospiteParla) return;
-    const SR = typeof window !== 'undefined' && (window.SpeechRecognition || window.webkitSpeechRecognition);
-    if (!SR) return;
-    try {
-      const rec = new SR();
-      rec.lang = meta;
-      rec.interimResults = true;
-      rec.continuous = true;
-      testoOspiteRef.current = '';
-      let definitivo = '';
-      rec.onresult = (ev) => {
-        for (let k = ev.resultIndex; k < ev.results.length; k++) {
-          const r = ev.results[k];
-          if (r.isFinal) definitivo += r[0].transcript + ' ';
-        }
-        testoOspiteRef.current = definitivo;
-      };
-      rec.onend = () => {
+    // b.603 — terza copia di SpeechRecognition → lib/dettatura.js (b.432).
+    // L'ospite non vede scrivere: si usa solo il definitivo, a fine ascolto.
+    const d = ascoltaDettatura({
+      lingua: meta,
+      suFine: (raccolto) => {
         setOspiteParla(false);
-        const raccolto = testoOspiteRef.current;
-        testoOspiteRef.current = '';
-        if (raccolto.trim()) traduciOspite(raccolto);
-      };
-      rec.onerror = () => { setOspiteParla(false); };
-      recOspiteRef.current = rec;
-      rec.start();
-      setOspiteParla(true);
-      vibrate(8);
-    } catch { setOspiteParla(false); }
+        recOspiteRef.current = null;
+        if (raccolto) traduciOspite(raccolto);
+      },
+    });
+    if (!d) { setOspiteParla(false); return; }
+    recOspiteRef.current = d;
+    setOspiteParla(true);
+    vibrate(8);
   }, [ospiteParla, meta, traduciOspite]);
 
   const ospiteSu = useCallback(() => {
     if (!ospiteParla) return;
-    try { recOspiteRef.current?.stop(); }
+    try { recOspiteRef.current?.ferma(); }
     catch { /* il riconoscimento era gia fermo: fermarlo due volte non e un guasto */ }
   }, [ospiteParla]);
 
   // ── LA DETTATURA (trascrizione dal vivo, stessa via di b.352) ──
   const detta = useCallback(() => {
     if (detto) {
-      try { recRef.current?.stop(); } catch { /* il riconoscimento era gia fermo: fermarlo due volte non e un guasto */ }
+      try { recRef.current?.ferma(); } catch { /* il riconoscimento era gia fermo: fermarlo due volte non e un guasto */ }
       setDetto(false); dettoRef.current = false;
       // b.428, ordine di Luca: «se clicco sul microfono registro, quando lo
       // clicco di nuovo deve inviare il messaggio e leggerlo». Finora a
@@ -475,43 +445,30 @@ export default function PrimaProva({ onChiudi }) {
       setTesto((attuale) => { if (attuale.trim()) traduci(attuale); return attuale; });
       return;
     }
-    const SR = typeof window !== 'undefined' && (window.SpeechRecognition || window.webkitSpeechRecognition);
-    if (!SR) return;
-    try {
-      const rec = new SR();
-      rec.lang = miaLingua;
-      rec.interimResults = true;
-      rec.continuous = true;
-      const base = testo ? testo + ' ' : '';
-      let definitivo = '';
-      rec.onresult = (ev) => {
-        let volatile = '';
-        for (let k = ev.resultIndex; k < ev.results.length; k++) {
-          const r = ev.results[k];
-          if (r.isFinal) definitivo += r[0].transcript + ' ';
-          else volatile += r[0].transcript;
-        }
-        setTesto((base + definitivo + volatile).trimStart());
-      };
-      rec.onend = () => {
+    // b.603 — quarta copia di SpeechRecognition → lib/dettatura.js (b.432).
+    const d = ascoltaDettatura({
+      lingua: miaLingua,
+      inizio: testo,
+      suTesto: (t) => setTesto(t),
+      suFine: () => {
         setDetto(false); dettoRef.current = false;
+        recRef.current = null;
         // il microfono si e chiuso: l'ultima frase parte SUBITO, con la voce.
         // E si disarma il timer della scrittura, altrimenti la stessa frase
         // ripartirebbe una seconda volta (b.357).
         clearTimeout(timerRef.current);
         setTesto((attuale) => { if (attuale.trim()) traduci(attuale); return attuale; });
-      };
-      rec.onerror = () => { setDetto(false); dettoRef.current = false; };
-      recRef.current = rec;
-      rec.start();
-      setDetto(true); dettoRef.current = true;
-      vibrate(8);
-    } catch { setDetto(false); dettoRef.current = false; }
+      },
+    });
+    if (!d) { setDetto(false); dettoRef.current = false; return; }
+    recRef.current = d;
+    setDetto(true); dettoRef.current = true;
+    vibrate(8);
   }, [detto, testo, miaLingua, traduci]);
 
   useEffect(() => () => {
-    try { recRef.current?.stop(); } catch { /* il riconoscimento era gia fermo: fermarlo due volte non e un guasto */ }
-    try { recOspiteRef.current?.stop(); } catch { /* b.445 — anche quello dell'ospite */ }
+    try { recRef.current?.ferma(); } catch { /* il riconoscimento era gia fermo: fermarlo due volte non e un guasto */ }
+    try { recOspiteRef.current?.ferma(); } catch { /* b.445 — anche quello dell'ospite */ }
     try { audioRef.current?.pause(); } catch { /* la voce era gia ferma: fermarla due volte non e un guasto */ }
     clearTimeout(timerRef.current);
   }, []);
@@ -582,7 +539,7 @@ export default function PrimaProva({ onChiudi }) {
     else { try { await navigator.clipboard.writeText(indirizzoMappa); } catch { /* il browser non concede gli appunti in questo contesto: l'indirizzo resta comunque a schermo */ } }
   }, [indirizzoMappa, meta2]);
 
-  const micDisponibile = typeof window !== 'undefined' && !!(window.SpeechRecognition || window.webkitSpeechRecognition);
+  const micDisponibile = dettaturaDisponibile();   // b.603
   const bordo = `1px solid ${C.cardBorder || 'rgba(255,255,255,0.1)'}`;
   const ultimaResa = storia.length ? storia[storia.length - 1].resa : '';
 

@@ -21,8 +21,11 @@ describe('il traduttore subito', () => {
     // Niente frase preconfezionata: si traduce quello che l'utente scrive.
     expect(src, 'traduce il testo dell\'utente').toContain('/api/translate');
     expect(src, 'parte da sola quando smetti di scrivere').toMatch(/setTimeout\(\(\) => traduci\(testo\)/);
-    expect(src, 'la dettatura c\'e, dove il browser la offre').toMatch(/SpeechRecognition/);
-    expect(src, 'la trascrizione arriva nel campo mentre parli').toMatch(/interimResults = true/);
+    // b.603 — la dettatura e' quella di lib/dettatura.js (b.432), che manda
+    // i pezzi provvisori mentre si parla (interimResults = true sta li').
+    expect(src, 'la dettatura c\'e, dove il browser la offre').toMatch(/ascoltaDettatura\(\{/);
+    expect(src, 'la trascrizione arriva nel campo mentre parli').toMatch(/suTesto: \(t\) => setTesto\(t\)/);
+    expect(leggi('lib/dettatura.js')).toMatch(/interimResults = true/);
   });
 
   it('la voce arriva insieme al testo, ed e madrelingua', () => {
@@ -122,7 +125,9 @@ describe('il traduttore subito', () => {
     expect(registro, 'la riga finisce nel registro').toBeGreaterThan(-1);
     expect(voce, 'e la voce si chiede DOPO averla scritta').toBeGreaterThan(registro);
     // e la richiesta della voce non puo far esplodere niente
-    expect(codice, 'ogni rotta della voce e dentro una rete').toMatch(/const chiediVoce = async[\s\S]{0,600}catch/);
+    // b.603 — il ciclo delle rotte e' `procuraVoce` (modulo unico): la rete e' li'.
+    expect(codice, 'la voce passa dal ciclo unico').toMatch(/await procuraVoce\(\[/);
+    expect(leggi('lib/audio/voceTradotta.js'), 'ogni rotta della voce e dentro una rete').toMatch(/export async function procuraVoce[\s\S]{0,900}catch/);
   });
 
   it('dice cosa sta facendo e cosa è andato storto', () => {

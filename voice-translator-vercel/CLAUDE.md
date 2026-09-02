@@ -267,6 +267,42 @@ perche il working tree lo conteneva ancora.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.603** (push #879) — Modulo D del "correggi tutto": le
+  pipeline gemelle FUORI dagli interpreti.
+
+  **Dettatura**: cinque copie di SpeechRecognition (SpeakerView a
+  blocchi, TaxiTalk, Prima prova x2 — io e l'ospite —, LifeView domanda
+  al Maestro) → `lib/dettatura.js`, che b.432 aveva scritto apposta
+  dicendo «la prossima volta che una di loro si apre, si sposta qui».
+  Ogni chiamante tiene la sua lingua e la sua reazione a fine ascolto;
+  il riconoscimento, il «no-speech non e' un guasto», la consegna del
+  solo definitivo e il ferma() idempotente sono in un posto. LifeView:
+  se la dettatura non parte si ripiega ORA sul registra-poi-trascrivi
+  (prima: si fermava e basta). Restano proprie, e perche':
+  useTranslation (microfono della chat) e useFreeTalkVAD portano logica
+  che dettatura.js non ha — cambio motore su confidenza bassa,
+  registrazione di scorta che parte dopo 2 s senza risultati,
+  distinzione permesso-negato/microfono-assente — e sono il percorso
+  piu' usato dell'app: allargare il contratto di dettatura.js per loro
+  e' un modulo a se', non un'adozione.
+  **Voce fuori dagli interpreti**: `procuraVoce(motori)` (ciclo: 204 →
+  niente da dire e stop, «200 con zero byte» → prossimo, scadenza b.363,
+  guasto nel registro) e `suonaBlob` (rete di sicurezza 30 s, url
+  liberato una volta) in lib/audio/voceTradotta.js. SpeakerView e
+  TaxiTalk (clone esatto, jscpd #6: 33 righe) li usano; Prima prova
+  (premium → Edge → voce del telefono) e InterpreteVideo (via asiatica
+  o premium) idem. Gli ORDINI dei motori restano di chi chiama: sono
+  scelte diverse e volute, non copie. 0 `fetch('/api/tts` nelle quattro
+  schermate, 0 `new Audio` in SpeakerView/TaxiTalk.
+
+  Prove: nuovo `pipeline-gemelle-b603.test.js`, 8 di comportamento
+  (ordine, zero byte, 204 senza pagare, rete, malformati; onended,
+  scadenza, play rifiutato) + 3 ancore. 4 prove esistenti riallineate
+  (coda-audio, prima-prova x2, b552). [VERIFICATO] eslint 0 errori,
+  build ok, suite 301 file / 3703 prove, 0 regressioni. [ATTESO]
+  dettatura dal vivo in Relatore/Taxi/Prima prova/Life: non collaudata
+  in questa sessione.
+
 - Versione: **b.602** (push #878) — Modulo C del "correggi tutto": un
   client Deepgram, una cattura PCM16, il microfono unico dappertutto.
 

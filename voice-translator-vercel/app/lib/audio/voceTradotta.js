@@ -214,3 +214,71 @@ export function fermaAudio(audio) {
   if (!audio) return;
   try { audio.pause(); audio.currentTime = 0; } catch { /* l'audio era gia finito: nulla da fermare */ }
 }
+
+// ═══ b.603 — LE PIPELINE GEMELLE FUORI DAGLI INTERPRETI ═══
+// Relatore (SpeakerView), TaxiTalk, Prima prova e InterpreteVideo
+// chiedevano la voce ai server ognuno con il proprio ciclo di fetch
+// (jscpd: SpeakerView:307-339 ↔ TaxiTalk:249-275 clone esatto) e la
+// suonavano ognuno con il proprio `new Audio`. Gli ORDINI dei motori
+// sono diversi e VOLUTI (Edge→OpenAI per chi non ha credito, premium
+// per la Prima prova, la via asiatica per i video): restano di chi
+// chiama. Il ciclo — prova, 204 = niente da dire, scadenza, prossimo —
+// e' uno solo.
+
+/**
+ * Prova i motori in ordine. Ogni motore e' `{ rotta, corpo }`.
+ * - 204 → null, senza provare i successivi (b.552: non si paga il nulla)
+ * - risposta ok con audio non vuoto → il Blob
+ * - altrimenti → il prossimo; finiti tutti → null
+ */
+export async function procuraVoce(motori, { fetchImpl = globalThis.fetch, scadenzaMs = SCADENZA_VOCE_MS } = {}) {
+  for (const m of motori || []) {
+    if (!m?.rotta) continue;
+    try {
+      const r = await fetchImpl(m.rotta, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(m.corpo || {}),
+        signal: AbortSignal.timeout(scadenzaMs),
+      });
+      if (r.status === 204) return null;
+      if (r.ok) { const b = await r.blob(); if (b && b.size > 0) return b; }
+    } catch (e) {
+      // b.363 — il guasto lascia traccia (rete caduta, attesa scaduta, credito finito)
+      if (e?.name !== 'AbortError') console.warn(`[voce] ${m.rotta}:`, e?.message || e);
+    }
+  }
+  return null;
+}
+
+/**
+ * Suona un Blob e risolve quando ha finito (o fallito, o dopo la rete
+ * di sicurezza: se il browser non chiama ne onended ne onerror una coda
+ * resterebbe bloccata per sempre). `onAudio` riceve l'elemento.
+ */
+export function suonaBlob(blob, { onAudio, volume = 1.0, scadenzaMs = 30000 } = {}) {
+  return new Promise((finito) => {
+    if (!blob || blob.size === 0) { finito(false); return; }
+    let url = null;
+    let chiuso = false;
+    let timer = null;
+    const chiudi = (esito) => {
+      if (chiuso) return;
+      chiuso = true;
+      clearTimeout(timer);
+      try { if (url) URL.revokeObjectURL(url); } catch { /* url gia liberato: nulla da fare */ }
+      finito(esito);
+    };
+    try {
+      url = URL.createObjectURL(blob);
+      const audio = new Audio(url);
+      audio.volume = volume;
+      onAudio?.(audio);
+      audio.onended = () => chiudi(true);
+      audio.onerror = () => chiudi(false);
+      timer = setTimeout(() => chiudi(false), scadenzaMs);
+      audio.play().catch(() => chiudi(false));
+    } catch {
+      chiudi(false);
+    }
+  });
+}

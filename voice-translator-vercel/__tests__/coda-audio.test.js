@@ -193,8 +193,12 @@ describe('e collegata al codice vivo, in tutti e due i posti', () => {
   it('chi suona ha sempre una via d\'uscita: la coda non si blocca', () => {
     // Se il browser non chiama ne onended ne onerror, senza rete di
     // sicurezza la conversazione ammutolirebbe per sempre.
-    const s = app('components/SpeakerView.js');
-    expect(s).toMatch(/setTimeout\(chiudi, 30000\)/);
-    expect(s).toMatch(/audio\.play\(\)\.catch\(chiudi\)/);
+    // b.603 — il lettore e' `suonaBlob` nel modulo unico (SpeakerView e
+    // TaxiTalk lo usano tutti e due): la rete di sicurezza sta li'.
+    const s = app('lib/audio/voceTradotta.js');
+    expect(s).toMatch(/timer = setTimeout\(\(\) => chiudi\(false\), scadenzaMs\)/);
+    expect(s).toMatch(/audio\.play\(\)\.catch\(\(\) => chiudi\(false\)\)/);
+    expect(app('components/SpeakerView.js')).toMatch(/suonaBlob\(blob/);
+    expect(app('components/TaxiTalk.js')).toMatch(/suonaBlob\(blob/);
   });
 });

@@ -74,7 +74,12 @@ describe('chi chiama non ripiega, e soprattutto non paga, per il nulla', () => {
   it('le due schermate che pagherebbero OpenAI si fermano prima', () => {
     // Qui il danno non era solo il registro sporco: dopo il 204 il codice
     // proseguiva su /api/tts, che e' a pagamento, per far dire il vuoto.
-    expect(leggi('components/SpeakerView.js')).toMatch(/edgeRes\.status === 204\) return null;/);
-    expect(leggi('components/TaxiTalk.js')).toMatch(/edge\.status === 204\) return null;/);
+    // b.603 — il ciclo e' unico (procuraVoce): il 204 ferma la catena li',
+    // per tutte e due, e /api/tts viene DOPO edge nell'ordine dichiarato.
+    expect(leggi('lib/audio/voceTradotta.js')).toMatch(/if \(r\.status === 204\) return null;/);
+    for (const f of ['components/SpeakerView.js', 'components/TaxiTalk.js']) {
+      const s = leggi(f);
+      expect(s).toMatch(/procuraVoce\(\[\s*\{ rotta: '\/api\/tts-edge'[\s\S]{0,200}\{ rotta: '\/api\/tts'/);
+    }
   });
 });
