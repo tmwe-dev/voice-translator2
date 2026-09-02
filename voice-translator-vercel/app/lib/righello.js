@@ -51,8 +51,8 @@ export const LINGUETTA = {
  * lasciando SPAZIO_LINGUETTA libero DA TUTTI E DUE i lati — che e
  * esattamente cio che tiene la colonna in mezzo.
  */
-export const SPAZIO_LINGUETTA = LINGUETTA.larghezza + MARGINE + 6;   // 66
-export const LARGA = 440;
+const SPAZIO_LINGUETTA = LINGUETTA.larghezza + MARGINE + 6;   // 66
+const LARGA = 440;
 
 export const COLONNA = {
   width: '100%',
@@ -102,7 +102,7 @@ export function postoADestra(indice = 0) {
 // microfono della Home, che in Mondo non c'e: cosi in Mondo le due si
 // accavallavano. Ora la fila la decide il righello, come gia a destra:
 // una quota di partenza, un passo, e nessuno sceglie piu numeri suoi.
-export const COLONNA_SINISTRA = {
+const COLONNA_SINISTRA = {
   primo: 'max(132px, calc(env(safe-area-inset-top) + 124px))',
   passo: LINGUETTA.altezza + 12,   // 58 di linguetta + 12 di respiro
 };

@@ -20,7 +20,7 @@
 // ═══════════════════════════════════════════════════════════════
 
 /** Le famiglie di ramo. L'ordine conta: si alterna per non fare monocultura. */
-export const TIPI_RAMO = ['stesso', 'vicino', 'ambito', 'evento', 'luogo'];
+const TIPI_RAMO = ['stesso', 'vicino', 'ambito', 'evento', 'luogo'];
 
 export function normalizza(q) {
   return String(q || '').toLowerCase().replace(/\s+/g, ' ').trim();

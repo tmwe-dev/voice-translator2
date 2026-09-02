@@ -81,10 +81,9 @@ export function esiste(id) {
   return Object.prototype.hasOwnProperty.call(TASSONOMIA, String(id || ''));
 }
 
-/** Il padre di un topic, o null se e' una radice (o non esiste). */
-export function padreDi(id) {
-  return esiste(id) ? TASSONOMIA[id] : null;
-}
+// b.596 — qui c'era padreDi, che risaliva di un livello nella
+// tassonomia. Non la chiamava nessuno (catena, sotto, fa la risalita
+// completa e la usano davvero).
 
 /**
  * La catena dal topic fino alla radice, se stesso incluso.
@@ -106,10 +105,9 @@ export function discende(id, avo) {
   return catena(id).includes(String(avo || ''));
 }
 
-/** I figli diretti di un topic. */
-export function figliDi(id) {
-  return TOPIC_IDS.filter((k) => TASSONOMIA[k] === String(id || ''));
-}
+// b.596 — qui c'era figliDi, il simmetrico di padreDi (rimosso sopra
+// per lo stesso motivo): i figli diretti di un topic. Non la chiamava
+// nessuno.
 
 // ═══ I VECCHI NOMI, PERCHE NESSUNO PERDE I SUOI INTERESSI ═══
 // Regola 41 del documento: «le preferenze vecchie devono essere

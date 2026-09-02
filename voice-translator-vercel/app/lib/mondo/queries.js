@@ -92,19 +92,8 @@ export function domandaPer(topic, lingua = 'en') {
   return d[radice(lingua)] || d.en || '';
 }
 
-/** Le domande di piu topic, senza vuoti e senza doppioni. */
-export function domandePer(topics, lingua = 'en') {
-  const visti = new Set();
-  const fuori = [];
-  for (const t of (Array.isArray(topics) ? topics : [])) {
-    const q = domandaPer(t, lingua);
-    const k = chiaveQuery(q);
-    if (!q || visti.has(k)) continue;
-    visti.add(k);
-    fuori.push({ topic: t, query: q });
-  }
-  return fuori;
-}
+// b.596 — qui c'era domandePer, la versione batch di domandaPer (sopra)
+// per piu topic insieme. Non la chiamava nessuno.
 
 // La UI precedente alla FASE 5 usa ancora queste domande. Non sono una
 // seconda tassonomia: sono solo alias di ingresso verso gli stessi ID.

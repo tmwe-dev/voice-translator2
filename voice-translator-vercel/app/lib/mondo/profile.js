@@ -94,11 +94,10 @@ export function seguiTopic(profile, topic) {
   return { ...p, followedTopics: [id, ...p.followedTopics].slice(0, TETTO) };
 }
 
-export function nonSeguireTopic(profile, topic) {
-  const id = canonico(topic);
-  const p = normalizzaProfile(profile);
-  return { ...p, followedTopics: p.followedTopics.filter((t) => t !== id) };
-}
+// b.596 — qui c'era nonSeguireTopic, il simmetrico di seguiTopic (sopra)
+// per togliere un topic seguito. Non la chiamava nessuno: seguiTopic e'
+// cablato in UI, il suo contrario no — verifica se "smetti di seguire"
+// esiste davvero in interfaccia prima di dare per scontato che serva.
 
 export function bloccaFonte(profile, dominio) {
   const d = String(dominio || '').trim().toLowerCase();

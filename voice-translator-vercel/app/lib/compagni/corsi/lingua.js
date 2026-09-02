@@ -159,7 +159,7 @@ const TAG_TRADUZIONE = /\[([a-zA-Z]{2}):\s*([^\]]*?)\s*\]/g;
  * lo schermo sia la voce. Erano due strade separate sullo stesso testo,
  * ed e cosi che una si e sistemata e l'altra e rimasta rotta.
  */
-export function ripuliscePerVoce(testo) {
+function ripuliscePerVoce(testo) {
   return String(testo || '')
     .replace(TAG_TRADUZIONE, (intero, codice, dentro) => (dentro ? `(${dentro})` : ''))
     .replace(/\s{2,}/g, ' ');

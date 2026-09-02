@@ -40,7 +40,7 @@ export function pesoDi(evento) {
   return PESI[String(evento || '').toUpperCase()] ?? 0;
 }
 
-export function eventoValido(evento) {
+function eventoValido(evento) {
   return EVENTI.includes(String(evento || '').toUpperCase());
 }
 

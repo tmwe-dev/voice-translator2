@@ -71,7 +71,7 @@ function ricade(d, elenco) {
 }
 
 /** Vero se questo dominio non puo fondare una lezione certificata. */
-export function nonFondante(url) {
+function nonFondante(url) {
   const d = dominio(url);
   return !!d && ricade(d, NON_FONDANTI);
 }

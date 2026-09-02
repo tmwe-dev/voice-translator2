@@ -87,7 +87,7 @@ export const BASE_NOVITA = 10;
 
 /** Oltre questo multiplo del massimo per invio non e' un errore di
  *  misura, e' una bugia: si butta invece di tagliarla. */
-export const FATTORE_BUGIA = 6;
+const FATTORE_BUGIA = 6;
 
 // Sotto questo la freschezza non scende: passati tre giorni tutti i
 // contenuti sono "vecchi" allo stesso modo e a decidere tornano i
@@ -174,7 +174,7 @@ export function punteggioContenuto(c, adessoMs = Date.now()) {
 /** L'indirizzo di un contenuto, dovunque lo tenga: scheda di Mondo,
  *  slide del feed, video di YouTube. Da qui esce la chiave con cui i
  *  segnali sono stati contati. */
-export function indirizzoDi(x) {
+function indirizzoDi(x) {
   if (!x) return '';
   const d = x.dati || {};
   if (x.url) return String(x.url);
@@ -186,7 +186,7 @@ export function indirizzoDi(x) {
 
 /** Quando e' nato, in millisecondi. I nomi sono quelli gia' in uso nel
  *  progetto (`pubblicato` dalle schede, le date ISO dalle stanze). */
-export function quandoDi(x) {
+function quandoDi(x) {
   if (!x) return 0;
   const d = x.dati || {};
   const diretti = [x.quandoMs, x.quando, x.pubblicato, d.pubblicato, d.quando];
@@ -210,7 +210,7 @@ export function chiaveDi(x) {
 
 /** I segnali di un contenuto, presi dai conteggi del server e uniti
  *  alla sua data. */
-export function segnaliDi(x, conteggi) {
+function segnaliDi(x, conteggi) {
   const c = conteggi?.[chiaveDi(x)] || {};
   return {
     cuori: numero(c.cuori),
@@ -223,7 +223,7 @@ export function segnaliDi(x, conteggi) {
 }
 
 /** Il punteggio di un contenuto gia' pescato dai conteggi. */
-export function punteggioDi(x, conteggi, adessoMs = Date.now()) {
+function punteggioDi(x, conteggi, adessoMs = Date.now()) {
   return punteggioContenuto(segnaliDi(x, conteggi), adessoMs);
 }
 

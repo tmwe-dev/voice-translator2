@@ -78,7 +78,7 @@ const percorso = (url) => {
   try { return new URL(url, window.location.origin).pathname; } catch { return ''; }
 };
 
-export class RichiestaVietataInDiretta extends Error {
+class RichiestaVietataInDiretta extends Error {
   constructor(rotta) {
     super(`Modalita Diretta: ${rotta} non puo essere chiamata.`);
     this.name = 'RichiestaVietataInDiretta';

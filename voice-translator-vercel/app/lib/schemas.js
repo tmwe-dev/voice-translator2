@@ -210,4 +210,4 @@ export function validateMessageInput(body) {
 
 // ═══ Exports ═══
 
-export { VALID_LANGS, LANG_CODE_RE, ROOM_ID_RE, clean as sanitize };
+export { LANG_CODE_RE, clean as sanitize };

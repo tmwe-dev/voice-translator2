@@ -48,9 +48,11 @@ export const REGIA = {
   maxUnFormato: 0.80,   // capitolo 33: nessun formato oltre l'80%
 };
 
-// Capitolo 19, e vale piu di tutti i pesi messi insieme: se hai
-// scritto una domanda, la risposta viene prima della personalizzazione.
-export const QUERY_ESPLICITA_COMANDA = true;
+// b.596 — qui c'era QUERY_ESPLICITA_COMANDA = true, capitolo 19:
+// "se hai scritto una domanda, la risposta viene prima della
+// personalizzazione". Nessun codice la leggeva — la regola descritta
+// nel documento non risulta applicata da nessuna parte, non solo non
+// esportata: verifica da fare, non una semplice pulizia di export.
 
 // ═══ FASE 5 — L'INTERRUTTORE ═══
 // Il documento (cap. 40) vuole la migrazione a pezzi e il vecchio

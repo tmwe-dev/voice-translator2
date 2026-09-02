@@ -295,15 +295,12 @@ async function getSetting(key) {
 
 const OFFLINE_QUEUE_KEY = 'offline_queue';
 
-/**
- * Queue a message for sending when back online
- */
-export async function queueOfflineMessage(message) {
-  let queue; try { queue = JSON.parse(await getSetting(OFFLINE_QUEUE_KEY) || '[]'); } catch { queue = []; }
-  queue.push({ ...message, _queuedAt: Date.now() });
-  await saveSetting(OFFLINE_QUEUE_KEY, JSON.stringify(queue));
-  return queue.length;
-}
+// b.596 — qui c'era queueOfflineMessage, che scriveva un messaggio in
+// coda per l'invio a riconnessione avvenuta. Non la chiamava nessuno —
+// flushOfflineQueue (sotto) esiste ed e' agganciata in page.js, ma senza
+// un produttore la coda che legge e' sempre vuota. Non e' solo pulizia:
+// segnala che l'accodo offline dei messaggi non e' mai stato collegato
+// al flusso di invio reale — verifica da fare, non ricostruita alla cieca.
 
 /**
  * Get all queued offline messages

@@ -267,6 +267,54 @@ perche il working tree lo conteneva ancora.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.596** (push #872) — Modulo 6 completato: 43 export morti
+  tolti da 29 file, un quasi-errore corretto prima di spedirlo.
+
+  "Procedi e migliora il codice" dopo il voto 7,3/10. Preso lo scarto
+  affidabile del Modulo 5 (import statici, non il ramo lazy di page.js)
+  e verificato ogni voce con un doppio giro: grep di ogni simbolo su
+  TUTTO il repo (non solo page.js — dove serve knip non serve piu),
+  poi conteggio delle occorrenze nel proprio file per distinguere "mai
+  usato da nessuna parte" da "usato solo internamente, esportato per
+  errore". 90 delle 143 voci erano falsi positivi del bug del Modulo 5
+  (uso reale trovato altrove, es. CLAY_OMBRA/clayCard in components/
+  Life/*) — scartate, non toccate. Escluso a priori tutto app/wallet/*
+  (pricing/riconciliazione): troppo rischioso per un giro bulk, resta
+  per una revisione dedicata.
+
+  Di quel che restava: 33 export usati SOLO dentro il proprio file
+  (tolto solo `export`, comportamento identico, zero rischio) e 10
+  davvero morti ovunque (funzione intera rimossa, con una riga di
+  commento nello stesso stile gia in uso in chatStorage.js — "b.596 —
+  qui c'era X, faceva Y, non la chiamava nessuno").
+
+  **Il quasi-errore, corretto prima di spedirlo:** `ultimiDelCanale`
+  (topics/videoUfficiale.js) sembrava morta per lo stesso grep — zero
+  citazioni del suo NOME in tutto il repo, test compresi. Ma un test
+  di ancoraggio (b.587, `mondo-video-globo-b587.test.js`) non cerca il
+  suo nome: cerca il PATTERN di codice dentro il suo corpo
+  (`await soloIncorporabili(candidati)`), a protezione del filtro
+  embeddable sui video da playlist seguita. Rimuovendola la suite e'
+  diventata rossa (1/3638) — la prova che serviva, arrivata prima del
+  commit e non dopo. Ripristinata identica. Lezione per il prossimo
+  giro di pulizia: un grep sul NOME del simbolo non basta quando un
+  test ancora un PATTERN dentro il suo corpo — la suite completa
+  resta l'ultima rete, mai saltarla prima di un commit di rimozione.
+
+  **Segnalati, non toccati** (tre funzioni morte che sembrano feature
+  vere non finite di collegare, non refusi): `queueOfflineMessage`
+  (chatStorage.js) — la coda offline ha un consumatore cablato in
+  page.js ma nessun produttore, quindi legge sempre vuoto;
+  `nonSeguireTopic` (mondo/profile.js) — seguire un topic e' cablato,
+  smettere di seguirlo no; `QUERY_ESPLICITA_COMANDA` (mondo/
+  rankingConfig.js) — un flag che dichiara una regola di prodotto
+  (cap. 19) che nessun codice legge, la regola descritta potrebbe non
+  essere davvero applicata.
+
+  [VERIFICATO] eslint pulito su tutti i 29 file toccati (0 errori).
+  `next build` completa senza errori. Suite completa 295 file / 3638
+  test, 0 regressioni (dopo il ripristino di ultimiDelCanale).
+
 - Versione: **b.595** (push #871) — Moduli 5-8 del piano qualita:
   knip riparato (in parte, onestamente), un test di ancoraggio, la
   documentazione stantia trovata.

@@ -29,7 +29,7 @@
 import { chiaveContenuto } from './gradimento.js';
 
 export const TETTO_BACHECA = 60;
-export const TETTO_NASCOSTI = 400;
+const TETTO_NASCOSTI = 400;
 
 const elenco = (x) => (Array.isArray(x) ? x : []);
 

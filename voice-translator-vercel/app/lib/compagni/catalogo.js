@@ -219,7 +219,9 @@ export function compagnoVuoto() {
   };
 }
 
-export { VOCI as VOCI_COMPAGNI };
+// b.596 — qui c'era `export { VOCI as VOCI_COMPAGNI }`. Non la
+// importava nessuno (VOCI resta usata dentro questo file). Se serve
+// di nuovo altrove, e' un export da un rigo, non un problema.
 
 // b.217 — la creazione automatica produceva un `genere` che poi veniva
 // BUTTATO: ogni Compagno generato riceveva la voce maschile di default

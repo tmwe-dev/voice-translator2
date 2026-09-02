@@ -160,7 +160,7 @@ export function haAppenaConcordato(testo, lingua = 'it') {
   const parole = (PAROLE_ACCORDO[lingua] || Object.values(PAROLE_ACCORDO).flat());
   return parole.some(w => t.includes(w));
 }
-export const RIGA_ANTI_ECO = {
+const RIGA_ANTI_ECO = {
   it: "\nNel tuo ULTIMO intervento hai concordato. Questo giro vale solo se porti un DATO NUOVO o un'obiezione fondata: altrimenti passa (esito: passo).",
   en: "\nIn your LAST turn you agreed. This round only counts if you bring a NEW fact or a grounded objection: otherwise pass (esito: passo).",
 };

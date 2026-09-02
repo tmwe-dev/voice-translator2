@@ -43,7 +43,7 @@ const CHIAVE_LETTI = 'vt-avvisi-letti';
 /** I tre motivi per cui vale la pena disturbare qualcuno. Fuori da
  *  questi tre un avviso non esiste: meglio nessuna riga che una riga
  *  che nessuno sa leggere. */
-export const TIPI_AVVISO = ['commento', 'stanza', 'reazione'];
+const TIPI_AVVISO = ['commento', 'stanza', 'reazione'];
 
 /** Il tetto del pallino: oltre nove si scrive «9+», come fanno i social. */
 export const TETTO_PALLINO = 9;

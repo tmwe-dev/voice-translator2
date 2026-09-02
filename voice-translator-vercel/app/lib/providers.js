@@ -80,7 +80,7 @@ const PROVIDER_CHAINS = {
 
 // Fastest provider per target language (for superfast mode)
 // Microsoft is now fastest AND highest quality
-export const FASTEST_PROVIDER = {
+const FASTEST_PROVIDER = {
   '*': 'google', // b.91 — era microsoft, che oggi fallisce sempre
 };
 
@@ -217,7 +217,7 @@ const MS_LANG_MAP = {
  * Microsoft Translate (unofficial via npm)
  * Best for: ar, hi, ru, tr, and generally good for all
  */
-export async function tryMicrosoftTranslate(text, sourceLang, targetLang) {
+async function tryMicrosoftTranslate(text, sourceLang, targetLang) {
   // b.91 — prima gli errori venivano lasciati risalire "per poterli
   // segnalare": risultato, 48 errori in produzione per una libreria che
   // oggi non funziona piu. Ora fallisce in silenzio e si passa al

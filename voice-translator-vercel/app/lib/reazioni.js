@@ -48,7 +48,7 @@ const IDS = REAZIONI.map((r) => r.id);
 
 /** Un id che non e' fra i sei non esiste: arriva da un telefono con la
  *  memoria vecchia o da una chiamata storta, e va buttato in silenzio. */
-export function reazioneValida(id) {
+function reazioneValida(id) {
   return typeof id === 'string' && IDS.includes(id);
 }
 

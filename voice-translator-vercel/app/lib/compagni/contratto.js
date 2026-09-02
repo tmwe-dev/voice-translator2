@@ -133,7 +133,7 @@ export function temperaturaDibattito(liberta) {
 }
 
 /** Riga di comportamento a partire dalla barra libertà. */
-export function promptLiberta(liberta) {
+function promptLiberta(liberta) {
   return (LIB[liberta] || LIB[LIB_DEF]).testo;
 }
 
@@ -143,7 +143,7 @@ export function promptLiberta(liberta) {
  * @param fonti    gli sono state fornite fonti verificate (es. dalla Tavola rotonda o da un corso)?
  * @param memoria  ha memoria di questa persona?
  */
-export function bloccoCapacita({ ricerca = false, fonti = false, memoria = false } = {}) {
+function bloccoCapacita({ ricerca = false, fonti = false, memoria = false } = {}) {
   const righe = [
     `- ricerca web in tempo reale: ${ricerca ? 'sì' : 'no'}`,
     `- fonti verificate fornite: ${fonti ? 'sì' : 'no'}`,

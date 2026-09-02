@@ -26,7 +26,6 @@
 // Import: solo file puri di questa cartella.
 // ═══════════════════════════════════════════════════════════════
 import { REGIA } from './rankingConfig.js';
-import { motivo } from './reasons.js';
 
 function primoTopic(x) {
   return x?.content?.topics?.[0] || '';
@@ -170,13 +169,5 @@ export function comeEVenuta(sequenza, { miaLingua = 'it' } = {}) {
   };
 }
 
-/**
- * Un motivo di scoperta si aggiunge a chi entra per la quota, cosi la
- * scheda puo dirlo: «una scoperta fuori dai tuoi interessi»
- * (capitolo 24).
- */
-export function segnaScoperta(x) {
-  if (!x || eDiScoperta(x)) return x;
-  const m = motivo('discovery', x.content?.topics?.[0] || '');
-  return m ? { ...x, reasons: [...(x.reasons || []), m] } : x;
-}
+// b.596 — qui c'era segnaScoperta, che aggiungeva un motivo "scoperta
+// fuori dai tuoi interessi" a un contenuto. Non la chiamava nessuno.

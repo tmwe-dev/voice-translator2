@@ -26,7 +26,7 @@
 
 /** Trenta giorni: una testata autorevole non cambia in una settimana,
  *  ma in un mese nascono e muoiono siti abbastanza da rifare il giro. */
-export const VITA_LISTA_MS = 30 * 24 * 3600 * 1000;
+const VITA_LISTA_MS = 30 * 24 * 3600 * 1000;
 
 export function dominioNudo(d) {
   if (!d) return '';

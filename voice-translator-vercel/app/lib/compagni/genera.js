@@ -134,7 +134,7 @@ export function estraiAgente(testo) {
 const clamp = (n) => Math.max(0, Math.min(100, Math.round(Number(n) || 0)));
 
 /** Ripulisce e completa l'oggetto agente prodotto dall'LLM. */
-export function normalizzaAgente(d = {}) {
+function normalizzaAgente(d = {}) {
   const b = d.barre || {};
   return {
     nome: String(d.nome || '').slice(0, 60).trim(),
@@ -167,7 +167,7 @@ function etichetta(chiave, v) {
 }
 
 /** Riga di stile leggibile a partire dalle barre. */
-export function rigaBarre(barre = {}) {
+function rigaBarre(barre = {}) {
   const b = normalizzaAgente({ barre }).barre;
   return `Stile: tono ${etichetta('tono', b.tono)}, ${etichetta('calore', b.calore)}, ${etichetta('sintesi', b.sintesi)}, ${etichetta('umorismo', b.umorismo)}; sei ${etichetta('assertivita', b.assertivita)} e ${etichetta('creativita', b.creativita)}.`;
 }

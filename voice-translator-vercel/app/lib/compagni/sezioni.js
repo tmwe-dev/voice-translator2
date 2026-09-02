@@ -10,7 +10,7 @@
 // il client le manda, le rotte le iniettano nel system.
 // ═══════════════════════════════════════════════════════════════
 
-export const TIPI_SEZIONE = ['regole', 'argomento', 'contesto'];
+const TIPI_SEZIONE = ['regole', 'argomento', 'contesto'];
 
 /** Pulisce una sezione arrivata dal client: mai fidarsi della forma. */
 export function sanaSezione(s) {

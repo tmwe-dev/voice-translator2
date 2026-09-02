@@ -145,7 +145,7 @@ export function contestoProfilo(dati) {
 
 // ── PROFILO PRONUNCIA (persistente, per lingua) ──
 
-export async function leggiProfiloPronuncia(email, lingua) {
+async function leggiProfiloPronuncia(email, lingua) {
   const owner = idUtente(email);
   const sb = owner && getSupabaseAdmin();
   if (!sb || !lingua) return null;

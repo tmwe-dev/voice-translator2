@@ -25,7 +25,7 @@
 // File PURO: nessun import (lezione di b.559).
 // ═══════════════════════════════════════════════════════════════
 
-export const VALORI = {
+const VALORI = {
   contentMix:      ['balanced', 'moreVideo', 'moreArticles'],
   titles:          ['translated', 'original'],
   breaking:        ['important', 'all', 'off'],

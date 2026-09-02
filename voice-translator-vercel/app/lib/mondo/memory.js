@@ -35,7 +35,7 @@ export const MEMORY_VUOTA = {
 
 export const GIORNO = 24 * 3600 * 1000;
 export const TETTO_VISTI = 400;
-export const TETTO_RICERCHE = 20;
+const TETTO_RICERCHE = 20;
 
 /**
  * Quanto vale oggi un segnale toccato l'ultima volta `quando`.
@@ -55,7 +55,7 @@ function voce(x) {
 }
 
 /** La memoria in forma sana, da qualunque cosa arrivi. */
-export function normalizzaMemory(x) {
+function normalizzaMemory(x) {
   const d = (x && typeof x === 'object') ? x : {};
   const mappa = (m) => {
     const fuori = {};
@@ -139,15 +139,8 @@ export function registraEvento(memory, tipo, dati) {
   return registra(memory, fabbricaEvento(tipo, dati));
 }
 
-/** I topic che contano di piu oggi, dal piu forte. Solo i positivi. */
-export function topicPiuForti(memory, { quanti = 8, adesso = Date.now() } = {}) {
-  const m = normalizzaMemory(memory);
-  return Object.keys(m.topicAffinity)
-    .map((t) => ({ topic: t, peso: affinitaTopic(m, t, adesso) }))
-    .filter((x) => x.peso > 0)
-    .sort((a, b) => b.peso - a.peso)
-    .slice(0, quanti);
-}
+// b.596 — qui c'era topicPiuForti, che ordinava i topic per affinita.
+// Non la chiamava nessuno.
 
 /**
  * DALLE PREFERENZE VECCHIE (capitolo 41): `argomentiVisti` e `gusti`

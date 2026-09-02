@@ -7,7 +7,7 @@
 // breaking. E' puro: lo usano sia il server sia il browser.
 // ═══════════════════════════════════════════════════════════════
 
-export const BREAKING_WEIGHTS = Object.freeze({
+const BREAKING_WEIGHTS = Object.freeze({
   importance: 0.25,
   novelty: 0.20,
   confidence: 0.15,
@@ -123,7 +123,7 @@ function geografiaEvento(evento, countries = []) {
   return suoi.some((c) => voluti.has(String(c).toUpperCase())) ? 1 : 0;
 }
 
-export function breakingScore(evento, { now = Date.now(), followedTopics = [], countries = [], isNew = true } = {}) {
+function breakingScore(evento, { now = Date.now(), followedTopics = [], countries = [], isNew = true } = {}) {
   const sourceCount = Number(evento?.sourceCount) || 0;
   const segnali = {
     importance: importanzaTestuale(evento),

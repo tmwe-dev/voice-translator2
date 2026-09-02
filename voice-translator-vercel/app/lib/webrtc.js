@@ -88,7 +88,7 @@ if (typeof window !== 'undefined') {
  * Porta la configurazione ICE piu aggiornata dentro una connessione gia
  * creata, ma PRIMA che inizi la raccolta dei candidati locali.
  */
-export async function preparaIcePerPc(pc) {
+async function preparaIcePerPc(pc) {
   if (!pc) return false;
   try {
     // Se abbiamo gia un TURN statico non ritardiamo la chiamata. Altrimenti
