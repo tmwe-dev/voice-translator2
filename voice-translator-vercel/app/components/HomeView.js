@@ -63,7 +63,7 @@ const SEZIONI = [
 
 const HomeView = memo(function HomeView({ selectedMode, setSelectedMode,
   selectedContext, setSelectedContext, roomDescription, setRoomDescription, handleCreateRoom,
-  contacts, fetchContacts, rejoinRoom, startChatWithContact, unlockAudio }) {
+  contacts, fetchContacts, rejoinRoom, unlockAudio }) {   // b.606 — via la prop mai usata
   const { L, S, prefs, setPrefs, savePrefs, myLang, setMyLang, setView, theme, setTheme } = useApp();
 
   const [activeRooms, setActiveRooms] = useState([]);

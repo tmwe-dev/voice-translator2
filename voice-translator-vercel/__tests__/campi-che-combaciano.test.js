@@ -65,7 +65,8 @@ describe('una stanza si chiama `id`', () => {
     // sbagliato e leggerlo dall'OGGETTO stanza o conversazione.
     const p = senzaCommenti(app('page.js'));
     expect(p).not.toMatch(/\?room=\$\{(room|conv|detailConversation)\??\.roomId\}/);
-    expect(p).toMatch(/\?room=\$\{room\.id\}/);
+    // b.606 — il link `?room=${room.id}` stava SOLO in startChatWithContact,
+    // funzione morta (mai chiamata): tolta. Resta quello della cronologia.
     expect(p).toMatch(/\?room=\$\{detailConversation\.id\}/);
   });
 });

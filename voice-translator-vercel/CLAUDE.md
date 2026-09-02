@@ -267,6 +267,14 @@ perche il working tree lo conteneva ancora.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.606** (push #882) — Modulo F-R: SOLO rimozioni.
+  `startChatWithContact` (page.js, 20 righe: creava una stanza e copiava
+  il link) e la prop omonima di HomeView, che la destrutturava e non la
+  chiamava mai. La funzione viva resta `handleStartChatWithContact`
+  (ContactsView). Trovata in b.605, tolta a parte per non mescolare.
+  page.js 1.863 → 1.843. [VERIFICATO] eslint 0 errori, build ok, suite
+  303 file / 3713 prove, 0 regressioni.
+
 - Versione: **b.605** (push #881) — Modulo F1 del "correggi tutto": la
   radice UI, primo taglio. page.js 1.969 → 1.863 righe.
 

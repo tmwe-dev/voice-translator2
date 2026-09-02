@@ -1115,25 +1115,11 @@ function HomeInner() {
     // ── FINE b.93 ──
   }
 
-  async function startChatWithContact(contact) {
-    try {
-      setStatus('...');
-      const room = await roomPolling.handleCreateRoom(
-        prefs.name || 'Host', myLang, selectedMode, prefs.avatar,
-        selectedContext, selectedMode, '',
-        auth.isTrial, auth.isTopPro, auth.userAccount
-      );
-      roomInfoRef.current = room;
-      roomContextRef.current = { contextId: selectedContext, contextPrompt: CONTEXTS.find(c => c.id === selectedContext)?.prompt || '', description: '' };
-      setView('lobby');
-      setStatus('');
-      // Auto-copy invite link for the contact
-      // b.110 — era `room.roomId`, ma l'oggetto stanza ha `id`
-      // (store.js:69). Il link copiato conteneva "room=undefined".
-      const link = `${window.location.origin}?room=${room.id}`;
-      try { await navigator.clipboard.writeText(link); } catch { /* l utente ha annullato, o il permesso non c e */ }
-    } catch (e) { setStatus('Error: ' + e.message); }
-  }
+  // b.606 — qui c'era `startChatWithContact` (20 righe): creava una stanza
+  // e copiava il link, passata a HomeView che la destrutturava e non la
+  // chiamava MAI. La funzione viva e' `handleStartChatWithContact` (via
+  // ContactsView). Trovata da F1 (b.605), tolta in un giro di sole
+  // rimozioni.
 
   // Auto-join: quando invitato con ?auto=1 e ha già i prefs
   useEffect(() => {
@@ -1509,7 +1495,7 @@ function HomeInner() {
         roomDescription={roomDescription} setRoomDescription={setRoomDescription}
         handleCreateRoom={handleCreateRoom}
         contacts={contactsHook.contacts} fetchContacts={contactsHook.fetchContacts}
-        rejoinRoom={rejoinRoom} startChatWithContact={startChatWithContact}
+        rejoinRoom={rejoinRoom}
             unlockAudio={audio.unlockAudio} />
       {showTutorial && (
         <TutorialOverlay tutorialStep={tutorialStep}

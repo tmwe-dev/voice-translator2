@@ -98,6 +98,6 @@ describe('b.605 — page.js chiama la funzione, non ne tiene una copia', () => {
     // DEBITO DICHIARATO (F2): page.js chiama ancora roomPolling.handleCreateRoom
     // in altri 4 punti (invito automatico, Nuova conversazione, taxi/relatore):
     // creano senza vetrina. Sono i prossimi candidati a uscire da page.js.
-    expect((s.match(/roomPolling\.handleCreateRoom\(/g) || []).length).toBe(4);
+    expect((s.match(/roomPolling\.handleCreateRoom\(/g) || []).length).toBe(3);   // b.606 — una era morta
   });
 });
