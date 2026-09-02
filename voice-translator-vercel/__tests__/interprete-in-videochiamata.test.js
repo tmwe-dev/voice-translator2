@@ -94,8 +94,10 @@ describe('e il sottotitolo giusto vince', () => {
 describe('la catena a monte era gia intera: si verifica che resti tale', () => {
   it('l\'interprete manda sottotitolo E audio sul canale dati', () => {
     const s = senzaCommenti(leggi('app/hooks/useInterpreterMode.js'));
-    expect(s).toMatch(/type: 'interpreter-subtitle'/);
-    expect(s).toMatch(/type: 'interpreter-audio'/);
+    // b.599 — nomi da lib/eventi.js; l'audio parte dal modulo unico.
+    expect(s).toMatch(/type: MSG\.SOTTOTITOLO/);
+    expect(s).toMatch(/inviaAudioDC\(webrtc, await blobABase64\(ttsBlob\)\)/);
+    expect(senzaCommenti(leggi('app/lib/audio/voceTradotta.js'))).toMatch(/type: MSG\.AUDIO, data: base64/);
   });
 
   it('chi riceve li instrada all\'interprete', () => {

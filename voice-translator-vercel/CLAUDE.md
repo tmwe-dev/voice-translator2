@@ -267,6 +267,47 @@ perche il working tree lo conteneva ancora.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.599** (push #875) — Modulo A del "correggi tutto"
+  (audit di architettura b.598): la voce tradotta e' UN modulo, non due
+  copie; i nomi degli eventi in un posto solo; closure stantia chiusa.
+
+  Luca: "ok adesso correggi tutto". Il rimedio si fa a moduli, uno per
+  versione, ognuno spedibile e reversibile da solo: A (questo), B1
+  rimozioni, B2 cicli lib/, C microfono/STT, D pipeline gemelle fuori
+  dagli interpreti, E logger, F radice UI + test.
+
+  **Nuovo `lib/audio/voceTradotta.js`** (funzioni pure, zero React):
+  `chiediVoce` (ordine motori, 2 tentativi, 402, 204, circuit breaker —
+  prima lo streaming NON aveva il breaker e il ripiego aveva UN
+  tentativo: ora identici), `blobABase64`, `inviaAudioDC` (pezzi da 10
+  KB), `creaRiassemblatore`, `riproduciBase64` (uscita unica `finito()`,
+  idempotente), `regolaVolumeInCorsa`, `fermaAudio`. useInterpreterMode
+  e useStreamingInterpreter ne sono consumatori: -~140 righe di copie,
+  0 stringhe di rotta TTS o `new Audio` nei due hook.
+  **Nuovo `lib/eventi.js`**: `EVENTO.*` (bartalk:*), `MSG.*`
+  (interpreter-*), `lancia`, `avvisaTTS`, `avvisaVoceLocale`. Adottato
+  in 8 file (i due hook, RoomView, useAudioSystem, VideoCallOverlay,
+  InterpreteVideo, GloboMondo, FinestraSulMondo). I `postMessage`
+  verso l'iframe del globo restano stringhe: e' un contratto con
+  `public/`, un altro confine.
+  **P0.3 dell'audit**: `handleIncomingMessage` (streaming) era
+  dichiarata PRIMA di `playBase64Audio` con deps `[myLang, partnerLang]`:
+  ora dopo, con `playBase64Audio` nelle deps. Il warning eslint
+  corrispondente e' sparito.
+
+  Prove: nuovo `voce-tradotta-modulo-unico-b599.test.js`, 21 prove di
+  COMPORTAMENTO (fetch finto: ordine motori, 402, 204, rete che
+  inciampa; base64 oltre 64K; pezzi mescolati; play() che rifiuta;
+  volume zero; base64 rotto) + 2 ancore ("nessuna stringa a mano nelle
+  pipeline", "nessuna copia"). 7 prove esistenti che ancoravano il
+  TESTO delle copie (b167, b247 x3, videochiamata, b530 x2, b552, b598
+  x4) riallineate al modulo — lette una per una prima di toccarle.
+  `niente-silenzi` ha trovato 3 commenti di catch troppo corti nel
+  modulo nuovo: allungati.
+
+  [VERIFICATO] eslint 0 errori. `next build` ok. Suite 298 file / 3677
+  prove, 0 regressioni. [ATTESO] chiamata vera: non collaudata.
+
 - Versione: **b.598** (push #874) — Voce anticipata in videochiamata +
   i tre debiti residui di b.597 chiusi + tre difetti del ripiego trovati
   dall'audit di architettura.

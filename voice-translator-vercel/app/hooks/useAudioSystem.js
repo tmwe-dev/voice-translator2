@@ -9,6 +9,7 @@ import { toast } from '../lib/avvisi.js';
 import { tFuori } from '../lib/i18n.js';
 import { segnalaVoceMuta } from '../lib/segnaleVoce.js';
 import { prendiVoce, rendiVoce } from '../lib/microfonoMaster.js';
+import { avvisaTTS } from '../lib/eventi.js';
 
 /**
  * useAudioSystem — Audio orchestration (mic, queue, ducking, playback)
@@ -78,7 +79,7 @@ export default function useAudioSystem({
   function segnalaTTS(attivo) {
     try {
       window.__bartalkTTS = attivo;
-      window.dispatchEvent(new CustomEvent('bartalk:tts', { detail: { attivo } }));
+      avvisaTTS(attivo);   // b.599 — nome ed evento in lib/eventi.js
     } catch { /* sul server non esistono finestra e audio: qui non si fa nulla */ }
   }
 

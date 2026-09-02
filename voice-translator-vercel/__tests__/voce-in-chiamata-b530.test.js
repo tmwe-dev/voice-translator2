@@ -20,15 +20,19 @@ describe('b.530 — la preferenza voce-chiamata (funzioni VERE, non stringhe)', 
 
 describe('b.530 — la voce scelta viaggia con OGNI frase (cambio a meta chiamata)', () => {
   it('streaming: letta a ogni sintesi, dentro il corpo, premium per prima', () => {
+    // b.599 — la lettura della voce scelta sta nel modulo unico, chiamato
+    // a ogni frase da tutte e due le pipeline.
+    const v = leggi('app/lib/audio/voceTradotta.js');
+    expect(v).toMatch(/const voceScelta = getVoceChiamata\(\);/);
+    expect(v).toMatch(/voiceId: voceScelta \|\| undefined/);
+    expect(v).toMatch(/\(voceScelta \|\| preferisciEleven\)/);
     const f = leggi('app/hooks/useStreamingInterpreter.js');
-    expect(f).toMatch(/const voceScelta = getVoceChiamata\(\);/);
-    expect(f).toMatch(/voiceId: voceScelta \|\| undefined/);
-    expect(f).toMatch(/\(voceScelta \|\| preferisciElevenRef\.current\)/);
+    expect(f).toMatch(/preferisciEleven: preferisciElevenRef\.current/);
   });
   it('anche il percorso legacy a blocchi fa lo stesso', () => {
     const f = leggi('app/hooks/useInterpreterMode.js');
-    expect(f).toMatch(/const voceScelta = getVoceChiamata\(\);/);
-    expect(f).toMatch(/voiceId: voceScelta \|\| undefined/);
+    expect(f).toMatch(/await chiediVoce\(translated, \{/);
+    expect(f).toMatch(/userToken, preferisciEleven,/);
   });
   it('il server accetta il voiceId esplicito (era gia cosi: ora qualcuno glielo manda)', () => {
     expect(leggi('app/api/tts-elevenlabs/route.js')).toMatch(/voiceId, langCode/);

@@ -11,6 +11,7 @@ import { getVolumeTTS, setVolumeTTS, getAttenuazione, setAttenuazione, getVoceCh
 import { VOCI_ELENCO } from '../lib/compagni/catalogo.js';
 import { useApp } from '../contexts/AppContext.js';
 import { getLang } from '../lib/constants.js';
+import { EVENTO, lancia } from '../lib/eventi.js';   // b.599
 
 // ── I mattoni della videochiamata ──
 //
@@ -601,7 +602,7 @@ const VideoCallOverlay = memo(function VideoCallOverlay({
                   const v = parseFloat(e.target.value);
                   setVolTTS(v); setVolumeTTS(v);
                   // b.352 — agisce anche sulla frase GIA in corso
-                  try { window.dispatchEvent(new CustomEvent('bartalk:vol-tts')); } catch { /* fuori dal browser nessuno ascolta */ }
+                  lancia(EVENTO.VOL_TTS);
                 }}
                 aria-label={L('translatedVolume')} style={{ width: '100%', accentColor: S?.colors?.accent1 || '#5b8cff', height: 4 }} />
             </div>
@@ -662,7 +663,7 @@ const VideoCallOverlay = memo(function VideoCallOverlay({
               { chiave: 'voce', icona: volTTS > 0.01 ? <IconVolume size={17}/> : <IconVolumeOff size={17}/>,
                 parola: L('voiceWord'), acceso: volTTS > 0.01,
                 fa: () => {
-                  if (volTTS > 0.01) { volTTSPrimaRef.current = volTTS; setVolTTS(0); setVolumeTTS(0); try { window.dispatchEvent(new CustomEvent('bartalk:vol-tts')); } catch { /* fuori dal browser nessuno ascolta */ } }
+                  if (volTTS > 0.01) { volTTSPrimaRef.current = volTTS; setVolTTS(0); setVolumeTTS(0); lancia(EVENTO.VOL_TTS); }
                   else { const v = volTTSPrimaRef.current > 0.01 ? volTTSPrimaRef.current : 0.7; setVolTTS(v); setVolumeTTS(v); }
                 } },
               { chiave: 'volumi', icona: <IconVolumeLow size={17}/>, parola: L('volumesWord'), acceso: volumiAperti,

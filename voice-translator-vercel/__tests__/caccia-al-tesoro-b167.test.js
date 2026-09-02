@@ -82,10 +82,16 @@ describe('P0-1: Direct Mode non si fida piu solo dell\'intestazione client', () 
     expect(bloccoEngine).toContain('roomId');
     expect(bloccoEngine).toContain('roomSessionToken');
 
+    // b.599 — le due pipeline dell'interprete non chiamano piu le rotte
+    // vocali da sole: passano da lib/audio/voceTradotta.js (modulo unico).
+    // I pegni di stanza si controllano LI', una volta; e che i due hook
+    // glieli passino davvero.
     for (const hook of ['app/hooks/useInterpreterMode.js', 'app/hooks/useStreamingInterpreter.js']) {
+      const h = leggi(hook);
+      expect(h, hook).toMatch(/chiediVoce(?:Unica)?\([^)]*\{[\s\S]{0,200}roomSessionToken: roomSessionTokenRef\?\.current/);
+    }
+    for (const hook of ['app/lib/audio/voceTradotta.js']) {
       const src = leggi(hook);
-      // b.352 — l'interprete ora ha PIU motori (edge + premium con ripiego):
-      // la rotta edge non e piu in una fetch fissa ma nell'elenco dei motori.
       const i = src.indexOf("'/api/tts-edge'");
       expect(i, hook).toBeGreaterThan(-1);
       // b.352 — nello streaming la voce passa da chiediVoce (piu motori con

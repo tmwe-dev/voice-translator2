@@ -489,8 +489,12 @@ describe('ciò che non deve essersi rotto', () => {
     // codice invece di COSA deve essere vero si mette di traverso ai
     // lavori giusti: adesso chiede che la voce passi dal salvavita, non
     // come lo si chiama.
-    expect(corpo).toMatch(/apiCircuitBreaker\.execute\(\s*[`'"]interpreter-tts/);
-    expect(corpo, 'invio al partner').toContain('interpreter-subtitle');
+    // b.599 — la voce passa dal modulo unico (lib/audio/voceTradotta.js),
+    // e il salvavita sta li' dentro: qui si chiede solo che il blocco la
+    // chiami; il nome del messaggio viene da lib/eventi.js.
+    expect(corpo).toMatch(/await chiediVoce\(translated/);
+    expect(leggi('app/lib/audio/voceTradotta.js')).toMatch(/apiCircuitBreaker\.execute\(\s*[`'"]interpreter-tts/);
+    expect(corpo, 'invio al partner').toContain('MSG.SOTTOTITOLO');
   });
 
   it('e nel ripiego la voce ha DUE motori, non uno (b.381)', () => {
@@ -498,15 +502,20 @@ describe('ciò che non deve essersi rotto', () => {
     // il difetto: quando lo streaming non parte si cadeva qui, e qui
     // c'era solo Edge con un `return` muto. Cioe il secondo motore
     // mancava proprio nel momento in cui serviva.
-    expect(s, 'motore di ripiego').toContain('/api/tts-elevenlabs');
-    expect(s, 'motore primario').toContain('/api/tts-edge');
-    expect(s, 'e se cadono tutti e due lo si dice').toContain('voce-non-disponibile');
+    // b.599 — i due motori stanno nel modulo unico, usato da tutte e due
+    // le pipeline: il ripiego non puo' piu' avere meno motori dello streaming.
+    const v = leggi('app/lib/audio/voceTradotta.js');
+    expect(v, 'motore di ripiego').toContain('/api/tts-elevenlabs');
+    expect(v, 'motore primario').toContain('/api/tts-edge');
+    expect(s, 'il ripiego usa il modulo').toMatch(/await chiediVoce\(translated/);
+    expect(s, 'e se cadono tutti e due lo si dice').toContain('EVENTO.VOCE_NON_DISPONIBILE');
   });
 
   it("l'interprete in streaming continua a mandare sottotitoli e voce", () => {
     const s = streaming();
-    expect(s).toContain("type: 'interpreter-subtitle'");
-    expect(s).toContain("type: 'interpreter-audio'");
-    expect(s).toContain("'/api/tts-edge'");
+    // b.599 — nomi da lib/eventi.js, invio dal modulo unico.
+    expect(s).toContain("type: MSG.SOTTOTITOLO");
+    expect(s).toMatch(/inviaAudioDC\(webrtc, await blobABase64\(ttsBlob\)\)/);
+    expect(leggi('app/lib/audio/voceTradotta.js')).toContain("'/api/tts-edge'");
   });
 });

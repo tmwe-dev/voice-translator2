@@ -66,8 +66,9 @@ describe('chi chiama non ripiega, e soprattutto non paga, per il nulla', () => {
   });
 
   it('l interprete non cambia motore: non c e niente da tradurre in voce', () => {
-    expect(leggi('hooks/useInterpreterMode.js')).toMatch(/r\?\.status === 204\) return;/);
-    expect(leggi('hooks/useStreamingInterpreter.js')).toMatch(/r\.status === 204\) return null;/);
+    // b.599 — il 204 lo capisce il modulo unico, per tutte e due le pipeline.
+    expect(leggi('lib/audio/voceTradotta.js')).toMatch(/r\.status === 204\) \{ esito\.motivo = 'niente-da-dire'; return esito; \}/);
+    expect(leggi('hooks/useInterpreterMode.js')).toMatch(/if \(motivo === 'niente-da-dire'\) return;/);
   });
 
   it('le due schermate che pagherebbero OpenAI si fermano prima', () => {

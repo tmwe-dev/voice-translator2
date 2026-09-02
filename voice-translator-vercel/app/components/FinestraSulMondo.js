@@ -9,6 +9,7 @@ import { settingsDaPrefs } from '../lib/mondo/settings.js';
 import { profileDaPrefs, topicDichiarati } from '../lib/mondo/profile.js';
 import { matchesFollowed, trafficFromEvents } from '../lib/mondo/breaking.js';
 import { disableMondoPush, enableMondoPush, pushDisponibile, syncMondoPush } from '../lib/mondo/pushClient.js';
+import { EVENTO } from '../lib/eventi.js';   // b.599
 
 // ═══════════════════════════════════════════════════════════════
 // MONDO LIVE (b.580)
@@ -170,7 +171,7 @@ export default function FinestraSulMondo({ C, L, lingua, prefs, attiva, paese, o
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const following = events.filter((e) => matchesFollowed(e, profile));
-    window.dispatchEvent(new CustomEvent('bartalk:mondo-layer', {
+    window.dispatchEvent(new CustomEvent(EVENTO.MONDO_LAYER, {
       detail: {
         layer,
         live: trafficFromEvents(events),

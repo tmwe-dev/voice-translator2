@@ -4,6 +4,7 @@ import Icon from '../Icon.js';
 import { FONT, vibrate } from '../../lib/constants.js';
 import AppContext from '../../contexts/AppContext.js';
 import { suona } from '../../lib/voce.js';
+import { EVENTO } from '../../lib/eventi.js';
 import {
   frasiCompiute, prossimaDaDire, viaAsiatica, disponibile,
 } from '../../lib/interpreteVideo.js';
@@ -22,7 +23,7 @@ const ORIGINE_YT = 'https://www.youtube-nocookie.com';
 const PASSO_MS = 250;
 const MODI = ['spento', 'sottotitoli', 'voce'];
 const MODO_KEY = 'bartalk-interprete-video-modo-v1';
-const MODO_EVENTO = 'bartalk:interprete-video-modo';
+const MODO_EVENTO = EVENTO.INTERPRETE_VIDEO_MODO;   // b.599 — lib/eventi.js
 const RITENTA_DOPO_MS = 1800;
 const MAX_PREPARATE = 2;
 const TOLLERANZA_PARTENZA = 0.08;

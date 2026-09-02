@@ -4,10 +4,13 @@ import { createNoiseGate } from '../lib/noiseGate.js';
 import { apiCircuitBreaker } from '../lib/circuitBreaker.js';
 import useStreamingInterpreter from './useStreamingInterpreter.js';
 import { createLogger } from '../lib/logger.js';
-import { getVoceChiamata, getVolumeTTS } from '../lib/audioPrefs.js';
 import { prendiVoce, rendiVoce } from '../lib/microfonoMaster.js';
-const dbg = createLogger('interpreter');
-
+// b.599 — la voce tradotta (richiesta ai motori, base64, invio DC,
+// riproduzione, riassemblaggio) vive in UN modulo condiviso con lo
+// streaming: qui ne restano solo le chiamate. Vedi lib/audio/voceTradotta.js.
+import {
+  chiediVoce, blobABase64, inviaAudioDC, creaRiassemblatore, riproduciBase64,
+} from '../lib/audio/voceTradotta.js';
 // b.598 — LA VOCE, ANTICIPATA. Prima l'attenuazione della voce del
 // partner partiva SOLO quando la voce TRADOTTA era pronta a suonare
 // (secondi dopo che l'utente aveva gia iniziato a parlare — l'intero
@@ -16,11 +19,10 @@ const dbg = createLogger('interpreter');
 // ascoltare l'utente". Il cancello del rumore (noiseGate.js) sa gia,
 // in tempo reale, quando l'utente ha COMINCIATO a parlare — lo usa gia
 // per se stesso. Qui lo si ascolta anche da fuori: stesso segnale,
-// nessun secondo rilevatore.
-function avvisaVoceLocale(parlando) {
-  try { window.dispatchEvent(new CustomEvent('bartalk:voce-locale', { detail: { parlando: !!parlando } })); }
-  catch { /* fuori dal browser non c'e nessuno da avvisare: si prosegue */ }
-}
+// nessun secondo rilevatore. b.599: il nome dell'evento e l'aiutante
+// stanno in lib/eventi.js.
+import { EVENTO, MSG, avvisaVoceLocale, lancia } from '../lib/eventi.js';
+const dbg = createLogger('interpreter');
 
 // ═══════════════════════════════════════
 // useInterpreterMode — Bidirectional real-time STT → Translate → TTS
@@ -103,75 +105,24 @@ export default function useInterpreterMode({
   // Track subtitle timeout IDs for cleanup on unmount
   const subtitleTimersRef = useRef([]);
 
-  // Buffer for reassembling chunked audio parts
-  const audioPartsRef = useRef({}); // { [id]: { parts: {}, total: number, ts: number } }
+  // b.599 — riassemblaggio dei pezzi audio: modulo unico.
+  const riassemblatoreRef = useRef(creaRiassemblatore());
 
   // Cleanup stale incomplete audio buffers every 30s (prevents memory leaks)
   useEffect(() => {
     const interval = setInterval(() => {
-      const buf = audioPartsRef.current;
-      const now = Date.now();
-      for (const id of Object.keys(buf)) {
-        if (now - (buf[id].ts || 0) > 30000) {
-          console.warn('[Interpreter] Dropping stale audio buffer:', id);
-          delete buf[id];
-        }
-      }
+      const tolti = riassemblatoreRef.current.pulisci(30000);
+      if (tolti) dbg.warn('pezzi audio orfani buttati', { tolti });
     }, 30000);
     return () => clearInterval(interval);
   }, []);
 
   // Play base64 audio helper — activates ducking while playing
+  // b.599 — era una COPIA divergente di quella dello streaming (i fix
+  // b.381/b.404 mancavano qui, rimessi a mano in b.598). Ora e' la stessa
+  // funzione per tutti e due: lib/audio/voceTradotta.js.
   const playBase64Audio = useCallback((base64Data) => {
-    try {
-      const audioBytes = Uint8Array.from(atob(base64Data), c => c.charCodeAt(0));
-      const blob = new Blob([audioBytes], { type: 'audio/mpeg' });
-      const url = URL.createObjectURL(blob);
-      const audio = new Audio(url);
-      // b.276 — P1: IL VOLUME ORA LO COMANDI TU.
-      // Era fisso a 0,9: spegnere "Ascolta la voce" o abbassare il
-      // cursore non aveva alcun effetto sull'interprete, perche questa
-      // riga non guardava la preferenza. Ora la legge, e a volume zero
-      // non si riproduce affatto.
-      const volume = getVolumeTTS();
-      if (volume <= 0) { URL.revokeObjectURL(url); return; }
-      audio.volume = volume;
-      // Duck partner audio while interpreter speaks
-      // b.276 — P1: L'ATTENUAZIONE DELL'ORIGINALE.
-      // startDucking abbassa un volume interno che la voce del partner
-      // in videochiamata non attraversa: "Solo tradotta / Attenuata /
-      // Entrambe" restava senza effetto durante l'interprete. La stanza
-      // ascolta un avviso preciso per abbassare la voce vera: ora
-      // l'interprete lo manda, come gia fa la voce normale.
-      const avvisa = (acceso) => {
-        try { window.dispatchEvent(new CustomEvent('bartalk:tts', { detail: { attivo: acceso } })); }
-        catch { /* fuori dal browser non c'e nessuno da avvisare: si prosegue */ }
-      };
-      startDucking?.();
-      avvisa(true);
-      // b.598 — LA COPIA CHE B.381/B.404 NON AVEVANO TOCCATO. I due fix
-      // «l'avviso non si spegneva mai» sono stati fatti nello streaming
-      // (useStreamingInterpreter.playBase64Audio) e QUI, nel ripiego, no:
-      // `audio.play().catch(() => {})` inghiottiva il rifiuto senza
-      // spegnere l'avviso, e il `catch` in fondo spegneva il ducking
-      // interno ma non l'avviso alla stanza. Risultato: nel ripiego (che
-      // e' proprio la strada delle chiamate che gia vanno male) la voce
-      // del partner poteva restare attenuata fino al giro dopo. Trovato
-      // dall'audit di architettura b.598 (sovrapposizione 4.1). Stessa
-      // uscita unica dello streaming.
-      const finito = () => {
-        avvisa(false);
-        stopDucking?.();
-        try { URL.revokeObjectURL(url); } catch { /* gia liberato: nulla da fare */ }
-      };
-      audio.play().catch(() => { finito(); });
-      audio.onended = finito;
-      audio.onerror = finito;
-    } catch (e) {
-      console.warn('[Interpreter] Failed to play audio:', e);
-      try { window.dispatchEvent(new CustomEvent('bartalk:tts', { detail: { attivo: false } })); } catch { /* idem: si prosegue */ }
-      stopDucking?.();
-    }
+    riproduciBase64(base64Data, { startDucking, stopDucking });
   }, [startDucking, stopDucking]);
 
   // Process incoming interpreter data from partner
@@ -179,14 +130,14 @@ export default function useInterpreterMode({
     if (!msg) return;
 
     // b.598 — stesso contratto dello streaming (vedi sopra).
-    if (msg.type === 'interpreter-voce-mancata') {
+    if (msg.type === MSG.VOCE_MANCATA) {
       setPartnerVoceMancataLegacy(true);
       clearTimeout(voceMancataTimerRef.current);
       voceMancataTimerRef.current = setTimeout(() => setPartnerVoceMancataLegacy(false), 8000);
       return;
     }
 
-    if (msg.type === 'interpreter-subtitle') {
+    if (msg.type === MSG.SOTTOTITOLO) {
       // Dedup: skip if we already showed this exact subtitle recently
       const fingerprint = `sub:${msg.text}:${msg.lang}`;
       if (seenMsgsRef.current.has(fingerprint)) return;
@@ -214,7 +165,7 @@ export default function useInterpreterMode({
     }
 
     // Single audio message (fits in one DC frame)
-    if (msg.type === 'interpreter-audio' && msg.data) {
+    if (msg.type === MSG.AUDIO && msg.data) {
       // Dedup: skip if we already played this audio (first 40 chars as fingerprint)
       const audioFp = `audio:${msg.data.substring(0, 40)}`;
       if (seenMsgsRef.current.has(audioFp)) return;
@@ -226,21 +177,10 @@ export default function useInterpreterMode({
     }
 
     // Chunked audio message (split across multiple DC frames)
-    if (msg.type === 'interpreter-audio-part' && msg.id && msg.data != null) {
-      const buf = audioPartsRef.current;
-      if (!buf[msg.id]) buf[msg.id] = { parts: {}, total: msg.total, ts: Date.now() };
-      buf[msg.id].parts[msg.part] = msg.data;
-      // Check if all parts received
-      const entry = buf[msg.id];
-      if (Object.keys(entry.parts).length === entry.total) {
-        // Reassemble in order
-        let fullBase64 = '';
-        for (let i = 0; i < entry.total; i++) {
-          fullBase64 += entry.parts[i] || '';
-        }
-        delete buf[msg.id];
-        playBase64Audio(fullBase64);
-      }
+    if (msg.type === MSG.AUDIO_PARTE) {
+      // b.599 — riassemblaggio: modulo unico.
+      const intero = riassemblatoreRef.current.aggiungi(msg);
+      if (intero) playBase64Audio(intero);
     }
   }, [playBase64Audio]);
 
@@ -350,7 +290,7 @@ export default function useInterpreterMode({
       // subito; la voce lo raggiunge quando e pronta.
       if (webrtc?.sendDirectMessage) {
         webrtc.sendDirectMessage({
-          type: 'interpreter-subtitle',
+          type: MSG.SOTTOTITOLO,
           text: translated,
           lang: partnerLang,
           originalText: transcript,
@@ -360,115 +300,38 @@ export default function useInterpreterMode({
 
       // 3. TTS — Generate audio of translation
       //
-      // b.381 — IL RIPIEGO TORNAVA ALLA VECCHIA ARCHITETTURA. Questo e il
-      // percorso in cui si finisce quando lo streaming non parte: cioe
-      // proprio il momento in cui le cose stanno gia andando male. E qui
-      // c'era UN SOLO motore vocale e un `return` muto: se Edge falliva,
-      // la traduzione arrivava scritta e la voce non partiva — nessun
-      // secondo motore, nessun avviso, niente. La catena a due motori
-      // costruita in b.352 viveva solo nello streaming.
-      //
-      // Adesso i due motori ci sono anche qui, nell'ordine che chiede
-      // chi ha aperto la stanza, e se cadono tutti e due lo si DICE
-      // invece di restare in silenzio.
-      // b.530 — vedi lo streaming: la voce scelta comanda anche qui.
-      const voceScelta = getVoceChiamata();
-      // b.598 — LA LINGUA CHE ELEVENLABS NON RICEVEVA. Qui si mandava il
-      // campo `lang`, ma /api/tts-elevenlabs legge SOLO `langCode`
-      // (route.js: `const { text, voiceId, langCode, ... } = await
-      // req.json()`). Lingua vuota = niente voce predefinita per lingua,
-      // niente modello per lingua, niente codice di pronuncia: la
-      // premium parlava con la voce di ripiego globale. Solo nel
-      // ripiego a pezzi; lo streaming mandava gia `langCode`. Trovato
-      // dall'audit di architettura b.598 (sovrapposizione 4.3).
-      const motori = (voceScelta || preferisciEleven)
-        ? [{ rotta: '/api/tts-elevenlabs', campo: 'langCode' }, { rotta: '/api/tts-edge', campo: 'langCode' }]
-        : [{ rotta: '/api/tts-edge', campo: 'langCode' }, { rotta: '/api/tts-elevenlabs', campo: 'langCode' }];
-
-      let ttsRes = null;
-      for (const m of motori) {
-        try {
-          const r = await apiCircuitBreaker.execute(`interpreter-tts:${m.rotta}`, () =>
-            fetch(m.rotta, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                text: translated,
-                [m.campo]: partnerLang,
-                voiceId: voceScelta || undefined,
-                // b.167 — vedi la POST verso /api/translate poco sopra: stesso
-                // motivo, stesso schema.
-                roomId,
-                roomSessionToken: roomId ? (roomSessionTokenRef?.current || undefined) : undefined,
-              }),
-              // b.363 — anche la sintesi vocale era senza scadenza.
-              signal: AbortSignal.timeout(30000),
-            })
-          );
-          // b.552 — 204 = niente da pronunciare (sole emoji o punteggiatura): non e' un guasto, non si suona e non si cambia motore.
-          if (r?.status === 204) return;
-          if (r?.ok) { ttsRes = r; break; }
-        } catch { /* questo motore non risponde: si prova l'altro */ }
-      }
-
-      if (!ttsRes) {
+      // b.381 — IL RIPIEGO TORNAVA ALLA VECCHIA ARCHITETTURA: un solo
+      // motore e un `return` muto. b.598: campo `lang` che ElevenLabs
+      // non leggeva. b.599 — la richiesta ai due motori (ordine, due
+      // tentativi, 402, 204, circuit breaker) e' la STESSA funzione dello
+      // streaming: lib/audio/voceTradotta.js. Le divergenze fra le due
+      // copie sono finite.
+      const { blob: ttsBlob, motivo } = await chiediVoce(translated, {
+        langCode: partnerLang, roomId,
+        roomSessionToken: roomSessionTokenRef?.current,
+        userToken, preferisciEleven,
+      });
+      if (motivo === 'niente-da-dire') return;   // b.552 — sole emoji/punteggiatura
+      if (!ttsBlob) {
         // b.381 — il silenzio era la cosa peggiore: chi parla continuava a
         // parlare credendo che dall'altra parte si sentisse.
         console.warn('[interprete] nessun motore vocale disponibile: la traduzione resta scritta');
-        try { window.dispatchEvent(new CustomEvent('bartalk:voce-non-disponibile')); }
-        catch { /* fuori dal browser non c'e nessuno da avvisare */ }
+        lancia(EVENTO.VOCE_NON_DISPONIBILE);
         // b.598 — l'evento sopra non lo ascolta nessuno: si dice anche
         // nel modo che la UI e il partner capiscono davvero (b.352).
-        try { webrtc?.sendDirectMessage?.({ type: 'interpreter-voce-mancata' }); } catch { /* canale chiuso: il sottotitolo e' gia partito */ }
+        try { webrtc?.sendDirectMessage?.({ type: MSG.VOCE_MANCATA }); } catch { /* canale chiuso: il sottotitolo e' gia partito */ }
         setVoceGuastaLegacy(true);
         setTimeout(() => setVoceGuastaLegacy(false), 8000);
         return;
       }
-      const ttsBlob = await ttsRes.blob();
-      const ttsBuffer = await ttsBlob.arrayBuffer();
-      // Convert to base64 in chunks to avoid "Maximum call stack size exceeded"
-      // (String.fromCharCode(...spread) crashes when array > ~64K elements)
-      const bytes = new Uint8Array(ttsBuffer);
-      let binary = '';
-      const chunkSize = 8192;
-      for (let i = 0; i < bytes.length; i += chunkSize) {
-        binary += String.fromCharCode.apply(null, bytes.subarray(i, i + chunkSize));
-      }
-      const ttsBase64 = btoa(binary);
-
-      // 4. Send via DataChannel to partner
-      // IMPORTANT: pass objects (not strings) — sendDirectMessage handles JSON.stringify + E2E
-      if (webrtc?.sendDirectMessage) {
-        // b.277 — il sottotitolo e gia partito, qui viaggia solo la voce.
-        // Send audio (split into chunks if too large for DC)
-        // Browser RTCDataChannel limit is ~16KB per message.
-        // After JSON.stringify + E2E encryption overhead (~200 bytes),
-        // 10KB base64 chunks stay safely under the 16KB browser limit.
-        const MAX_DC_SIZE = 10000; // 10KB safe for 16KB browser limit + encryption overhead
-        if (ttsBase64.length <= MAX_DC_SIZE) {
-          webrtc.sendDirectMessage({
-            type: 'interpreter-audio',
-            data: ttsBase64,
-          });
-        } else {
-          // Split into parts
-          const parts = Math.ceil(ttsBase64.length / MAX_DC_SIZE);
-          const id = Date.now().toString(36);
-          for (let i = 0; i < parts; i++) {
-            webrtc.sendDirectMessage({
-              type: 'interpreter-audio-part',
-              id,
-              part: i,
-              total: parts,
-              data: ttsBase64.slice(i * MAX_DC_SIZE, (i + 1) * MAX_DC_SIZE),
-            });
-          }
-        }
-      }
+      // 4. Send via DataChannel to partner — b.277 il sottotitolo e gia
+      // partito, qui viaggia solo la voce. b.599: base64 e pezzi da 10 KB
+      // nel modulo unico.
+      inviaAudioDC(webrtc, await blobABase64(ttsBlob));
     } catch (e) {
       console.warn('[Interpreter] Process chunk error:', e);
     }
-  }, [myLang, partnerLang, roomId, roomSessionTokenRef, userToken, webrtc]);
+  }, [myLang, partnerLang, roomId, roomSessionTokenRef, userToken, webrtc, preferisciEleven]);
 
   // Keep processChunkRef in sync so recorder.ondataavailable always calls latest version
   // (avoids stale closure if myLang/partnerLang/userToken change mid-recording)

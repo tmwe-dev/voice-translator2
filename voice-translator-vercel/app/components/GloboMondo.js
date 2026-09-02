@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { postoADestra, MARGINE, COLONNA_DESTRA } from '../lib/righello.js';
+import { EVENTO } from '../lib/eventi.js';   // b.599
 
 // ═══════════════════════════════════════════════════════════════
 // IL GLOBO DEL MONDO — il file approvato resta il renderer.
@@ -61,8 +62,8 @@ export default function GloboMondo({ sfondo = false, titolo = 'Il mondo ora', et
       const layer = ['live', 'following', 'community'].includes(d.layer) ? d.layer : 'live';
       setRadar({ layer, live: d.live || {}, following: d.following || {} });
     };
-    window.addEventListener('bartalk:mondo-layer', cambia);
-    return () => window.removeEventListener('bartalk:mondo-layer', cambia);
+    window.addEventListener(EVENTO.MONDO_LAYER, cambia);
+    return () => window.removeEventListener(EVENTO.MONDO_LAYER, cambia);
   }, []);
 
   const trafficoEffettivo = useMemo(() => {

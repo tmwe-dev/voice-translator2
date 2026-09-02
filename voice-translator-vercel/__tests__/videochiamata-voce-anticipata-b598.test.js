@@ -100,22 +100,22 @@ describe('b.598 — noiseGate.onCambio dice quando l\'utente parla', () => {
 // ─────────────────────────────────────────────────────────────
 describe('b.598 — la voce locale attenua il partner subito, non dopo il giro di traduzione', () => {
   it('tutte e due le pipeline collegano onCambio al cancello e mandano bartalk:voce-locale', () => {
-    const legacy = leggi('app/hooks/useInterpreterMode.js');
-    expect(legacy).toMatch(/function avvisaVoceLocale\(parlando\)/);
-    expect(legacy).toMatch(/new CustomEvent\('bartalk:voce-locale'/);
-    expect(legacy).toMatch(/onCambio: avvisaVoceLocale/);
-    const streaming = leggi('app/hooks/useStreamingInterpreter.js');
-    expect(streaming).toMatch(/onCambio: \(parlando\) =>/);
-    expect(streaming).toMatch(/new CustomEvent\('bartalk:voce-locale'/);
+    // b.599 — l'aiutante sta in lib/eventi.js; tutte e due lo importano.
+    expect(leggi('app/lib/eventi.js')).toMatch(/export const avvisaVoceLocale = \(parlando\) => lancia\(EVENTO\.VOCE_LOCALE/);
+    for (const p of ['app/hooks/useInterpreterMode.js', 'app/hooks/useStreamingInterpreter.js']) {
+      const f = leggi(p);
+      expect(f, p).toMatch(/avvisaVoceLocale.*from '\.\.\/lib\/eventi\.js'/);
+      expect(f, p).toMatch(/onCambio: avvisaVoceLocale/);
+    }
   });
 
   it('la stanza ascolta i due segnali e li mette in OR', () => {
     const r = leggi('app/components/RoomView.js');
     expect(r).toMatch(/attenuazioneAttivaRef = useRef\(\{ tts: false, voceLocale: false \}\)/);
-    expect(r).toMatch(/window\.addEventListener\('bartalk:tts', suTTS\)/);
-    expect(r).toMatch(/window\.addEventListener\('bartalk:voce-locale', suVoceLocale\)/);
+    expect(r).toMatch(/window\.addEventListener\(EVENTO\.TTS, suTTS\)/);
+    expect(r).toMatch(/window\.addEventListener\(EVENTO\.VOCE_LOCALE, suVoceLocale\)/);
     expect(r).toMatch(/attenuazioneAttivaRef\.current\.tts \|\| attenuazioneAttivaRef\.current\.voceLocale/);
-    expect(r).toMatch(/window\.removeEventListener\('bartalk:voce-locale', suVoceLocale\)/);
+    expect(r).toMatch(/window\.removeEventListener\(EVENTO\.VOCE_LOCALE, suVoceLocale\)/);
   });
 });
 
@@ -183,16 +183,18 @@ describe('b.598 — il ripiego a blocchi allineato allo streaming', () => {
     expect(leggi('app/api/tts-elevenlabs/route.js')).toMatch(/const \{ text, voiceId, langCode,/);
   });
   it('playBase64Audio del ripiego spegne l\'avviso da un\'uscita sola (b.381/b.404 anche qui)', () => {
+    // b.599 — la riproduzione e' la STESSA funzione per tutte e due le
+    // pipeline (riproduciBase64, provata per comportamento in
+    // voce-tradotta-modulo-unico-b599.test.js): qui si chiede solo che
+    // il ripiego la usi e non ne tenga una copia.
     const corpo = f.slice(f.indexOf('const playBase64Audio = useCallback'), f.indexOf('const handleInterpreterMessage'))
-      .split('\n').filter(l => !l.trim().startsWith('//')).join('\n');   // il commento racconta il vecchio difetto: non conta
-    expect(corpo).toMatch(/const finito = \(\) => \{\s*\n\s*avvisa\(false\);/);
-    expect(corpo).toMatch(/audio\.play\(\)\.catch\(\(\) => \{ finito\(\); \}\)/);
-    expect(corpo).toMatch(/audio\.onended = finito;\s*\n\s*audio\.onerror = finito;/);
-    expect(corpo).not.toMatch(/audio\.play\(\)\.catch\(\(\) => \{\}\)/);
+      .split('\n').filter(l => !l.trim().startsWith('//')).join('\n');
+    expect(corpo).toMatch(/riproduciBase64\(base64Data, \{ startDucking, stopDucking \}\)/);
+    expect(corpo).not.toMatch(/new Audio\(/);
   });
   it('la voce mancata usa il contratto dello streaming: DataChannel + stato, in invio e in ricezione', () => {
-    expect(f).toMatch(/webrtc\?\.sendDirectMessage\?\.\(\{ type: 'interpreter-voce-mancata' \}\)/);
-    expect(f).toMatch(/if \(msg\.type === 'interpreter-voce-mancata'\) \{\s*\n\s*setPartnerVoceMancataLegacy\(true\)/);
+    expect(f).toMatch(/webrtc\?\.sendDirectMessage\?\.\(\{ type: MSG\.VOCE_MANCATA \}\)/);
+    expect(f).toMatch(/if \(msg\.type === MSG\.VOCE_MANCATA\) \{\s*\n\s*setPartnerVoceMancataLegacy\(true\)/);
     expect(f).toMatch(/voceGuasta: streaming\.voceGuasta \|\| voceGuastaLegacy/);
     expect(f).toMatch(/partnerVoceMancata: streaming\.partnerVoceMancata \|\| partnerVoceMancataLegacy/);
   });

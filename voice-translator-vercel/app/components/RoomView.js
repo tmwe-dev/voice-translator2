@@ -40,6 +40,7 @@ import { eDiretta } from '../lib/decisioni.js';
 // la lettura pubblica di una stanza non li manda apposta, e due punti
 // del client davano per scontato un array e morivano.
 import { membriDi } from '../lib/membri.js';
+import { EVENTO } from '../lib/eventi.js';   // b.599 — i nomi degli eventi, in un posto solo
 
 // b.470 — la veste di una voce del pannello: alta 44 come ogni altro
 // tasto (regola dei quarantaquattro), a tutta larghezza, senza riquadro.
@@ -512,11 +513,11 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
     };
     const suTTS = (e) => { attenuazioneAttivaRef.current.tts = !!e.detail?.attivo; applica(); };
     const suVoceLocale = (e) => { attenuazioneAttivaRef.current.voceLocale = !!e.detail?.parlando; applica(); };
-    window.addEventListener('bartalk:tts', suTTS);
-    window.addEventListener('bartalk:voce-locale', suVoceLocale);
+    window.addEventListener(EVENTO.TTS, suTTS);
+    window.addEventListener(EVENTO.VOCE_LOCALE, suVoceLocale);
     return () => {
-      window.removeEventListener('bartalk:tts', suTTS);
-      window.removeEventListener('bartalk:voce-locale', suVoceLocale);
+      window.removeEventListener(EVENTO.TTS, suTTS);
+      window.removeEventListener(EVENTO.VOCE_LOCALE, suVoceLocale);
     };
   }, [partnerVolume]);
 

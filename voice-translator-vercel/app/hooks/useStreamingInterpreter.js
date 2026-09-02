@@ -4,8 +4,15 @@ import { getLang } from '../lib/constants.js';
 import { createNoiseGate } from '../lib/noiseGate.js';
 import { deepgramAmmesso, USO } from '../lib/sttPolicy.js';
 import { createLogger } from '../lib/logger.js';
-import { getVoceChiamata, getVolumeTTS } from '../lib/audioPrefs.js';
 import { prendiVoce, rendiVoce } from '../lib/microfonoMaster.js';
+// b.599 — la voce tradotta (richiesta, base64, invio DC, riproduzione,
+// riassemblaggio) vive in UN modulo condiviso con useInterpreterMode:
+// qui ne restano solo le chiamate. Vedi lib/audio/voceTradotta.js.
+import {
+  chiediVoce as chiediVoceUnica, blobABase64, inviaAudioDC, creaRiassemblatore,
+  riproduciBase64, regolaVolumeInCorsa, fermaAudio,
+} from '../lib/audio/voceTradotta.js';
+import { EVENTO, MSG, avvisaVoceLocale } from '../lib/eventi.js';
 const dbg = createLogger('streaming');
 
 // ═══════════════════════════════════════════════════════════════
@@ -163,7 +170,7 @@ export default function useStreamingInterpreter({
   const sendSubtitleToPartner = useCallback((translatedText, originalText, isFinal) => {
     if (!webrtc?.sendDirectMessage || !translatedText) return;
     webrtc.sendDirectMessage({
-      type: 'interpreter-subtitle',
+      type: MSG.SOTTOTITOLO,
       text: translatedText,
       lang: partnerLang,
       originalText,
@@ -189,40 +196,15 @@ export default function useStreamingInterpreter({
   const audioCorrenteRef = useRef(null);
 
   const chiediVoce = useCallback(async (testo) => {
-    // b.530 — la voce SCELTA (pannello Volumi della chiamata) si legge
-    // a ogni frase: cambiarla a meta chiamata vale dalla frase dopo.
-    // Una voce con nome esiste solo sulla premium: se ne hai scelta
-    // una, la premium prova per prima.
-    const voceScelta = getVoceChiamata();
-    const base = {
-      text: testo, langCode: partnerLang, roomId,
-      voiceId: voceScelta || undefined,
-      roomSessionToken: roomId ? (roomSessionTokenRef?.current || undefined) : undefined,
-      userToken: userToken || undefined,
-    };
-    const motori = (voceScelta || preferisciElevenRef.current)
-      ? ['/api/tts-elevenlabs', '/api/tts-edge']
-      : ['/api/tts-edge', '/api/tts-elevenlabs'];
-    for (const rotta of motori) {
-      for (let tentativo = 0; tentativo < 2; tentativo++) {
-        try {
-          const r = await fetch(rotta, {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(base),
-            // b.363 — la voce dell'interprete non aveva scadenza: una
-            // richiesta appesa bloccava il giro dei due motori e chi
-            // ascoltava non sentiva niente ne capiva perche.
-            signal: AbortSignal.timeout(30000),
-          });
-          // b.552 — 204 = niente da pronunciare (sole emoji o punteggiatura): non e' un guasto, non si suona e non si cambia motore.
-          if (r.status === 204) return null;
-          if (r.ok) return await r.blob();
-          // credito esaurito sulla premium: inutile riprovarla, si passa oltre
-          if (r.status === 402) break;
-        } catch { /* rete inciampata: il prossimo giro riprova */ }
-      }
-    }
-    return null;
+    // b.530 — la voce SCELTA si legge a ogni frase (dentro chiediVoceUnica).
+    // b.599 — l'ordine dei motori, i due tentativi, il 402, il 204 e il
+    // circuit breaker stanno nel modulo unico: identici al ripiego.
+    const { blob } = await chiediVoceUnica(testo, {
+      langCode: partnerLang, roomId,
+      roomSessionToken: roomSessionTokenRef?.current,
+      userToken, preferisciEleven: preferisciElevenRef.current,
+    });
+    return blob;
   }, [partnerLang, roomId, roomSessionTokenRef, userToken]);
 
   const speakAndSend = useCallback(async (translatedText) => {
@@ -231,37 +213,13 @@ export default function useStreamingInterpreter({
       const ttsBlob = await chiediVoce(translatedText);
       if (!ttsBlob) {
         // Il silenzio non resta mai muto: chi ascolta vede il perche.
-        webrtc?.sendDirectMessage?.({ type: 'interpreter-voce-mancata' });
+        webrtc?.sendDirectMessage?.({ type: MSG.VOCE_MANCATA });
         setVoceGuasta(true);
         setTimeout(() => setVoceGuasta(false), 8000);
         return;
       }
-      const buffer = await ttsBlob.arrayBuffer();
-      const bytes = new Uint8Array(buffer);
-      let binary = '';
-      const chunkSize = 8192;
-      for (let i = 0; i < bytes.length; i += chunkSize) {
-        binary += String.fromCharCode.apply(null, bytes.subarray(i, i + chunkSize));
-      }
-      const base64 = btoa(binary);
-
-      // Send audio via DataChannel
-      if (webrtc?.sendDirectMessage) {
-        const MAX_DC_SIZE = 10000;
-        if (base64.length <= MAX_DC_SIZE) {
-          webrtc.sendDirectMessage({ type: 'interpreter-audio', data: base64 });
-        } else {
-          const parts = Math.ceil(base64.length / MAX_DC_SIZE);
-          const id = Date.now().toString(36);
-          for (let i = 0; i < parts; i++) {
-            webrtc.sendDirectMessage({
-              type: 'interpreter-audio-part',
-              id, part: i, total: parts,
-              data: base64.slice(i * MAX_DC_SIZE, (i + 1) * MAX_DC_SIZE),
-            });
-          }
-        }
-      }
+      // b.599 — base64 e invio a pezzi: modulo unico.
+      inviaAudioDC(webrtc, await blobABase64(ttsBlob));
     } catch (e) {
       console.warn('[StreamInterp] TTS error:', e);
     }
@@ -563,10 +521,7 @@ export default function useStreamingInterpreter({
       try {
         const ng = createNoiseGate(rawStream, {
           threshold: -45,
-          onCambio: (parlando) => {
-            try { window.dispatchEvent(new CustomEvent('bartalk:voce-locale', { detail: { parlando: !!parlando } })); }
-            catch { /* fuori dal browser non c'e nessuno da avvisare */ }
-          },
+          onCambio: avvisaVoceLocale,
         });
         if (ng?.cleanStream) {
           noiseGateRef.current = ng;
@@ -707,11 +662,8 @@ export default function useStreamingInterpreter({
     fraseInLavorazioneRef.current = null;
     // e la voce che sta parlando ADESSO si ferma: era l'unica cosa che
     // lo stop non toccava.
-    try {
-      const a = audioCorrenteRef.current;
-      if (a) { a.pause(); a.currentTime = 0; }
-      audioCorrenteRef.current = null;
-    } catch { /* l'audio era gia finito: nulla da fermare */ }
+    fermaAudio(audioCorrenteRef.current);
+    audioCorrenteRef.current = null;
 
     // Reset state
     currentSentenceRef.current = '';
@@ -721,12 +673,26 @@ export default function useStreamingInterpreter({
     setPartnerLiveSubtitle('');
   }, [handleSentenceComplete, abortaStreaming]);
 
+
+  // ═══ AUDIO PLAYBACK HELPERS ═══
+  // b.599 — riproduzione e riassemblaggio: modulo unico (lib/audio/
+  // voceTradotta.js). Qui resta solo il legame con lo stato di questo
+  // hook: l'audio in corsa (per fermarlo allo stop e regolarlo in corsa).
+  const riassemblatoreRef = useRef(creaRiassemblatore());
+
+  const playBase64Audio = useCallback((base64Data) => {
+    riproduciBase64(base64Data, {
+      startDucking, stopDucking,
+      onAudio: (a) => { audioCorrenteRef.current = a; },
+    });
+  }, [startDucking, stopDucking]);
+
   // ═══ HANDLE INCOMING FROM PARTNER ═══
   // Il partner che usa lo stesso hook manda subtitle e audio
   const handleIncomingMessage = useCallback((msg) => {
     if (!msg) return;
 
-    if (msg.type === 'interpreter-subtitle') {
+    if (msg.type === MSG.SOTTOTITOLO) {
       if (msg.isFinal) {
         setPartnerSubtitles(prev => [...prev.slice(-20), {
           text: msg.text, original: msg.originalText, lang: msg.lang, ts: Date.now()
@@ -755,133 +721,35 @@ export default function useStreamingInterpreter({
       }
     }
 
-    // Audio playback (same logic as old interpreter)
-    if (msg.type === 'interpreter-voce-mancata') {
+    if (msg.type === MSG.VOCE_MANCATA) {
       setPartnerVoceMancata(true);
       clearTimeout(voceMancataTimerRef.current);
       voceMancataTimerRef.current = setTimeout(() => setPartnerVoceMancata(false), 8000);
     }
-    if (msg.type === 'interpreter-audio' && msg.data) {
+    if (msg.type === MSG.AUDIO && msg.data) {
       playBase64Audio(msg.data);
     }
-    if (msg.type === 'interpreter-audio-part') {
-      handleAudioPart(msg);
+    if (msg.type === MSG.AUDIO_PARTE) {
+      const intero = riassemblatoreRef.current.aggiungi(msg);
+      if (intero) playBase64Audio(intero);
     }
-  }, [myLang, partnerLang]);
-
-  // ═══ AUDIO PLAYBACK HELPERS ═══
-  const audioPartsRef = useRef({});
-
-  const playBase64Audio = useCallback((base64Data) => {
-    // b.404 — QUESTA FUNZIONE NASCEVA DENTRO IL TRY, e il rimedio
-    // d'emergenza in fondo (il `catch`) la chiamava da FUORI: li dentro
-    // non esiste. Quindi quando qualcosa andava storto, andava storto
-    // anche il rimedio — e l'avviso che dice alla stanza «la voce
-    // tradotta ha finito» non partiva mai, lasciando la voce vera del
-    // partner attenuata per sempre. Che e esattamente il difetto che
-    // b.381 credeva di aver chiuso.
-    //
-    // E c'e di peggio: e questa riga che da quattro ore faceva fallire
-    // OGNI pubblicazione. Il controllo che la trova gira su Vercel ma
-    // non nelle compilazioni che facevo io in locale, dove lo saltavo.
-    // Otto versioni fatte e nessuna arrivata a Luca.
-    const avvisa = (acceso) => {
-      try { window.dispatchEvent(new CustomEvent('bartalk:tts', { detail: { attivo: acceso } })); }
-      catch { /* fuori dal browser non c'e nessuno da avvisare: si prosegue */ }
-    };
-    try {
-      const audioBytes = Uint8Array.from(atob(base64Data), c => c.charCodeAt(0));
-      const blob = new Blob([audioBytes], { type: 'audio/mpeg' });
-      const url = URL.createObjectURL(blob);
-      const audio = new Audio(url);
-      // b.276 — P1: IL VOLUME ORA LO COMANDI TU.
-      // Era fisso a 0,9: spegnere "Ascolta la voce" o abbassare il
-      // cursore non aveva alcun effetto sull'interprete, perche questa
-      // riga non guardava la preferenza. Ora la legge, e a volume zero
-      // non si riproduce affatto.
-      const volume = getVolumeTTS();
-      if (volume <= 0) { URL.revokeObjectURL(url); return; }
-      audio.volume = volume;
-      // b.352 — il cursore agisce ANCHE sulla frase in corso: prima il
-      // volume si leggeva solo all'avvio e muoverlo durante il parlato
-      // non faceva nulla ("i comandi non funzionano", collaudo di Luca).
-      audioCorrenteRef.current = audio;
-      // b.276 — P1: L'ATTENUAZIONE DELL'ORIGINALE.
-      // startDucking abbassa un volume interno che la voce del partner
-      // in videochiamata non attraversa: "Solo tradotta / Attenuata /
-      // Entrambe" restava senza effetto durante l'interprete. La stanza
-      // ascolta un avviso preciso per abbassare la voce vera: ora
-      // l'interprete lo manda, come gia fa la voce normale.
-      startDucking?.();
-      avvisa(true);
-      // b.381 — L'AVVISO SI SPEGNEVA MAI. Si accendeva quando partiva la
-      // voce tradotta e non veniva PIU rimesso a false: ne alla fine, ne
-      // in caso di errore. La stanza ascolta proprio questo per abbassare
-      // la voce vera del partner — quindi restava attenuata per sempre,
-      // fino al prossimo giro di voce tradotta.
-      //
-      // Si spegne in UN posto solo, chiamato da tutte e tre le uscite: se
-      // lo si scrivesse tre volte, la prossima uscita nuova se lo
-      // dimenticherebbe di nuovo. E' esattamente cosi che e nato questo
-      // difetto.
-      const finito = () => {
-        avvisa(false);
-        stopDucking?.();
-        try { URL.revokeObjectURL(url); } catch { /* gia liberato: nulla da fare */ }
-        if (audioCorrenteRef.current === audio) audioCorrenteRef.current = null;
-      };
-      audio.play().catch(() => { finito(); });
-      audio.onended = finito;
-      audio.onerror = finito;
-    } catch { avvisa(false); stopDucking?.(); }
-  }, [startDucking, stopDucking]);
-
-  const handleAudioPart = useCallback((msg) => {
-    const buf = audioPartsRef.current;
-    if (!buf[msg.id]) buf[msg.id] = { parts: {}, total: msg.total, ts: Date.now() };
-    buf[msg.id].parts[msg.part] = msg.data;
-    const entry = buf[msg.id];
-    if (Object.keys(entry.parts).length === entry.total) {
-      let full = '';
-      for (let i = 0; i < entry.total; i++) full += entry.parts[i] || '';
-      delete buf[msg.id];
-      playBase64Audio(full);
-    }
-  }, [playBase64Audio]);
+    // b.599 — P0.3 dell'audit: le dipendenze erano [myLang, partnerLang]
+    // ma la funzione usa playBase64Audio (closure stantia). Ora e'
+    // dichiarata DOPO le funzioni che usa, con tutte le dipendenze.
+  }, [myLang, partnerLang, playBase64Audio]);
 
   // b.352 — il cursore del volume comanda anche l'audio GIA in corsa.
   useEffect(() => {
-    const suVolume = () => {
-      const a = audioCorrenteRef.current;
-      if (!a) return;
-      const v = getVolumeTTS();
-      // b.381 — RIPORTARE IL VOLUME SU NON FACEVA RIPARTIRE NIENTE.
-      // Portandolo a zero si metteva in pausa, ma rialzandolo si
-      // rimetteva solo il numero: la frase restava ferma. Il cursore
-      // sembrava funzionare e non funzionava — la categoria di difetto
-      // che nessuna prova sulla presenza delle funzioni trova, perche
-      // tutte le funzioni ci sono.
-      try {
-        a.volume = v;
-        if (v <= 0) a.pause();
-        // si riprende solo se e stata la pausa del volume a fermarlo, e
-        // se la frase non era gia finita per conto suo.
-        else if (a.paused && !a.ended) a.play().catch(() => { /* il browser puo rifiutare: non e un guasto */ });
-      } catch { /* l'audio era gia finito: nulla da regolare */ }
-    };
-    window.addEventListener('bartalk:vol-tts', suVolume);
-    return () => window.removeEventListener('bartalk:vol-tts', suVolume);
+    // b.381 — riportare il volume su deve far RIPARTIRE la frase: la
+    // regola sta in regolaVolumeInCorsa (modulo unico).
+    const suVolume = () => { regolaVolumeInCorsa(audioCorrenteRef.current); };
+    window.addEventListener(EVENTO.VOL_TTS, suVolume);
+    return () => window.removeEventListener(EVENTO.VOL_TTS, suVolume);
   }, []);
 
   // Cleanup stale audio buffers
   useEffect(() => {
-    const interval = setInterval(() => {
-      const buf = audioPartsRef.current;
-      const now = Date.now();
-      for (const id of Object.keys(buf)) {
-        if (now - (buf[id].ts || 0) > 30000) delete buf[id];
-      }
-    }, 30000);
+    const interval = setInterval(() => { riassemblatoreRef.current.pulisci(30000); }, 30000);
     return () => clearInterval(interval);
   }, []);
 
