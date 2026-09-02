@@ -1,0 +1,16 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+
+  "entry": [
+    "app/**/{page,layout,route,template}.{js,jsx}",
+    "scripts/*.mjs",
+    "test-fisico-*.mjs",
+    "prova-lingua.mjs",
+    "upstash-shim.mjs",
+    "playwright.prod.config.js"
+  ],
+
+  "ignore": [
+    "public/**"
+  ]
+}

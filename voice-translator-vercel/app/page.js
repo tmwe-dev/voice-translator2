@@ -80,14 +80,6 @@ const CreateRoomSheet = lazy(() => import('./components/CreateRoomSheet.js'));
 // ═══ Always-imported (lightweight, used within RoomView) ═══
 import ProviderBadge from './components/ProviderBadge.js';
 
-// ═══ Lazy loading fallback ═══
-const LazyFallback = () => (
-  <div style={{display:'flex',alignItems:'center',justifyContent:'center',height:'100dvh',background:'#060810'}}>
-    <div style={{width:32,height:32,borderRadius:'50%',border:'3px solid rgba(38,217,176,0.2)',borderTopColor:'#26D9B0',animation:'vtSpin 0.8s linear infinite'}} />
-    <style>{`@keyframes vtSpin { to { transform: rotate(360deg); } }`}</style>
-  </div>
-);
-
 // ═══ Navigation ═══
 import BottomNav from './components/BottomNav.js';
 import NewConversationSheet from './components/NewConversationSheet.js';
@@ -95,6 +87,21 @@ import InvitaAmici, { INVITO_AMICI_VISTO } from './components/InvitaAmici.js';
 // TaxiMode is used inside RoomView, not standalone
 const AIView = lazy(() => import('./components/AIView.js'));
 const DetailView = lazy(() => import('./components/DetailView.js'));
+
+// ═══ Lazy loading fallback ═══
+// b.595 — MODULO 5 (piano qualita): spostato qui SOLO per far funzionare
+// knip (vedi knip.json e la nota in CLAUDE.md) — le graffe dentro il
+// template `<style>{\`@keyframes...{...}\`}</style>` confondevano il suo
+// parser e gli facevano perdere tutti gli import lazy() che venivano
+// dopo nel file (117 falsi "file inutilizzati"). Nessun comportamento
+// cambia: e' la stessa costante, dichiarata prima del suo unico uso
+// (riga ~1483), solo spostata dopo gli import invece che in mezzo.
+const LazyFallback = () => (
+  <div style={{display:'flex',alignItems:'center',justifyContent:'center',height:'100dvh',background:'#060810'}}>
+    <div style={{width:32,height:32,borderRadius:'50%',border:'3px solid rgba(38,217,176,0.2)',borderTopColor:'#26D9B0',animation:'vtSpin 0.8s linear infinite'}} />
+    <style>{`@keyframes vtSpin { to { transform: rotate(360deg); } }`}</style>
+  </div>
+);
 
 // ═══ Context provider for prop drilling elimination ═══
 import { AppProvider } from './contexts/AppContext.js';

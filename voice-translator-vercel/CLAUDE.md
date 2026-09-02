@@ -267,6 +267,75 @@ perche il working tree lo conteneva ancora.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.595** (push #871) — Moduli 5-8 del piano qualita:
+  knip riparato (in parte, onestamente), un test di ancoraggio, la
+  documentazione stantia trovata.
+
+  **Modulo 5 — trovata la causa VERA per cui knip mentiva.** Non era
+  un problema di configurazione: con `--debug` e una bisezione manuale
+  (ridotto app/page.js riga per riga in un repo minimo, ricreato il
+  bug con 6 righe) trovato un bug reale del parser di knip 6.34.0 (gia
+  l'ultima versione — niente da aggiornare): quando un template
+  literal con graffe annidate compare dentro un figlio JSX
+  (`<style>{\`@keyframes x { to { transform: ... } }\`}</style>`) PRIMA
+  di un `lazy(() => import(...))` nello stesso file, knip perde la
+  traccia di OGNI import lazy che segue — da qui i 117 "file
+  inutilizzati" e 70 "export inutilizzati" del vecchio audit (tutti
+  falsi, gia sospettato e confermato con un campione a mano).
+
+  Aggiunto `knip.json` (entry per gli script standalone che gia
+  esistevano ma non erano riconosciuti — scripts/*.mjs, i test-fisico-*
+  di Luca, playwright.prod.config.js usato da ci.yml; ignore su
+  public/** perche' e' servito al browser con <script src>, non
+  importato). Spostata la CONST `LazyFallback` (non il suo
+  comportamento: stessa dichiarazione, stessa riga di primo uso ~1483,
+  solo dopo gli import invece che in mezzo) perche' era la prima delle
+  due occorrenze di quel pattern in page.js e l'unica spostabile senza
+  rischio (l'altra, riga ~1461, e' dentro la render live e non vale il
+  rischio di toccarla solo per un linter).
+
+  **Onestamente: la riparazione e' PARZIALE.** La seconda occorrenza
+  resta, quindi knip perde ancora la traccia di tutto cio che si
+  raggiunge SOLO attraverso il ramo lazy di page.js (quasi tutti i
+  componenti in app/components/, gli hook che usano solo loro). Prova
+  concreta: `CLAY_OMBRA` e `clayCard` (app/lib/constants.js) risultavano
+  "export inutilizzati" ma sono usatissimi dentro components/Life/* —
+  falso positivo dallo stesso bug, non un secondo problema. Quello che
+  invece FUNZIONA ora: i file raggiunti da import statici diretti (le
+  rotte app/api/*/route.js verso app/lib/ e app/wallet/) — la lista
+  "unused exports" per QUESTI e' affidabile.
+
+  **Modulo 6 — un solo risultato verificato, nessuna rimozione.**
+  Usando solo la parte affidabile (import statici): `app/lib/logger.js`
+  esporta un `apiError(message, status, extra)` che non lo chiama
+  nessuno — esiste un SECONDO `apiError(code, message, extra)` del
+  tutto diverso in `app/lib/errors.js`, ed e' quello che usano davvero
+  tts/route.js, translate/route.js eccetera. Due funzioni con lo stesso
+  nome e firma diversa nello stesso progetto e' un rischio di
+  confusione vero, ma la rimozione del duplicato morto e' un cambio a
+  se' (mai mischiare togliere e cambiare) — segnalato, non toccato qui.
+  Il resto della lista exports resta da triare a mano una volta chiusa
+  la seconda occorrenza del Modulo 5 — troppo lavoro per essere sicuro
+  in questa sessione, meglio dirlo che affrettarlo.
+
+  **Modulo 7 — trovato:** `PIANO_IMPLEMENTAZIONE.md` e' stantio.
+  Dichiara "36 API, 17 hook, 27 componenti, 56 moduli lib" e segnala
+  come "mancanti" cose che invece esistono gia' (es. InterpreterView.js
+  c'e', il file lo elenca come da costruire). Non toccato: decidere se
+  aggiornarlo o archiviarlo tocca a Luca, non e' una correzione di
+  codice.
+
+  **Modulo 8 — un solo test, il piu' corto possibile.** Per la regola
+  del giro di lavoro (niente infrastruttura di test oltre la prova piu'
+  breve): un test che legge il sorgente delle 3 rotte toccate dal
+  Modulo 3 e verifica che `trackDailySpend` resti fuoco-e-dimentica
+  (niente `await` davanti, sempre un `.catch(`) — se qualcuno rimette
+  un `await` per sbaglio, questo diventa rosso.
+
+  [VERIFICATO] `npx next build` completa senza errori. eslint pulito su
+  page.js (solo warning preesistenti, righe non toccate). Suite
+  completa 294 file / 3635 test (compreso il nuovo), 0 regressioni.
+
 - Versione: **b.594** (push #870) — MODULO 3 del piano qualita:
   trackDailySpend non piu bloccante ovunque.
 
