@@ -22,9 +22,22 @@ describe('b.527 — il silenzio della traduzione ora si spiega e si ripara', () 
   });
   it('nei sottotitoli: traduzione spenta = un tasto che la accende, non il vuoto', () => {
     const f = leggi('app/components/VideoCallOverlay.js');
-    expect(f).toMatch(/!interpreterActive && setInterpreterActive && !stanzaDiretta && !stanzaConPiuDiDue \? \(/);
+    // b.597 — la condizione unica e diventata tre rami distinti (Stanza
+    // Diretta / gruppo / traduzione solo spenta): ognuno dice il PROPRIO
+    // motivo invece di condividere lo stesso "tocca per accendere" anche
+    // quando accendere non e possibile.
+    expect(f).toMatch(/!interpreterActive && setInterpreterActive \? \(/);
     expect(f).toMatch(/L\('translationOffTap'\)/);
     expect(f).toMatch(/L\('interpreterFailed'\)/);
+  });
+  it('in Stanza Diretta o di gruppo i sottotitoli spiegano il motivo, non restano un vuoto muto', () => {
+    // b.597 — Luca dal vivo (nuovo audit): "poi non traduce", senza che
+    // niente lo spiegasse. In Stanza Diretta/gruppo il pannello prima
+    // cadeva sul generico captionsWillAppear ("appariranno qui"), una
+    // promessa che li non si avvera mai.
+    const f = leggi('app/components/VideoCallOverlay.js');
+    expect(f).toMatch(/\) : stanzaDiretta \? \(/);
+    expect(f).toMatch(/\) : stanzaConPiuDiDue \? \(/);
   });
 });
 

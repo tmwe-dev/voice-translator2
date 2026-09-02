@@ -427,11 +427,34 @@ const VideoCallOverlay = memo(function VideoCallOverlay({
                           {latest.text}
                         </div>
                       </>
-                    ) : !interpreterActive && setInterpreterActive && !stanzaDiretta && !stanzaConPiuDiDue ? (
+                    ) : stanzaDiretta ? (
+                      // b.597 — IL SILENZIO SPIEGATO ANCHE QUI. Prima, in
+                      // una Stanza Diretta, questo riquadro diceva sempre
+                      // "le traduzioni appariranno qui appena parlate" —
+                      // una promessa che in una Stanza Diretta non si
+                      // avvera MAI (la voce non passa dai server per
+                      // scelta di design, vedi directNoCloud). Luca dal
+                      // vivo: "non traduce" — perche non poteva, e niente
+                      // lo diceva finche non si andava a scovare il motivo
+                      // dentro "Altro".
+                      <div style={{ fontSize: 12.5, color: 'rgba(238,242,255,0.5)', fontStyle: 'italic' }}>
+                        {L('directNoCloud')}
+                      </div>
+                    ) : stanzaConPiuDiDue ? (
+                      // b.597 — stesso principio, per la stanza di gruppo:
+                      // il pannello spiega subito perche non arriva niente,
+                      // invece di lasciar credere che stia per arrivare.
+                      <div style={{ fontSize: 12.5, color: 'rgba(238,242,255,0.5)', fontStyle: 'italic' }}>
+                        {L('interpreterTwoOnly')}
+                      </div>
+                    ) : !interpreterActive && setInterpreterActive ? (
                       // b.527 — IL SILENZIO SPIEGATO, dov'era muto. Nel
                       // collaudo di Luca i sottotitoli restavano vuoti e
                       // niente diceva PERCHE: se la traduzione e spenta,
                       // qui ora c'e scritto, ed e il tasto per accenderla.
+                      // b.597 — il comando gemello vive ora anche nella
+                      // barra principale (vedi piu sotto): questo resta
+                      // un secondo modo di trovarlo, non l'unico.
                       <button onClick={() => setInterpreterActive(true)}
                         style={{
                           display: 'flex', alignItems: 'center', gap: 8, minHeight: 40, padding: '0 12px',
@@ -610,14 +633,11 @@ const VideoCallOverlay = memo(function VideoCallOverlay({
             {[
               { chiave: 'ruota', icona: <IconFlipCamera size={17}/>, parola: L('rotateWord'), acceso: false,
                 fa: () => webrtc.flipCamera() },
-              ...(setInterpreterActive ? [{ chiave: 'interprete', icona: <IconGlobe size={17}/>,
-                parola: interpreterActive ? L('translatingWord') : L('translateWord'),
-                acceso: interpreterActive && !stanzaDiretta && !stanzaConPiuDiDue,
-                fa: () => {
-                  if (stanzaDiretta) { toast.info(L('directNoCloud')); return; }
-                  if (stanzaConPiuDiDue) { toast.info(L('interpreterTwoOnly')); return; }
-                  setInterpreterActive(!interpreterActive);
-                } }] : []),
+              // b.597 — «interprete» non abita piu qui: e diventato un
+              // comando primario nella barra (Luca: "non si sa come
+              // attivarla"). Restava, sarebbero stati DUE interruttori per
+              // la stessa cosa in due posti diversi — piu confusione, non
+              // meno.
               { chiave: 'cc', icona: <span style={{ fontSize: 12, fontWeight: 500, letterSpacing: 0.5 }}>CC</span>,
                 parola: L('subtitlesWord'), acceso: mostraTesto, fa: () => setMostraTesto(v => !v) },
               { chiave: 'voce', icona: volTTS > 0.01 ? <IconVolume size={17}/> : <IconVolumeOff size={17}/>,
@@ -647,9 +667,13 @@ const VideoCallOverlay = memo(function VideoCallOverlay({
           </div>
         )}
 
-        {/* ═══ b.491 — LA BARRA DELLA TAVOLA 18: tre comandi soli, grandi,
-            e il rosso e solo per chiudere. Sparisce da sola dopo qualche
-            secondo; un tocco ovunque la riporta. ═══ */}
+        {/* ═══ b.491 — LA BARRA DELLA TAVOLA 18: comandi grandi, il rosso
+            solo per chiudere. b.597 — «tre comandi soli» si allarga a
+            quattro: la traduzione (vedi sotto) e nata come parte di
+            "Altro" e in pratica restava invisibile — Luca l'ha segnalato
+            due volte prima di questa correzione. Restano fuori dalla
+            barra solo i comandi davvero secondari (ruota, sottotitoli,
+            voce, volumi, schermo). ═══ */}
         <div style={{
           padding: '10px 10px', paddingBottom: 'max(14px, env(safe-area-inset-bottom))',
           display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 14,
@@ -678,6 +702,35 @@ const VideoCallOverlay = memo(function VideoCallOverlay({
               WebkitTapHighlightColor: 'transparent' }}>
             {webrtc.videoEnabled ? <IconCamera size={22}/> : <IconCameraOff size={22}/>}
           </button>
+          {/* ═══ b.597 — LA TRADUZIONE, PROMOSSA A COMANDO PRIMARIO.
+              Prima viveva SOLO dentro "Altro": due tocchi, un'icona fra
+              sei, nessuna indicazione che fosse li. Luca dal vivo: "non si
+              sa come attivarla, come disattivarla". Ora e qui, un tocco,
+              sempre visibile, con lo stato che si vede (acceso = colorato).
+              In Stanza Diretta o di gruppo resta comunque tappabile: dice
+              perche non si puo' invece di sparire e basta. ═══ */}
+          {setInterpreterActive && (
+            <button onClick={() => {
+                if (stanzaDiretta) { toast.info(L('directNoCloud')); return; }
+                if (stanzaConPiuDiDue) { toast.info(L('interpreterTwoOnly')); return; }
+                setInterpreterActive(!interpreterActive);
+              }}
+              aria-pressed={interpreterActive && !stanzaDiretta && !stanzaConPiuDiDue}
+              aria-label={interpreterActive ? L('translatingWord') : L('translateWord')}
+              title={interpreterActive ? L('translatingWord') : L('translateWord')}
+              style={{ width: 44, height: 44, borderRadius: 22, cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: (interpreterActive && !stanzaDiretta && !stanzaConPiuDiDue)
+                  ? `${S?.colors?.accent2 || '#38e1ff'}30` : 'rgba(5,7,15,0.6)',
+                border: `1px solid ${(interpreterActive && !stanzaDiretta && !stanzaConPiuDiDue)
+                  ? `${S?.colors?.accent2 || '#38e1ff'}90` : 'rgba(160,190,255,0.2)'}`,
+                color: (interpreterActive && !stanzaDiretta && !stanzaConPiuDiDue)
+                  ? (S?.colors?.accent2 || '#38e1ff') : '#fff',
+                opacity: (stanzaDiretta || stanzaConPiuDiDue) ? 0.55 : 1,
+                WebkitTapHighlightColor: 'transparent' }}>
+              <IconGlobe size={20}/>
+            </button>
+          )}
           {/* chiudi — il rosso e solo per questo */}
           <button
             onClick={() => { webrtc.disconnect(); setShowVideoCall(false); setVideoFullscreen(false); }}

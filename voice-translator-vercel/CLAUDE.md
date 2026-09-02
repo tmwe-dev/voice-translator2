@@ -267,6 +267,96 @@ perche il working tree lo conteneva ancora.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.597** (push #873) — Audit della traduzione in
+  videochiamata (richiesta di Luca: "non si capisce un cazzo... non si
+  sa come attivarla... poi non traduce") + due difetti confermati e
+  corretti, con prova.
+
+  **L'audit, con le mani nel codice e nei log live (non a memoria).**
+  Letti per intero VideoCallOverlay.js, RoomView.js, useInterpreterMode.js,
+  useStreamingInterpreter.js, noiseGate.js, webrtc.js, audioPrefs.js.
+  Interrogati i log runtime Vercel (7 giorni) di /api/transcribe,
+  /api/translate, /api/tts-edge, /api/tts-elevenlabs. Confermato che la
+  produzione gira gia su b.596 (deploy READY, commit 8d9bd5f) — non era
+  un problema di deploy in ritardo.
+
+  **Cosa NON era rotto (e non e' stato toccato):**
+  L'attenuazione automatica della voce originale mentre parla la
+  traduzione ESISTE gia e funziona: evento `bartalk:tts` + `audio.volume
+  = partnerVolume * getAttenuazione()` su RoomView, con tre preset
+  scelti dall'utente (solo tradotta / attenuata / entrambe) — esattamente
+  il flusso "abbassa in automatico, poi lascia scegliere all'utente" che
+  Luca ha descritto. Il microfono ha gia isolamento standard
+  (echoCancellation/noiseSuppression/autoGainControl via getUserMedia)
+  piu un noise gate RMS dedicato (noiseGate.js, soglia -45dB) sul flusso
+  che va alla trascrizione. **Limite tecnico onesto**: questo e
+  soppressione di rumore generico, non separazione di DUE voci umane
+  che parlano insieme (diarizzazione/isolamento vocale) — quella e
+  un'altra classe di problema (servizi tipo Krisp), non implementata e
+  non implementabile gratis nel browser. Nessuna di queste parti e
+  stata toccata.
+
+  **Due difetti CONFERMATI e corretti in VideoCallOverlay.js:**
+
+  1. Il comando che accende/spegne la traduzione viveva SOLO dentro il
+     cassetto "Altro" (⋯): due tocchi, un'icona fra sei righe, nessuna
+     indicazione che fosse li. Risposta diretta a "non si sa come
+     attivarla, come disattivarla": promosso a comando primario nella
+     barra (accanto a microfono e telecamera), un tocco, stato visibile
+     (colorato quando acceso). Tolto dal cassetto "Altro" — un solo
+     comando, un solo posto, non due interruttori per la stessa cosa.
+
+  2. In una Stanza Diretta o in una stanza di gruppo (>2 persone) la
+     traduzione cloud e strutturalmente spenta (per scelta di design:
+     "la voce non passa dai server"/"funziona solo a due"), ma il
+     pannello sottotitoli mostrava sempre "le traduzioni appariranno
+     qui appena parlate" — una promessa che li non si avvera MAI.
+     Risposta diretta a "poi non traduce": ora il pannello dice SUBITO
+     il motivo vero (gli stessi messaggi gia usati nel toast di
+     "Altro"), invece di lasciar credere che stia per arrivare qualcosa.
+
+  **Cosa Luca stesso aveva chiesto in b.491 e che questa correzione
+  rovescia in parte**: "tre comandi soli in barra". Con la traduzione
+  promossa, la barra passa da tre a quattro comandi primari (microfono,
+  telecamera, traduci, chiudi) + Altro. Lo dichiaro qui invece di
+  nasconderlo: la scelta di oggi (comprensibilita della traduzione)
+  vince su quella di allora (barra minima), perche e la stessa persona
+  a chiederla, in questa sessione, con piu forza.
+
+  **DEBITO RESIDUO — trovato dall'audit, non toccato in questo giro:**
+  - `/api/tts-edge`: 112 errori "sintesi riuscita ma audio vuoto" su 11
+    utenti in 7 giorni (testo vero, non solo emoji — il caso gia
+    coperto da b.552). Non e silenzioso: sia useInterpreterMode che
+    useStreamingInterpreter hanno gia un secondo motore vocale
+    (ElevenLabs) di ripiego quando Edge fallisce, quindi l'impatto e
+    latenza/degradazione, non muto totale — ma resta un difetto vivo,
+    non spiegato, da investigare a parte.
+  - `/api/transcribe`: ~205 errori 400 "Audio file might be corrupted
+    or unsupported" in 7 giorni su piu utenti. In useInterpreterMode.js
+    `processChunk`, un fallimento qui e MUTO (`if (!sttRes.ok) return;`
+    — nessun log visibile all'utente, nessun retry, il blocco audio
+    sparisce e basta). E' il candidato piu credibile per "non traduce"
+    senza apparente motivo, ma non e stato provato che la causa sia
+    proprio l'audio che arriva dal noise gate della videochiamata —
+    servirebbe correlare gli errori a sessioni di videochiamata
+    specifiche, cosa che i log attuali non permettono di fare in modo
+    diretto. [ASSUNTO], non [VERIFICATO]: da riprendere.
+  - La modalita compatta (non a tutto schermo) della videochiamata non
+    ha NESSUN accesso all'interprete (niente comando, niente
+    sottotitoli): tutta la funzione dei sottotitoli/traduzione vive
+    solo nel ramo a tutto schermo di VideoCallOverlay.js. Mitigato dal
+    fatto che la chiamata passa automaticamente a tutto schermo alla
+    connessione (RoomView.js), ma chi torna in chat con "← Chat" perde
+    l'accesso senza preavviso. Non toccato in questo giro: estendere la
+    modalita compatta e un intervento piu ampio sulla stessa superficie
+    che oggi ha gia avuto due modifiche.
+
+  [VERIFICATO] eslint pulito su VideoCallOverlay.js. `next build`
+  completa senza errori. Suite completa 296 file / 3642 test (+4 su
+  b.596: 1 file nuovo con 3 prove sul comando primario, 1 prova
+  esistente riscritta per il nuovo ramo Stanza Diretta/gruppo, 1 prova
+  nuova aggiunta nello stesso file), 0 regressioni.
+
 - Versione: **b.596** (push #872) — Modulo 6 completato: 43 export morti
   tolti da 29 file, un quasi-errore corretto prima di spedirlo.
 
