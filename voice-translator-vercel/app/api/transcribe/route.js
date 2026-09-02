@@ -155,6 +155,25 @@ async function handlePost(req) {
     } catch (e) {
       // Whisper e' fallito: il servizio non e' stato consegnato, la
       // riserva torna INTERA nel wallet — non e' un uso, non si paga.
+      //
+      // b.593 — MODULO 1 (radar qualita): "corrotto o non supportato" e
+      // capitato 205 volte in due settimane, ma sempre e solo per 3
+      // utenti — quindi quasi certo un pattern del LORO device/browser,
+      // non un difetto diffuso. Letto tutto cio che alimenta questa
+      // rotta (useVoiceRecorder, useParlatoTradotto, useInterpreterMode,
+      // useTranslation): nessuna causa certa trovata da codice — solo un
+      // dettaglio minore (Blob rietichettato 'audio/webm' invece del
+      // mimeType negoziato, innocuo nella pratica). Senza poter
+      // riprodurre il device di quei 3 utenti, un fix alla cieca
+      // violerebbe la regola "nessun fix senza prova". Questa riga non
+      // corregge: fotografa cosa arriva DAVVERO, cosi il prossimo caso
+      // (quasi certo, e ricorrente) ha il dato che oggi manca.
+      log.warn('Whisper ha rifiutato l\'audio:', {
+        byte: buffer.length,
+        tipoDichiarato: audioFile.type || '?',
+        durataSecDichiarata: durataSec,
+        userAgent: req.headers.get('user-agent') || '?',
+      });
       await unlink(tempPath).catch(() => {});
       if (riservaId) { await release(riservaId, 'whisper_fallito'); riservaId = null; }
       throw e;

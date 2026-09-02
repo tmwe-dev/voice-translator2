@@ -267,6 +267,64 @@ perche il working tree lo conteneva ancora.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.593** (push #869) — RADAR DI QUALITA: dalla correzione di
+  un mio errore di lettura date, al primo modulo del piano di
+  miglioramento (Modulo 1 — l'audio che /api/transcribe rifiuta).
+
+  Luca ha chiesto un voto "a tela di ragno" su 6 assi del progetto. Nel
+  costruirlo avevo segnalato come "bug live trovato oggi" un TypeError
+  su `/api/reazioni` (`leggiConte is not a function`) — ma controllando
+  le DATE esatte dei log Vercel (non solo il conteggio) e emerso che
+  tutte le 43 occorrenze cadono in una finestra di 23 minuti il 28
+  agosto, gia chiusa da giorni quando l'ho segnalata, e risolta dalla
+  riscrittura di `app/lib/stanze/reazioni.js` in b.588. Stessa cosa per
+  l'audio TTS vuoto, il "Circuit OPEN" su Redis/Upstash e la cascata di
+  errori su messages/mondo/apiGuard: tutto nella stessa finestra del
+  27-28 agosto, un solo incidente (verosimile blip di Upstash), non sei
+  problemi separati e non piu attivo da 4+ giorni. **BUG PRE-ESISTENTE
+  nella MIA analisi**, corretto qui perche il voto (7,2/10) fosse
+  fondato su cio che e vero oggi, non su rumore storico.
+
+  Rifatta la lettura sulle sole date ancora attive: `/api/transcribe`
+  che rifiuta audio "corrotto" (205 volte in 2 settimane, ma SOLO 3
+  utenti distinti — quasi certo un pattern del loro device, non
+  diffuso), il warning di deprecazione `url.parse()` (159 volte — letto
+  il nostro codice, ZERO occorrenze: e' `web-push` e/o `pdf-parse` nei
+  node_modules, non nostro, nessuna azione presa perche non e nostro da
+  correggere), e un timeout ricorrente su "Daily spend tracking" (41
+  volte in un mese, da verificare se blocca la richiesta o e' un
+  effetto collaterale silenzioso).
+
+  **Modulo 1 di 8 del piano — fatto in questa versione:** letto ogni
+  percorso che alimenta `/api/transcribe` (`useVoiceRecorder.js`,
+  `useParlatoTradotto.js`, `useInterpreterMode.js`, `useTranslation.js`)
+  cercando la causa dei 205 rifiuti. Trovato un dettaglio minore (il
+  Blob viene rietichettato `'audio/webm'` invece del `mimeType`
+  negoziato in 4 punti, mentre `LifeView.js`/`PannelloPronuncia.js` gia
+  usano correttamente `rec.mimeType` — un'incoerenza reale ma quasi
+  certamente innocua nella pratica), NESSUNA causa certa. Regola 7 di
+  Cobra ("nessun fix senza riproduzione o lettura diretta della causa"):
+  senza poter riprodurre il device dei 3 utenti, un fix alla cieca non
+  si fa. Aggiunta invece la diagnostica che oggi mancava — al momento
+  del rifiuto di Whisper si registrano ora byte reali, tipo dichiarato,
+  durata dichiarata e user-agent (`app/api/transcribe/route.js`) — cosi
+  la prossima occorrenza (quasi certa, e ricorrente su questi 3 utenti)
+  da' il dato che serve per una correzione vera, non una supposizione.
+
+  **Cosa resta dei restanti 7 moduli — non fatto qui, in coda:**
+  Modulo 2 (url.parse) chiuso come "non nostro" salvo un futuro bump di
+  versione di `web-push`/`pdf-parse`; Moduli 3 (timeout spend-tracking),
+  4 (il 17,8% di 429: misurare prima di decidere), 5-6 (knip affidabile
+  + triage dei 117 file/70 export), 7 (freschezza degli altri
+  PIANO-*.md), 8 (test di ancoraggio sui pattern trovati) restano da
+  fare — indipendenti tra loro, tranne il 6 che dipende dal 5.
+
+  [VERIFICATO] eslint 0 errori su transcribe/route.js. Suite completa
+  vitest: 294 file / 3635 test, 0 regressioni. [ATTESO] la diagnostica
+  aggiunta cattura il prossimo rifiuto Whisper con dati sufficienti a
+  identificare la causa reale — non ancora osservato, perche non c'e
+  ancora stata una nuova occorrenza dopo il deploy.
+
 - Versione: **b.592** (push #868) — I 5 ASSI ANCHE NELLE LEZIONI DI
   LINGUA: il gap trovato analizzando Ermes (Jose_master, tmwe-dev) e
   chiuso con codice gia in produzione altrove, non nuovo.
