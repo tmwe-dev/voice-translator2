@@ -6,6 +6,8 @@ import AnteprimaCoperta from './ui/AnteprimaCoperta.js';
 import Sovrapposizione from './ui/Sovrapposizione.js';
 import Icon from './Icon.js';
 import { eBloccato, cambiaBlocco, senzaBloccati } from '../lib/bloccati.js';
+import { createLogger } from '../lib/logger.js';
+const log = createLogger('MondoDiscussioni');   // b.604 — niente console.* sparsi: tutto dal logger
 
 // ═══════════════════════════════════════════════════════════════
 // MondoDiscussioni — il THREAD di una discussione pubblica (Fase 1)
@@ -75,7 +77,7 @@ function MondoDiscussioni({ discussionId, onClose, onOpenPersona }) {
       // b.363 — prima questo guasto non lasciava traccia da nessuna parte: nel
       // registro non compariva nulla, e il motivo vero (rete caduta, attesa
       // scaduta, credito finito, server rotto) restava irrecuperabile.
-      if (e?.name !== 'AbortError') console.warn('[b.363] /api/mondo/discussioni:', e?.message || e);
+      if (e?.name !== 'AbortError') log.warn('[b.363] /api/mondo/discussioni:', e?.message || e);
       setErrore(L('loadingError')); }
     setCaricando(false);
   }, [discussionId, userToken, L]);
@@ -130,7 +132,7 @@ function MondoDiscussioni({ discussionId, onClose, onOpenPersona }) {
       // b.363 — prima questo guasto non lasciava traccia da nessuna parte: nel
       // registro non compariva nulla, e il motivo vero (rete caduta, attesa
       // scaduta, credito finito, server rotto) restava irrecuperabile.
-      if (e?.name !== 'AbortError') console.warn('[b.363] /api/translate:', e?.message || e);
+      if (e?.name !== 'AbortError') log.warn('[b.363] /api/translate:', e?.message || e);
       setTradotti(t => { const n = { ...t }; delete n[chiave]; return n; });
     }
   }, [tradotti, mia, userToken]);
@@ -153,7 +155,7 @@ function MondoDiscussioni({ discussionId, onClose, onOpenPersona }) {
       // b.363 — prima questo guasto non lasciava traccia da nessuna parte: nel
       // registro non compariva nulla, e il motivo vero (rete caduta, attesa
       // scaduta, credito finito, server rotto) restava irrecuperabile.
-      if (e?.name !== 'AbortError') console.warn('[b.363] /api/mondo/discussioni:', e?.message || e);
+      if (e?.name !== 'AbortError') log.warn('[b.363] /api/mondo/discussioni:', e?.message || e);
       setErrore(L('networkError')); }
     setInviando(false);
   }, [testo, inviando, userToken, discussionId, mia, nick, L, carica]);
@@ -178,7 +180,7 @@ function MondoDiscussioni({ discussionId, onClose, onOpenPersona }) {
       // b.363 — prima questo guasto non lasciava traccia da nessuna parte: nel
       // registro non compariva nulla, e il motivo vero (rete caduta, attesa
       // scaduta, credito finito, server rotto) restava irrecuperabile.
-      if (e?.name !== 'AbortError') console.warn('[b.363] /api/mondo/discussioni:', e?.message || e);
+      if (e?.name !== 'AbortError') log.warn('[b.363] /api/mondo/discussioni:', e?.message || e);
       setSeguiti(s => { const n = new Set(s); if (gia) n.add(publicId); else n.delete(publicId); return n; });
       // b.255 — il pulsante tornava indietro DA SOLO, in silenzio: sembrava
       // che l'applicazione ci ripensasse. Ora si dice che non e riuscito.

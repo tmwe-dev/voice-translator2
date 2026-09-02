@@ -6,6 +6,8 @@ import Icon from '../Icon.js';
 import { parlaTavolo, parlaTurno, sintesiTavolo, preparaBriefing, reportFinale, aggiornaRiassunto } from '../../lib/compagni/cliente.js';
 import { memGet } from '../../lib/memoria.js';
 import { obiettiviAttivi } from '../../lib/compagni/obiettivi.js';
+import { createLogger } from '../../lib/logger.js';
+const log = createLogger('Tavolo');   // b.604 — niente console.* sparsi: tutto dal logger
 
 // ═══════════════════════════════════════════════════════════════
 // Tavolo — tu + 2-4 Compagni che conversano insieme. Scrivi, e ognuno
@@ -141,7 +143,7 @@ function Tavolo({ compagni, L, C = {}, lingua, userToken, testoP, muto, accent, 
       // b.363 — prima questo guasto non lasciava traccia da nessuna parte: nel
       // registro non compariva nulla, e il motivo vero (rete caduta, attesa
       // scaduta, credito finito, server rotto) restava irrecuperabile.
-      if (e?.name !== 'AbortError') console.warn('[b.363] perServer:', e?.message || e);
+      if (e?.name !== 'AbortError') log.warn('[b.363] perServer:', e?.message || e);
       setErrore(e.creditoEsaurito ? L('lifeNoCredit') : (e.status === 401 ? L('lifeLoginNeeded') : L('lifeError')));
     } finally { chiudiCiclo(); setAttende(false); }
   }, [testo, attende, messaggi, scelti, lingua, userToken, obiettivo, L]); // eslint-disable-line react-hooks/exhaustive-deps

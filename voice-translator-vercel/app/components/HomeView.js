@@ -17,6 +17,8 @@ import Ribalta from './ui/Ribalta.js';
 import PrimaProva, { riapriPrimaProva } from './PrimaProva.js'; // b.96 → b.356 "Parla ora"
 import { memGet, memSet } from '../lib/memoria.js';
 import { membriDi } from '../lib/membri.js';
+import { createLogger } from '../lib/logger.js';
+const log = createLogger('HomeView');   // b.604 — niente console.* sparsi: tutto dal logger
 
 // ═══════════════════════════════════════
 // Theme palette (multi-theme support)
@@ -114,7 +116,7 @@ const HomeView = memo(function HomeView({ selectedMode, setSelectedMode,
             // b.363 — prima questo guasto non lasciava traccia da nessuna parte: nel
             // registro non compariva nulla, e il motivo vero (rete caduta, attesa
             // scaduta, credito finito, server rotto) restava irrecuperabile.
-            if (e?.name !== 'AbortError') console.warn('[b.363] /api/room:', e?.message || e);
+            if (e?.name !== 'AbortError') log.warn('[b.363] /api/room:', e?.message || e);
             rimaste.push(room);   // rete incerta: si tiene
           }
         }

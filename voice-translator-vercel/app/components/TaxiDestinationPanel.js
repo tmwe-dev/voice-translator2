@@ -5,6 +5,8 @@ import useSheetA11y from '../hooks/useSheetA11y.js';
 import { PALETTE } from '../lib/palette.js';
 import Icon from './Icon.js';
 import { useApp } from '../contexts/AppContext.js';
+import { createLogger } from '../lib/logger.js';
+const log = createLogger('TaxiDestinationPanel');   // b.604 — niente console.* sparsi: tutto dal logger
 
 // ═══════════════════════════════════════════════════════════════
 // TaxiDestinationPanel — Structured destination form for TaxiTalk
@@ -105,7 +107,7 @@ function TaxiDestinationPanel({ onDestinationReady, onClose, targetLang, S }) {
       // b.363 — prima questo guasto non lasciava traccia da nessuna parte: nel
       // registro non compariva nulla, e il motivo vero (rete caduta, attesa
       // scaduta, credito finito, server rotto) restava irrecuperabile.
-      if (e?.name !== 'AbortError') console.warn('[b.363] https://nominatim.openstreetmap.org:', e?.message || e);
+      if (e?.name !== 'AbortError') log.warn('[b.363] https://nominatim.openstreetmap.org:', e?.message || e);
       setSearchError(L('searchError')); }
     setSearching(false);
   }, [targetLang, L, userPos]);

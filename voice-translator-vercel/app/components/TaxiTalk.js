@@ -15,6 +15,8 @@ import { useApp } from '../contexts/AppContext.js';
 import { immagineQR } from '../lib/codiceQR.js';
 import { ascolta as ascoltaDettatura } from '../lib/dettatura.js';   // b.603 — la dettatura in un posto solo
 import { procuraVoce, suonaBlob } from '../lib/audio/voceTradotta.js';   // b.603
+import { createLogger } from '../lib/logger.js';
+const log = createLogger('TaxiTalk');   // b.604 — niente console.* sparsi: tutto dal logger
 
 // ═══════════════════════════════════════════════════════════════
 // TaxiTalk — rifatto da capo, semplice e immediato (Luca).
@@ -180,7 +182,7 @@ function TaxiTalk({ userToken }) {
       // b.363 — prima questo guasto non lasciava traccia da nessuna parte: nel
       // registro non compariva nulla, e il motivo vero (rete caduta, attesa
       // scaduta, credito finito, server rotto) restava irrecuperabile.
-      if (e?.name !== 'AbortError') console.warn('[b.363] https://nominatim.openstreetmap.org:', e?.message || e);
+      if (e?.name !== 'AbortError') log.warn('[b.363] https://nominatim.openstreetmap.org:', e?.message || e);
       setErroreDest(L('searchError')); }
     setCercando(false);
   }, [userPos, driverLang, L]);
@@ -231,7 +233,7 @@ function TaxiTalk({ userToken }) {
       // b.363 — prima questo guasto non lasciava traccia da nessuna parte: nel
       // registro non compariva nulla, e il motivo vero (rete caduta, attesa
       // scaduta, credito finito, server rotto) restava irrecuperabile.
-      if (e?.name !== 'AbortError') console.warn('[b.363] /api/translate:', e?.message || e);
+      if (e?.name !== 'AbortError') log.warn('[b.363] /api/translate:', e?.message || e);
       setErroreTrad(L('youHaveNoConnection')); setTraducendo(false); return ''; }
   }, [testo, myLang, driverLang, userToken, L]);
 

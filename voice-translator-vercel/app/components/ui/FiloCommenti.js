@@ -6,6 +6,8 @@ import { chiaveContenuto } from '../../lib/gradimento.js';
 import { sanaCommento, ordinaCommenti, serveStanza, MAX_COMMENTO } from '../../lib/commentiContenuto.js';
 import Sovrapposizione from './Sovrapposizione.js';
 import Icon from '../Icon.js';
+import { createLogger } from '../../lib/logger.js';
+const log = createLogger('FiloCommenti');   // b.604 — niente console.* sparsi: tutto dal logger
 
 // ═══════════════════════════════════════════════════════════════
 // IL FILO DEI COMMENTI di un contenuto (b.545).
@@ -50,7 +52,7 @@ export default function FiloCommenti({ aperto, url, titolo, C = {}, L, nome, onC
       setCommenti(ordinaCommenti(d.commenti || []));
       setErrore('');
     } catch (e) {
-      if (e?.name !== 'AbortError') console.warn('[b.545] /api/mondo/commenti:', e?.message || e);
+      if (e?.name !== 'AbortError') log.warn('[b.545] /api/mondo/commenti:', e?.message || e);
       setErrore(tt('loadingError', 'Errore nel caricamento'));
     }
     setCaricando(false);
@@ -95,7 +97,7 @@ export default function FiloCommenti({ aperto, url, titolo, C = {}, L, nome, onC
         requestAnimationFrame(() => scorriRef.current?.scrollTo(0, 0));
       }
     } catch (e) {
-      if (e?.name !== 'AbortError') console.warn('[b.545] /api/mondo/commenti:', e?.message || e);
+      if (e?.name !== 'AbortError') log.warn('[b.545] /api/mondo/commenti:', e?.message || e);
       setErrore(tt('networkError', 'Errore di rete'));
     }
     setInviando(false);

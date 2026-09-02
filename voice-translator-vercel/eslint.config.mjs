@@ -43,7 +43,11 @@ const config = [
       // dimenticanza.
       'no-empty': ['error', { allowEmptyCatch: false }],
       // Structured logging: console.* forbidden in app code (use lib/logger.js)
-      'no-console': ['warn', { allow: ['warn', 'error'] }],
+      // b.604 — era 'warn' con warn/error permessi: 254 console.* in 68 file
+      // (audit di architettura b.598). Ora passano tutti dal logger, e la
+      // regola e' un ERRORE senza eccezioni: lib/logger.js e' l'unico
+      // pozzo, marcato riga per riga con eslint-disable-line.
+      'no-console': 'error',
       // React 19: no need for React import
       'react/react-in-jsx-scope': 'off',
       // Allow unescaped apostrophes in JSX text (Italian UI strings)

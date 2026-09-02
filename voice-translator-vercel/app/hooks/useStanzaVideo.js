@@ -9,6 +9,8 @@ import { applicaProfiloVideoGruppo } from '../lib/videoGruppoQualita.js';
 import { subscribeTick } from '../lib/ticker.js';
 // b.138 — gli avvisi di questo hook si leggono a schermo: vanno tradotti.
 import { tFuori } from '../lib/i18n.js';
+import { createLogger } from '../lib/logger.js';
+const log = createLogger('useStanzaVideo');   // b.604 — niente console.* sparsi: tutto dal logger
 
 // ═══════════════════════════════════════════════════════════════
 // useStanzaVideo — la stanza video di gruppo.
@@ -64,12 +66,12 @@ export default function useStanzaVideo({ roomId, roomSessionToken, mioNome, atti
       // b.363 — corpo non-JSON (pagina d'errore del guardiano): la
       // lettura esplodeva e si perdeva il motivo del blocco.
       const d = await r.json().catch(() => null);
-      if (!d) console.warn('[stanza-video] risposta non leggibile, stato', r.status, 'azione', azione);
+      if (!d) log.warn('[stanza-video] risposta non leggibile, stato', r.status, 'azione', azione);
       return d;
     } catch (e) {
       // b.363 — ripiego silenzioso su un percorso che l'utente vede
       // (nessun video): ora il motivo resta scritto.
-      console.warn('[stanza-video] azione', azione, 'non riuscita:', e?.message || e);
+      log.warn('[stanza-video] azione', azione, 'non riuscita:', e?.message || e);
       return null;
     }
   }, [roomId, roomSessionToken]);
@@ -138,7 +140,7 @@ export default function useStanzaVideo({ roomId, roomSessionToken, mioNome, atti
         if (!d?.ok) throw new Error('segnale di ripresa non consegnato');
         return true;
       } catch (e) {
-        console.warn('[StanzaVideo] ripresa peer non riuscita:', nome, e?.message || e);
+        log.warn('[StanzaVideo] ripresa peer non riuscita:', nome, e?.message || e);
         if (voce.riprese >= MAX_RIPRESE_PEER) chiudiPeer(nome);
         else voce.ripresaTimer = setTimeout(() => { riprendi(); }, RITARDO_RIPRESA);
         return false;
@@ -315,7 +317,7 @@ export default function useStanzaVideo({ roomId, roomSessionToken, mioNome, atti
           chiudiPeer(da);
         }
       } catch (e) {
-        console.warn('[StanzaVideo] segnale non gestito:', s.tipo, e?.message);
+        log.warn('[StanzaVideo] segnale non gestito:', s.tipo, e?.message);
       }
     }
 

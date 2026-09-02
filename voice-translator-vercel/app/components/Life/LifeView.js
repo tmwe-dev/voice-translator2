@@ -6,6 +6,8 @@ import Icon from '../Icon.js';
 import { useApp } from '../../contexts/AppContext.js';
 import { COMPAGNI_PREDEFINITI } from '../../lib/compagni/catalogo.js';
 import { LIVELLI, PROFILI } from '../../lib/compagni/corsi/catalogo.js';
+import { createLogger } from '../../lib/logger.js';
+const log = createLogger('LifeView');   // b.604 — niente console.* sparsi: tutto dal logger
 
 // b.300 — idee per riempire il campo: un tocco mette una frase gia
 // dettagliata, cosi anche un anziano o un bambino non parte dal vuoto.
@@ -448,7 +450,7 @@ function Podcast({ compagni, L, C, lingua, userToken, testoP, muto, accent, card
       // b.363 — prima questo guasto non lasciava traccia da nessuna parte: nel
       // registro non compariva nulla, e il motivo vero (rete caduta, attesa
       // scaduta, credito finito, server rotto) restava irrecuperabile.
-      if (e?.name !== 'AbortError') console.warn('[b.363] vai:', e?.message || e);
+      if (e?.name !== 'AbortError') log.warn('[b.363] vai:', e?.message || e);
       setErrore(e.creditoEsaurito ? L('lifeNoCredit') : L('lifeError'));
       setStato('pronto');
     } finally { chiudiCiclo(); }
@@ -710,7 +712,7 @@ function Impara({ compagni, L, C, lingua, userToken, testoP, muto, accent, card,
         // b.363 — prima questo guasto non lasciava traccia da nessuna parte: nel
         // registro non compariva nulla, e il motivo vero (rete caduta, attesa
         // scaduta, credito finito, server rotto) restava irrecuperabile.
-        if (e?.name !== 'AbortError') console.warn('[b.363] /api/compiti:', e?.message || e);
+        if (e?.name !== 'AbortError') log.warn('[b.363] /api/compiti:', e?.message || e);
         setErrore(e?.creditoEsaurito ? L('lifeNoCredit') : L('lifeError'));
       } finally { setLavoro(false); }
     });
@@ -833,7 +835,7 @@ function Impara({ compagni, L, C, lingua, userToken, testoP, muto, accent, card,
       // b.363 — prima questo guasto non lasciava traccia da nessuna parte: nel
       // registro non compariva nulla, e il motivo vero (rete caduta, attesa
       // scaduta, credito finito, server rotto) restava irrecuperabile.
-      if (e?.name !== 'AbortError') console.warn('[b.363] /api/transcribe:', e?.message || e);
+      if (e?.name !== 'AbortError') log.warn('[b.363] /api/transcribe:', e?.message || e);
       setMicDomanda(''); }
   }, [micDomanda, linguaCorso, userToken, domanda]);
   // b.315 — EVIDENZIA (leggi-e-segui): sfondo diverso al paragrafo che il
@@ -1098,7 +1100,7 @@ function Impara({ compagni, L, C, lingua, userToken, testoP, muto, accent, card,
       // b.363 — prima questo guasto non lasciava traccia da nessuna parte: nel
       // registro non compariva nulla, e il motivo vero (rete caduta, attesa
       // scaduta, credito finito, server rotto) restava irrecuperabile.
-      if (e?.name !== 'AbortError') console.warn('[b.363] apri:', e?.message || e);
+      if (e?.name !== 'AbortError') log.warn('[b.363] apri:', e?.message || e);
       setErrore(e.creditoEsaurito ? L('lifeNoCredit') : L('lifeError'));
     } finally { setLavoro(false); }
     // b.217 — idem: `linguaCorso` nelle deps (la lezione va nella lingua scelta).
@@ -1182,7 +1184,7 @@ function Impara({ compagni, L, C, lingua, userToken, testoP, muto, accent, card,
       // b.363 — prima questo guasto non lasciava traccia da nessuna parte: nel
       // registro non compariva nulla, e il motivo vero (rete caduta, attesa
       // scaduta, credito finito, server rotto) restava irrecuperabile.
-      if (e?.name !== 'AbortError') console.warn('[b.363] faiRipasso:', e?.message || e);
+      if (e?.name !== 'AbortError') log.warn('[b.363] faiRipasso:', e?.message || e);
       setErrore(e.creditoEsaurito ? L('lifeNoCredit') : L('lifeError')); }
     finally { setLavoro(false); }
   }, [lavoro, argomento, categoria, livello, docenteId, linguaCorso, userToken, L, tt]);

@@ -33,6 +33,8 @@ import Icon from './Icon.js';
 import { mieStanze, dimenticaStanza } from '../lib/mieStanze.js';
 import { quando, viva, stileEtichetta, PUNTO } from '../lib/schedaMondo.js';
 import { riservaADestra } from '../lib/righello.js'; // b.540 — la batteria sta in alto a destra: le si lascia il posto
+import { createLogger } from '../lib/logger.js';
+const log = createLogger('StanzeView');   // b.604 — niente console.* sparsi: tutto dal logger
 
 // La lingua di chi guarda, applicata all'argomento vivo: se il messaggio
 // porta gia la traduzione fatta in stanza, si legge quella; altrimenti
@@ -84,7 +86,7 @@ export default function StanzeView({ onJoinRoom, onCreateRoom }) {
       if (!d) { setErrore(true); return; }
       setStanze((d.rooms || []).map((x) => ({ ...x, roomId: x.roomId || x.id, membri: x.memberCount ?? x.members ?? 0 })));
     } catch (e) {
-      if (e?.name !== 'AbortError') console.warn('[b.537] /api/mondo:', e?.message || e);
+      if (e?.name !== 'AbortError') log.warn('[b.537] /api/mondo:', e?.message || e);
       setErrore(true);
     }
   }, []);

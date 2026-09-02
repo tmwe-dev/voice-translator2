@@ -7,6 +7,8 @@ import BarraReazioni from './BarraReazioni.js';
 import Ascolta from './Ascolta.js';
 import Velo from './Velo.js';
 import { velare } from '../lib/velo.js';
+import { createLogger } from '../lib/logger.js';
+const log = createLogger('MessageList');   // b.604 — niente console.* sparsi: tutto dal logger
 
 // b.120 — le parole che l'utente legge toccando la spunta. Servono
 // anche a chi usa un lettore di schermo, che altrimenti sentirebbe
@@ -130,7 +132,7 @@ const MessageList = memo(function MessageList({
       // b.363 — prima questo guasto non lasciava traccia da nessuna parte: nel
       // registro non compariva nulla, e il motivo vero (rete caduta, attesa
       // scaduta, credito finito, server rotto) restava irrecuperabile.
-      if (e?.name !== 'AbortError') console.warn('[b.363] /api/translate:', e?.message || e);
+      if (e?.name !== 'AbortError') log.warn('[b.363] /api/translate:', e?.message || e);
       setTradLocali(t => { const nn = { ...t }; delete nn[chiave]; return nn; }); }
   }, [tradLocali, myLang, userToken, roomId]);
 

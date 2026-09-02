@@ -2,7 +2,7 @@
 import { useRef, useCallback, useEffect, useState } from 'react';
 import { getSupabaseClient } from '../lib/supabase.js';
 import { createLogger } from '../lib/logger.js';
-const dbg = createLogger('realtime');
+const log = createLogger('realtime');
 
 /**
  * useRealtimeRoom — Supabase Realtime Channels for room communication.
@@ -58,9 +58,9 @@ export default function useRealtimeRoom({
     }
 
     const supabase = getSupabaseClient();
-    dbg.debug('[Realtime] subscribe() called, rid:', rid, 'supabase:', !!supabase);
+    log.debug('[Realtime] subscribe() called, rid:', rid, 'supabase:', !!supabase);
     if (!supabase || !rid) {
-      console.warn('[Realtime] Cannot subscribe — supabase:', !!supabase, 'rid:', rid);
+      log.warn('[Realtime] Cannot subscribe — supabase:', !!supabase, 'rid:', rid);
       return;
     }
 
@@ -118,11 +118,11 @@ export default function useRealtimeRoom({
       if (status === 'SUBSCRIBED') {
         readyRef.current = true;
         setConnected(true);
-        dbg.debug(`[Realtime] Connected to room:${rid}`);
+        log.debug(`[Realtime] Connected to room:${rid}`);
       } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
         readyRef.current = false;
         setConnected(false);
-        console.warn(`[Realtime] Channel ${status} for room:${rid}`);
+        log.warn(`[Realtime] Channel ${status} for room:${rid}`);
       }
     });
 
@@ -153,15 +153,15 @@ export default function useRealtimeRoom({
       });
       if (result === 'ok') return true;
       // First attempt failed — retry once after 500ms
-      console.warn(`[Realtime] Broadcast failed for ${event}, retrying in 500ms...`);
+      log.warn(`[Realtime] Broadcast failed for ${event}, retrying in 500ms...`);
       await new Promise(r => setTimeout(r, 500));
       if (!channelRef.current || !readyRef.current) return false;
       const retry = await channelRef.current.send({ type: 'broadcast', event, payload });
       if (retry === 'ok') return true;
-      console.warn(`[Realtime] Broadcast retry failed for ${event}`);
+      log.warn(`[Realtime] Broadcast retry failed for ${event}`);
       return false;
     } catch (e) {
-      console.error(`[Realtime] Broadcast error for ${event}:`, e);
+      log.error(`[Realtime] Broadcast error for ${event}:`, e);
       return false;
     }
   }, []);

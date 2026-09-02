@@ -4,7 +4,7 @@ import { FONT } from '../lib/constants.js';
 import Icon from './Icon.js';
 import { createLogger } from '../lib/logger.js';
 import { useApp } from '../contexts/AppContext.js';
-const dbg = createLogger('account');
+const log = createLogger('account');
 
 export default function AccountView({ authStep, authEmail, setAuthEmail, authCode, setAuthCode,
   authLoading, authTestCode, sendAuthCode, verifyAuthCodeFn, loginWithGoogle, loginWithApple,
@@ -67,10 +67,10 @@ export default function AccountView({ authStep, authEmail, setAuthEmail, authCod
       const stateData = await stateRes.json().catch(() => null);
       state = stateData?.state;
     } catch (e) {
-      console.error('Failed to get OAuth state:', e);
+      log.error('Failed to get OAuth state:', e);
       return false;
     }
-    if (!state) { console.error('[b.363] oauth-state illeggibile: accesso Google non avviato'); return false; }
+    if (!state) { log.error('[b.363] oauth-state illeggibile: accesso Google non avviato'); return false; }
     const redirectUri = `${window.location.origin}/api/auth/google-callback`;
     const scope = 'email profile openid';
     const url = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${encodeURIComponent(clientId)}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${encodeURIComponent(scope)}&prompt=select_account&state=${encodeURIComponent(state)}`;
@@ -139,12 +139,12 @@ export default function AccountView({ authStep, authEmail, setAuthEmail, authCod
                 if (window.google?.accounts?.id) {
                   window.google.accounts.id.prompt((notification) => {
                     if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-                      dbg.debug('[Auth] One Tap unavailable, using OAuth popup');
+                      log.debug('[Auth] One Tap unavailable, using OAuth popup');
                       googleOAuthPopup();
                     }
                   });
                 } else {
-                  dbg.debug('[Auth] Google SDK not loaded, using OAuth popup');
+                  log.debug('[Auth] Google SDK not loaded, using OAuth popup');
                   if (!googleOAuthPopup()) {
                     setAuthError(L('googleUnavailable'));
                   }
@@ -185,7 +185,7 @@ export default function AccountView({ authStep, authEmail, setAuthEmail, authCod
                     }
                   } catch (e) {
                     if (e.error !== 'popup_closed_by_user') {
-                      console.error('Apple Sign-In error:', e);
+                      log.error('Apple Sign-In error:', e);
                     }
                   }
                 } else {
@@ -212,7 +212,7 @@ export default function AccountView({ authStep, authEmail, setAuthEmail, authCod
                       }
                     } catch (e) {
                       if (e.error !== 'popup_closed_by_user') {
-                        console.error('Apple Sign-In error:', e);
+                        log.error('Apple Sign-In error:', e);
                       }
                     }
                   };

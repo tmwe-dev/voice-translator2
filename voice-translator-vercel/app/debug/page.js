@@ -1,6 +1,8 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { memGet } from '../lib/memoria.js';
+import { createLogger } from '../lib/logger.js';
+const log = createLogger('page');   // b.604 — niente console.* sparsi: tutto dal logger
 
 const FONT = "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
 
@@ -39,7 +41,7 @@ export default function DebugPage() {
         body: JSON.stringify({ action: 'user-info', userToken: token }),
       });
       if (res.ok) setUserInfo(await res.json());
-    } catch (e) { console.error(e); }
+    } catch (e) { log.error(e); }
   }
 
   async function runSimulation() {
@@ -63,7 +65,7 @@ export default function DebugPage() {
         }),
       });
       if (res.ok) setSimulation(await res.json());
-    } catch (e) { console.error(e); }
+    } catch (e) { log.error(e); }
     setLoading(false);
   }
 

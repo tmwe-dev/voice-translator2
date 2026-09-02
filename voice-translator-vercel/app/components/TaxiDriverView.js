@@ -7,6 +7,8 @@ import { decryptDestination } from '../lib/taxiCrypto.js';
 import { PALETTE } from '../lib/palette.js';
 import { useApp } from '../contexts/AppContext.js';
 import TaxiMap from './TaxiMap.js';
+import { createLogger } from '../lib/logger.js';
+const log = createLogger('TaxiDriverView');   // b.604 — niente console.* sparsi: tutto dal logger
 
 // ═══════════════════════════════════════════════════════════════
 // TaxiDriverView — Dedicated page for taxi drivers
@@ -113,7 +115,7 @@ function TaxiDriverView({ destId, decryptionKey }) {
         // b.363 — prima questo guasto non lasciava traccia da nessuna parte: nel
         // registro non compariva nulla, e il motivo vero (rete caduta, attesa
         // scaduta, credito finito, server rotto) restava irrecuperabile.
-        if (e?.name !== 'AbortError') console.warn('[b.363] /api/taxi/destination:', e?.message || e);
+        if (e?.name !== 'AbortError') log.warn('[b.363] /api/taxi/destination:', e?.message || e);
         if (e?.message?.includes('decrypt') || e?.name === 'OperationError') {
           setError(L('cannotDecryptDest'));
         } else {
@@ -176,7 +178,7 @@ function TaxiDriverView({ destId, decryptionKey }) {
           }
         }
       } catch (e) {
-        console.warn('[TaxiDriver] Translation failed:', e?.message);
+        log.warn('[TaxiDriver] Translation failed:', e?.message);
         if (!cancelled) setTranslatedAddress(destination.normalizedAddress);
       }
       if (!cancelled) setTranslating(false);
@@ -202,7 +204,7 @@ function TaxiDriverView({ destId, decryptionKey }) {
             // b.363 — prima la lettura non era protetta e il percorso spariva
             // in silenzio: il tassista restava senza indicazioni e senza motivo.
             const data = await res.json().catch(() => null);
-            if (!data) console.warn('[b.363] percorso OSRM: risposta illeggibile');
+            if (!data) log.warn('[b.363] percorso OSRM: risposta illeggibile');
             if (data?.routes?.[0]) {
               const route = data.routes[0];
               setRouteInfo({

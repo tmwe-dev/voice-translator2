@@ -17,6 +17,8 @@ import { PALETTE } from '../lib/palette.js';
 import { subscribeTick } from '../lib/ticker.js';
 import { useApp } from '../contexts/AppContext.js';
 import MondoNews from './MondoNews.js';
+import { createLogger } from '../lib/logger.js';
+const log = createLogger('MondoView');   // b.604 — niente console.* sparsi: tutto dal logger
 
 // ═══════════════════════════════════════════════════════════════
 // MondoView — b.580
@@ -145,7 +147,7 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
         const d = await r.json();
         if (vivo) setSchedaPaese(d);
       } catch (e) {
-        if (e?.name !== 'AbortError') console.warn('[b.399] scheda paese non arrivata:', e?.message);
+        if (e?.name !== 'AbortError') log.warn('[b.399] scheda paese non arrivata:', e?.message);
         if (vivo) setSchedaPaese(null);
       }
     })();
@@ -168,7 +170,7 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
         else setError(L('loadRoomsFailed'));
       } else setError(L('loadRoomsFailed'));
     } catch (e) {
-      if (e?.name !== 'AbortError') console.warn('[b.363] /api/mondo:', e?.message || e);
+      if (e?.name !== 'AbortError') log.warn('[b.363] /api/mondo:', e?.message || e);
       setError(L('loadRoomsFailed'));
     } finally { setLoading(false); }
   }, [L]);

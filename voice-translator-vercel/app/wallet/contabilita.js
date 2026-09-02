@@ -17,6 +17,8 @@
 // ═══════════════════════════════════════════════════════════════
 
 import { createClient } from '@supabase/supabase-js';
+import { createLogger } from '../lib/logger.js';
+const log = createLogger('contabilita');   // b.604 — niente console.* sparsi: tutto dal logger
 
 function db() {
   // Service role: solo lato server. Mai esporre al client.
@@ -115,7 +117,7 @@ export async function spendibile(utenteId) {
     // portafoglio resta chiuso, la tolleranza semplicemente non c'e
     // ancora. Ogni altro errore (database giu davvero) sale come prima.
     if (/PGRST202|could not find|does not exist|schema cache/i.test(`${error.code} ${error.message}`)) {
-      console.warn('[wallet] migrazione 012 non applicata: tolleranza disattiva');
+      log.warn('[wallet] migrazione 012 non applicata: tolleranza disattiva');
       return await saldo(utenteId);
     }
     throw new Error('Spendibile: ' + error.message);

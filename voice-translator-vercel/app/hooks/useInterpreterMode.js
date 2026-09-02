@@ -22,7 +22,7 @@ import {
 // nessun secondo rilevatore. b.599: il nome dell'evento e l'aiutante
 // stanno in lib/eventi.js.
 import { EVENTO, MSG, avvisaVoceLocale, lancia } from '../lib/eventi.js';
-const dbg = createLogger('interpreter');
+const log = createLogger('interpreter');
 
 // ═══════════════════════════════════════
 // useInterpreterMode — Bidirectional real-time STT → Translate → TTS
@@ -112,7 +112,7 @@ export default function useInterpreterMode({
   useEffect(() => {
     const interval = setInterval(() => {
       const tolti = riassemblatoreRef.current.pulisci(30000);
-      if (tolti) dbg.warn('pezzi audio orfani buttati', { tolti });
+      if (tolti) log.warn('pezzi audio orfani buttati', { tolti });
     }, 30000);
     return () => clearInterval(interval);
   }, []);
@@ -228,7 +228,7 @@ export default function useInterpreterMode({
           fetch('/api/transcribe', { method: 'POST', body: formData, signal: AbortSignal.timeout(30000) })
         );
       } catch (e) {
-        console.warn('[Interpreter] STT fetch fallita:', e?.message || e);
+        log.warn('[Interpreter] STT fetch fallita:', e?.message || e);
         audioFallitiRef.current++;
         if (audioFallitiRef.current >= 3) setProblemaAudio(true);
         return;
@@ -315,7 +315,7 @@ export default function useInterpreterMode({
       if (!ttsBlob) {
         // b.381 — il silenzio era la cosa peggiore: chi parla continuava a
         // parlare credendo che dall'altra parte si sentisse.
-        console.warn('[interprete] nessun motore vocale disponibile: la traduzione resta scritta');
+        log.warn('[interprete] nessun motore vocale disponibile: la traduzione resta scritta');
         lancia(EVENTO.VOCE_NON_DISPONIBILE);
         // b.598 — l'evento sopra non lo ascolta nessuno: si dice anche
         // nel modo che la UI e il partner capiscono davvero (b.352).
@@ -329,7 +329,7 @@ export default function useInterpreterMode({
       // nel modulo unico.
       inviaAudioDC(webrtc, await blobABase64(ttsBlob));
     } catch (e) {
-      console.warn('[Interpreter] Process chunk error:', e);
+      log.warn('[Interpreter] Process chunk error:', e);
     }
   }, [myLang, partnerLang, roomId, roomSessionTokenRef, userToken, webrtc, preferisciEleven]);
 
@@ -371,7 +371,7 @@ export default function useInterpreterMode({
     if (codaChunkRef.current.length > MAX_CODA_CHUNK) {
       const scartati = codaChunkRef.current.length - MAX_CODA_CHUNK;
       codaChunkRef.current.splice(0, scartati);
-      console.warn(`[Interpreter] b.247 — coda STT piena (max ${MAX_CODA_CHUNK}): scartati ${scartati} blocchi audio, i piu vecchi. La catena STT/traduzione/TTS non tiene il passo del microfono.`);
+      log.warn(`[Interpreter] b.247 — coda STT piena (max ${MAX_CODA_CHUNK}): scartati ${scartati} blocchi audio, i piu vecchi. La catena STT/traduzione/TTS non tiene il passo del microfono.`);
     }
     elaboraCoda();
   }, [elaboraCoda]);
@@ -399,7 +399,7 @@ export default function useInterpreterMode({
           recordStream = ng.cleanStream;
         }
       } catch (e) {
-        console.warn('[Interpreter] Noise gate unavailable, using raw stream:', e);
+        log.warn('[Interpreter] Noise gate unavailable, using raw stream:', e);
       }
 
       const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
@@ -426,9 +426,9 @@ export default function useInterpreterMode({
       setErroreAvvio(null);
       audioFallitiRef.current = 0;
       setProblemaAudio(false);
-      dbg.debug('[Interpreter] Started');
+      log.debug('[Interpreter] Started');
     } catch (e) {
-      console.error('[Interpreter] Failed to start:', e);
+      log.error('[Interpreter] Failed to start:', e);
       setErroreAvvio(e?.message || 'avvio non riuscito');
       setActive(false);
       // b.381 — IL MICROFONO RESTAVA APERTO. Qui si prende il microfono
@@ -486,7 +486,7 @@ export default function useInterpreterMode({
     }
     audioFallitiRef.current = 0;
     setProblemaAudio(false);
-    dbg.debug('[Interpreter] Stopped');
+    log.debug('[Interpreter] Stopped');
   }, []);
 
   // Cleanup on unmount
@@ -537,11 +537,11 @@ export default function useInterpreterMode({
     const streamingOk = await streaming.start();
     if (streamingOk) {
       setErroreAvvio(null);
-      dbg.debug('[Interpreter] Using streaming pipeline (subtitle-first)');
+      log.debug('[Interpreter] Using streaming pipeline (subtitle-first)');
       return;
     }
     // Fallback to legacy chunk-based pipeline
-    dbg.debug('[Interpreter] Streaming unavailable, using legacy 3s chunks');
+    log.debug('[Interpreter] Streaming unavailable, using legacy 3s chunks');
     // b.381 — SI ASPETTA. Questa funzione e asincrona (chiede il
     // microfono, apre il registratore) ma veniva lanciata e lasciata
     // andare: il `finally` di chi chiama riapriva la porta subito, e

@@ -8,7 +8,7 @@ import { tFuori } from '../lib/i18n.js';
 import { ascoltaVociMute } from '../lib/segnaleVoce.js';
 import { memGet, memSet } from '../lib/memoria.js';
 import { membriDi, quantiDentro } from '../lib/membri.js';
-const dbg = createLogger('polling');
+const log = createLogger('polling');
 
 // ═══════════════════════════════════════════════════════════════
 // POLLING_INTERVAL: With Supabase Realtime active, polling is just
@@ -152,10 +152,10 @@ export default function useRoomPolling({
   // Copre: P2P + Realtime a ~50 ms di distanza, e il polling che porta la
   // copia del server (id nuovo, ma stesso `clientId`) di un messaggio gia letto.
   const processIncomingMessage = useCallback((msg) => {
-    if (!msg) { dbg.debug('[TTS-TRACE] skip: no msg'); return; }
-    if (msg.id && sentByMeRef.current.has(msg.id)) { dbg.debug('[TTS-TRACE] skip: sentByMe', msg.id); return; }
+    if (!msg) { log.debug('[TTS-TRACE] skip: no msg'); return; }
+    if (msg.id && sentByMeRef.current.has(msg.id)) { log.debug('[TTS-TRACE] skip: sentByMe', msg.id); return; }
     const myVerifiedName = verifiedNameRef.current || prefsRef.current.name;
-    if (msg.sender === myVerifiedName) { dbg.debug('[TTS-TRACE] skip: sender=me', msg.sender, '=', myVerifiedName); return; }
+    if (msg.sender === myVerifiedName) { log.debug('[TTS-TRACE] skip: sender=me', msg.sender, '=', myVerifiedName); return; }
 
     // ── b.131 · la conferma parte DA QUI, che e l'imbuto di tutti ──
     //
@@ -202,7 +202,7 @@ export default function useRoomPolling({
       ? `id:${msg.clientId || msg.id}`
       : `testo:${msg.sender}|${msg.original}|${Math.floor((msg.timestamp || Date.now()) / 30000)}`;
     if (processedForTTSRef.current.has(chiaveTTS)) {
-      dbg.debug('[TTS-TRACE] skip: gia letto', chiaveTTS);
+      log.debug('[TTS-TRACE] skip: gia letto', chiaveTTS);
       return;
     }
 
@@ -220,7 +220,7 @@ export default function useRoomPolling({
       speechLang = getLang(myLang).speech;
     }
 
-    dbg.debug('[TTS-TRACE] processIncoming:', {
+    log.debug('[TTS-TRACE] processIncoming:', {
       id: msg.id?.substring(0,20), sender: msg.sender,
       myLang, myName: myVerifiedName,
       hasTranslations: !!msg.translations, translationKeys: msg.translations ? Object.keys(msg.translations) : [],
@@ -236,13 +236,13 @@ export default function useRoomPolling({
         const first = processedForTTSRef.current.values().next().value;
         processedForTTSRef.current.delete(first);
       }
-      dbg.debug('[TTS-TRACE] >>> queueAudio:', textToPlay?.substring(0,30), speechLang);
+      log.debug('[TTS-TRACE] >>> queueAudio:', textToPlay?.substring(0,30), speechLang);
       // b.248 — alla coda si passa l'id di CATTURA (clientId se c'e):
       // cosi anche il suo dedup interno vede la stessa chiave su tutti i
       // canali, copia del server compresa.
       queueAudio(textToPlay, speechLang, msg.clientId || msg.id);
     } else {
-      dbg.debug('[TTS-TRACE] no TTS:', textToPlay ? 'autoPlay=false' : 'no textToPlay');
+      log.debug('[TTS-TRACE] no TTS:', textToPlay ? 'autoPlay=false' : 'no textToPlay');
     }
 
     // ── Feed incoming message to conversation context (knowledge base) ──
@@ -390,7 +390,7 @@ export default function useRoomPolling({
           };
           return updated;
         }
-        console.warn('[handleMessageUpdate] Message not found for update:', { sender: data.sender, original: data.original?.substring(0, 30), messagesCount: prev.length });
+        log.warn('[handleMessageUpdate] Message not found for update:', { sender: data.sender, original: data.original?.substring(0, 30), messagesCount: prev.length });
         return prev;
       }
       const updated = [...prev];
@@ -734,14 +734,14 @@ export default function useRoomPolling({
                 else setPollError(true);
                 auth401CountRef.current = 0;
               } else {
-                console.warn('[stanza] rientro rifiutato, stato', ri.status);
+                log.warn('[stanza] rientro rifiutato, stato', ri.status);
                 setPollError(true);
               }
             } catch (e) {
               // b.363 — questo ripiego accende l'avviso di linea che
               // l'utente vede, ma non registrava niente: era il guasto
               // piu difficile da capire di tutta la stanza.
-              console.warn('[stanza] rientro non riuscito:', e?.message || e);
+              log.warn('[stanza] rientro non riuscito:', e?.message || e);
               setPollError(true);
             }
           }
@@ -753,7 +753,7 @@ export default function useRoomPolling({
           // esplodeva e il giro saltava, lasciando l'elenco dei presenti
           // fermo all'ultima versione buona.
           const { room, verifiedName, isHost: hostFlag } = await rRes.json().catch(() => ({}));
-          if (!room) console.warn('[stanza] battito: risposta senza stanza');
+          if (!room) log.warn('[stanza] battito: risposta senza stanza');
           if (verifiedName) verifiedNameRef.current = verifiedName;
           if (hostFlag !== undefined) isHostRef.current = hostFlag;
           roomInfoRef.current = room;
@@ -782,7 +782,7 @@ export default function useRoomPolling({
           setPollError(false);
         }
       } catch (e) {
-        console.error('[Poll] error:', e);
+        log.error('[Poll] error:', e);
         pollErrorCountRef.current++;
         if (pollErrorCountRef.current >= 3) {
           setPollError(true);
@@ -812,7 +812,7 @@ export default function useRoomPolling({
       if (pollRef.current) clearInterval(pollRef.current);
       const interval = intervalloOra(realtimeConnected);
       pollRef.current = setInterval(pollFnRef.current, interval);
-      dbg.debug(`[Poll] ogni ${interval}ms (Realtime: ${realtimeConnected ? 'ON' : 'OFF'}, schermo: ${paginaNascosta() ? 'spento' : 'acceso'})`);
+      log.debug(`[Poll] ogni ${interval}ms (Realtime: ${realtimeConnected ? 'ON' : 'OFF'}, schermo: ${paginaNascosta() ? 'spento' : 'acceso'})`);
     };
 
     const alCambioVisibilita = () => {
@@ -930,7 +930,7 @@ export default function useRoomPolling({
         signal: AbortSignal.timeout(10000)
       });
     } catch (e) {
-      console.error('[SyncLang] Error:', e);
+      log.error('[SyncLang] Error:', e);
     }
   }
 

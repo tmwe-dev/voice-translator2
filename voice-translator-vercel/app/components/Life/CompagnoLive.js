@@ -4,6 +4,8 @@ import { FONT } from '../../lib/constants.js';
 import { zittisci, suInterruzione } from '../../lib/voce.js';
 import Icon from '../Icon.js';
 import { prendiVoce, rendiVoce } from '../../lib/microfonoMaster.js';   // b.602
+import { createLogger } from '../../lib/logger.js';
+const log = createLogger('CompagnoLive');   // b.604 — niente console.* sparsi: tutto dal logger
 
 // ═══════════════════════════════════════════════════════════════
 // b.316 — COMPAGNO DAL VIVO (Luca): la chiacchierata 1-a-1 in Amico
@@ -343,7 +345,7 @@ function CompagnoLive({ compagno, lingua, userToken, contesto, onChiudi, onFine,
           if (d?.message) setDettaglio(String(d.message));
         },
         onError: (messaggio) => {
-          console.warn('[CompagnoLive] errore di linea:', messaggio);
+          log.warn('[CompagnoLive] errore di linea:', messaggio);
           if (!mioTurno()) return;
           // b.431 — se e SOLO la voce a non essere consentita, non e un
           // guasto: e un permesso. Lo gestisce chi ha aperto la linea,
@@ -380,7 +382,7 @@ function CompagnoLive({ compagno, lingua, userToken, contesto, onChiudi, onFine,
       if (!conv || vocePropriaRifiutata) {
         // Si riapre senza chiedere la voce: meglio la voce predefinita che
         // nessuna telefonata. E si dice, invece di lasciarlo credere.
-        console.warn('[b.431] il fornitore non consente di cambiare voce: si prosegue con la sua');
+        log.warn('[b.431] il fornitore non consente di cambiare voce: si prosegue con la sua');
         try { await conv?.endSession?.(); } catch { /* la linea era gia caduta da se: non c'e niente da chiudere */ }
         conv = await apriLinea(false);
         if (!mioTurno()) { conv?.endSession?.().catch?.(() => {}); return; }
@@ -398,7 +400,7 @@ function CompagnoLive({ compagno, lingua, userToken, contesto, onChiudi, onFine,
       // ancora aperto. Su un microfono questo non e un difetto grafico.
       setMuteDisponibile(typeof conv.setMicMuted === 'function');
     } catch (e) {
-      console.warn('[CompagnoLive] apertura fallita:', e);
+      log.warn('[CompagnoLive] apertura fallita:', e);
       if (mioTurno()) { setStato('avvio_fallito'); setDettaglio(String(e?.message || e || L('errorTitle'))); }
     }
   }, [compagno, lingua, userToken, consegnaTurni, chiudiConto, fermaBattito, L]);
@@ -437,7 +439,7 @@ function CompagnoLive({ compagno, lingua, userToken, contesto, onChiudi, onFine,
       setMicSpento(nuovo);   // la scritta cambia DOPO che il comando e passato
     } catch (e) {
       // il microfono e rimasto com'era, e va detto: la scritta non cambia.
-      console.warn('[CompagnoLive] il microfono non ha ubbidito:', e);
+      log.warn('[CompagnoLive] il microfono non ha ubbidito:', e);
       setDettaglio(L('liveMicNoResponse'));
     }
   }, [micSpento, L]);

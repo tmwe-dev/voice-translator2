@@ -13,7 +13,7 @@ import useE2EEncryption from './useE2EEncryption.js';
 import { createLogger } from '../lib/logger.js';
 import { creaPostaInUscita } from '../lib/postaInUscita.js';
 import { fotografiaChiamata, salvaRapporto } from '../lib/diagnosticaChiamata.js';
-const dbg = createLogger('webrtc');
+const log = createLogger('webrtc');
 
 // ═══════════════════════════════════════════════
 // useWebRTC — P2P video call with accept/decline + Supabase Realtime signaling
@@ -119,11 +119,11 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
     e2e.reset();
     pendingCallRef.current = false;
     if (dcRef.current) {
-      try { dcRef.current.close(); } catch (e) { console.warn('[WebRTC] dc close:', e.message); }
+      try { dcRef.current.close(); } catch (e) { log.warn('[WebRTC] dc close:', e.message); }
       dcRef.current = null;
     }
     if (pcRef.current) {
-      try { pcRef.current.close(); } catch (e) { console.warn('[WebRTC] pc close:', e.message); }
+      try { pcRef.current.close(); } catch (e) { log.warn('[WebRTC] pc close:', e.message); }
       pcRef.current = null;
     }
     if (localStreamRef.current) {
@@ -166,7 +166,7 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
             signalingSubscribePromiseRef.current,
             new Promise((resolve) => setTimeout(resolve, 250)),
           ]);
-        } catch (e) { console.warn('[WebRTC] signaling wait:', e.message); }
+        } catch (e) { log.warn('[WebRTC] signaling wait:', e.message); }
       } else {
         await new Promise((resolve) => setTimeout(resolve, 100));
       }
@@ -177,7 +177,7 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
   const sendSignal = useCallback(async (type, data) => {
     const ready = await waitForSignalingReady();
     if (!ready || !channelRef.current) {
-      console.warn('[WebRTC] Signaling channel not ready, cannot send:', type);
+      log.warn('[WebRTC] Signaling channel not ready, cannot send:', type);
       throw new Error(`Signaling channel not ready for ${type}`);
     }
     const result = await channelRef.current.send({
@@ -186,14 +186,14 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
       payload: { type, data, from: myName, timestamp: Date.now() },
     });
     if (result !== 'ok') {
-      console.warn('[WebRTC] Failed to send signal:', type, result);
+      log.warn('[WebRTC] Failed to send signal:', type, result);
       throw new Error(`Failed to send ${type}: ${String(result)}`);
     }
   }, [myName, waitForSignalingReady]);
 
   // ── Handle incoming remote tracks ──
   const handleRemoteTrack = useCallback((track, stream) => {
-    dbg.debug('[WebRTC] Remote track received:', track.kind, 'readyState:', track.readyState);
+    log.debug('[WebRTC] Remote track received:', track.kind, 'readyState:', track.readyState);
     // Always update the ref with the latest stream/tracks
     if (stream) {
       // Remove old tracks of same kind to prevent accumulation & leaked handlers
@@ -245,7 +245,7 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
     } catch (e) {
       // Only log non-JSON-parse errors (those indicate bugs in message handlers)
       if (e instanceof SyntaxError) return; // Expected: binary/malformed DC data
-      console.warn('[DC] Message handler error:', e);
+      log.warn('[DC] Message handler error:', e);
     }
   }, []); // No deps — reads from ref
 
@@ -262,11 +262,11 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
     const pc = pcRef.current;
     if (!pc || pc.signalingState === 'closed') return false;
     if (iceRestartAttemptRef.current >= MAX_ICE_RESTARTS) {
-      console.warn(`[WebRTC] ICE restart limit reached (${MAX_ICE_RESTARTS}), giving up`);
+      log.warn(`[WebRTC] ICE restart limit reached (${MAX_ICE_RESTARTS}), giving up`);
       return false;
     }
     iceRestartAttemptRef.current++;
-    dbg.debug(`[WebRTC] ICE restart attempt ${iceRestartAttemptRef.current}/${MAX_ICE_RESTARTS}`);
+    log.debug(`[WebRTC] ICE restart attempt ${iceRestartAttemptRef.current}/${MAX_ICE_RESTARTS}`);
     try {
       // Modern approach: restartIce() + createOffer
       if (pc.restartIce) pc.restartIce();
@@ -275,7 +275,7 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
       await sendSignal('offer', JSON.stringify(pc.localDescription));
       return true;
     } catch (e) {
-      console.error('[WebRTC] ICE restart failed:', e);
+      log.error('[WebRTC] ICE restart failed:', e);
       return false;
     }
   }, [sendSignal]);
@@ -299,7 +299,7 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
   // ── Connection state handler ──
   const handleStateChange = useCallback((info) => {
     const { source, state } = typeof info === 'object' ? info : { source: 'unknown', state: info };
-    dbg.debug(`[WebRTC] State change: ${source}=${state}`);
+    log.debug(`[WebRTC] State change: ${source}=${state}`);
 
     if (state === 'connected' || state === 'completed') {
       if (disconnectTimerRef.current) {
@@ -371,7 +371,7 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
     // telecamera non si riaccende mai dopo un CHIUDI.
     if (chiusuraVolutaRef.current) return;
     if (autoReconnectAttemptRef.current >= MAX_AUTO_RECONNECTS) {
-      console.warn('[WebRTC] Auto-reconnect limit reached — giving up');
+      log.warn('[WebRTC] Auto-reconnect limit reached — giving up');
       scattaRapporto('fallita');
       setWebrtcState('failed');
       stateRef.current = 'failed';
@@ -380,7 +380,7 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
     }
     autoReconnectAttemptRef.current++;
     const delay = 3000 * autoReconnectAttemptRef.current; // 3s, 6s
-    dbg.debug(`[WebRTC] Auto-reconnect attempt ${autoReconnectAttemptRef.current}/${MAX_AUTO_RECONNECTS} in ${delay}ms`);
+    log.debug(`[WebRTC] Auto-reconnect attempt ${autoReconnectAttemptRef.current}/${MAX_AUTO_RECONNECTS} in ${delay}ms`);
 
     setWebrtcState('connecting');
     stateRef.current = 'connecting';
@@ -459,7 +459,7 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
             // b.272 — prima qui si scriveva solo un avviso nel registro:
             // il collegamento era morto, il sistema se ne accorgeva, e
             // restava a guardare. Ora si reagisce come a una caduta.
-            console.warn('[WebRTC] nessuna risposta al battito da 20s: tratto la linea come caduta');
+            log.warn('[WebRTC] nessuna risposta al battito da 20s: tratto la linea come caduta');
             lastPongRef.current = Date.now();   // un solo tentativo per giro
             if (!chiusuraVolutaRef.current) {
               attemptIceRestart().then(ripartito => { if (!ripartito) attemptAutoReconnect(); });
@@ -491,7 +491,7 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
         // ── Unencrypted message (E2E not yet established or fallback) ──
         onDirectMessageRef.current?.(msg);
       } catch (e) {
-        if (!(e instanceof SyntaxError)) console.warn('[DC] setupDC message error:', e);
+        if (!(e instanceof SyntaxError)) log.warn('[DC] setupDC message error:', e);
       }
     };
     dc.onclose = () => {
@@ -516,7 +516,7 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
           localStreamRef.current = stream;
           setLocalStream(stream);
           return stream;
-        } catch (e) { console.warn('[WebRTC] audio-only fallback failed:', e.message); }
+        } catch (e) { log.warn('[WebRTC] audio-only fallback failed:', e.message); }
         // b.285 — IL RIPIEGO NON E PIU MUTO. Prima, se la telecamera non
         // si apriva (permesso negato, altra app che la tiene), si
         // proseguiva in solo-audio SENZA DIRLO: l'utente si credeva in
@@ -531,7 +531,7 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
     const queue = iceCandidateQueueRef.current;
     iceCandidateQueueRef.current = [];
     for (const candidateStr of queue) {
-      try { await addIceCandidate(pc, candidateStr); } catch (e) { console.warn('[WebRTC] ICE flush:', e.message); }
+      try { await addIceCandidate(pc, candidateStr); } catch (e) { log.warn('[WebRTC] ICE flush:', e.message); }
     }
   }
 
@@ -539,7 +539,7 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
   const handleIncomingSignal = useCallback(async (payload) => {
     if (!payload || payload.from === myName) return;
     const { type, data } = payload;
-    dbg.debug('[WebRTC] Signal received:', type, 'from:', payload.from, 'state:', stateRef.current);
+    log.debug('[WebRTC] Signal received:', type, 'from:', payload.from, 'state:', stateRef.current);
 
     // ── NEW: Call request/response flow ──
     if (type === 'call-ended') {
@@ -574,7 +574,7 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
       // il difetto che b.245 credeva di aver chiuso: la correzione era
       // giusta, l'indirizzo da cui leggeva no.
       if (data?.reconnect && (stateRef.current === 'connected' || stateRef.current === 'connecting')) {
-        dbg.debug('[WebRTC] riconnessione del partner: smonto la vecchia e riaccetto');
+        log.debug('[WebRTC] riconnessione del partner: smonto la vecchia e riaccetto');
         cleanup();
         const eraVideo = !!data?.withVideo || tipoChiamataPrecedenteRef.current === 'video';
         const tipo = eraVideo ? 'video' : 'voice';
@@ -584,7 +584,7 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
         setWebrtcState('connecting');
         stateRef.current = 'connecting';
         // Si riaccetta subito: nessun banner, e' la stessa chiamata di prima.
-        sendSignal('call-accepted', { piattaforma: piattaformaRef.current }).catch((e) => console.warn('[WebRTC] riaccetto:', e.message));
+        sendSignal('call-accepted', { piattaforma: piattaformaRef.current }).catch((e) => log.warn('[WebRTC] riaccetto:', e.message));
         return;
       }
       if (data?.piattaforma) piattaformaPartnerRef.current = data.piattaforma;
@@ -642,7 +642,7 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
           }
         }, CONNECTION_TIMEOUT);
       } catch (e) {
-        console.error('[WebRTC] Post-accept offer error:', e);
+        log.error('[WebRTC] Post-accept offer error:', e);
         setWebrtcState('failed');
         stateRef.current = 'failed';
       }
@@ -665,7 +665,7 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
       }
 
       if (stateRef.current === 'connected') {
-        dbg.debug('[WebRTC] Already connected, ignoring offer');
+        log.debug('[WebRTC] Already connected, ignoring offer');
         return;
       }
 
@@ -681,7 +681,7 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
         // richiamare deve passare dalla porta principale — una
         // chiamata vera, che si vede e si accetta.
         if (chiusuraVolutaRef.current) {
-          dbg.debug('[WebRTC] offerta non richiesta ignorata: la chiamata era stata chiusa di proposito');
+          log.debug('[WebRTC] offerta non richiesta ignorata: la chiamata era stata chiusa di proposito');
           return;
         }
         // Direct offer (no call-request) — auto-accept for backward compatibility
@@ -730,7 +730,7 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
           }
         }, CONNECTION_TIMEOUT);
       } catch (e) {
-        console.error('[WebRTC] Accept error:', e);
+        log.error('[WebRTC] Accept error:', e);
         setWebrtcState('failed');
         stateRef.current = 'failed';
         cleanup();
@@ -744,7 +744,7 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
           await acceptAnswer(pc, data);
           await flushIceCandidates(pc);
         } catch (e) {
-          console.error('[WebRTC] Accept answer error:', e);
+          log.error('[WebRTC] Accept answer error:', e);
         }
       }
 
@@ -755,7 +755,7 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
         iceCandidateQueueRef.current.push(data);
         return;
       }
-      try { await addIceCandidate(pc, data); } catch (e) { console.warn('[WebRTC] ICE add:', e.message); }
+      try { await addIceCandidate(pc, data); } catch (e) { log.warn('[WebRTC] ICE add:', e.message); }
 
     } else if (type === 'renegotiate') {
       const pc = pcRef.current;
@@ -790,7 +790,7 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
           sendSignal('renegotiate', offerStr).catch(() => {});
         }
       } catch (e) {
-        console.error('[WebRTC] Renegotiate error:', e);
+        log.error('[WebRTC] Renegotiate error:', e);
       }
     }
   }, [myName, cleanup, handleDCMessage, handleStateChange, handleRemoteTrack, sendSignal]);
@@ -825,7 +825,7 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
     return () => {
       signalingReadyRef.current = false;
       signalingSubscribePromiseRef.current = null;
-      try { channel.unsubscribe(); } catch (e) { console.warn('[WebRTC] unsubscribe:', e.message); }
+      try { channel.unsubscribe(); } catch (e) { log.warn('[WebRTC] unsubscribe:', e.message); }
       if (channelRef.current === channel) channelRef.current = null;
     };
   }, [roomId]);
@@ -869,7 +869,7 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
         }
       }, 30000);
     } catch (e) {
-      console.error('[WebRTC] Call request error:', e);
+      log.error('[WebRTC] Call request error:', e);
       setWebrtcState('failed');
       stateRef.current = 'failed';
     }
@@ -894,7 +894,7 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
     try {
       await sendSignal('call-accepted', { piattaforma: piattaformaRef.current });
     } catch (e) {
-      console.error('[WebRTC] Accept signal error:', e);
+      log.error('[WebRTC] Accept signal error:', e);
     }
   }, [incomingCall, sendSignal]);
 
@@ -904,7 +904,7 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
     setIncomingCall(null);
     try {
       await sendSignal('call-declined', JSON.stringify({ reason: 'declined' }));
-    } catch (e) { console.warn('[WebRTC] decline signal:', e.message); }
+    } catch (e) { log.warn('[WebRTC] decline signal:', e.message); }
   }, [sendSignal]);
 
   // ── Toggle video ──
@@ -954,7 +954,7 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
           callTypeRef.current = 'video';
         }
       } catch (e) {
-        console.warn('[WebRTC] Camera failed:', e);
+        log.warn('[WebRTC] Camera failed:', e);
       }
     }
   }, [videoEnabled, sendSignal]);
@@ -973,7 +973,7 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
       const ricomposto = new MediaStream([...tracceAudio, ...soloVideo.getVideoTracks()]);
       localStreamRef.current = ricomposto;
       setLocalStream(ricomposto);
-    } catch (e) { console.warn('[WebRTC] flipCamera:', e.message); }
+    } catch (e) { log.warn('[WebRTC] flipCamera:', e.message); }
   }, []);
 
   // ═══ b.293 — CONDIVISIONE SCHERMO (solo dove il browser la offre:
@@ -1019,7 +1019,7 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
       return true;
     } catch (e) {
       // "Annulla" nella finestra di scelta non e un guasto
-      if (e?.name !== 'NotAllowedError') console.warn('[WebRTC] condivisione schermo:', e.message);
+      if (e?.name !== 'NotAllowedError') log.warn('[WebRTC] condivisione schermo:', e.message);
       return false;
     }
   }, [schermoCondiviso]);

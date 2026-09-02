@@ -267,6 +267,37 @@ perche il working tree lo conteneva ancora.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.604** (push #880) — Modulo E del "correggi tutto": un
+  registro solo.
+
+  254 `console.*` in 68 file → `log.*` dal logger (createLogger), con
+  un codemod su AST (@babel/parser: si tocca SOLO il callee, mai gli
+  argomenti). I 12 file che chiamavano il logger `dbg` ora lo chiamano
+  `log` come gli altri 112. 56 file hanno ricevuto import + `const log
+  = createLogger('<nome-file>')` dopo l'ultimo import (7 inserimenti
+  finiti nel posto sbagliato dal codemod — import senza `;` — trovati
+  da eslint no-undef e rimessi a mano). `useFreeTalkVAD`:
+  `.catch(console.error)` → un errore con messaggio.
+  **Logger variadico**: 33 delle 254 chiamate avevano tre o piu'
+  argomenti; con `(msg, data)` il terzo sarebbe sparito in silenzio.
+  Ora `(msg, ...rest)`: un dato come prima, da due in su in
+  `dettagli`. Provato in "produzione" (env finto): niente si perde.
+  **eslint `no-console`: da warn-con-eccezioni a `error`** senza
+  eccezioni; lib/logger.js e' l'unico pozzo, marcato riga per riga.
+  Cambio di comportamento dichiarato: i 2 `console.log` diventano
+  `log.debug`, che in produzione tace (prima stampavano). Voluto.
+  NON toccati: `traccia()` (monitorSviluppo, 6 file: e' telemetria di
+  prodotto, non registro) e i 2 `Sentry.*` diretti (contratto con il
+  servizio, non un registro parallelo).
+
+  Prove: nuovo `logger-unico-b604.test.js` (0 console fuori dal logger,
+  0 `dbg`, regola eslint, logger variadico in produzione). 2 ancore
+  riallineate (b247, wallet-b161-bis: cercavano `console.warn`/`error`
+  come prova che il guasto non fosse muto — ora cercano `log.*`).
+  [VERIFICATO] eslint 0 errori (98 warning pre-esistenti:
+  exhaustive-deps e no-img-element), build ok, suite 302 file / 3707
+  prove, 0 regressioni.
+
 - Versione: **b.603** (push #879) — Modulo D del "correggi tutto": le
   pipeline gemelle FUORI dagli interpreti.
 

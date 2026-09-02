@@ -11,7 +11,7 @@ import { sendViaDataChannel } from '../lib/webrtc.js';
 import { eModalitaDiretta } from '../lib/decisioni.js';
 import { createLogger } from '../lib/logger.js';
 import { numeroDiSicurezza } from '../lib/improntaChiavi.js';
-const dbg = createLogger('e2e');
+const log = createLogger('e2e');
 
 /**
  * useE2EEncryption — Manages E2E encryption for WebRTC DataChannel.
@@ -54,7 +54,7 @@ export default function useE2EEncryption({ sessionModeRef, roomIdRef } = {}) {
         dc.send(JSON.stringify({ type: 'e2e-pubkey', key: pubKeyStr }));
       }
     } catch (e) {
-      console.warn('[E2E] Key generation failed:', e);
+      log.warn('[E2E] Key generation failed:', e);
       readyRef.current = false;
     }
   }, []);
@@ -84,13 +84,13 @@ export default function useE2EEncryption({ sessionModeRef, roomIdRef } = {}) {
       } catch (e) {
         // Senza numero non si blocca la conversazione, ma non si puo
         // nemmeno dire che sia verificata: la schermata lo dira.
-        dbg.warn('[E2E] numero di sicurezza non calcolabile:', e?.message);
+        log.warn('[E2E] numero di sicurezza non calcolabile:', e?.message);
         setNumeroSicurezza('');
       }
 
-      dbg.debug('[E2E] Shared key derived — messages are now encrypted');
+      log.debug('[E2E] Shared key derived — messages are now encrypted');
     } catch (e) {
-      console.warn('[E2E] Key derivation failed:', e);
+      log.warn('[E2E] Key derivation failed:', e);
       readyRef.current = false;
     }
   }, []);
@@ -127,11 +127,11 @@ export default function useE2EEncryption({ sessionModeRef, roomIdRef } = {}) {
       } catch (e) {
         // FAIL-CLOSED in Direct mode: encryption failed → block message
         if (isDirect) {
-          console.error('[E2E] Encryption failed in Direct mode — message BLOCKED:', e);
+          log.error('[E2E] Encryption failed in Direct mode — message BLOCKED:', e);
           throw new E2EEncryptionError('Encryption failed — message not sent');
         }
         // Translate mode: fall back to cleartext (server processes anyway)
-        console.warn('[E2E] Encryption failed, falling back to cleartext:', e);
+        log.warn('[E2E] Encryption failed, falling back to cleartext:', e);
         return sendViaDataChannel(dc, msg);
       }
     }
@@ -139,7 +139,7 @@ export default function useE2EEncryption({ sessionModeRef, roomIdRef } = {}) {
     // E2E not ready (no shared key yet)
     if (isDirect) {
       // FAIL-CLOSED: block the message entirely
-      console.error('[E2E] E2E not ready in Direct mode — message BLOCKED');
+      log.error('[E2E] E2E not ready in Direct mode — message BLOCKED');
       throw new E2ENotReadyError('E2E encryption not ready — message not sent');
     }
 
@@ -152,10 +152,10 @@ export default function useE2EEncryption({ sessionModeRef, roomIdRef } = {}) {
     if (!sharedKeyRef.current) return null;
     try {
       const plaintext = await decryptMessage(sharedKeyRef.current, encryptedData);
-      let msg; try { msg = JSON.parse(plaintext); } catch { console.warn('[E2E] JSON parse failed'); return null; }
+      let msg; try { msg = JSON.parse(plaintext); } catch { log.warn('[E2E] JSON parse failed'); return null; }
       return msg;
     } catch (e) {
-      console.warn('[E2E] Decryption failed:', e);
+      log.warn('[E2E] Decryption failed:', e);
       return null;
     }
   }, []);

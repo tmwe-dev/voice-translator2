@@ -3,6 +3,8 @@ import { memo, useState, useEffect, useCallback } from 'react';
 import { FONT, vibrate, getLang } from '../lib/constants.js';
 import Icon from './Icon.js';
 import { useApp } from '../contexts/AppContext.js';
+import { createLogger } from '../lib/logger.js';
+const log = createLogger('MondoPersona');   // b.604 — niente console.* sparsi: tutto dal logger
 
 // ═══════════════════════════════════════════════════════════════
 // MondoPersona — il profilo pubblico di una persona (Fase 1)
@@ -34,7 +36,7 @@ function MondoPersona({ publicId, onClose, onOpenDiscussione }) {
         const r = await fetch(`/api/mondo/discussioni?persona=${encodeURIComponent(publicId)}`, { signal: AbortSignal.timeout(10000) /* b.363 — prima non c'era tetto di attesa: se la rete restava muta la chiamata pendeva per sempre e l'utente non vedeva mai un esito */ });
         // b.363 — prima la lettura non era protetta: il profilo restava vuoto
         // e nessuno, ne' l'utente ne' il registro, sapeva perche'.
-        if (r.ok && vivo) { const d = await r.json().catch(() => null); if (d) setP(d.profilo || null); else console.warn('[b.363] mondo/persona: risposta illeggibile'); }
+        if (r.ok && vivo) { const d = await r.json().catch(() => null); if (d) setP(d.profilo || null); else log.warn('[b.363] mondo/persona: risposta illeggibile'); }
       } catch { /* profilo non caricato: resta il minimo */ }
       if (vivo) setCaricando(false);
     })();
@@ -57,7 +59,7 @@ function MondoPersona({ publicId, onClose, onOpenDiscussione }) {
       // b.363 — prima questo guasto non lasciava traccia da nessuna parte: nel
       // registro non compariva nulla, e il motivo vero (rete caduta, attesa
       // scaduta, credito finito, server rotto) restava irrecuperabile.
-      if (e?.name !== 'AbortError') console.warn('[b.363] /api/mondo/discussioni:', e?.message || e);
+      if (e?.name !== 'AbortError') log.warn('[b.363] /api/mondo/discussioni:', e?.message || e);
       setSeguito(gia); setErroreSegui(L('genericError')); }
   }, [userToken, seguito, publicId, L]);
 

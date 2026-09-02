@@ -18,6 +18,8 @@ import { spendibile, scalaSeDisponibile } from './contabilita.js';
 import { costoConversazione, costoElevenLabsCaratteri, costoMessaggioTesto, costoRiassunto, costoAzioneChat } from './consumo.js';
 import { costoProviderCent, CARATTERI_PER_SECONDO } from './provider-costi.js';
 import { COSTO_CLONAZIONE_SECONDI } from './tariffe.js';
+import { createLogger } from '../lib/logger.js';
+const log = createLogger('addebita');   // b.604 — niente console.* sparsi: tutto dal logger
 
 /**
  * Il credito è finito? (da chiamare PRIMA di lavorare: se sì → 402)
@@ -40,7 +42,7 @@ export async function creditoFinito(utente, opzioni = {}) {
     // b.364 — il pavimento non e piu zero: e meno la tolleranza.
     return (await spendibile(utente)) <= 0;
   } catch (e) {
-    console.error('[wallet] saldo non leggibile:', e.message);
+    log.error('[wallet] saldo non leggibile:', e.message);
     return !!opzioni.failClosed;
   }
 }
@@ -74,7 +76,7 @@ export async function creditoInsufficiente(utente, costoPrevisto, opzioni = {}) 
     // b.364 — vedi creditoFinito.
     return (await spendibile(utente)) < costoPrevisto;
   } catch (e) {
-    console.error('[wallet] saldo non leggibile:', e.message);
+    log.error('[wallet] saldo non leggibile:', e.message);
     return !!opzioni.failClosed;
   }
 }
@@ -207,7 +209,7 @@ async function scala(utente, secondi, dettaglio) {
     const riuscito = await scalaSeDisponibile(utente, secondi, dettaglio);
     return riuscito ? 'ok' : 'esaurito';
   } catch (e) {
-    console.error('[wallet] addebito fallito, non blocco:', e.message);
+    log.error('[wallet] addebito fallito, non blocco:', e.message);
     return 'saltato';
   }
 }

@@ -39,6 +39,8 @@
 // ═══════════════════════════════════════════════════════════════
 
 import { createClient } from '@supabase/supabase-js';
+import { createLogger } from '../lib/logger.js';
+const log = createLogger('riserva');   // b.604 — niente console.* sparsi: tutto dal logger
 
 function db() {
   return createClient(
@@ -107,19 +109,19 @@ export async function commit(riservaId, secondiReali, dettaglio = {}) {
       p_riserva_id: riservaId, p_secondi_reali: importo, p_dettaglio: dettaglio,
     });
     if (error) {
-      console.error('[wallet] commit riserva fallito:', riservaId, error.message);
+      log.error('[wallet] commit riserva fallito:', riservaId, error.message);
       return { ok: false, motivo: error.message };
     }
     // wallet_commit RETURNS TABLE (ok BOOLEAN, motivo TEXT): rifiuta una
     // riserva inesistente o gia chiusa, e lo dice.
     const r = data?.[0];
     if (r && r.ok === false) {
-      console.error('[wallet] commit riserva rifiutato:', riservaId, r.motivo);
+      log.error('[wallet] commit riserva rifiutato:', riservaId, r.motivo);
       return { ok: false, motivo: r.motivo || 'riserva rifiutata' };
     }
     return { ok: true };
   } catch (e) {
-    console.error('[wallet] commit riserva fallito:', riservaId, e.message);
+    log.error('[wallet] commit riserva fallito:', riservaId, e.message);
     return { ok: false, motivo: e.message };
   }
 }
@@ -135,8 +137,8 @@ export async function release(riservaId, motivo = '') {
   if (!riservaId) return;
   try {
     const { error } = await db().rpc('wallet_release', { p_riserva_id: riservaId, p_motivo: motivo });
-    if (error) console.error('[wallet] release riserva fallito:', riservaId, error.message);
+    if (error) log.error('[wallet] release riserva fallito:', riservaId, error.message);
   } catch (e) {
-    console.error('[wallet] release riserva fallito:', riservaId, e.message);
+    log.error('[wallet] release riserva fallito:', riservaId, e.message);
   }
 }

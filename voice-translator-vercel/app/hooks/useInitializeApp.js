@@ -5,7 +5,7 @@ import { mapLang } from '../lib/i18n.js';
 import { indovinaPaese } from '../lib/paesi.js';
 import { createLogger } from '../lib/logger.js';
 import { memDel, memGet, memSet, sesGet, sesSet } from '../lib/memoria.js';
-const dbg = createLogger('init');
+const log = createLogger('init');
 
 /**
  * useInitializeApp — Handles the complex app initialization:
@@ -283,7 +283,7 @@ export default function useInitializeApp({
 
       // 8. TESTING_MODE auto-login
       if (typeof window !== 'undefined' && window.__VT_TESTING_MODE && !savedToken) {
-        dbg.debug('[TESTING_MODE] Auto-login with test account...');
+        log.debug('[TESTING_MODE] Auto-login with test account...');
         fetch('/api/test-login', {
           method: 'POST',
           // b.363 — nessuna scadenza: in collaudo una rete appesa
@@ -308,10 +308,10 @@ export default function useInitializeApp({
               // b.166 — CONFERMATO (caccia al tesoro): data.user.apiKeys e
               // ora mascherato dal server, non va piu nel campo modificabile
               // (vedi useAuth.js, stesso motivo).
-              dbg.debug('[TESTING_MODE] Logged in as test@bartalk.dev');
+              log.debug('[TESTING_MODE] Logged in as test@bartalk.dev');
             }
           })
-          .catch(e => console.warn('[TESTING_MODE] Auto-login failed:', e.message));
+          .catch(e => log.warn('[TESTING_MODE] Auto-login failed:', e.message));
       } else if (typeof window !== 'undefined' && window.__VT_TESTING_MODE) {
         auth.setIsTrial(false);
         auth.setIsTopPro(true);
@@ -385,7 +385,7 @@ export default function useInitializeApp({
         const ricontrolla = () => { if (document.visibilityState === 'visible') reg.update().catch(() => {}); };
         document.addEventListener('visibilitychange', ricontrolla);
         setInterval(() => reg.update().catch(() => {}), 5 * 60 * 1000);
-      }).catch(err => console.error('SW registration failed:', err));
+      }).catch(err => log.error('SW registration failed:', err));
 
       // Il service worker nuovo ha preso il controllo (skipWaiting e gia
       // in sw.js): da questo istante HTML e pagina appartengono a due

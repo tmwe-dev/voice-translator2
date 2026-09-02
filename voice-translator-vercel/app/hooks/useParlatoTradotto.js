@@ -3,6 +3,8 @@ import { useRef, useState, useCallback, useEffect } from 'react';
 // b.138 — gli avvisi di questo hook si leggono a schermo: vanno tradotti.
 import { tFuori } from '../lib/i18n.js';
 import { memGet } from '../lib/memoria.js';
+import { createLogger } from '../lib/logger.js';
+const log = createLogger('useParlatoTradotto');   // b.604 — niente console.* sparsi: tutto dal logger
 
 // ═══════════════════════════════════════════════════════════════
 // useParlatoTradotto — chi prende la parola viene tradotto.
@@ -99,7 +101,7 @@ export default function useParlatoTradotto({
       // b.363 — questo ripiego mostra un messaggio all'utente ma non
       // registrava nulla: in produzione non si sapeva se fosse rete,
       // scadenza o corpo illeggibile.
-      console.warn('[parlato-tradotto] trascrizione non riuscita:', e?.message || e);
+      log.warn('[parlato-tradotto] trascrizione non riuscita:', e?.message || e);
       setErrore('Connessione assente');
     } finally {
       setStaScrivendo(false);

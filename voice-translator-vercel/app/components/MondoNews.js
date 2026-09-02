@@ -69,6 +69,8 @@ import { useApp } from '../contexts/AppContext.js';
 // b.255 — vedi lib/pannelloPieno.js: un pannello che copre lo schermo lo
 // dichiara, cosi il banner d'installazione non gli finisce sopra.
 import { apriPannelloPieno, chiudiPannelloPieno } from '../lib/pannelloPieno.js';
+import { createLogger } from '../lib/logger.js';
+const log = createLogger('MondoNews');   // b.604 — niente console.* sparsi: tutto dal logger
 
 const CATEGORIE = [
   { id: 'top',        cat: 'notizie',    labelKey: 'newsTopHeadlines' },
@@ -430,7 +432,7 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
       } catch (e) {
         // Un guasto non si traveste da «nessuno ne parla»: sono due cose
         // diverse, e chi guarda deve poterle distinguere.
-        if (e?.name !== 'AbortError') { console.warn('[b.400] confronto non arrivato:', e?.message); if (vivo) setConfrontoGuasto(true); }
+        if (e?.name !== 'AbortError') { log.warn('[b.400] confronto non arrivato:', e?.message); if (vivo) setConfrontoGuasto(true); }
       }
     })();
     return () => { vivo = false; taglio.abort(); };
@@ -464,7 +466,7 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
         // b.363 — prima questo guasto non lasciava traccia da nessuna parte: nel
         // registro non compariva nulla, e il motivo vero (rete caduta, attesa
         // scaduta, credito finito, server rotto) restava irrecuperabile.
-        if (e?.name !== 'AbortError') console.warn('[b.363] /api/mondo/discussioni:', e?.message || e);
+        if (e?.name !== 'AbortError') log.warn('[b.363] /api/mondo/discussioni:', e?.message || e);
         if (vivo) setFeedGuasto(true); }
     })();
     return () => { vivo = false; };
@@ -529,7 +531,7 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
       // b.363 — prima la lettura non era protetta e la ricerca video moriva
       // in silenzio, lasciando la griglia vuota senza un motivo.
       const d = await r.json().catch(() => null);
-      if (!d) { console.warn('[b.363] topics/video: risposta illeggibile'); return; }
+      if (!d) { log.warn('[b.363] topics/video: risposta illeggibile'); return; }
       setVideoAttivi(!!d.disponibile);
       // b.324 — audit Mondo D6: la griglia mostrava lo stesso video due
       // volte (fonti diverse, stesso id). Dedup per id/url prima di mostrare.
@@ -678,7 +680,7 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
       signal: AbortSignal.timeout(10000),
       body: JSON.stringify({ chiave: k, tipo, valore }),
     }).catch((e) => {
-      if (e?.name !== 'AbortError') console.warn('[b.545] POST /api/mondo/segnali:', e?.message || e);
+      if (e?.name !== 'AbortError') log.warn('[b.545] POST /api/mondo/segnali:', e?.message || e);
     });
   }, []);
 
@@ -713,7 +715,7 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
       const d = r.ok ? await r.json().catch(() => null) : null;
       conteggi = d?.conteggi || null;
     } catch (e) {
-      if (e?.name !== 'AbortError') console.warn('[b.545] GET /api/mondo/segnali:', e?.message || e);
+      if (e?.name !== 'AbortError') log.warn('[b.545] GET /api/mondo/segnali:', e?.message || e);
     }
     if (!conteggi) return;
     // `mescolaConInteresse` garantisce che il migliore di ogni mio seme
@@ -925,7 +927,7 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
       // b.363 — prima questo guasto non lasciava traccia da nessuna parte: nel
       // registro non compariva nulla, e il motivo vero (rete caduta, attesa
       // scaduta, credito finito, server rotto) restava irrecuperabile.
-      if (e?.name !== 'AbortError') console.warn('[b.363] /api/topics/search:', e?.message || e);
+      if (e?.name !== 'AbortError') log.warn('[b.363] /api/topics/search:', e?.message || e);
       // b.552 — un giro in sottofondo che non riesce resta in sottofondo:
       // non si mette un cartello di guasto davanti a chi sta guardando.
       if (e.name !== 'AbortError' && !dietro && !silenziosa) setErrore('guasto');
@@ -1092,7 +1094,7 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
       // b.363 — prima questo guasto non lasciava traccia da nessuna parte: nel
       // registro non compariva nulla, e il motivo vero (rete caduta, attesa
       // scaduta, credito finito, server rotto) restava irrecuperabile.
-      if (e?.name !== 'AbortError') console.warn('[b.363] /api/mondo/discussioni:', e?.message || e);
+      if (e?.name !== 'AbortError') log.warn('[b.363] /api/mondo/discussioni:', e?.message || e);
       setErrore('guasto'); }
     setCreando(false);
     // b.232 — `prefs` nelle deps: il body usa prefs.mondoNick, che prima

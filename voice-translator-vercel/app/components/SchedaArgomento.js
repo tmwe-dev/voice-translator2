@@ -27,6 +27,8 @@ import Icon from './Icon.js';
 import { useApp } from '../contexts/AppContext.js';
 import AnteprimaCoperta from './ui/AnteprimaCoperta.js';
 import Sovrapposizione from './ui/Sovrapposizione.js';
+import { createLogger } from '../lib/logger.js';
+const log = createLogger('SchedaArgomento');   // b.604 — niente console.* sparsi: tutto dal logger
 
 function SchedaArgomento({ aperta, tipo, dati, C, onClose, onParlane, autoGenera = false }) {
   const { L, prefs, userToken } = useApp();
@@ -99,7 +101,7 @@ function SchedaArgomento({ aperta, tipo, dati, C, onClose, onParlane, autoGenera
       // b.363 — prima questo guasto non lasciava traccia da nessuna parte: nel
       // registro non compariva nulla, e il motivo vero (rete caduta, attesa
       // scaduta, credito finito, server rotto) restava irrecuperabile.
-      if (e?.name !== 'AbortError') console.warn('[b.363] /api/topics/riassunto:', e?.message || e);
+      if (e?.name !== 'AbortError') log.warn('[b.363] /api/topics/riassunto:', e?.message || e);
       setErrSintesi(true); }
     finally { setGenerando(false); }
   }, [dati, generando, prefs.uiLang, userToken]);

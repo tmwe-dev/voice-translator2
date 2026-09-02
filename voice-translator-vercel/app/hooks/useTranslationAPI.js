@@ -14,7 +14,7 @@ import { puoPartire } from '../lib/reati.js';
 import { toast } from '../lib/avvisi.js';
 import { cronometro } from '../lib/monitorSviluppo.js';
 import { membriDi, linguaDellAltro, lingueDegliAltri } from '../lib/membri.js';
-const dbg = createLogger('translation-api');
+const log = createLogger('translation-api');
 
 // b.247 — lo stesso formato che accetta /api/messages (POST e PATCH).
 // Un identificativo che il server rifiuterebbe non deve nemmeno partire:
@@ -120,7 +120,7 @@ export default function useTranslationAPI({
     // perche un client si puo modificare.
     const confine = puoPartire(original);
     if (!confine.ok) {
-      dbg.warn('[sendMessage] fermato al confine:', confine.categoria);
+      log.warn('[sendMessage] fermato al confine:', confine.categoria);
       // Si dice PERCHE. Un messaggio che sparisce senza spiegazione fa
       // pensare a un guasto, e chi ha scritto lo riscrive uguale.
       toast.error(confine.motivo);
@@ -149,7 +149,7 @@ export default function useTranslationAPI({
       : null;
     if (idDichiarato) {
       if (idSpedizioneRef.current.has(idDichiarato)) {
-        dbg.debug('[sendMessage] doppio scatto della stessa cattura, bloccato:', idDichiarato);
+        log.debug('[sendMessage] doppio scatto della stessa cattura, bloccato:', idDichiarato);
         return null;
       }
     } else if (original === lastSentTextRef.current.testo && ora - lastSentTextRef.current.quando < 2500) {
@@ -158,7 +158,7 @@ export default function useTranslationAPI({
       // toglierlo qui vorrebbe dire peggiorare la protezione. Resta la
       // vecchia regola sul testo, ma vale SOLO su questa strada — chi
       // l'origine la dichiara non ci passa mai.
-      dbg.debug('[sendMessage] Doppio invio bloccato (origine non dichiarata):', original.slice(0, 30));
+      log.debug('[sendMessage] Doppio invio bloccato (origine non dichiarata):', original.slice(0, 30));
       return null;
     }
     lastSentTextRef.current = { testo: original, quando: ora };
@@ -318,7 +318,7 @@ export default function useTranslationAPI({
       segnaStato('fallito');
       return null;
     }).catch(e => {
-      console.error('[sendMessage] Server save error:', e);
+      log.error('[sendMessage] Server save error:', e);
       segnaStato('fallito');
       return null;
     });
@@ -429,7 +429,7 @@ export default function useTranslationAPI({
           return doPatch(retryCount + 1);
         }
       } catch (e) {
-        console.error('[sendTranslationUpdate] Server PATCH error:', e);
+        log.error('[sendTranslationUpdate] Server PATCH error:', e);
       }
     };
 
@@ -548,10 +548,10 @@ export default function useTranslationAPI({
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}));
         if (res.status === 402) {
-          console.warn('[translateUniversal] No credits (402), falling back to free translation');
+          log.warn('[translateUniversal] No credits (402), falling back to free translation');
           throw new Error('no-credits');
         }
-        console.warn('[translateUniversal] Paid translate failed:', res.status, errData.error);
+        log.warn('[translateUniversal] Paid translate failed:', res.status, errData.error);
         fineTraduzione({ stato: res.status, esito: 'errore' });
         throw new Error('Translation error');
       }
@@ -566,7 +566,7 @@ export default function useTranslationAPI({
       // riservito identico per quindici minuti senza nemmeno riprovare.
       // Qui si getta il risultato e si scende al ripiego gratuito.
       if (result?.validationFailed) {
-        console.warn('[translateUniversal] Traduzione respinta dal controllo qualita: passo al ripiego');
+        log.warn('[translateUniversal] Traduzione respinta dal controllo qualita: passo al ripiego');
         fineTraduzione({ stato: res.status, fornitore: result?.provider || '?', esito: 'respinta' });
         throw new Error('validazione-fallita');
       }
@@ -578,7 +578,7 @@ export default function useTranslationAPI({
       // This ensures translation ALWAYS works even if credits are exhausted,
       // auth is broken, or the paid API has issues. Quality may be lower
       // (Microsoft/Google vs LLM) but the message gets translated.
-      dbg.debug('[translateUniversal] Falling back to free translation:', paidErr.message);
+      log.debug('[translateUniversal] Falling back to free translation:', paidErr.message);
       try {
         const freeRes = await fetch('/api/translate-free', {
           method: 'POST',
@@ -598,7 +598,7 @@ export default function useTranslationAPI({
           // fallito invece di far esplodere tutta la catena.
           result = await freeRes.json().catch(() => null);
           if (!result?.translated) {
-            console.error('[translateUniversal] Free fallback: risposta non leggibile');
+            log.error('[translateUniversal] Free fallback: risposta non leggibile');
             return { translated: text, fallback: true, traduzioneFallita: true };
           }
         } else {
@@ -607,11 +607,11 @@ export default function useTranslationAPI({
           // significa "tradotto da un fornitore di riserva". Chi chiamava non
           // aveva modo di distinguere una traduzione di riserva RIUSCITA da un
           // guasto totale, e mostrava l'originale come se fosse tradotto.
-          console.error('[translateUniversal] Free fallback also failed:', freeRes.status);
+          log.error('[translateUniversal] Free fallback also failed:', freeRes.status);
           return { translated: text, fallback: true, traduzioneFallita: true };
         }
       } catch (freeErr) {
-        console.error('[translateUniversal] Free fallback error:', freeErr);
+        log.error('[translateUniversal] Free fallback error:', freeErr);
         return { translated: text, fallback: true, traduzioneFallita: true };
       }
     }

@@ -4,7 +4,7 @@ import { getLang, SILENCE_DELAY, VAD_THRESHOLD, VAD_PRESETS, isWhisperPrimaryLan
 import { createLogger } from '../lib/logger.js';
 import { creaCalibratore, sogliaInScala255 } from '../lib/calibraRumore.js';
 import { memGet, memSet } from '../lib/memoria.js';
-const dbg = createLogger('vad');
+const log = createLogger('vad');
 
 /**
  * FreeTalk VAD (Voice Activity Detection) hook.
@@ -157,9 +157,9 @@ export default function useFreeTalkVAD({
         recognition.onerror = (event) => {
           if (event.error === 'no-speech') return;
           ftErrorCount++;
-          console.warn(`[STT-FreeTalk] Error: ${event.error} (count=${ftErrorCount})`);
+          log.warn(`[STT-FreeTalk] Error: ${event.error} (count=${ftErrorCount})`);
           if (ftErrorCount >= 3 && !whisperOnlyRef.current) {
-            console.warn('[STT-FreeTalk] Too many errors — enabling Whisper-only mode');
+            log.warn('[STT-FreeTalk] Too many errors — enabling Whisper-only mode');
             whisperOnlyRef.current = true;
           }
         };
@@ -172,7 +172,7 @@ export default function useFreeTalkVAD({
         };
         recognition.start();
       } else if (useWhisperOnly) {
-        dbg.debug(`[STT-FreeTalk] Whisper-only mode for lang=${currentLang}`);
+        log.debug(`[STT-FreeTalk] Whisper-only mode for lang=${currentLang}`);
       }
 
       // b.108 — il buffer si alloca UNA volta, non a ogni fotogramma:
@@ -225,7 +225,7 @@ export default function useFreeTalkVAD({
               r.ondataavailable = e => { if (e.data.size > 0) ch.push(e.data); };
               r.onstop = async () => {
                 const blob = new Blob(ch, { type: r.mimeType });
-                if (blob.size > 1000) await processAndSendAudio(blob).catch(console.error);
+                if (blob.size > 1000) await processAndSendAudio(blob).catch((e) => log.error('[VAD] invio audio fallito:', e));
               };
               vadRecRef.current = r;
               r.start(100);
@@ -267,7 +267,7 @@ export default function useFreeTalkVAD({
                   try {
                     await translateAndSend(allOriginal, { clearStreamingMsg: true });
                   } catch (e) {
-                    console.error('[FreeTalk] Translation error:', e);
+                    log.error('[FreeTalk] Translation error:', e);
                   }
                   setStreamingMsg(null);
                   allWordsRef.current = '';
@@ -337,7 +337,7 @@ export default function useFreeTalkVAD({
         try {
           await translateAndSend(pendingText, { clearStreamingMsg: true });
         } catch (e) {
-          console.error('[FreeTalk] Error sending pending text on stop:', e);
+          log.error('[FreeTalk] Error sending pending text on stop:', e);
         }
         allWordsRef.current = '';
         freeTalkSendingRef.current = false;

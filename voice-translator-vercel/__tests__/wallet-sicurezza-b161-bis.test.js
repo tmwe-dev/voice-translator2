@@ -136,8 +136,9 @@ describe('app/wallet/riserva.js: wrapper JS per riserva/commit/release', () => {
   it('e il guasto resta scritto nel registro, non sparisce', () => {
     const iCommit = src.indexOf('export async function commit(');
     const iRelease = src.indexOf('export async function release(');
-    expect(src.slice(iCommit, iRelease)).toContain('console.error');
-    expect(src.slice(iRelease)).toContain('console.error');
+    // b.604 — il registro e' il logger (lib/logger.js), non console.
+    expect(src.slice(iCommit, iRelease)).toContain('log.error');
+    expect(src.slice(iRelease)).toContain('log.error');
   });
 
   it('ma `riserva()` resta l\'unica fail-closed delle tre', () => {

@@ -1,5 +1,7 @@
 'use client';
 import { useState, useCallback, useRef, useEffect } from 'react';
+import { createLogger } from '../lib/logger.js';
+const log = createLogger('useReazioni');   // b.604 — niente console.* sparsi: tutto dal logger
 
 // ═══════════════════════════════════════════════════════════════
 // useReazioni — i conteggi dei pollici e dei cuori.
@@ -34,13 +36,13 @@ export default function useReazioni({ roomId, roomSessionToken, msgIds = [] }) {
       // lettura esplodeva dentro il try e la reazione tornava indietro
       // senza che restasse traccia del motivo.
       const d = await r.json().catch(() => null);
-      if (!d) console.warn('[reazioni] risposta non leggibile, stato', r.status);
+      if (!d) log.warn('[reazioni] risposta non leggibile, stato', r.status);
       return d;
     } catch (e) {
       // b.363 — questo ripiego cambia cio che l'utente vede (la reazione
       // torna indietro) ma non registrava nulla: in produzione era un
       // guasto invisibile.
-      console.warn('[reazioni] chiamata non riuscita:', e?.message || e);
+      log.warn('[reazioni] chiamata non riuscita:', e?.message || e);
       return null;
     }
   }, [roomId, roomSessionToken]);

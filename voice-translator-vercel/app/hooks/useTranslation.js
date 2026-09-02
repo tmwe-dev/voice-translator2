@@ -9,7 +9,7 @@ import { getPerf, PERF } from '../lib/perfTelemetry.js';
 import { createLogger } from '../lib/logger.js';
 import { toast } from '../lib/avvisi.js';
 import { cronometro, traccia } from '../lib/monitorSviluppo.js';
-const dbg = createLogger('translation');
+const log = createLogger('translation');
 
 // ═══════════════════════════════════════════════════════════════
 // FASE 10: Simplified Translation Pipeline
@@ -302,7 +302,7 @@ export default function useTranslation({
       try {
         result = await doTranslate();
       } catch (firstErr) {
-        console.warn('[translateAndSend] Retry in 500ms:', firstErr.message);
+        log.warn('[translateAndSend] Retry in 500ms:', firstErr.message);
         await new Promise(r => setTimeout(r, 500));
         result = await doTranslate();
       }
@@ -332,7 +332,7 @@ export default function useTranslation({
         });
       }
     } catch (e) {
-      console.error('[translateAndSend] Failed after retry:', e);
+      log.error('[translateAndSend] Failed after retry:', e);
       if (updateLocalMessage) {
         const senderName = verifiedNameRef?.current || prefsRef.current.name;
         // b.247 — anche il segnale d'errore nomina il SUO messaggio: per
@@ -362,9 +362,9 @@ export default function useTranslation({
         if (typeof confidence === 'number' && confidence > 0) {
           if (confidence < STT_CONFIDENCE_THRESHOLD) {
             lowConfidenceCountRef.current++;
-            dbg.debug(`[STT] Low confidence: ${confidence.toFixed(2)} (${lowConfidenceCountRef.current}/${STT_LOW_CONFIDENCE_COUNT})`);
+            log.debug(`[STT] Low confidence: ${confidence.toFixed(2)} (${lowConfidenceCountRef.current}/${STT_LOW_CONFIDENCE_COUNT})`);
             if (lowConfidenceCountRef.current >= STT_LOW_CONFIDENCE_COUNT) {
-              console.warn(`[STT] Auto-switching to Whisper-only mode — ${STT_LOW_CONFIDENCE_COUNT} consecutive low-confidence results`);
+              log.warn(`[STT] Auto-switching to Whisper-only mode — ${STT_LOW_CONFIDENCE_COUNT} consecutive low-confidence results`);
               whisperOnlyRef.current = true;
             }
           } else {
@@ -443,7 +443,7 @@ export default function useTranslation({
       throw new Error(tFuori('creditExhaustedShort'));
     }
     if (!res.ok) {
-      console.error('[processAndSendAudio] Transcribe API error:', res.status);
+      log.error('[processAndSendAudio] Transcribe API error:', res.status);
       throw new Error(`Transcribe error ${res.status}`);
     }
     // b.363 — corpo non-JSON (pagina d'errore del guardiano): la lettura
@@ -451,7 +451,7 @@ export default function useTranslation({
     const { original, creditoEsaurito } = await res.json().catch(() => ({}));
     if (creditoEsaurito) window.dispatchEvent(new CustomEvent('wallet:esaurito'));
     getPerf().measure(PERF.STT_LATENCY);
-    dbg.debug('[processAndSendAudio] STT result:', original?.substring(0, 50));
+    log.debug('[processAndSendAudio] STT result:', original?.substring(0, 50));
     if (!original?.trim() || !roomId) return;
 
     // ── Step 2: Phase 1 send + Phase 2 translate via unified helper ──
@@ -471,7 +471,7 @@ export default function useTranslation({
       // una ricevuta: la strappa /api/translate, non serve dirglielo.
       await translateAndSend(original, { skipPhase1: true, myL, targetLangs, idCattura });
     } catch (e) {
-      console.error('[processAndSendAudio] Translation failed:', e);
+      log.error('[processAndSendAudio] Translation failed:', e);
       if (updateLocalMessage) {
         const senderName = verifiedNameRef?.current || prefsRef.current.name;
         // b.247 — vedi translateAndSend: l'errore si posa sul messaggio
@@ -541,7 +541,7 @@ export default function useTranslation({
     // Reset whisper-only mode on each new recording attempt — give browser STT another chance
     // (the flag was set because of previous bad results, but conditions may have improved)
     if (whisperOnlyRef.current && !isWhisperPrimaryLang(currentLang)) {
-      dbg.debug('[STT] Resetting whisper-only mode for new recording attempt');
+      log.debug('[STT] Resetting whisper-only mode for new recording attempt');
       whisperOnlyRef.current = false;
       lowConfidenceCountRef.current = 0;
     }
@@ -592,9 +592,9 @@ export default function useTranslation({
           if (e.data.size > 0) backupChunksRef.current.push(e.data);
         };
         backupRecRef.current.start(100);
-        dbg.debug('[STT] Backup recording started (STT fallback)');
+        log.debug('[STT] Backup recording started (STT fallback)');
       } catch (e) {
-        console.warn('[STT] Backup mic access failed:', e.name, e.message);
+        log.warn('[STT] Backup mic access failed:', e.name, e.message);
       }
     };
     backupTimer = setTimeout(() => {
@@ -619,10 +619,10 @@ export default function useTranslation({
     recognition.onerror = (event) => {
       if (event.error === 'no-speech') return;
       errorCount++;
-      console.warn(`[STT] Error: ${event.error} (count=${errorCount})`);
+      log.warn(`[STT] Error: ${event.error} (count=${errorCount})`);
       // ── Mic permission denied → show visible error to user ──
       if (event.error === 'not-allowed' || event.error === 'audio-capture') {
-        console.error('[STT] Microphone access denied — user needs to grant permission');
+        log.error('[STT] Microphone access denied — user needs to grant permission');
         setRecording(false);
         streamingModeRef.current = false;
         setStreamingMsg({ original: '', translated: null, isStreaming: false,
@@ -634,7 +634,7 @@ export default function useTranslation({
       // Start backup immediately on error
       if (!backupRecRef.current) startBackupIfNeeded();
       if (errorCount >= 3 && !whisperOnlyRef.current) {
-        console.warn('[STT] Too many errors — enabling Whisper-only for this session');
+        log.warn('[STT] Too many errors — enabling Whisper-only for this session');
         whisperOnlyRef.current = true;
       }
     };
@@ -723,7 +723,7 @@ export default function useTranslation({
             // Non si puo riprovare da soli: l'audio e gia stato
             // consumato. Ma si puo almeno DIRLO, invece di lasciare
             // credere che sia andata.
-            dbg.error('[voce] invio fallito:', errore?.message);
+            log.error('[voce] invio fallito:', errore?.message);
             toast.error(tFuori('sendVoiceFailed'));
           }
           }
@@ -748,7 +748,7 @@ export default function useTranslation({
     backupStreamRef.current = null;
 
     if (!allOriginal) {
-      dbg.debug('[stopStreaming] No text accumulated (finals + interims), nothing to send');
+      log.debug('[stopStreaming] No text accumulated (finals + interims), nothing to send');
       setRecording(false);
       stoppingRef.current = false;
       if (roomId) setSpeakingState(roomId, false);
@@ -756,7 +756,7 @@ export default function useTranslation({
       return;
     }
 
-    dbg.debug(`[stopStreaming] Sending text: "${allOriginal}" (interim included: ${interimText ? 'yes' : 'no'})`);
+    log.debug(`[stopStreaming] Sending text: "${allOriginal}" (interim included: ${interimText ? 'yes' : 'no'})`);
 
     // ── Translate and send using DRY helper ──
     // Also populate textInput so user can see/edit the dictated text in the textarea
@@ -775,7 +775,7 @@ export default function useTranslation({
       allWordsRef.current = '';
       setTextInput('');  // Clear input after successful voice send
     } catch (e) {
-      console.error('[stopStreaming] Translation error:', e);
+      log.error('[stopStreaming] Translation error:', e);
       setStreamingMsg(null);
     } finally {
       // CRITICAL: Reset stoppingRef AFTER the async translateAndSend completes.
@@ -820,7 +820,7 @@ export default function useTranslation({
             // Non si puo riprovare da soli: l'audio e gia stato
             // consumato. Ma si puo almeno DIRLO, invece di lasciare
             // credere che sia andata.
-            dbg.error('[voce] invio fallito:', errore?.message);
+            log.error('[voce] invio fallito:', errore?.message);
             toast.error(tFuori('sendVoiceFailed'));
           }
         setRecording(false);
@@ -829,7 +829,7 @@ export default function useTranslation({
       };
       recRef.current.start(100);
     } catch (err) {
-      console.error('[Recording] Mic access failed:', err.name, err.message);
+      log.error('[Recording] Mic access failed:', err.name, err.message);
       setRecording(false);
       setStreamingMsg({ original: '', translated: null, isStreaming: false,
         _micError: err.name === 'NotAllowedError' ? 'mic_denied' : 'mic_unavailable' });
@@ -904,7 +904,7 @@ export default function useTranslation({
     try {
       await translateAndSend(trimText, opzioni.rispostaA ? { rispostaA: opzioni.rispostaA } : {});
     } catch (e) {
-      console.error('[sendTextMessage] Error:', e);
+      log.error('[sendTextMessage] Error:', e);
     }
     setSendingText(false);
   }

@@ -12,6 +12,8 @@ import {
   saveChat, saveMessage, saveMessages, getChat, getMessages,
   getAllChats, deleteChat, exportChat, importChat, getStorageUsage,
 } from '../lib/chatStorage.js';
+import { createLogger } from '../lib/logger.js';
+const log = createLogger('useLocalChat');   // b.604 — niente console.* sparsi: tutto dal logger
 
 const PAGE_SIZE = 50;
 
@@ -40,7 +42,7 @@ export default function useLocalChat({ roomId, myName, members, mode, context })
   useEffect(() => {
     getAllChats()
       .then(setChats)
-      .catch(err => console.warn('[useLocalChat] Failed to load chats:', err));
+      .catch(err => log.warn('[useLocalChat] Failed to load chats:', err));
   }, []);
 
   // ── Create/update chat metadata when room changes ──
@@ -83,7 +85,7 @@ export default function useLocalChat({ roomId, myName, members, mode, context })
         setLoading(false);
       })
       .catch(err => {
-        console.warn('[useLocalChat] Failed to load messages:', err);
+        log.warn('[useLocalChat] Failed to load messages:', err);
         setLoading(false);
       });
   }, [chatId]);
@@ -120,7 +122,7 @@ export default function useLocalChat({ roomId, myName, members, mode, context })
         });
       }
     } catch (err) {
-      console.warn('[useLocalChat] Failed to persist messages:', err);
+      log.warn('[useLocalChat] Failed to persist messages:', err);
     }
   }, [chatId]);
 
@@ -139,7 +141,7 @@ export default function useLocalChat({ roomId, myName, members, mode, context })
         return [...older.filter(m => !ids.has(m.id)), ...prev];
       });
     } catch (err) {
-      console.warn('[useLocalChat] Failed to load more:', err);
+      log.warn('[useLocalChat] Failed to load more:', err);
     }
     setLoading(false);
   }, [chatId, loading, hasMore, currentMessages]);
@@ -151,7 +153,7 @@ export default function useLocalChat({ roomId, myName, members, mode, context })
       setChats(prev => prev.filter(c => c.id !== id));
       if (id === chatId) setCurrentMessages([]);
     } catch (err) {
-      console.warn('[useLocalChat] Failed to delete chat:', err);
+      log.warn('[useLocalChat] Failed to delete chat:', err);
     }
   }, [chatId]);
 
@@ -161,7 +163,7 @@ export default function useLocalChat({ roomId, myName, members, mode, context })
     try {
       return await exportChat(chatId, format);
     } catch (err) {
-      console.warn('[useLocalChat] Export failed:', err);
+      log.warn('[useLocalChat] Export failed:', err);
       return null;
     }
   }, [chatId]);
@@ -173,7 +175,7 @@ export default function useLocalChat({ roomId, myName, members, mode, context })
       setChats(prev => [chat, ...prev.filter(c => c.id !== chat.id)]);
       return chat;
     } catch (err) {
-      console.warn('[useLocalChat] Import failed:', err);
+      log.warn('[useLocalChat] Import failed:', err);
       return null;
     }
   }, []);

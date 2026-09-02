@@ -18,6 +18,8 @@
 import { apiCircuitBreaker } from '../circuitBreaker.js';
 import { getVoceChiamata, getVolumeTTS } from '../audioPrefs.js';
 import { MSG, avvisaTTS } from '../eventi.js';
+import { createLogger } from '../logger.js';
+const log = createLogger('voceTradotta');   // b.604 — niente console.* sparsi: tutto dal logger
 
 /** Un messaggio DataChannel pesa al massimo ~16 KB nel browser: 10 KB di
  *  base64 + JSON + cifratura E2E restano sotto con margine. */
@@ -244,7 +246,7 @@ export async function procuraVoce(motori, { fetchImpl = globalThis.fetch, scaden
       if (r.ok) { const b = await r.blob(); if (b && b.size > 0) return b; }
     } catch (e) {
       // b.363 — il guasto lascia traccia (rete caduta, attesa scaduta, credito finito)
-      if (e?.name !== 'AbortError') console.warn(`[voce] ${m.rotta}:`, e?.message || e);
+      if (e?.name !== 'AbortError') log.warn(`[voce] ${m.rotta}:`, e?.message || e);
     }
   }
   return null;

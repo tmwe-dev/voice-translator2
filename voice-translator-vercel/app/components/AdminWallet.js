@@ -2,6 +2,8 @@
 import { useState } from 'react';
 import { formattaDurata } from '../wallet/tariffe.js';
 import Icon from './Icon.js';
+import { createLogger } from '../lib/logger.js';
+const log = createLogger('AdminWallet');   // b.604 — niente console.* sparsi: tutto dal logger
 
 // ═══════════════════════════════════════════════
 // AdminWallet — il monitor economico del wallet.
@@ -66,7 +68,7 @@ export default function AdminWallet() {
       // b.363 — prima questo guasto non lasciava traccia da nessuna parte: nel
       // registro non compariva nulla, e il motivo vero (rete caduta, attesa
       // scaduta, credito finito, server rotto) restava irrecuperabile.
-      if (e?.name !== 'AbortError') console.warn('[b.363] /api/wallet/admin:', e?.message || e);
+      if (e?.name !== 'AbortError') log.warn('[b.363] /api/wallet/admin:', e?.message || e);
       setEsito('Errore di rete'); }
     finally { setCaricamento(false); }
   }
@@ -80,7 +82,7 @@ export default function AdminWallet() {
     // cadeva o la risposta non era JSON, l'errore restava appeso e il
     // pulsante sembrava semplicemente non aver fatto nulla.
     const d = await r.json().catch(() => null);
-    if (!d) { console.error('[b.363] wallet/admin: risposta illeggibile'); setEsito('Errore di rete'); return false; }
+    if (!d) { log.error('[b.363] wallet/admin: risposta illeggibile'); setEsito('Errore di rete'); return false; }
     if (d.ok) carica(); else setEsito(d.error || 'Errore');
     return d.ok;
   }

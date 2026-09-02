@@ -9,6 +9,8 @@ import { procuraVoce } from '../../lib/audio/voceTradotta.js';   // b.603
 import {
   frasiCompiute, prossimaDaDire, viaAsiatica, disponibile,
 } from '../../lib/interpreteVideo.js';
+import { createLogger } from '../../lib/logger.js';
+const log = createLogger('InterpreteVideo');   // b.604 — niente console.* sparsi: tutto dal logger
 
 // ═══════════════════════════════════════════════════════════════
 // b.581 — TRADUZIONE VIDEO VISIBILE E SINCRONIZZATA
@@ -171,7 +173,7 @@ export default function InterpreteVideo({ videoId, lingua, attivo, onCambia, C, 
         setCercati(true);
       } catch (e) {
         if (!vivo) return;
-        if (e?.name !== 'AbortError') console.warn('[b.581] sottotitoli:', e?.message || e);
+        if (e?.name !== 'AbortError') log.warn('[b.581] sottotitoli:', e?.message || e);
         setCercati(true);
       }
     })();
@@ -189,7 +191,7 @@ export default function InterpreteVideo({ videoId, lingua, attivo, onCambia, C, 
       telaio.current = document.querySelector(`iframe[src*="${videoId}"]`);
     } catch (e) {
       telaio.current = null;
-      console.warn('[b.581] player non trovato:', e?.message || e);
+      log.warn('[b.581] player non trovato:', e?.message || e);
     }
     return telaio.current;
   }, [videoId]);
@@ -200,7 +202,7 @@ export default function InterpreteVideo({ videoId, lingua, attivo, onCambia, C, 
     try {
       f.contentWindow.postMessage(JSON.stringify({ event: 'command', func, args }), ORIGINE_YT);
     } catch (e) {
-      console.warn('[b.581] comando al player:', e?.message || e);
+      log.warn('[b.581] comando al player:', e?.message || e);
     }
   }, [player]);
 
@@ -213,7 +215,7 @@ export default function InterpreteVideo({ videoId, lingua, attivo, onCambia, C, 
     try {
       f?.contentWindow?.postMessage(JSON.stringify({ event: 'listening', id: 'bartalk-interprete' }), ORIGINE_YT);
     } catch (e) {
-      console.warn('[b.581] il player non ascolta:', e?.message || e);
+      log.warn('[b.581] il player non ascolta:', e?.message || e);
     }
 
     const ascolta = (ev) => {
@@ -253,7 +255,7 @@ export default function InterpreteVideo({ videoId, lingua, attivo, onCambia, C, 
       if (!r.ok || !d || d.validationFailed) return '';
       return d.translated || d.translation || '';
     } catch (e) {
-      if (e?.name !== 'AbortError') console.warn('[b.581] /api/translate:', e?.message || e);
+      if (e?.name !== 'AbortError') log.warn('[b.581] /api/translate:', e?.message || e);
       return '';
     }
   }, [lingua, userToken]);

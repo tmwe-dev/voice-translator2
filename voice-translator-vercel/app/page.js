@@ -111,6 +111,8 @@ import Sciame from './components/Sciame.js';
 import InstallaApp from './components/InstallaApp.js';
 // b.404 — il telecomando della voce vale per tutta l'app, non solo per Life.
 import TelecomandoVoce from './components/TelecomandoVoce.js';
+import { createLogger } from './lib/logger.js';
+const log = createLogger('page');   // b.604 — niente console.* sparsi: tutto dal logger
 
 
 export default function Home() {
@@ -571,7 +573,7 @@ function HomeInner() {
           setStatus(`${result.sent} ${L('offlineMessagesSent')}`);
           setTimeout(() => setStatus(''), 3000);
         }
-      } catch (e) { console.warn('[Page] Offline message flush failed:', e?.message); }
+      } catch (e) { log.warn('[Page] Offline message flush failed:', e?.message); }
     }
     function onOnline() { flushQueue(); }
     window.addEventListener('online', onOnline);
@@ -870,7 +872,7 @@ function HomeInner() {
         setArchivioGuasto(true);
       }
     } catch (e) {
-      console.error('History error:', e);
+      log.error('History error:', e);
       setArchivioGuasto(true);
     }
   }
@@ -888,7 +890,7 @@ function HomeInner() {
       await fetch('/api/conversation', { method:'POST', headers:{'Content-Type':'application/json'},
         signal: AbortSignal.timeout(15000),
         body: JSON.stringify(endBody) });
-    } catch (e) { console.error('End chat error:', e); }
+    } catch (e) { log.error('End chat error:', e); }
     roomPolling.leaveRoom();
     try { sesDel('vt-invito-in-corso'); } catch { /* niente memoria di sessione */ }
     convContext.resetContext(); // Clear conversation knowledge base
@@ -919,7 +921,7 @@ function HomeInner() {
       activeRooms = activeRooms.filter(r => r.roomId !== roomData.roomId);
       activeRooms.unshift(roomData);
       memSet('vt-active-rooms', JSON.stringify(activeRooms.slice(0, 10)));
-    } catch (e) { console.warn('[Page] Save active rooms failed:', e?.message); }
+    } catch (e) { log.warn('[Page] Save active rooms failed:', e?.message); }
     roomPolling.stopPolling();
     roomPolling.leaveRoom();
     // b.269 — uscendo, l'invito smette di valere: senza questo un
@@ -1006,7 +1008,7 @@ function HomeInner() {
         let activeRooms; try { activeRooms = JSON.parse(memGet('vt-active-rooms') || '[]'); } catch { activeRooms = []; }
         activeRooms = activeRooms.filter(r => r.roomId !== rid);
         memSet('vt-active-rooms', JSON.stringify(activeRooms));
-      } catch (e) { console.warn('[Page] Update active rooms on rejoin failed:', e?.message); }
+      } catch (e) { log.warn('[Page] Update active rooms on rejoin failed:', e?.message); }
       // b.537 — anche il rientro conta come visita: la stanza risale.
       try { segnaVisita({ roomId: rid, nome: room?.nome || room?.name || '', host: room?.host || '', lingua: room?.hostLang || room?.lang || '' }); }
       catch { /* memoria vietata: si rientra lo stesso */ }
@@ -1019,7 +1021,7 @@ function HomeInner() {
         let activeRooms; try { activeRooms = JSON.parse(memGet('vt-active-rooms') || '[]'); } catch { activeRooms = []; }
         activeRooms = activeRooms.filter(r => r.roomId !== rid);
         memSet('vt-active-rooms', JSON.stringify(activeRooms));
-      } catch (e2) { console.warn('[Page] Cleanup active rooms on rejoin error failed:', e2?.message); }
+      } catch (e2) { log.warn('[Page] Cleanup active rooms on rejoin error failed:', e2?.message); }
       setStatus('Chat terminata');
       setTimeout(() => setStatus(''), 2000);
     }
@@ -1043,7 +1045,7 @@ function HomeInner() {
                 signal: AbortSignal.timeout(45000),
                 body: JSON.stringify({ convId, userToken: auth.userTokenRef?.current || null }) });
               if (sumRes.ok) { const d = await sumRes.json().catch(() => ({})); conversation.summary = d.summary; }
-            } catch (e) { console.warn('[Page] Summary fetch failed:', e?.message); }
+            } catch (e) { log.warn('[Page] Summary fetch failed:', e?.message); }
             setSummaryLoading(false);
           }
           setCurrentConv(conversation);
@@ -1052,7 +1054,7 @@ function HomeInner() {
           setView('summary');
         }
       }
-    } catch (e) { console.error('View conv error:', e); }
+    } catch (e) { log.error('View conv error:', e); }
     setStatus('');
   }
 
@@ -1080,7 +1082,7 @@ function HomeInner() {
         signal: AbortSignal.timeout(15000),
         body: JSON.stringify(body) });
       setShowModeSelector(false);
-    } catch (e) { console.error('Mode change error:', e); }
+    } catch (e) { log.error('Mode change error:', e); }
   }
 
   async function handleCreateRoom() {
@@ -1406,7 +1408,7 @@ function HomeInner() {
               } catch (e) {
                 // La stanza esiste comunque: si entra col codice. Solo non
                 // compare in vetrina, e l'host deve poterlo sapere.
-                console.warn('[Community] stanza non pubblicata:', e?.message);
+                log.warn('[Community] stanza non pubblicata:', e?.message);
               }
             }
             setView('lobby');
@@ -1950,7 +1952,7 @@ function HomeInner() {
                 setView('history');
               })
               .catch(e => {
-                console.error('Delete error:', e);
+                log.error('Delete error:', e);
                 setStatus(L('cannotDelete'));
                 setTimeout(() => setStatus(''), 3000);
               });

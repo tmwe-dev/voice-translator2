@@ -12,6 +12,8 @@ import { componiPersonalita } from '../../lib/compagni/genera.js';
 import { compatibilitaVoceLingua } from '../../lib/vociLingue.js';
 import { conRipiego } from '../../lib/ripiego.js';
 import Ascolta from '../Ascolta.js';  // b.404 — una sola grafica per ascoltare
+import { createLogger } from '../../lib/logger.js';
+const log = createLogger('GestioneCompagni');   // b.604 — niente console.* sparsi: tutto dal logger
 
 // b.212 — le barre "stile ElevenLabs": l'utente regola il carattere a vista.
 const BARRE = [
@@ -284,7 +286,7 @@ function GestioneCompagni({ miei, onCambiato, L, C = {}, lingua, userToken, test
       // b.363 — prima questo guasto non lasciava traccia da nessuna parte: nel
       // registro non compariva nulla, e il motivo vero (rete caduta, attesa
       // scaduta, credito finito, server rotto) restava irrecuperabile.
-      if (e?.name !== 'AbortError') console.warn('[b.363] urlToDataUrl:', e?.message || e);
+      if (e?.name !== 'AbortError') log.warn('[b.363] urlToDataUrl:', e?.message || e);
       return null; }
   }, []);
 

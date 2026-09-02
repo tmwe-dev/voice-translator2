@@ -7,6 +7,8 @@ import { PALETTE } from '../lib/palette.js';
 import { useApp } from '../contexts/AppContext.js';
 import { disegnaQR } from '../lib/codiceQR.js';
 import { t, preloadLang, mapLang } from '../lib/i18n.js';
+import { createLogger } from '../lib/logger.js';
+const log = createLogger('QuickInvite');   // b.604 — niente console.* sparsi: tutto dal logger
 
 // b.482 — I COLORI ARRIVANO DAL TEMA, non da valori scritti a mano dentro
 // la schermata: l'invito restava scuro e verde-acqua anche col tema chiaro,
@@ -47,7 +49,7 @@ function QuickInvite({ handleCreateRoom, roomId, setViewAfterCreate }) {
     setError('');
     handleCreateRoom(lang)
       .then(room => { if (room?.id || room?.roomId) setCreatedRoomId(room.id || room.roomId); else setError(L('roomCreateFailed')); })
-      .catch(e => { console.warn('[QuickInvite]', e); setError(L('connErrorRetry')); })
+      .catch(e => { log.warn('[QuickInvite]', e); setError(L('connErrorRetry')); })
       .finally(() => setCreating(false));
   }, [createdRoomId, creating, handleCreateRoom, lang, L]);
 

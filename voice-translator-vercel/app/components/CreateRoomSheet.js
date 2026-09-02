@@ -5,6 +5,8 @@ import useSheetA11y from '../hooks/useSheetA11y.js';
 import { PALETTE } from '../lib/palette.js';
 import { useApp } from '../contexts/AppContext.js';
 import { TIPI_STANZA, CAPIENZA, normalizzaCapienza } from '../lib/decisioni.js';
+import { createLogger } from '../lib/logger.js';
+const log = createLogger('CreateRoomSheet');   // b.604 — niente console.* sparsi: tutto dal logger
 
 // ═══════════════════════════════════════════════════════════════
 // CreateRoomSheet — Create a Community BarTalk room
@@ -132,7 +134,7 @@ function CreateRoomSheet({ open, onClose, onCreate, preimpostato }) {
       });
       onClose();
     } catch (e) {
-      console.warn('[CreateRoom] Failed:', e?.message);
+      log.warn('[CreateRoom] Failed:', e?.message);
     }
     setCreating(false);
   }, [nomePulito, nomeValido, roomType, category, lang, description, maxParticipants, hot, diretta, ognunoPagaIlSuo, onCreate, onClose]);

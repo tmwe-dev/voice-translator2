@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { PALETTE } from '../lib/palette.js';
 import { t, linguaInterfacciaFuoriContesto } from '../lib/i18n.js';
 import { memGet, memSet } from '../lib/memoria.js';
+import { createLogger } from '../lib/logger.js';
+const log = createLogger('CookieConsent');   // b.604 — niente console.* sparsi: tutto dal logger
 
 // ═══════════════════════════════════════════════════════════════
 // L'AVVISO COOKIE PARLAVA SOLO INGLESE (b.136-bis)
@@ -43,14 +45,14 @@ export default function CookieConsent() {
       if (!consent) {
         setTimeout(() => setVisible(true), 1500);
       }
-    } catch (e) { console.warn('[CookieConsent] localStorage error:', e?.message); }
+    } catch (e) { log.warn('[CookieConsent] localStorage error:', e?.message); }
   }, []);
 
   const handleConsent = (type) => {
     try {
       memSet('vt-cookie-consent', type);
       memSet('vt-cookie-consent-date', new Date().toISOString());
-    } catch (e) { console.warn('[CookieConsent] localStorage error:', e?.message); }
+    } catch (e) { log.warn('[CookieConsent] localStorage error:', e?.message); }
     setVisible(false);
   };
 

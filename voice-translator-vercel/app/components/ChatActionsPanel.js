@@ -12,6 +12,8 @@ import getStyles from '../lib/styles.js';
 import { FONT } from '../lib/constants.js';
 import { PALETTE } from '../lib/palette.js';
 import Icon from './Icon.js';
+import { createLogger } from '../lib/logger.js';
+const log = createLogger('ChatActionsPanel');   // b.604 — niente console.* sparsi: tutto dal logger
 
 function ChatActionsPanel({
   theme = 'dark',
@@ -94,7 +96,7 @@ function ChatActionsPanel({
       // b.363 — prima questo guasto non lasciava traccia da nessuna parte: nel
       // registro non compariva nulla, e il motivo vero (rete caduta, attesa
       // scaduta, credito finito, server rotto) restava irrecuperabile.
-      if (err?.name !== 'AbortError') console.warn('[b.363] /api/chat-action:', err?.message || err);
+      if (err?.name !== 'AbortError') log.warn('[b.363] /api/chat-action:', err?.message || err);
       setError(err.message);
     } finally {
       setLoading(null);

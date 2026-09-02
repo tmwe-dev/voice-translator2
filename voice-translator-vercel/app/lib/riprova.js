@@ -42,6 +42,9 @@
 //     far aspettare l'utente per niente.
 // ═══════════════════════════════════════════════════════════════
 
+import { createLogger } from './logger.js';
+const log = createLogger('riprova');   // b.604 — niente console.* sparsi: tutto dal logger
+
 /** Un no definitivo: riprovare non cambierebbe la risposta. */
 const DEFINITIVI = [400, 401, 403, 404, 422];
 
@@ -91,7 +94,7 @@ export async function conRiprova(tentativo, opzioni = {}) {
     } catch (e) {
       // Se anche l'avviso fallisce non si trascina giu tutto il resto:
       // resterebbe comunque l'errore vero da restituire qui sotto.
-      if (typeof console !== 'undefined') console.warn('[riprova] avviso fallito:', e?.message);
+      log.warn('[riprova] avviso fallito:', e?.message);
     }
   }
   throw ultimoErrore;

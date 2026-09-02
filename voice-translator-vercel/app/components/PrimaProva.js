@@ -23,6 +23,8 @@ import { ascolta as ascoltaDettatura, dettaturaDisponibile } from '../lib/dettat
 import { procuraVoce } from '../lib/audio/voceTradotta.js';   // b.603
 import { parlaColSistema } from '../lib/voceSistema.js'; // b.417
 import { immagineQR } from '../lib/codiceQR.js';
+import { createLogger } from '../lib/logger.js';
+const log = createLogger('PrimaProva');   // b.604 — niente console.* sparsi: tutto dal logger
 
 // ═══════════════════════════════════════════════════════════════
 // b.355→b.356 — "PARLA ORA", il traduttore subito.
@@ -320,7 +322,7 @@ export default function PrimaProva({ onChiudi }) {
       // b.363 — prima questo guasto non lasciava traccia da nessuna parte: nel
       // registro non compariva nulla, e il motivo vero (rete caduta, attesa
       // scaduta, credito finito, server rotto) restava irrecuperabile.
-      if (e?.name !== 'AbortError') console.warn('[b.363] /api/translate:', e?.message || e);
+      if (e?.name !== 'AbortError') log.warn('[b.363] /api/translate:', e?.message || e);
       slaccia();   // b.428 — dopo un guasto si DEVE poter riprovare
       if (mio === numeroRef.current) setStato('errore'); }
   }, [miaLingua, meta, parla]);
@@ -396,7 +398,7 @@ export default function PrimaProva({ onChiudi }) {
       // la risposta e nella MIA lingua: si legge con la MIA voce
       parla(d.translated, miaLingua);
     } catch (e) {
-      if (e?.name !== 'AbortError') console.warn('[b.445] /api/translate ospite:', e?.message || e);
+      if (e?.name !== 'AbortError') log.warn('[b.445] /api/translate ospite:', e?.message || e);
       if (mio === numeroRef.current) setStato('errore');
     }
   }, [meta, miaLingua, parla]);
@@ -506,7 +508,7 @@ export default function PrimaProva({ onChiudi }) {
         setRisultati(dati.map((p) => ({ lat: parseFloat(p.lat), lon: parseFloat(p.lon), displayName: p.display_name })));
       }
     } catch (e) {
-      if (e?.name !== 'AbortError') console.warn('[b.430] nominatim:', e?.message || e);
+      if (e?.name !== 'AbortError') log.warn('[b.430] nominatim:', e?.message || e);
       setErroreDove(L('searchError'));
     }
     setCercando(false);

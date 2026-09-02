@@ -4,6 +4,8 @@ import { FONT, getLang } from '../lib/constants.js';
 import Icon from './Icon.js';
 import { bandieraVoce } from '../lib/bandiereVoci.js';
 import { useApp } from '../contexts/AppContext.js';
+import { createLogger } from '../lib/logger.js';
+const log = createLogger('VoiceTestView');   // b.604 — niente console.* sparsi: tutto dal logger
 
 // ═══════════════════════════════════════════════════════════════
 // VoiceTestView — Premium ElevenLabs Voice Studio
@@ -103,9 +105,9 @@ const VoiceTestView = memo(function VoiceTestView({ isTrial, isTopPro,
         // svuotava senza che nulla, a schermo o nel registro, lo dicesse.
         const data = await res.json().catch(() => null);
         if (data) setElevenLabsVoices(data.voices || []);
-        else console.warn('[b.363] tts-elevenlabs voci: risposta illeggibile');
+        else log.warn('[b.363] tts-elevenlabs voci: risposta illeggibile');
       }
-    } catch(e) { console.error(e); }
+    } catch(e) { log.error(e); }
     setLoadingEL(false);
   }, [userTokenRef, setElevenLabsVoices]);
 
@@ -163,7 +165,7 @@ const VoiceTestView = memo(function VoiceTestView({ isTrial, isTopPro,
       // b.363 — prima questo guasto non lasciava traccia da nessuna parte: nel
       // registro non compariva nulla, e il motivo vero (rete caduta, attesa
       // scaduta, credito finito, server rotto) restava irrecuperabile.
-      if (e?.name !== 'AbortError') console.warn('[b.363] /api/tts-elevenlabs:', e?.message || e);
+      if (e?.name !== 'AbortError') log.warn('[b.363] /api/tts-elevenlabs:', e?.message || e);
       setTestResults(prev => ({ ...prev, [key]: 'error' }));
       setPlayingVoice(null);
     }
@@ -390,7 +392,7 @@ const VoiceTestView = memo(function VoiceTestView({ isTrial, isTopPro,
                       // b.363 — prima questo guasto non lasciava traccia da nessuna parte: nel
                       // registro non compariva nulla, e il motivo vero (rete caduta, attesa
                       // scaduta, credito finito, server rotto) restava irrecuperabile.
-                      if (e?.name !== 'AbortError') console.warn('[b.363] /api/tts-edge:', e?.message || e);
+                      if (e?.name !== 'AbortError') log.warn('[b.363] /api/tts-edge:', e?.message || e);
                       setPlayingVoice(null); }
                   }}
                   style={{

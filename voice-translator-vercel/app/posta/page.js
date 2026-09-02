@@ -10,6 +10,8 @@ import {
   registraImpronta, elencaContatti, riconosciCambio,
 } from '../lib/peepoff/archivio.js';
 import { registraDispositivo, risolvi, battito, spedisci, portiere } from '../lib/peepoff/consegna.js';
+import { createLogger } from '../lib/logger.js';
+const log = createLogger('page');   // b.604 — niente console.* sparsi: tutto dal logger
 
 // ═══════════════════════════════════════════════════════════════
 // b.349 — PEEPOFF, l'app sorella (/posta): messaggi che NON passano
@@ -145,10 +147,10 @@ export default function Posta() {
             await aggiorna();
             return esito;
           },
-          suErrore: (msg) => console.warn('[PeepOff]', msg),
+          suErrore: (msg) => log.warn('[PeepOff]', msg),
         });
       } catch (e) {
-        if (vivo) { setStato('login'); console.warn('[PeepOff] avvio fallito:', e?.message); }
+        if (vivo) { setStato('login'); log.warn('[PeepOff] avvio fallito:', e?.message); }
       }
     })();
     return () => {

@@ -6,6 +6,8 @@ import PageHeader from './ui/PageHeader.js';
 import Icon from './Icon.js';
 import { PALETTE } from '../lib/palette.js';
 import { useApp } from '../contexts/AppContext.js';
+import { createLogger } from '../lib/logger.js';
+const log = createLogger('ContactsView');   // b.604 — niente console.* sparsi: tutto dal logger
 
 // ═══════════════════════════════════════════════
 // ContactsView — Redesigned with glassmorphism
@@ -121,7 +123,7 @@ export default function ContactsView({
           }
           await new Promise(r => setTimeout(r, 100)); // Rate limit
         } catch (err) {
-          console.warn('[Contacts] Import failed for', c, err);
+          log.warn('[Contacts] Import failed for', c, err);
         }
       }
       setDeviceImportResult({ success: true, added, invited, total: result.contacts.length });

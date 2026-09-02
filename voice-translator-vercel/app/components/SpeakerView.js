@@ -20,6 +20,8 @@ import { chiediChiaveDeepgram, apriDeepgram } from '../lib/audio/deepgramLive.js
 import { prendiVoce, rendiVoce } from '../lib/microfonoMaster.js';
 import { ascolta as ascoltaDettatura } from '../lib/dettatura.js';   // b.603 — la dettatura in un posto solo
 import { procuraVoce, suonaBlob } from '../lib/audio/voceTradotta.js';   // b.603 — il ciclo dei motori e il lettore, in un posto solo
+import { createLogger } from '../lib/logger.js';
+const log = createLogger('SpeakerView');   // b.604 — niente console.* sparsi: tutto dal logger
 
 // ═══════════════════════════════════════════════════════════════
 // TaxiTalk — Redesigned: "Parla, Traduci, Mostra"
@@ -265,7 +267,7 @@ function SpeakerView({ userToken }) {
       // b.363 — prima questo guasto non lasciava traccia da nessuna parte: nel
       // registro non compariva nulla, e il motivo vero (rete caduta, attesa
       // scaduta, credito finito, server rotto) restava irrecuperabile.
-      if (e?.name !== 'AbortError') console.warn('[b.363] /api/translate:', e?.message || e);
+      if (e?.name !== 'AbortError') log.warn('[b.363] /api/translate:', e?.message || e);
       setErroreUltimo(L('youHaveNoConnection'));
       return '';
     }
@@ -349,7 +351,7 @@ function SpeakerView({ userToken }) {
       // b.363 — prima questo guasto non lasciava traccia da nessuna parte: nel
       // registro non compariva nulla, e il motivo vero (rete caduta, attesa
       // scaduta, credito finito, server rotto) restava irrecuperabile.
-      if (e?.name !== 'AbortError') console.warn('[b.363] https://nominatim.openstreetmap.org:', e?.message || e);
+      if (e?.name !== 'AbortError') log.warn('[b.363] https://nominatim.openstreetmap.org:', e?.message || e);
       setDestError(L('searchError')); setDestCoords(null); }
     setDestLoading(false);
   }, [targetLang, L, userPos]);
@@ -388,7 +390,7 @@ function SpeakerView({ userToken }) {
         }));
         setRouteInfo({ distKm, durationMin, steps });
       }
-    } catch (e) { console.warn('[SpeakerView] Route fetch failed:', e?.message); }
+    } catch (e) { log.warn('[SpeakerView] Route fetch failed:', e?.message); }
     setRouteLoading(false);
   }, []);
   fetchRouteRef.current = fetchRoute;
@@ -509,7 +511,7 @@ function SpeakerView({ userToken }) {
       if (!sessione) throw new Error('Deepgram non si e aperto');
       sessioneRef.current = sessione;
     } catch (e) {
-      console.warn('[SpeakerView] WebSocket setup failed:', e?.message);
+      log.warn('[SpeakerView] WebSocket setup failed:', e?.message);
       if (streamRef.current) {
         if (daRendereRef.current === streamRef.current) rendiVoce(streamRef.current);
         else streamRef.current.getTracks().forEach(t => { try { t.stop(); } catch { /* era gia ferma: fermarla di nuovo non e un guasto */ } });

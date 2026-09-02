@@ -22,6 +22,8 @@ import { ascolta as ascoltaVoce, dettaturaDisponibile } from '../../lib/dettatur
 // un microfono deve riconoscerlo ovunque: la veste arriva da un posto
 // solo, il comportamento al tocco non cambia di una virgola.
 import { vesteMicrofono } from '../ui/Microfono.js';
+import { createLogger } from '../../lib/logger.js';
+const log = createLogger('AmicoChat');   // b.604 — niente console.* sparsi: tutto dal logger
 
 // b.231 — la storia della chat ora PERSISTE per Compagno (prima viveva solo
 // in memoria e spariva a ogni ricarica o cambio Compagno). Sta sul dispositivo.
@@ -179,7 +181,7 @@ function AmicoChat({ compagni, L, lingua, userToken, testoP, muto, accent, card,
       // b.363 — prima questo guasto non lasciava traccia da nessuna parte: nel
       // registro non compariva nulla, e il motivo vero (rete caduta, attesa
       // scaduta, credito finito, server rotto) restava irrecuperabile.
-      if (e?.name !== 'AbortError') console.warn('[b.363] nuovi:', e?.message || e);
+      if (e?.name !== 'AbortError') log.warn('[b.363] nuovi:', e?.message || e);
       if (sceltoRef.current?.id !== idAtt) return;
       setErrore(e.creditoEsaurito ? L('lifeNoCredit') : (e.status === 401 ? L('lifeLoginNeeded') : L('lifeError')));
     } finally { if (sceltoRef.current?.id === idAtt) setAttende(false); }

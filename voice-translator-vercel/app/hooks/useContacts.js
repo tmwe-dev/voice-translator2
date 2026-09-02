@@ -3,6 +3,8 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { APP_URL } from '../lib/constants.js';
 import { t } from '../lib/i18n.js';
 import { subscribeTick } from '../lib/ticker.js';
+import { createLogger } from '../lib/logger.js';
+const log = createLogger('useContacts');   // b.604 — niente console.* sparsi: tutto dal logger
 
 const HEARTBEAT_INTERVAL = 60000; // 60 seconds
 
@@ -70,9 +72,9 @@ export default function useContacts({ userTokenRef }) {
       // la lettura esplodeva e l'elenco restava vuoto senza spiegazione.
       const data = await res.json().catch(() => ({}));
       if (data.contacts) setContacts(data.contacts);
-      else if (!res.ok) console.warn('[contatti] elenco non leggibile, stato', res.status);
+      else if (!res.ok) log.warn('[contatti] elenco non leggibile, stato', res.status);
     } catch (e) {
-      console.error('Fetch contacts error:', e);
+      log.error('Fetch contacts error:', e);
     } finally {
       setContactsLoading(false);
     }

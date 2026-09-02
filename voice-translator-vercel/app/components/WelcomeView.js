@@ -8,6 +8,8 @@ import { useApp } from '../contexts/AppContext.js';
 import Sciame from './Sciame.js';
 import { IconGlobe, IconMic, IconBattery } from './Icons.js';
 import { memDel, memSet } from '../lib/memoria.js';
+import { createLogger } from '../lib/logger.js';
+const log = createLogger('WelcomeView');   // b.604 — niente console.* sparsi: tutto dal logger
 
 // ═══════════════════════════════════════════════════════════
 // WELCOME VIEW — Redesign v2.0
@@ -148,19 +150,19 @@ export default function WelcomeView({ joinCode, userToken, setAuthStep,
               // rotta l'accesso Google si fermava in silenzio e l'utente
               // restava a fissare la schermata di benvenuto.
               const data = await res.json().catch(() => null);
-              if (!data) { console.error('[b.363] auth/google: risposta illeggibile, accesso non completato'); return; }
+              if (!data) { log.error('[b.363] auth/google: risposta illeggibile, accesso non completato'); return; }
               if (data.ok && loginWithGoogle) {
                 // Reuse the same post-login handler by simulating credential flow result
                 window.postMessage({ type: 'google-oauth-result', data }, '*');
               }
-            } catch (e) { console.error('Google code exchange error:', e); }
+            } catch (e) { log.error('Google code exchange error:', e); }
           }
         },
       });
       client.requestCode();
       return true;
     } catch (e) {
-      console.error('initCodeClient error:', e);
+      log.error('initCodeClient error:', e);
       return false;
     }
   }, [pendingReferralCode, loginWithGoogle]);

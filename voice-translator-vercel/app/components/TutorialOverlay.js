@@ -6,6 +6,8 @@ import { PALETTE } from '../lib/palette.js';
 import { useApp } from '../contexts/AppContext.js';
 import Sciame from './Sciame.js';
 import { memSet } from '../lib/memoria.js';
+import { createLogger } from '../lib/logger.js';
+const log = createLogger('TutorialOverlay');   // b.604 — niente console.* sparsi: tutto dal logger
 
 // ═══════════════════════════════════════════════
 // TutorialOverlay — Dark Ambient Onboarding
@@ -69,7 +71,7 @@ export default function TutorialOverlay({ tutorialStep, setTutorialStep, setShow
       setTutorialStep(tutorialStep + 1);
     } else {
       setShowTutorial(false);
-      try { memSet('vt-tutorial-done', '1'); } catch (e) { console.warn('[TutorialOverlay] localStorage error:', e?.message); }
+      try { memSet('vt-tutorial-done', '1'); } catch (e) { log.warn('[TutorialOverlay] localStorage error:', e?.message); }
     }
   }, [isLastStep, tutorialStep, setTutorialStep, setShowTutorial]);
 

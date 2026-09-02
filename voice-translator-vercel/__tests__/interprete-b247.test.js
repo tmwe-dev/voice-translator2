@@ -173,7 +173,7 @@ describe('nessun blocco audio viene buttato via in silenzio', () => {
     const corpo = s.slice(i, i + 600);
     // splice(0, n) toglie dalla testa: i più vecchi. Mai pop().
     expect(corpo).toContain('codaChunkRef.current.splice(0,');
-    expect(corpo, "mai in silenzio: era il punto").toContain('console.warn(');
+    expect(corpo, "mai in silenzio: era il punto").toContain('log.warn(');   // b.604 — dal logger, non da console
     expect(corpo).not.toContain('codaChunkRef.current.pop()');
   });
 

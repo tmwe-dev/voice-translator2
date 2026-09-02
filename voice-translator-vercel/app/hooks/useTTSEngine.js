@@ -6,6 +6,8 @@ import { AVATAR_NAMES, AVATARS } from '../lib/constants.js';
 // fermava. Ora ogni blob che parte si annuncia, come fa Life da b.305.
 import { suona as registraVoce } from '../lib/voce.js';
 import { preparaVociSistema, svuotaCacheVoci, trovaVoceMigliore, parlaColSistema } from '../lib/voceSistema.js';
+import { createLogger } from '../lib/logger.js';
+const log = createLogger('useTTSEngine');   // b.604 — niente console.* sparsi: tutto dal logger
 
 /**
  * useTTSEngine — All TTS engines extracted from useAudioSystem.
@@ -107,15 +109,15 @@ export default function useTTSEngine({
       const audio = getPersistentAudio();
       audio.onended = null;
       audio.onerror = null;
-      const safetyTimer = setTimeout(() => { console.warn('[TTS] playBlobAudio timeout'); audio.pause(); cleanup(); resolve(false); }, 30000);
+      const safetyTimer = setTimeout(() => { log.warn('[TTS] playBlobAudio timeout'); audio.pause(); cleanup(); resolve(false); }, 30000);
       function cleanup() { clearTimeout(safetyTimer); audio.onended = null; audio.onerror = null; }
       audio.onended = () => { cleanup(); resolve(true); };
-      audio.onerror = (e) => { console.warn('[TTS] playBlobAudio error:', e?.type || e); cleanup(); resolve(false); };
+      audio.onerror = (e) => { log.warn('[TTS] playBlobAudio error:', e?.type || e); cleanup(); resolve(false); };
       audio.src = blobUrl;
       // Ensure volume is up (may have been muted)
       audio.volume = 1.0;
       registraVoce(audio, etichettaVoce); // b.404 — il telecomando ora la vede
-      audio.play().catch((e) => { console.warn('[TTS] playBlobAudio play() rejected:', e?.message || e); cleanup(); resolve(false); });
+      audio.play().catch((e) => { log.warn('[TTS] playBlobAudio play() rejected:', e?.message || e); cleanup(); resolve(false); });
     });
   }
 
@@ -127,11 +129,11 @@ export default function useTTSEngine({
       a.volume = 1.0;
       a.playsInline = true;
       a.setAttribute('playsinline', '');
-      const safetyTimer = setTimeout(() => { console.warn('[TTS] playBlobNewAudio timeout'); a.pause(); resolve(false); }, 30000);
+      const safetyTimer = setTimeout(() => { log.warn('[TTS] playBlobNewAudio timeout'); a.pause(); resolve(false); }, 30000);
       a.onended = () => { clearTimeout(safetyTimer); resolve(true); };
-      a.onerror = (e) => { console.warn('[TTS] playBlobNewAudio error:', e?.type || e); clearTimeout(safetyTimer); resolve(false); };
+      a.onerror = (e) => { log.warn('[TTS] playBlobNewAudio error:', e?.type || e); clearTimeout(safetyTimer); resolve(false); };
       registraVoce(a, etichettaVoce); // b.404 — anche il percorso iOS
-      a.play().catch((e) => { console.warn('[TTS] playBlobNewAudio play() rejected:', e?.message || e); clearTimeout(safetyTimer); resolve(false); });
+      a.play().catch((e) => { log.warn('[TTS] playBlobNewAudio play() rejected:', e?.message || e); clearTimeout(safetyTimer); resolve(false); });
     });
   }
 
@@ -205,7 +207,7 @@ export default function useTTSEngine({
         // b.363 — qui l'utente sente la voce meccanica del browser al
         // posto di quella neurale: era il ripiego piu visibile di tutti
         // e non lasciava nessuna traccia del motivo.
-        console.warn('[TTS-Edge] entrambe le voci fallite, voce del browser:', e?.message || e);
+        log.warn('[TTS-Edge] entrambe le voci fallite, voce del browser:', e?.message || e);
         await browserSpeak(text, langCode);
         return;
       }
@@ -248,7 +250,7 @@ export default function useTTSEngine({
       const blob = await fetchTTSBlob(text, lang);
       await playBlobWithFallback(blob, text, lang);
     } catch (e) {
-      console.warn('[TTS-OpenAI] Failed, falling back to browser:', e.message);
+      log.warn('[TTS-OpenAI] Failed, falling back to browser:', e.message);
       await browserSpeak(text, lang);
     }
   }
@@ -289,7 +291,7 @@ export default function useTTSEngine({
       // b.363 — questo ripiego cambia la voce che l'utente sente (e
       // sposta la spesa su un altro fornitore) ma non registrava nulla:
       // in produzione la voce premium spariva senza spiegazione.
-      console.warn('[TTS-ElevenLabs] non disponibile, ripiego su OpenAI:', e?.message || e);
+      log.warn('[TTS-ElevenLabs] non disponibile, ripiego su OpenAI:', e?.message || e);
       return playTTS(text, langCode); // Fallback to OpenAI
     }
     await playBlobWithFallback(blob, text, langCode);
@@ -370,7 +372,7 @@ export default function useTTSEngine({
         // b.363 — stesso ripiego visibile del caso qui sopra, dentro la
         // coda della conversazione dal vivo: senza registro non si
         // capiva perche mezza conversazione suonasse meccanica.
-        console.warn('[TTS-Edge] coda: entrambe le voci fallite, voce del browser:', e?.message || e);
+        log.warn('[TTS-Edge] coda: entrambe le voci fallite, voce del browser:', e?.message || e);
         return null;   // niente blob: chi suona ripieghera sulla voce del browser
       }
     }

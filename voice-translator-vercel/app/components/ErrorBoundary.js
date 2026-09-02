@@ -3,6 +3,8 @@ import { Component } from 'react';
 import { t, preloadLang, linguaInterfacciaFuoriContesto } from '../lib/i18n.js';
 import { PALETTE } from '../lib/palette.js';
 import { IconWarning } from './Icons.js';
+import { createLogger } from '../lib/logger.js';
+const log = createLogger('ErrorBoundary');   // b.604 — niente console.* sparsi: tutto dal logger
 
 /**
  * ErrorBoundary — catches React render errors gracefully
@@ -21,7 +23,7 @@ export default class ErrorBoundary extends Component {
 
   componentDidCatch(error, errorInfo) {
     this.setState({ errorInfo });
-    console.error('[ErrorBoundary]', error, errorInfo);
+    log.error('[ErrorBoundary]', error, errorInfo);
     // Report to Sentry if available
     if (typeof window !== 'undefined') {
       import('@sentry/nextjs').then(Sentry => {
@@ -30,7 +32,7 @@ export default class ErrorBoundary extends Component {
           tags: { source: 'ErrorBoundary' },
         });
       }).catch(() => {
-        console.error('[ErrorBoundary] Failed to report to Sentry, logged locally:', error);
+        log.error('[ErrorBoundary] Failed to report to Sentry, logged locally:', error);
       });
     }
   }
@@ -52,7 +54,7 @@ export default class ErrorBoundary extends Component {
       }
       const regs = await navigator.serviceWorker?.getRegistrations?.();
       await Promise.all((regs || []).map((r) => r.unregister()));
-    } catch (e) { console.warn('[ErrorBoundary] Pulizia cache fallita:', e?.message); }
+    } catch (e) { log.warn('[ErrorBoundary] Pulizia cache fallita:', e?.message); }
     window.location.reload();
   };
 
@@ -73,7 +75,7 @@ export default class ErrorBoundary extends Component {
     try {
       lang = linguaInterfacciaFuoriContesto();
       preloadLang(lang);   // se il pacchetto non c'e ancora, t() ripiega su en
-    } catch (e) { console.warn('[ErrorBoundary] Language detection failed:', e?.message); }
+    } catch (e) { log.warn('[ErrorBoundary] Language detection failed:', e?.message); }
     return t(lang, key);
   }
 

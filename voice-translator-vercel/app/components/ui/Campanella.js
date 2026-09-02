@@ -7,6 +7,8 @@ import Sovrapposizione from './Sovrapposizione.js';
 import {
   etichettaPallino, raggruppaPerContenuto, segnaLetti, ultimaLettura, unisciAvvisi,
 } from '../../lib/campanella.js';
+import { createLogger } from '../../lib/logger.js';
+const log = createLogger('Campanella');   // b.604 — niente console.* sparsi: tutto dal logger
 
 // ═══════════════════════════════════════════════════════════════
 // LA CAMPANELLA — il pulsante in alto (b.545).
@@ -75,7 +77,7 @@ export default function Campanella({ C = {}, L, chiaviSeguite, onApriContenuto }
     } catch (e) {
       // la campanella e' un di piu: se non risponde, si tace e si riprova
       // al giro dopo. Nessun messaggio d'errore sopra la testata.
-      if (e?.name !== 'AbortError') console.warn('[b.545] /api/mondo/avvisi:', e?.message || e);
+      if (e?.name !== 'AbortError') log.warn('[b.545] /api/mondo/avvisi:', e?.message || e);
     }
   }, [chiaviTesto]);
 

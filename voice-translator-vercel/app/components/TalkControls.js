@@ -6,6 +6,8 @@ import { FONT, vibrate } from '../lib/constants.js';
 import { IconMic, IconRecord, IconLock, IconSparkles, IconHandRaise, IconSend } from './Icons.js';
 import { PALETTE } from '../lib/palette.js';
 import { membriDi, quantiDentro } from '../lib/membri.js';
+import { createLogger } from '../lib/logger.js';
+const log = createLogger('TalkControls');   // b.604 — niente console.* sparsi: tutto dal logger
 
 const TalkControls = memo(function TalkControls({
   L, S, roomMode, roomId, isHost, canTalk, modeInfo, isTrial,
@@ -177,10 +179,10 @@ const TalkControls = memo(function TalkControls({
                 if (res.ok) {
                   vibrate(15);
                 } else {
-                  console.warn('[TalkControls] raiseHand server error:', res.status);
+                  log.warn('[TalkControls] raiseHand server error:', res.status);
                 }
               } catch (err) {
-                console.error('[TalkControls] raiseHand failed:', err);
+                log.error('[TalkControls] raiseHand failed:', err);
               } finally {
                 setHandRaising(false);
               }
@@ -224,9 +226,9 @@ const TalkControls = memo(function TalkControls({
                 try {
                   const res = await fetch('/api/room', { signal: AbortSignal.timeout(10000) /* b.363 — prima non c'era tetto di attesa: se la rete restava muta la chiamata pendeva per sempre e l'utente non vedeva mai un esito */, method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
                   if (res.ok) vibrate(15);
-                  else console.warn('[TalkControls] grantSpeak server error:', res.status);
+                  else log.warn('[TalkControls] grantSpeak server error:', res.status);
                 } catch (err) {
-                  console.error('[TalkControls] grantSpeak failed:', err);
+                  log.error('[TalkControls] grantSpeak failed:', err);
                 } finally {
                   setGrantingSpeak(null);
                 }

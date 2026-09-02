@@ -16,7 +16,7 @@ import { EVENTO, MSG, avvisaVoceLocale } from '../lib/eventi.js';
 // b.602 — chiave, socket e cattura PCM16: un client solo (lib/audio/
 // deepgramLive.js), condiviso con SpeakerView e useDeepgramSTT.
 import { chiediChiaveDeepgram, apriDeepgram } from '../lib/audio/deepgramLive.js';
-const dbg = createLogger('streaming');
+const log = createLogger('streaming');
 
 // ═══════════════════════════════════════════════════════════════
 // useStreamingInterpreter — Subtitle-First + TTS a Frase
@@ -221,7 +221,7 @@ export default function useStreamingInterpreter({
       // b.599 — base64 e invio a pezzi: modulo unico.
       inviaAudioDC(webrtc, await blobABase64(ttsBlob));
     } catch (e) {
-      console.warn('[StreamInterp] TTS error:', e);
+      log.warn('[StreamInterp] TTS error:', e);
     }
   }, [webrtc, chiediVoce]);
 
@@ -455,7 +455,7 @@ export default function useStreamingInterpreter({
     // b.247 — chi decide se Deepgram si puo usare e lib/sttPolicy.js, non
     // questo file (vedi il commento sulla fetch della chiave).
     if (!deepgramAmmesso(USO.INTERPRETE)) {
-      dbg.debug('[StreamInterp] Deepgram non ammesso dalla policy: si usa la pipeline a blocchi');
+      log.debug('[StreamInterp] Deepgram non ammesso dalla policy: si usa la pipeline a blocchi');
       return false;
     }
 
@@ -465,7 +465,7 @@ export default function useStreamingInterpreter({
     }
 
     if (!deepgramKeyRef.current) {
-      console.error('[StreamInterp] No Deepgram key available');
+      log.error('[StreamInterp] No Deepgram key available');
       return false;
     }
 
@@ -517,19 +517,19 @@ export default function useStreamingInterpreter({
         endpointing: 500,   // b.531 — 300 tagliava dentro i respiri
         onTesto: (transcript, isFinal) => handleTranscript(transcript, isFinal),
         onFineFrase: () => handleUtteranceEnd(),   // silenzio prolungato → frase finita
-        onChiuso: () => { dbg.debug('[StreamInterp] WS closed'); },
+        onChiuso: () => { log.debug('[StreamInterp] WS closed'); },
       });
       if (!sessione) {
-        console.warn('[StreamInterp] Deepgram non si e aperto');
+        log.warn('[StreamInterp] Deepgram non si e aperto');
         abortaStreaming();
         return false;
       }
       sessioneRef.current = sessione;
-      dbg.debug('[StreamInterp] Connected to Deepgram');
+      log.debug('[StreamInterp] Connected to Deepgram');
       setActive(true);
       return true;
     } catch (e) {
-      console.error('[StreamInterp] Start failed:', e);
+      log.error('[StreamInterp] Start failed:', e);
       // b.247 — anche qui il microfono poteva essere gia stato aperto da
       // getUserMedia qualche riga sopra: senza abort restava acceso mentre
       // partiva la pipeline a blocchi.

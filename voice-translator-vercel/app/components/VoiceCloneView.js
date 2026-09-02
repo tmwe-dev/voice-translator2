@@ -6,6 +6,8 @@ import useVoiceRecorder from '../hooks/useVoiceRecorder.js';
 import Icon from './Icon.js';
 import { PALETTE } from '../lib/palette.js';
 import { useApp } from '../contexts/AppContext.js';
+import { createLogger } from '../lib/logger.js';
+const log = createLogger('VoiceCloneView');   // b.604 — niente console.* sparsi: tutto dal logger
 
 const MIN_DURATION = 30; // ElevenLabs requires at least 30s for instant voice cloning
 
@@ -96,7 +98,7 @@ export default function VoiceCloneView({ userToken, userTokenRef, onVoiceCloned,
       // b.363 — prima questo guasto non lasciava traccia da nessuna parte: nel
       // registro non compariva nulla, e il motivo vero (rete caduta, attesa
       // scaduta, credito finito, server rotto) restava irrecuperabile.
-      if (e?.name !== 'AbortError') console.warn('[b.363] /api/voice-clone:', e?.message || e);
+      if (e?.name !== 'AbortError') log.warn('[b.363] /api/voice-clone:', e?.message || e);
       setCloneError(e.message);
     } finally {
       setCloning(false);

@@ -8,7 +8,7 @@ import { createLogger } from '../lib/logger.js';
 // c'era la seconda delle tre copie. La voce viene dal microfono unico.
 import { chiediChiaveDeepgram, apriDeepgram } from '../lib/audio/deepgramLive.js';
 import { prendiVoce, rendiVoce } from '../lib/microfonoMaster.js';
-const dbg = createLogger('deepgram');
+const log = createLogger('deepgram');
 
 /**
  * Deepgram Streaming STT hook — server-grade WebSocket speech recognition.
@@ -102,7 +102,7 @@ export default function useDeepgramSTT({
     // qualunque effetto collaterale: niente microfono, niente stato di
     // registrazione, si torna false e chiama il ripiego.
     if (!deepgramAmmesso(USO.TRADUZIONE)) {
-      dbg.debug('[STT-Deepgram] non ammesso dalla policy: si usa il ripiego');
+      log.debug('[STT-Deepgram] non ammesso dalla policy: si usa il ripiego');
       return false;
     }
 
@@ -130,7 +130,7 @@ export default function useDeepgramSTT({
         });
         daRendereRef.current = null;
       } catch (e) {
-        console.error('[STT-Deepgram] Mic access error:', e);
+        log.error('[STT-Deepgram] Mic access error:', e);
         return false;
       }
     }
@@ -148,15 +148,15 @@ export default function useDeepgramSTT({
           setStreamingMsg(prev => prev ? { ...prev, original: preview } : null);
         }
       },
-      onChiuso: () => { dbg.debug('[STT-Deepgram] WebSocket closed'); },
+      onChiuso: () => { log.debug('[STT-Deepgram] WebSocket closed'); },
     });
     if (!sessione) {
-      console.warn('[STT-Deepgram] WebSocket error');
+      log.warn('[STT-Deepgram] WebSocket error');
       await stopDeepgramStreaming();
       return false;
     }
     sessioneRef.current = sessione;
-    dbg.debug('[STT-Deepgram] WebSocket connected');
+    log.debug('[STT-Deepgram] WebSocket connected');
 
     // Keepalive
     if (speakingKeepAliveRef.current) clearInterval(speakingKeepAliveRef.current);

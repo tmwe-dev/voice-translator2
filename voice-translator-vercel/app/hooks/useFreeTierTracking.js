@@ -3,6 +3,8 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { FREE_DAILY_LIMIT } from '../lib/constants.js';
 import { subscribeTick } from '../lib/ticker.js';
 import { memGet, memSet } from '../lib/memoria.js';
+import { createLogger } from '../lib/logger.js';
+const log = createLogger('useFreeTierTracking');   // b.604 — niente console.* sparsi: tutto dal logger
 
 /**
  * useFreeTierTracking — Manages free tier character usage with daily reset.
@@ -33,7 +35,7 @@ export default function useFreeTierTracking() {
           }
         }
       }
-    } catch (e) { console.warn('[useFreeTierTracking] localStorage error:', e?.message); }
+    } catch (e) { log.warn('[useFreeTierTracking] localStorage error:', e?.message); }
   }, []);
 
   // Persist usage changes

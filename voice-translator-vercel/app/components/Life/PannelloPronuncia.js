@@ -14,6 +14,8 @@ import { analizza, confronta, qualityGate } from '../../lib/fonia.js';
 import GraficoFonia from './GraficoFonia.js';
 import Ascolta from '../Ascolta.js';
 import { prendiVoce, rendiVoce } from '../../lib/microfonoMaster.js';   // b.602
+import { createLogger } from '../../lib/logger.js';
+const log = createLogger('PannelloPronuncia');   // b.604 — niente console.* sparsi: tutto dal logger
 
 // ═══════════════════════════════════════════════════════════════
 // PANNELLO PRONUNCIA — dillo ad alta voce (Luca, b.244)
@@ -135,7 +137,7 @@ export default function PannelloPronuncia({ frase, lingua, userToken, onEsito, v
       // b.363 — prima questo guasto non lasciava traccia da nessuna parte: nel
       // registro non compariva nulla, e il motivo vero (rete caduta, attesa
       // scaduta, credito finito, server rotto) restava irrecuperabile.
-      if (e?.name !== 'AbortError') console.warn('[b.363] /api/transcribe:', e?.message || e);
+      if (e?.name !== 'AbortError') log.warn('[b.363] /api/transcribe:', e?.message || e);
       setErrore(L('lifeNoHear'));
       setStato('pronto');
     }

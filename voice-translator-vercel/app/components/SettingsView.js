@@ -12,6 +12,8 @@ import AvatarImg from './AvatarImg.js';
 import { useApp } from '../contexts/AppContext.js';
 import { memGet, memDel } from '../lib/memoria.js';
 import { eInstallata } from '../hooks/usePWAInstall.js';
+import { createLogger } from '../lib/logger.js';
+const log = createLogger('SettingsView');   // b.604 — niente console.* sparsi: tutto dal logger
 
 // ═══════════════════════════════════════════════
 // SettingsView — riscritta: ogni riga FA qualcosa.
@@ -448,7 +450,7 @@ const SettingsView = memo(function SettingsView({ apiKeyInputs, userAccount, log
                 const a = document.createElement('a');
                 a.href = url; a.download = `bartalk-dati-${Date.now()}.json`; a.click();
                 URL.revokeObjectURL(url);
-              } catch (e) { console.warn('[Settings] export:', e?.message); }
+              } catch (e) { log.warn('[Settings] export:', e?.message); }
             }} ultima />
         </Gruppo>
 

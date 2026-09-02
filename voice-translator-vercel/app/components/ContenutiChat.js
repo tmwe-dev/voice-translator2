@@ -18,6 +18,8 @@
 
 import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import { FONT, vibrate } from '../lib/constants.js';
+import { createLogger } from '../lib/logger.js';
+const log = createLogger('ContenutiChat');   // b.604 — niente console.* sparsi: tutto dal logger
 
 const RE_URL = /https?:\/\/[^\s"'<>]+/gi;
 
@@ -62,7 +64,7 @@ function ContenutiChat({ messages, S, L, onApri }) {
           // b.363 — prima questo guasto non lasciava traccia da nessuna parte: nel
           // registro non compariva nulla, e il motivo vero (rete caduta, attesa
           // scaduta, credito finito, server rotto) restava irrecuperabile.
-          if (e?.name !== 'AbortError') console.warn('[b.363] /api/topics/link:', e?.message || e);
+          if (e?.name !== 'AbortError') log.warn('[b.363] /api/topics/link:', e?.message || e);
           setSchede(s => ({ ...s, [url]: 'errore' })); }
       })();
     }

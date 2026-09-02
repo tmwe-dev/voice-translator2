@@ -10,6 +10,8 @@ import { tFuori } from '../lib/i18n.js';
 import { segnalaVoceMuta } from '../lib/segnaleVoce.js';
 import { prendiVoce, rendiVoce } from '../lib/microfonoMaster.js';
 import { avvisaTTS } from '../lib/eventi.js';
+import { createLogger } from '../lib/logger.js';
+const log = createLogger('useAudioSystem');   // b.604 — niente console.* sparsi: tutto dal logger
 
 /**
  * useAudioSystem — Audio orchestration (mic, queue, ducking, playback)
@@ -166,7 +168,7 @@ export default function useAudioSystem({
       // Don't wait for ctx.state === 'running' — that blocks on mobile
       // and prevents browserSpeak fallback from working
       setAudioReady(true);
-    } catch (e) { console.warn('[AUDIO] unlockAudio error:', e); }
+    } catch (e) { log.warn('[AUDIO] unlockAudio error:', e); }
   }
 
   function unlockAudio() {
@@ -219,7 +221,7 @@ export default function useAudioSystem({
       const source = ctx.createMediaElementSource(audioElement);
       source.connect(gain);
       return source;
-    } catch (e) { console.warn('[useAudioSystem] connectToDucking failed:', e?.message || e); return null; }
+    } catch (e) { log.warn('[useAudioSystem] connectToDucking failed:', e?.message || e); return null; }
   }
 
   // b.111 — qui si rilanciava la vecchia coda quando l'audio veniva
@@ -273,7 +275,7 @@ export default function useAudioSystem({
 
   async function getMicStream() {
     if (audioContextRef.current && audioContextRef.current.state === 'suspended') {
-      try { await audioContextRef.current.resume(); } catch (e) { console.warn('[useAudioSystem] resume context failed:', e?.message || e); }
+      try { await audioContextRef.current.resume(); } catch (e) { log.warn('[useAudioSystem] resume context failed:', e?.message || e); }
     }
     if (persistentMicRef.current) {
       const tracks = persistentMicRef.current.getTracks();
@@ -282,7 +284,7 @@ export default function useAudioSystem({
         if (liveModeRef.current && track.applyConstraints) {
           try {
             await track.applyConstraints({ noiseSuppression: true, echoCancellation: true, autoGainControl: true });
-          } catch (e) { console.warn('[useAudioSystem] applyConstraints failed:', e?.message || e); }
+          } catch (e) { log.warn('[useAudioSystem] applyConstraints failed:', e?.message || e); }
         }
         return persistentMicRef.current;
       }
@@ -316,12 +318,12 @@ export default function useAudioSystem({
           try {
             await track.applyConstraints({ noiseSuppression: enabled, echoCancellation: enabled, autoGainControl: enabled });
           } catch (e) {
-            console.warn('[LiveMode] Could not apply constraints:', e);
+            log.warn('[LiveMode] Could not apply constraints:', e);
             try {
               persistentMicRef.current.getTracks().forEach(t => t.stop());
               persistentMicRef.current = null;
               await getMicStream();
-            } catch (e2) { console.warn('[useAudioSystem] mic reset failed:', e2?.message || e2); }
+            } catch (e2) { log.warn('[useAudioSystem] mic reset failed:', e2?.message || e2); }
           }
         }
       }
@@ -351,7 +353,7 @@ export default function useAudioSystem({
       .then(stream => { persistentMicRef.current = stream; micDalMasterRef.current = true; })
       .catch(() => navigator.mediaDevices.getUserMedia({ audio: audioConstraints })
         .then(stream => { persistentMicRef.current = stream; })
-        .catch(e => console.warn('[useAudioSystem] requestMicEarly failed:', e?.message || e)))
+        .catch(e => log.warn('[useAudioSystem] requestMicEarly failed:', e?.message || e)))
       .finally(() => { micInCorsoRef.current = false; });
   }
 
@@ -375,7 +377,7 @@ export default function useAudioSystem({
       gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.25);
       osc.start(ctx.currentTime);
       osc.stop(ctx.currentTime + 0.25);
-    } catch (e) { console.warn('[useAudioSystem] playNotifSound failed:', e?.message || e); }
+    } catch (e) { log.warn('[useAudioSystem] playNotifSound failed:', e?.message || e); }
   }
 
   // =============================================
@@ -521,7 +523,7 @@ export default function useAudioSystem({
           else await tts.playEdgeTTS(text, speechLang);
         }
       }
-    } catch (e) { console.error('[Audio] playMessage error:', e); }
+    } catch (e) { log.error('[Audio] playMessage error:', e); }
     if (mountedRef.current) setPlayingMsgId(null);
   }
 

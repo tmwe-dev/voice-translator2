@@ -6,6 +6,8 @@ import { generaLezione, generaQuiz } from '../../lib/compagni/cliente.js';
 import { sesSet } from '../../lib/memoria.js';
 import { apriScanner, ascoltaScansioni } from '../../lib/scanPonte.js';
 import { conRipiego } from '../../lib/ripiego.js';
+import { createLogger } from '../../lib/logger.js';
+const log = createLogger('CompitiView');   // b.604 — niente console.* sparsi: tutto dal logger
 
 // ═══════════════════════════════════════════════════════════════
 // COMPITI — l'agenda di studio (b.332, Ondata 1 di "Ripetizioni e
@@ -94,7 +96,7 @@ function CompitiView({ L, C, userToken, lingua, cambiaScheda, testoP, muto, acce
       // b.363 — prima questo guasto non lasciava traccia da nessuna parte: nel
       // registro non compariva nulla, e il motivo vero (rete caduta, attesa
       // scaduta, credito finito, server rotto) restava irrecuperabile.
-      if (e?.name !== 'AbortError') console.warn('[b.363] salva:', e?.message || e);
+      if (e?.name !== 'AbortError') log.warn('[b.363] salva:', e?.message || e);
       setErrore(e.status === 401 ? tt('lifeLoginNeeded', 'Accedi') : tt('lifeError', 'Qualcosa è andato storto')); }
     finally { setSalvando(false); }
   }, [bozza, salvando, userToken, ricarica]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -107,7 +109,7 @@ function CompitiView({ L, C, userToken, lingua, cambiaScheda, testoP, muto, acce
       // b.363 — prima questo guasto non lasciava traccia da nessuna parte: nel
       // registro non compariva nulla, e il motivo vero (rete caduta, attesa
       // scaduta, credito finito, server rotto) restava irrecuperabile.
-      if (e?.name !== 'AbortError') console.warn('[b.363] prossimo:', e?.message || e);
+      if (e?.name !== 'AbortError') log.warn('[b.363] prossimo:', e?.message || e);
       ricarica(); }
   }, [userToken, ricarica]);
 
@@ -117,7 +119,7 @@ function CompitiView({ L, C, userToken, lingua, cambiaScheda, testoP, muto, acce
       // b.363 — prima questo guasto non lasciava traccia da nessuna parte: nel
       // registro non compariva nulla, e il motivo vero (rete caduta, attesa
       // scaduta, credito finito, server rotto) restava irrecuperabile.
-      if (e?.name !== 'AbortError') console.warn('[b.363] elimina:', e?.message || e);
+      if (e?.name !== 'AbortError') log.warn('[b.363] elimina:', e?.message || e);
       ricarica(); }
   }, [userToken, ricarica]);
 
@@ -165,7 +167,7 @@ function CompitiView({ L, C, userToken, lingua, cambiaScheda, testoP, muto, acce
       // b.363 — prima questo guasto non lasciava traccia da nessuna parte: nel
       // registro non compariva nulla, e il motivo vero (rete caduta, attesa
       // scaduta, credito finito, server rotto) restava irrecuperabile.
-      if (e?.name !== 'AbortError') console.warn('[b.363] scattaOcr:', e?.message || e);
+      if (e?.name !== 'AbortError') log.warn('[b.363] scattaOcr:', e?.message || e);
       setErrore(e.status === 402 ? tt('lifeNoCredit', 'Credito esaurito') : tt('lifeError', 'Qualcosa è andato storto'));
     } finally { setOcrLavoro(false); }
   }, [ocrLavoro, fotoInTesto, userToken]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -200,7 +202,7 @@ function CompitiView({ L, C, userToken, lingua, cambiaScheda, testoP, muto, acce
       // b.363 — prima questo guasto non lasciava traccia da nessuna parte: nel
       // registro non compariva nulla, e il motivo vero (rete caduta, attesa
       // scaduta, credito finito, server rotto) restava irrecuperabile.
-      if (e?.name !== 'AbortError') console.warn('[b.363] caricaPdf:', e?.message || e);
+      if (e?.name !== 'AbortError') log.warn('[b.363] caricaPdf:', e?.message || e);
       setErrore(tt('lifeMatPdfErr', 'PDF non leggibile (se è una scansione, usa la foto)')); }
     finally { setOcrLavoro(false); }
   }, [ocrLavoro, userToken]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -217,7 +219,7 @@ function CompitiView({ L, C, userToken, lingua, cambiaScheda, testoP, muto, acce
       // b.363 — prima questo guasto non lasciava traccia da nessuna parte: nel
       // registro non compariva nulla, e il motivo vero (rete caduta, attesa
       // scaduta, credito finito, server rotto) restava irrecuperabile.
-      if (e?.name !== 'AbortError') console.warn('[b.363] salvaMat:', e?.message || e);
+      if (e?.name !== 'AbortError') log.warn('[b.363] salvaMat:', e?.message || e);
       setErrore(e.status === 401 ? tt('lifeLoginNeeded', 'Accedi') : tt('lifeError', 'Qualcosa è andato storto')); }
   }, [matBozza, userToken, ricaricaMateriali]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -228,7 +230,7 @@ function CompitiView({ L, C, userToken, lingua, cambiaScheda, testoP, muto, acce
       // b.363 — prima questo guasto non lasciava traccia da nessuna parte: nel
       // registro non compariva nulla, e il motivo vero (rete caduta, attesa
       // scaduta, credito finito, server rotto) restava irrecuperabile.
-      if (e?.name !== 'AbortError') console.warn('[b.363] apriMat:', e?.message || e);
+      if (e?.name !== 'AbortError') log.warn('[b.363] apriMat:', e?.message || e);
       setErrore(tt('lifeError', 'Qualcosa è andato storto')); }
   }, [userToken]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -242,7 +244,7 @@ function CompitiView({ L, C, userToken, lingua, cambiaScheda, testoP, muto, acce
       // b.363 — prima questo guasto non lasciava traccia da nessuna parte: nel
       // registro non compariva nulla, e il motivo vero (rete caduta, attesa
       // scaduta, credito finito, server rotto) restava irrecuperabile.
-      if (e?.name !== 'AbortError') console.warn('[b.363] creaLezioneDaMat:', e?.message || e);
+      if (e?.name !== 'AbortError') log.warn('[b.363] creaLezioneDaMat:', e?.message || e);
       setErrore(e.creditoEsaurito ? tt('lifeNoCredit', 'Credito esaurito') : tt('lifeError', 'Qualcosa è andato storto')); }
     finally { setLavoroMat(''); }
   }, [matAperto, lavoroMat, lingua, userToken]); // eslint-disable-line react-hooks/exhaustive-deps

@@ -39,16 +39,16 @@ function formatMsg(level, tag, message, data) {
   // In dev, use readable format; in prod, JSON for log aggregation
   if (!IS_PROD) {
     const prefix = `[${tag}]`;
-    if (level === 'error') console.error(prefix, message, data || '');
-    else if (level === 'warn') console.warn(prefix, message, data || '');
+    if (level === 'error') console.error(prefix, message, data || ''); // eslint-disable-line no-console -- logger sink
+    else if (level === 'warn') console.warn(prefix, message, data || ''); // eslint-disable-line no-console -- logger sink
     else console.log(prefix, message, data || ''); // eslint-disable-line no-console -- logger sink
     return;
   }
 
   // Production: structured JSON
   const out = JSON.stringify(entry);
-  if (level === 'error') console.error(out);
-  else if (level === 'warn') console.warn(out);
+  if (level === 'error') console.error(out); // eslint-disable-line no-console -- logger sink
+  else if (level === 'warn') console.warn(out); // eslint-disable-line no-console -- logger sink
   else console.log(out); // eslint-disable-line no-console -- logger sink
 }
 
@@ -63,12 +63,22 @@ function formatMsg(level, tag, message, data) {
  *   log.info('Login successful', { email });
  *   log.error('OAuth failed', error);
  */
+// b.604 — VARIADICO. I 254 `console.*` sparsi in 68 file (audit di
+// architettura b.598) passano tutti da qui: 33 di loro avevano tre o piu'
+// argomenti (`console.warn('X:', a, b)`), e un logger a due argomenti li
+// avrebbe persi in silenzio. Un argomento in piu' e' `data` come prima;
+// da due in su finiscono in `dettagli`, cosi' niente sparisce.
+function unisci(rest) {
+  if (rest.length === 0) return undefined;
+  if (rest.length === 1) return rest[0];
+  return { dettagli: rest };
+}
 export function createLogger(tag) {
   return {
-    debug: (msg, data) => currentLevel >= LEVELS.debug && formatMsg('debug', tag, msg, data),
-    info:  (msg, data) => currentLevel >= LEVELS.info  && formatMsg('info',  tag, msg, data),
-    warn:  (msg, data) => currentLevel >= LEVELS.warn  && formatMsg('warn',  tag, msg, data),
-    error: (msg, data) => currentLevel >= LEVELS.error && formatMsg('error', tag, msg, data),
+    debug: (msg, ...rest) => currentLevel >= LEVELS.debug && formatMsg('debug', tag, msg, unisci(rest)),
+    info:  (msg, ...rest) => currentLevel >= LEVELS.info  && formatMsg('info',  tag, msg, unisci(rest)),
+    warn:  (msg, ...rest) => currentLevel >= LEVELS.warn  && formatMsg('warn',  tag, msg, unisci(rest)),
+    error: (msg, ...rest) => currentLevel >= LEVELS.error && formatMsg('error', tag, msg, unisci(rest)),
   };
 }
 

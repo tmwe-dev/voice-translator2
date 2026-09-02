@@ -2,6 +2,8 @@
 import { useState, useRef, useEffect } from 'react';
 import { TESTING_MODE } from '../lib/config.js';
 import { memDel, memSet } from '../lib/memoria.js';
+import { createLogger } from '../lib/logger.js';
+const log = createLogger('useAuth');   // b.604 — niente console.* sparsi: tutto dal logger
 
 export default function useAuth() {
   // Auth state
@@ -122,14 +124,14 @@ export default function useAuth() {
       // JSON: prima la lettura esplodeva e l'utente non capiva perche
       // il codice non arrivava.
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) console.warn('[useAuth] send-code rifiutato, stato', res.status);
+      if (!res.ok) log.warn('[useAuth] send-code rifiutato, stato', res.status);
       if (data.ok) {
         setAuthStep('code');
         return true;
       }
       return false;
     } catch (e) {
-      console.warn('[useAuth] sendAuthCode failed:', e?.message || e);
+      log.warn('[useAuth] sendAuthCode failed:', e?.message || e);
       return false;
     } finally {
       setAuthLoading(false);
@@ -155,7 +157,7 @@ export default function useAuth() {
       // b.363 — vedi sopra: corpo non-JSON non deve far esplodere la
       // verifica, deve solo risultare "non riuscita".
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) console.warn('[useAuth] verify rifiutato, stato', res.status);
+      if (!res.ok) log.warn('[useAuth] verify rifiutato, stato', res.status);
       if (data.ok && data.token) {
         setUserToken(data.token);
         userTokenRef.current = data.token;
@@ -174,7 +176,7 @@ export default function useAuth() {
       }
       return false;
     } catch (e) {
-      console.warn('[useAuth] verifyAuthCode failed:', e?.message || e);
+      log.warn('[useAuth] verifyAuthCode failed:', e?.message || e);
       return false;
     } finally {
       setAuthLoading(false);
@@ -199,7 +201,7 @@ export default function useAuth() {
         setCreditBalance(data.credits);
         setUseOwnKeys(data.useOwnKeys || false);
       }
-    } catch (e) { console.warn('[useAuth] refreshBalance failed:', e?.message || e); }
+    } catch (e) { log.warn('[useAuth] refreshBalance failed:', e?.message || e); }
   }
 
   async function buyCredits(packageId) {
@@ -220,14 +222,14 @@ export default function useAuth() {
       // b.363 — qui si spendono soldi: se la risposta non e JSON prima
       // esplodeva in silenzio, ora resta scritto perche.
       const data = await res.json().catch(() => ({}));
-      if (!data.url) console.warn('[useAuth] cassa non aperta, stato', res.status);
+      if (!data.url) log.warn('[useAuth] cassa non aperta, stato', res.status);
       if (data.url) {
         window.location.href = data.url;
         return true;
       }
       return false;
     } catch (e) {
-      console.warn('[useAuth] buyCredits failed:', e?.message || e);
+      log.warn('[useAuth] buyCredits failed:', e?.message || e);
       return false;
     } finally {
       setAuthLoading(false);
@@ -260,11 +262,11 @@ export default function useAuth() {
         onResult?.('ok');
         return true;
       }
-      console.error('[Auth] save-keys failed:', data.error);
+      log.error('[Auth] save-keys failed:', data.error);
       onResult?.('error', data.error || 'Save failed');
       return false;
     } catch (e) {
-      console.warn('[useAuth] saveUserApiKeys failed:', e?.message || e);
+      log.warn('[useAuth] saveUserApiKeys failed:', e?.message || e);
       onResult?.('error', e.message);
       return false;
     } finally {
@@ -315,10 +317,10 @@ export default function useAuth() {
       // b.363 — corpo non-JSON: prima esplodeva e l'accesso spariva
       // senza spiegazione.
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) console.warn('[useAuth] accesso Google rifiutato, stato', res.status);
+      if (!res.ok) log.warn('[useAuth] accesso Google rifiutato, stato', res.status);
       return handleOAuthLogin(data, 'google');
     } catch (e) {
-      console.warn('[useAuth] loginWithGoogle failed:', e?.message || e);
+      log.warn('[useAuth] loginWithGoogle failed:', e?.message || e);
       return false;
     } finally {
       setAuthLoading(false);
@@ -352,10 +354,10 @@ export default function useAuth() {
       });
       // b.363 — vedi Google: corpo non-JSON non deve far esplodere.
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) console.warn('[useAuth] accesso Apple rifiutato, stato', res.status);
+      if (!res.ok) log.warn('[useAuth] accesso Apple rifiutato, stato', res.status);
       return handleOAuthLogin(data, 'apple');
     } catch (e) {
-      console.warn('[useAuth] loginWithApple failed:', e?.message || e);
+      log.warn('[useAuth] loginWithApple failed:', e?.message || e);
       return false;
     } finally {
       setAuthLoading(false);

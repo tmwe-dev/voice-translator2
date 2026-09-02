@@ -4,6 +4,8 @@ import { FONT } from '../lib/constants.js';
 import { useApp } from '../contexts/AppContext.js';
 import { PACCHETTI, oreIncluse, MOLTIPLICATORE_PREMIUM } from '../wallet/tariffe.js';
 import { memGet } from '../lib/memoria.js';
+import { createLogger } from '../lib/logger.js';
+const log = createLogger('CreditsView');   // b.604 — niente console.* sparsi: tutto dal logger
 
 // ═══════════════════════════════════════════════
 // CreditsView — LA pagina commerciale, allineata al wallet.
@@ -72,7 +74,7 @@ export default function CreditsView({ userAccount }) {
       // b.363 — prima questo guasto non lasciava traccia da nessuna parte: nel
       // registro non compariva nulla, e il motivo vero (rete caduta, attesa
       // scaduta, credito finito, server rotto) restava irrecuperabile.
-      if (e?.name !== 'AbortError') console.warn('[b.363] /api/wallet/ricarica:', e?.message || e);
+      if (e?.name !== 'AbortError') log.warn('[b.363] /api/wallet/ricarica:', e?.message || e);
       setEsito(L('genericError')); setEsitoOk(false); }
     finally { setCaricando(false); }
   }
@@ -98,7 +100,7 @@ export default function CreditsView({ userAccount }) {
       // b.363 — prima questo guasto non lasciava traccia da nessuna parte: nel
       // registro non compariva nulla, e il motivo vero (rete caduta, attesa
       // scaduta, credito finito, server rotto) restava irrecuperabile.
-      if (e?.name !== 'AbortError') console.warn('[b.363] /api/wallet/regalo:', e?.message || e);
+      if (e?.name !== 'AbortError') log.warn('[b.363] /api/wallet/regalo:', e?.message || e);
       setEsito(L('genericError')); setEsitoOk(false); }
   }
 
@@ -124,7 +126,7 @@ export default function CreditsView({ userAccount }) {
       // b.363 — prima questo guasto non lasciava traccia da nessuna parte: nel
       // registro non compariva nulla, e il motivo vero (rete caduta, attesa
       // scaduta, credito finito, server rotto) restava irrecuperabile.
-      if (e?.name !== 'AbortError') console.warn('[b.363] /api/wallet/regalo:', e?.message || e);
+      if (e?.name !== 'AbortError') log.warn('[b.363] /api/wallet/regalo:', e?.message || e);
       setEsitoRegalo(L('noConnection'));
     }
   }
