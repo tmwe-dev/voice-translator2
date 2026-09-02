@@ -267,6 +267,45 @@ perche il working tree lo conteneva ancora.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.609** (push #885) — Il Compagno dal vivo impara da Ermes
+  (TMWE 2.0, ~/Downloads/erp-analisi): le parti utili, senza chiave.
+
+  Luca: «migliora i nostri assistenti copiando le parti utili». Letti
+  agente.html (v.010969), api/agent.js (3.160 righe), la libreria kb/ e i
+  13 documenti tmwe_agent_kb_*.md. Confronto in chat. Portato QUI, lato
+  codice (niente che richieda la chiave ElevenLabs):
+  - **I ricordi entrano nella telefonata** (Ermes: `contesto_completo`).
+    `memoria.js` teneva i ricordi del Compagno solo per la chat scritta;
+    al dal vivo arrivavano 14 messaggi. Ora `variabiliDalVivo` porta
+    `{{memoria}}` (ricordi per tag del contesto, gia' minimizzati b.410,
+    riquadrati come dato) e l'aggancio cambia se ti conosce.
+  - **Quello che si dice al telefono si ricorda**: alla chiusura il
+    client manda i turni (≤40, ≤600 char), il server — se il Compagno ha
+    la memoria — estrae e salva i ricordi con le STESSE funzioni della
+    chat, dopo la risposta, mai bloccando la chiusura. `chiusura()` ora
+    torna `compagnoId`. Prima: dieci minuti al telefono e il Compagno,
+    alla chat dopo, non sapeva niente.
+  - **`{{data_oggi}}`** nella lingua della chiamata (Ermes: `data_oggi`).
+  - **WebRTC con ripiego websocket** in CompagnoLive (Ermes v.010906):
+    con websocket l'agente finisce il blocco prima di fermarsi quando lo
+    interrompi. Il rifiuto della voce (b.431) resta di chi ha chiamato.
+  - `scripts/elevenlabs-agente.mjs`: scarica/prompt/applica/strumenti
+    sull'agente, chiave da ambiente o .env.local (mai da argomento),
+    archivio del vecchio prompt PRIMA della PATCH (come Ermes).
+  **[ATTESO], da fare con la chiave** (vercel env pull): scaricare i due
+  prompt (Compagno ed Ermes), aggiungere `{{memoria}}` e `{{data_oggi}}`
+  al prompt del Compagno (una variabile in piu' non usata dal prompt non
+  rompe la sessione — da confermare dal vivo), registrare il primo client
+  tool (`compagno_ricorda`), e la libreria delle regole apprese con
+  conferma (Ermes: `ermes_apprendi` + bibliotecario) — quella e' un
+  modulo a se' con tabella nuova.
+  NON copiati, con motivo: agentId pubblico (noi firmiamo), voci senza
+  `verified_languages`, la «giornata» casuale.
+  Prove: `compagno-dal-vivo-ricorda-b609.test.js` (7: variabili con/senza
+  ricordi, riquadratura anti-injection, data per lingua, turni puliti,
+  ancore su rotta e componente). [VERIFICATO] eslint 0 errori, build ok,
+  suite 305 file / 3726 prove, 0 regressioni. [ATTESO] telefonata vera.
+
 - Versione: **b.608** (push #884) — Modulo F3: RoomView da 66 props a 25.
 
   Delle 66 props della firma (l'audit ne contava 78 coi default), 45

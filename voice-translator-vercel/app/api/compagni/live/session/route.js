@@ -4,7 +4,12 @@ import { createLogger } from '../../../../lib/logger.js';
 import { getSession } from '../../../../lib/users.js';
 import { getLang } from '../../../../lib/constants.js';
 import { risolviCompagno } from '../../../../lib/compagni/persistenza.js';
-import { apriLineaDalVivo, rinnovaLineaDalVivo, chiudiLineaDalVivo } from '../../../../lib/compagni/ponte.js';
+import { apriLineaDalVivo, rinnovaLineaDalVivo, chiudiLineaDalVivo, turniPuliti } from '../../../../lib/compagni/ponte.js';
+// b.609 — la memoria del Compagno entra nella telefonata ed esce dalla
+// telefonata (da Ermes: contesto a tre livelli + memoria durante la
+// sessione). Stesse funzioni della chat scritta: nessun secondo deposito.
+import { ricordiPerContesto, contestoMemoria, tagsDalTesto, estraiRicordi, aggiungiRicordi } from '../../../../lib/compagni/memoria.js';
+import { dopo } from '../../../../lib/dopo.js';
 
 // ═══════════════════════════════════════════════════════════════
 // LA PORTA DEL DAL VIVO — b.407, Via B (docs/PIANO-LIFE-COMPAGNI.md §5-ter)
@@ -86,6 +91,23 @@ async function handlePost(req) {
       if (!r.ok) {
         return NextResponse.json({ error: SPIEGAZIONI[r.motivo] || 'Chiusura non riuscita', motivo: r.motivo }, { status: r.status || 400 });
       }
+      // b.609 — QUELLO CHE SI E' DETTO AL TELEFONO SI RICORDA. I turni
+      // tornavano nella chat (P1.1) ma nessuno li leggeva per estrarne
+      // ricordi: dieci minuti di telefonata e il Compagno, alla chat dopo,
+      // non sapeva niente. Stessa estrazione e stessa minimizzazione della
+      // chat scritta (b.410), dopo la risposta, mai bloccando la chiusura.
+      const turni = turniPuliti(body.turni);
+      if (turni.length >= 2 && r.compagnoId && !r.gia) {
+        const compagnoDellaLinea = await risolviCompagno(r.compagnoId, email).catch(() => null);
+        if (compagnoDellaLinea?.memoria) {
+          dopo(async () => {
+            try {
+              const ricordi = await estraiRicordi(turni, { userToken });
+              if (ricordi.length) await aggiungiRicordi(email, compagnoDellaLinea.id, ricordi);
+            } catch { /* la memoria e' un di piu': la telefonata e' chiusa e pagata comunque */ }
+          });
+        }
+      }
       return NextResponse.json({ ok: true, secondiParlati: r.secondiParlati, creditoScalato: r.creditoScalato });
     }
 
@@ -102,12 +124,23 @@ async function handlePost(req) {
     const linguaEff = compagno.lingua || linguaApp;
     const nomeLingua = getLang(linguaEff)?.name || 'Italiano';
 
+    const contesto = typeof body.contesto === 'string' ? body.contesto.slice(0, 4000) : '';
+    // b.609 — i ricordi (solo se il Compagno ha la memoria accesa), guidati
+    // dai tag del contesto scritto come nella chat. Un deposito guasto non
+    // ferma la telefonata: si parte senza ricordi.
+    let memoria = '';
+    if (compagno.memoria) {
+      try { memoria = contestoMemoria(await ricordiPerContesto(email, compagno.id, tagsDalTesto(contesto))); }
+      catch (e) { log.warn('ricordi non letti per la telefonata', { motivo: e?.message }); }
+    }
     const r = await apriLineaDalVivo({
       compagno,
       email,
       userToken,
       nomeLingua,
-      contesto: typeof body.contesto === 'string' ? body.contesto.slice(0, 4000) : '',
+      contesto,
+      memoria,
+      codiceLingua: linguaEff,
       adesso,
     });
 

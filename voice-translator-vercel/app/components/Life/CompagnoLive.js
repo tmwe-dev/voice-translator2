@@ -157,7 +157,10 @@ function CompagnoLive({ compagno, lingua, userToken, contesto, onChiudi, onFine,
       fetch('/api/compagni/live/session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ azione: 'chiudi', userToken, sessioneId: id }),
+        // b.609 — i turni viaggiano con la chiusura: il server ne estrae i
+        // ricordi (se il Compagno ha la memoria accesa).
+        body: JSON.stringify({ azione: 'chiudi', userToken, sessioneId: id,
+          turni: turniRef.current.slice(-40).map((t) => ({ ruolo: t.ruolo, testo: String(t.testo || '').slice(0, 600) })) }),
         keepalive: true,
       }).catch(() => { /* il conto lo chiudera il cron delle riserve scadute */ });
     } catch { /* nemmeno la partenza della chiamata e riuscita: il conto lo chiudera il cron delle riserve scadute */ }
@@ -329,10 +332,15 @@ function CompagnoLive({ compagno, lingua, userToken, contesto, onChiudi, onFine,
       const rifiutoDellaVoce = (m) => /override.*voice_id|voice_id.*not allowed/i.test(String(m || ''));
       let vocePropriaRifiutata = false;
 
-      const apriLinea = async (conVoce) => Conversation.startSession({
+      // b.609 — IL RESPIRO (da Ermes, v.010906): con il trasporto websocket
+      // la voce dell'agente viaggia in blocchi gia' decisi e, quando lo
+      // interrompi, aspetta che il blocco finisca — «non mi ascolta, non si
+      // ferma». Con WebRTC il flusso e' continuo e l'interruzione e'
+      // immediata, eco cancellata dal browser compresa. Se WebRTC non parte
+      // si torna al websocket invece di non partire.
+      const opzioniLinea = (conVoce) => ({
         // niente piu `agentId`: l'indirizzo e gia firmato dal nostro server
         signedUrl: permesso.signedUrl,
-        connectionType: 'websocket',
         // Le variabili le costruisce il server dal Compagno vero: il
         // browser non decide piu chi e il personaggio ne come parla.
         dynamicVariables: permesso.variabili,
@@ -368,6 +376,18 @@ function CompagnoLive({ compagno, lingua, userToken, contesto, onChiudi, onFine,
           setRighe((r) => [...r.slice(-24), { chi: source === 'user' ? 'tu' : 'lui', testo }]);
         },
       });
+      const apriLinea = async (conVoce) => {
+        const opz = opzioniLinea(conVoce);
+        try {
+          return await Conversation.startSession({ ...opz, connectionType: 'webrtc' });
+        } catch (e) {
+          // b.431 — il rifiuto della VOCE non e' un guasto di trasporto: lo
+          // gestisce chi ha chiamato apriLinea, qui non si riprova.
+          if (rifiutoDellaVoce(e?.message || e)) throw e;
+          log.warn('[CompagnoLive] WebRTC non disponibile, passo al websocket:', e?.message || e);
+          return Conversation.startSession({ ...opz, connectionType: 'websocket' });
+        }
+      };
 
       let conv;
       try {

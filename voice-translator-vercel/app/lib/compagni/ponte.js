@@ -382,17 +382,52 @@ function riquadra(etichetta, valore, tetto) {
  * Le variabili che il prompt dell'agente si aspetta, costruite dal
  * Compagno RISOLTO SUL SERVER. Pura: si prova senza rete.
  */
-export function variabiliDalVivo({ compagno, nomeLingua, contesto }) {
+// b.609 — LA DATA, DETTA ALL'AGENTE (da Ermes, `data_oggi`): il Compagno
+// non sapeva che giorno fosse, e "ci sentiamo domenica" o "e' tardi" gli
+// uscivano a caso. Si scrive nella lingua della chiamata, come la
+// leggerebbe una persona. Pura: si prova senza rete.
+export function dataOggiPerVoce(codiceLingua = 'it', adesso = Date.now()) {
+  const tag = String(codiceLingua || 'it').split('-')[0] || 'it';
+  try {
+    return new Date(adesso).toLocaleString(tag, {
+      weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit',
+    });
+  } catch {
+    return new Date(adesso).toISOString().slice(0, 16).replace('T', ' ');
+  }
+}
+
+/** b.609 — i turni della telefonata, ripuliti: solo ruolo e testo, con un tetto. Pura. */
+export function turniPuliti(grezzi, { massimo = 40, tettoTesto = 600 } = {}) {
+  if (!Array.isArray(grezzi)) return [];
+  return grezzi.slice(-massimo).map((t) => ({
+    ruolo: t?.ruolo === 'persona' ? 'persona' : 'compagno',
+    testo: String(t?.testo || '').slice(0, tettoTesto).trim(),
+  })).filter((t) => t.testo);
+}
+
+export function variabiliDalVivo({ compagno, nomeLingua, contesto, memoria = '', codiceLingua = 'it', adesso = Date.now() }) {
   const conTesto = riquadra('conversazione precedente', contesto, 4000);
+  // b.609 — I RICORDI ENTRANO NELLA TELEFONATA (da Ermes, `contesto_completo`
+  // a tre livelli). `memoria.js` conservava gia' i ricordi del Compagno
+  // per la chat scritta; al dal vivo arrivavano solo gli ultimi quattordici
+  // messaggi. Un Compagno con la memoria accesa, al telefono, non sapeva
+  // nulla di te. Ora il blocco dei ricordi (gia' minimizzato dei dati
+  // sensibili, b.410) viaggia come variabile — riquadrato: e' un dato.
+  const conMemoria = riquadra('cosa ricordi di questa persona', memoria, 2400);
   return {
     nome: riquadra('nome', compagno?.nome || 'il tuo Compagno', 80) || 'il tuo Compagno',
     ruolo: riquadra('ruolo', compagno?.ruolo || '', 160),
     personalita: riquadra('personalita', compagno?.personalita || '', 2400),
     lingua: String(nomeLingua || 'Italiano').slice(0, 40),
     contesto: conTesto || '(nessuna: la conversazione comincia adesso)',
+    memoria: conMemoria || '(nessun ricordo ancora: e\' una delle prime volte)',
+    data_oggi: dataOggiPerVoce(codiceLingua, adesso),
     aggancio: conTesto
       ? 'Ho qui la nostra conversazione — riprendiamo da dove eravamo?'
-      : 'Che bello sentirti a voce — dimmi pure, di cosa parliamo?',
+      : (conMemoria
+        ? 'Che bello risentirti — dimmi, come va?'
+        : 'Che bello sentirti a voce — dimmi pure, di cosa parliamo?'),
   };
 }
 
@@ -461,7 +496,7 @@ async function lasciaLucchetto(sessioneId) {
  * @returns {{ok:true, sessioneId, signedUrl, variabili, voceId, tettoSecondi, battitoSecondi}}
  *          | {ok:false, motivo, status}
  */
-export async function apriLineaDalVivo({ compagno, email, userToken, nomeLingua, contesto, adesso }) {
+export async function apriLineaDalVivo({ compagno, email, userToken, nomeLingua, contesto, adesso, memoria = '', codiceLingua = 'it' }) {
   if (!AGENTE_DAL_VIVO) {
     // Detto per quello che e: manca una variabile d'ambiente, non e un
     // guasto del fornitore ne un problema di credito.
@@ -547,7 +582,7 @@ export async function apriLineaDalVivo({ compagno, email, userToken, nomeLingua,
       ok: true,
       sessioneId,
       signedUrl,
-      variabili: variabiliDalVivo({ compagno, nomeLingua, contesto }),
+      variabili: variabiliDalVivo({ compagno, nomeLingua, contesto, memoria, codiceLingua, adesso }),
       voceId: compagno?.voce?.id || null,
       tettoSecondi: LIVE_TRATTO_SECONDI,
       battitoSecondi: LIVE_BATTITO_SECONDI,
@@ -785,5 +820,6 @@ async function chiusura({ sessioneId, email, adesso }) {
     scalato += pezzo; resta -= pezzo;
   }
 
-  return { ok: true, secondiParlati, creditoScalato: scalato };
+  // b.609 — chi era al telefono: serve a chi chiude per far ricordare il Compagno
+  return { ok: true, secondiParlati, creditoScalato: scalato, compagnoId: linea.compagnoId || '' };
 }
