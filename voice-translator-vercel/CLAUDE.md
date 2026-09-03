@@ -267,6 +267,30 @@ perche il working tree lo conteneva ancora.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.611** (push #887) — SOLO rimozione: `InterpreterView`,
+  il terzo schermo sopra la chiamata.
+
+  Collaudo dal vivo 03/09 (Chrome di Luca, videochiamata a due, Traduci
+  acceso): dopo qualche secondo lo schermo mostrava SOLO il video del
+  partner, niente comandi. `document.elementFromPoint` sul centro di
+  Micro/Camera/Traduci/Termina/Altro e di ogni voce del cassetto
+  rispondeva VIDEO. Causa: RoomView montava `<InterpreterView>` (overlay
+  `position: fixed; z-index: 9999`) appena `interpreterActive &&
+  interpreter.active && remoteStream` — SOPRA VideoCallOverlay (z 200) e
+  VoiceCallOverlay, con comandi propri che sparivano dopo 5 s. E
+  attaccava il flusso remoto a un secondo `<video>` non silenziato: la
+  voce del partner usciva due volte, e la copia in piu' non passava
+  dall'attenuazione. Sono tre lamentele di Luca (b.597: «pannello che
+  copre la faccia», «non si sa come disattivarla», «non abbassa»)
+  spiegate da una riga che l'audit b.597 non ha guardato perche' stava
+  in RoomView, non in VideoCallOverlay. **BUG PRE-ESISTENTE, non notato
+  prima.** Tolti: il montaggio in RoomView, l'import, il file (176
+  righe). La chiave `closeInterpreter` nei pacchetti lingua resta (e'
+  testo, non codice: giro suo). Prova b.363 su InterpreterView
+  riscritta: ora chiede che il file NON esista.
+  [VERIFICATO] eslint 0 errori, build ok, suite 306 file / 3729 prove.
+  [ATTESO] dal vivo dopo il deploy: comandi toccabili con Traduci acceso.
+
 - Versione: **b.610** (push #886) — TEST FISICO in produzione (b.603,
   Chrome di Luca, stanza a due + videochiamata + interprete): TROVATA LA
   CAUSA del «poi non traduce». Il ripiego a blocchi consegnava file

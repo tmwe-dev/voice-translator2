@@ -306,10 +306,12 @@ describe('anche chi vive fuori dal contesto parla la lingua giusta', () => {
     expect(s).not.toContain('Sei offline —');
   });
 
-  it('InterpreterView non ha piu un\'etichetta in inglese fisso', () => {
-    const s = senzaCommenti(leggi('app/components/InterpreterView.js'));
-    expect(s).toContain("tFuori('closeInterpreter')");
-    expect(s).not.toContain('aria-label="Close interpreter"');
+  it('InterpreterView non esiste piu: era un terzo schermo sopra la chiamata (b.611)', () => {
+    // b.611 — collaudo dal vivo: montava un overlay z-9999 che copriva
+    // ogni comando della chiamata e raddoppiava l'audio del partner.
+    expect(fs.existsSync(path.join(RADICE, 'app/components/InterpreterView.js'))).toBe(false);
+    const r = senzaCommenti(leggi('app/components/RoomView.js'));
+    expect(r).not.toContain('InterpreterView');
   });
 });
 

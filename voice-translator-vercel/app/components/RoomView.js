@@ -22,7 +22,6 @@ import PannelloLaterale, { LinguettaPannello } from './ui/PannelloLaterale.js';
 import { vesteMicrofono } from './ui/Microfono.js';
 import { IconCamera, IconArchive } from './Icons.js';
 import Icon from './Icon.js';   // b.549 — l'icona dei guru
-import InterpreterView from './InterpreterView.js';
 import ChatActionsPanel from './ChatActionsPanel.js';
 import RoomHeader from './RoomHeader.js';
 import NumeroSicurezza from './NumeroSicurezza.js';
@@ -1240,20 +1239,24 @@ const RoomView = memo(function RoomView({
           VoiceEngineBar, nella stessa riga, come elemento di flusso. */}
       {/* ═══ FINE b.250 ═══ */}
 
-      {/* ═══ Interpreter View Overlay ═══ */}
-      {interpreterActive && interpreter?.active && webrtc?.remoteStream && (
-        <InterpreterView
-          theme={theme} remoteStream={webrtc.remoteStream}
-          mySubtitles={interpreter.mySubtitles || []}
-          partnerSubtitles={interpreter.partnerSubtitles || []}
-          latencyMs={0} onClose={() => setInterpreterActive(false)}
-          partnerName={partner?.name || ''} myLang={myLang}
-          partnerLang={partner?.lang || 'en'}
-          isStreaming={interpreter.isStreaming || false}
-          myLiveText={interpreter.myLiveText || ''}
-          partnerLiveSubtitle={interpreter.partnerLiveSubtitle || ''}
-        />
-      )}
+      {/* ═══ b.611 — QUI C'ERA <InterpreterView>: UN TERZO SCHERMO SOPRA GLI
+          ALTRI DUE. Appena l'interprete partiva in chiamata, si montava
+          un overlay a z-index 9999 (sopra VideoCallOverlay, z 200, e
+          sopra VoiceCallOverlay) con il video del partner, i sottotitoli
+          e comandi suoi che SPARIVANO dopo 5 secondi. Da quel momento
+          tutti i comandi della chiamata — Traduci, Termina, Altro, il
+          cursore del volume — erano sotto un video a tutto schermo:
+          `document.elementFromPoint` sul centro di ognuno rispondeva
+          VIDEO (collaudo dal vivo 03/09, Chrome di Luca). E' esattamente
+          «il pannello copre la faccia del partner» e «non si sa come
+          disattivarla» di b.597, che quell'audit non aveva visto perche'
+          la riga stava qui, non in VideoCallOverlay. In piu' attaccava il
+          flusso remoto a un SECONDO <video> NON silenziato: la voce del
+          partner usciva due volte, e la seconda copia non passava
+          dall'attenuazione (remoteAudioRef) — il «non abbassa» di Luca.
+          VideoCallOverlay e VoiceCallOverlay hanno gia' sottotitoli e
+          comando dell'interprete (b.132, b.597, b.598): il terzo schermo
+          era un residuo. Tolto, con il file. */}
 
       {/* ═══ Chat Actions Panel ═══ */}
       {/* b.248 — LE AZIONI AI PARTIVANO SEMPRE SENZA CREDENZIALI.
