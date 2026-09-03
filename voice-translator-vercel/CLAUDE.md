@@ -267,6 +267,77 @@ perche il working tree lo conteneva ancora.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.617** (push #893) — COLLAUDO FISICO COMPLETO dell'app
+  (03/09, prod b.616, dal Chrome di Luca): Home, Mondo, Stanze, chiamate,
+  tutte e 7 le sezioni di Life, Business, Impostazioni. Sette correzioni,
+  e tre osservazioni RITIRATE dopo verifica (vedi in fondo).
+
+  **(1) Le 348 voci ElevenLabs erano TUTTE mute.** Impostazioni → Lingua e
+  voce → «Scegli e prova le voci»: il triangolo non faceva niente, restava
+  un pallino rosso senza una parola. Gli assaggi non stanno su
+  `*.elevenlabs.io` ma su `storage.googleapis.com`, e la nostra `media-src`
+  li vietava: `NotSupportedError`, in silenzio. Aperta la CSP a quel
+  deposito (solo audio, nessun codice) e, se l'assaggio non parte, si prova
+  la strada vera (la nostra rotta, che la voce la genera) invece di
+  fermarsi al pallino.
+
+  **(2) Il «Riassunto» INVENTAVA la conversazione.** Prima vera chiamata a
+  `/api/chat-action` in produzione (zero in 7 giorni). Quattro messaggi
+  scritti a mano, «Riassunto» → sono uscite TRE battute che nessuno aveva
+  detto, attribuite per nome a una persona reale, col tasto Condividi
+  accanto. Causa: al modello arrivava la trascrizione NUDA come turno
+  utente — un dialogo troncato, che un modello piccolo continua. Ora la
+  trascrizione e' un dato recintato e il compito si ripete dopo il recinto
+  («non continuare, non inventare battute, non attribuire a nessuno cio'
+  che non ha detto»), piu' il divieto nel prompt di sistema di tutte e
+  cinque le azioni. E il titolo del risultato e' tradotto («Summary» in
+  un'app italiana).
+
+  **(3) Il telecomando restava acceso sul silenzio.** Uscito dalla lezione,
+  in Chat e in Home restava la pill «Prof.ssa Margaret» coi tasti, su un
+  audio che non esisteva piu'. `interrompi()` marcava e fermava ma non
+  liberava mai `corrente`. Ora un'interruzione VERA libera il registro; la
+  pausa no (quella si riprende), e il segno per chi aspetta il turno resta.
+
+  **(4) `/api/topics/riassunto` rispondeva 401 a un utente collegato.** Il
+  lettore bussa due volte: la prima e' un SONDAGGIO della cache, senza
+  gettone (la cache e' condivisa apposta). A cache vuota rispondeva 401 —
+  quattro nel giro di prova, e nei registri e in ogni audit restava un «non
+  autorizzato» mai vero. Ora il sondaggio ha la sua risposta; il 401 resta
+  per chi chiede di GENERARE con un gettone che non vale.
+
+  **(5) La Tavola rotonda si apriva muta.** Si scrive «su cosa devono
+  confrontarsi», si preme «Apri la Tavola rotonda» → stanza vuota, nessuno
+  parla, dell'obiettivo nessuna traccia: bisognava riscriverlo come primo
+  messaggio. Ora l'obiettivo E' il primo messaggio.
+
+  **(6) «Stanza Diretta — niente passa dai nostri server»** era il titolo
+  anche a interruttore SPENTO, mentre la riga sotto diceva il vero. Da
+  spento ora resta il nome della funzione (`directRoomTitleOff`, 38
+  lingue). **(7)** «consuma 3×.Nuovo account»: due frasi appiccicate.
+
+  [VERIFICATO] dal vivo in questo giro: b.614 (la striscia dei sottotitoli
+  e' sul bordo, non sul volto), b.615 (cuori/reazioni del Mondo 200, niente
+  piu' 429; «Reply» in inglese all'ospite, «Rispondi» all'host), b.616 (un
+  solo bottone apre le Azioni AI). Chat tradotta nei due sensi, guru,
+  podcast, lezione, obiettivi, compiti, PeepOff, portafoglio: funzionano.
+
+  **Da decidere con Luca (non toccati):** `/api/ocr` NON ESISTE (404) —
+  lo scanner dei biglietti ripiega su Tesseract nel browser e lo dichiara;
+  la Rubrica ha 0 contatti e il Glossario 0 termini (funzioni deployate e
+  mai usate); il link d'invito con `?lang=` riscrive `uiLang`/`lang` di chi
+  la lingua l'aveva gia' scelta (visto due volte); nelle stanze del Mondo
+  non c'e' il tasto chiamata — e' la regola b.152, ma niente lo spiega a chi
+  crea la stanza; `DEEPGRAM_API_KEY` ancora assente in produzione
+  (`/api/stt-token` 503 a ogni ingresso in stanza).
+
+  **Ritirate dopo verifica** (per onesta', erano sospetti miei): il podcast
+  NON paga un giro dopo lo Stop (la chiamata era partita prima: il mio
+  strumento registrava al ritorno); il placeholder «Scrivi un messaggio…»
+  non ha refusi (artefatto dello screenshot); toccare una lezione non crea
+  un corso doppione (stava generando la lezione).
+  [VERIFICATO] eslint 0 errori, build ok, suite 310 file / 3776 prove.
+
 - Versione: **b.616** (push #892) — SOLO RIMOZIONI, dal collaudo del 03/09
   (mai mischiate con i cambi di b.615).
 

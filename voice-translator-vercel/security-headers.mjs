@@ -15,7 +15,17 @@ export function politicaContenuti({ inSviluppo = process.env.NODE_ENV === 'devel
     "img-src 'self' data: blob: https:",
     "font-src 'self' data:",
     "connect-src 'self' data: https://unpkg.com https://cdn.jsdelivr.net https://tessdata.projectnaptha.com https://0.peerjs.com wss://0.peerjs.com https://*.supabase.co wss://*.supabase.co https://api.openai.com https://api.anthropic.com https://generativelanguage.googleapis.com https://api.elevenlabs.io https://*.elevenlabs.io wss://*.elevenlabs.io https://api.stripe.com https://*.upstash.io https://plausible.io https://*.sentry.io https://api.deepgram.com wss://api.deepgram.com https://nominatim.openstreetmap.org https://router.project-osrm.org https://tiles.openfreemap.org",
-    "media-src 'self' blob: data: https://*.elevenlabs.io",
+    // b.617 — LE 348 VOCI ERANO TUTTE MUTE. Trovato dal vivo (collaudo
+    // 03/09, Impostazioni → Lingua e voce → «Scegli e prova le voci»): il
+    // triangolo di anteprima non faceva NIENTE, solo un pallino rosso senza
+    // una parola. Il motivo: gli assaggi delle voci ElevenLabs non stanno
+    // su *.elevenlabs.io ma su storage.googleapis.com, e questa riga li
+    // vietava — `NotSupportedError: no supported source was found`, in
+    // silenzio. Si apre SOLO per l'audio (media-src: nessun codice viene
+    // eseguito da li') e SOLO verso quel deposito, e gli indirizzi non li
+    // sceglie l'utente: arrivano dalla nostra rotta, che li legge da
+    // api.elevenlabs.io. Chi tocca il triangolo ora sente la voce.
+    "media-src 'self' blob: data: https://*.elevenlabs.io https://storage.googleapis.com",
     "frame-src 'self' https://js.stripe.com https://accounts.google.com https://www.openstreetmap.org https://www.youtube-nocookie.com",
     "worker-src 'self' blob:",
     "base-uri 'self'",

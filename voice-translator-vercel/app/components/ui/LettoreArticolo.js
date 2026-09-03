@@ -103,6 +103,7 @@ export default function LettoreArticolo({ url, titolo, fonte, dati, prefs, userT
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ titolo: dati.titolo, lang: lingua === 'orig' ? (prefs?.lang || 'en') : lingua }),
         });
+        // b.617 — il sondaggio ora torna sempre 200: `daCache` dice se c'era.
         if (r.ok && vivo) {
           const d = await r.json().catch(() => null);
           if (d?.daCache && d.sintesi) setSintesiAI(d.sintesi);

@@ -11,6 +11,8 @@
 // si aggiungera SOPRA questi cluster, non al posto loro.
 // ═══════════════════════════════════════════════════════════════
 
+import { pulisciTesto } from './registro.js';   // b.617 — una sola pulizia del testo
+
 // Parole vuote minime nelle lingue principali: tolgono rumore dal confronto.
 const VUOTE = new Set([
   'il','lo','la','le','gli','un','una','di','da','in','con','per','su','che','del','della','dei','delle','al','alla','ai','e','a','o',
@@ -88,7 +90,11 @@ export function raggruppaInArgomenti(articoli) {
     return {
       id: `t${i}`,
       titolo: capo.titolo,
-      sintesi: conDescrizione?.descrizione || '',
+      // b.617 — SI RIPULISCE ANCHE IN USCITA. La b.615 aveva corretto la
+      // decodifica in INGRESSO, ma le schede gia' in cache restavano com'erano:
+      // dal vivo (collaudo 03/09) «...febbraio 2027.&nbsp;\"El Nino...» era
+      // ancora li. Qui passa tutto cio che va a schermo, cache compresa.
+      sintesi: pulisciTesto(conDescrizione?.descrizione || ''),
       immagine: conImmagine?.immagine || '',
       url: capo.url,
       fonti,

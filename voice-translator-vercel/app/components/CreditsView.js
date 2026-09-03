@@ -197,7 +197,9 @@ export default function CreditsView({ userAccount }) {
 
           {/* Come funziona — una riga, chiara */}
           <div style={{ fontSize: 12, color: tc.textMuted, fontFamily: FONT, lineHeight: 1.5, marginBottom: 14 }}>
-            {L('creditRuleA')} {MOLTIPLICATORE_PREMIUM}{'×'}.
+            {/* b.617 — JSX mangia lo spazio a fine riga: usciva
+                «consuma 3×.Nuovo account», due frasi appiccicate. */}
+            {L('creditRuleA')} {MOLTIPLICATORE_PREMIUM}{'×'}.{' '}
             {L('creditRuleB')}
           </div>
 

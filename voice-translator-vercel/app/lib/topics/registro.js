@@ -146,7 +146,12 @@ export function leggiVoci(xml) {
 // dopo — e finirebbero a schermo come <b> in mezzo alla frase. Quindi:
 // prima si sciolgono le entita, poi si tolgono i marcatori, e la e
 // commerciale per ultima (se no rifabbrica entita gia sciolte).
-function pulisci(s) {
+// b.617 — QUESTA E' LA PULIZIA BUONA, E ORA SI ESPORTA. Ce n'erano
+// quattro copie divergenti nel repo (registro, videoUfficiale,
+// interpreteVideo, e le due di estrai/ricerca che fino alla b.615 non
+// conoscevano nemmeno `&nbsp;`). Il debito era gia' dichiarato in b.615;
+// qui almeno il testo che ARRIVA A SCHERMO passa da una sola.
+export function pulisciTesto(s) {
   return String(s)
     .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1')
     .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"')
@@ -155,6 +160,7 @@ function pulisci(s) {
     .replace(/&amp;/g, '&')
     .replace(/\s+/g, ' ').trim();
 }
+const pulisci = pulisciTesto;
 
 /** Senza accenti e senza maiuscole: «però» e «pero» sono la stessa parola. */
 export function nuda(s) {

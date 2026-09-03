@@ -189,7 +189,29 @@ function Tavolo({ compagni, L, C = {}, lingua, userToken, testoP, muto, accent, 
       setAttende(false);
     }
     vibrate(8); setAvviato(true);
+    // ═══ b.617 — LA TAVOLA NON SI APRE PIU' MUTA ═══
+    // Collaudo 03/09: si scelgono due Compagni, si scrive «su cosa devono
+    // confrontarsi», si preme «Apri la Tavola rotonda» — e si arriva a una
+    // stanza VUOTA, dove nessuno parla e dell'obiettivo scritto non resta
+    // traccia a schermo. Chi l'ha scritto crede di averlo perso, e per far
+    // partire il confronto deve riscriverlo come primo messaggio. Ora
+    // l'obiettivo E' il primo messaggio: quello che l'interfaccia
+    // prometteva. Senza obiettivo la tavola si apre come prima, in attesa.
+    const tema = (obiettivo || '').trim();
+    if (tema) setTesto(tema);
   }, [scelti, conFonti, obiettivo, lingua, userToken, L]);
+
+  // b.617 — e appena la tavola e' aperta col tema in canna, si parte.
+  // (in un effetto e non dentro `avviaTavola`: `invia` legge `testo` dallo
+  // stato, che al momento del click non e' ancora aggiornato.)
+  const avvioAutomaticoRef = useRef(false);
+  useEffect(() => {
+    if (!avviato) { avvioAutomaticoRef.current = false; return; }
+    if (avvioAutomaticoRef.current) return;
+    if (!testo.trim() || messaggi.filter(soloVoci).length) return;
+    avvioAutomaticoRef.current = true;
+    invia();
+  }, [avviato, testo, messaggi, invia]);
 
   // b.302 — il DOCUMENTO su richiesta: dal confronto (e dal briefing se
   // c'era) scrive il documento finale, sostanzioso, da conservare.

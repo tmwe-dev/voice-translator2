@@ -57,6 +57,19 @@ async function handlePost(req) {
     if (salvata) return NextResponse.json({ sintesi: salvata, daCache: true });
   } catch { /* cache assente: si genera */ }
 
+  // ═══ b.617 — «NON CE L'HO IN CACHE» NON E' «NON SEI AUTORIZZATO» ═══
+  // Il lettore dell'articolo BUSSA due volte a questa porta: la prima per
+  // chiedere se la sintesi esiste gia (sondaggio, SENZA gettone: la cache
+  // e condivisa apposta), la seconda per generarla (col gettone). Alla
+  // prima, se la cache era vuota, si rispondeva 401 — e nei registri di
+  // produzione, e nel conto degli errori di ogni audit, restava un
+  // «non autorizzato» che non e mai stato vero. Dal vivo (collaudo
+  // 03/09, «Apri e traduci»): quattro 401 di fila con l'utente collegato.
+  // Adesso il sondaggio ha la sua risposta onesta; il 401 resta per chi
+  // chiede DI GENERARE con un gettone che non vale.
+  if (!userToken) {
+    return NextResponse.json({ sintesi: '', daCache: false, serveAccount: true });
+  }
   // GENERARE invece costa: serve la sessione, come per /api/summary.
   const session = await getSession(userToken);
   if (!session) {

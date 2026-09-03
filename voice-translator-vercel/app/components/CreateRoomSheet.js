@@ -291,8 +291,16 @@ function CreateRoomSheet({ open, onClose, onCreate, preimpostato }) {
                 color: diretta ? '#26D9B0' : textMuted,
               }}>{diretta ? '✓' : '·'}</span>
               <span style={{ flex: 1 }}>
+                {/* b.617 — IL TITOLO NON PROMETTE QUELLO CHE L'INTERRUTTORE
+                    NON STA FACENDO. Collaudo 03/09: a interruttore SPENTO si
+                    leggeva lo stesso «Stanza Diretta — niente passa dai
+                    nostri server», mentre la riga sotto diceva il vero
+                    («la conversazione usa i nostri servizi»). Chi legge il
+                    titolo in fretta portava via una promessa di riservatezza
+                    che in quel momento era falsa. Da spento resta il nome
+                    della funzione; la promessa torna quando e' accesa. */}
                 <span style={{ display: 'block', fontSize: 12, fontWeight: 500, color: diretta ? '#26D9B0' : textPrimary, marginBottom: 2 }}>
-                  {L('directRoomTitle')}
+                  {diretta ? L('directRoomTitle') : L('directRoomTitleOff')}
                 </span>
                 <span style={{ display: 'block', fontSize: 10, color: textMuted, lineHeight: 1.5 }}>
                   {diretta

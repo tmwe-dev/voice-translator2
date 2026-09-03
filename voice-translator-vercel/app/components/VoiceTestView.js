@@ -132,14 +132,23 @@ const VoiceTestView = memo(function VoiceTestView({ isTrial, isTopPro,
     setTestResults(prev => ({ ...prev, [key]: 'loading' }));
 
     try {
+      // ═══ b.617 — L'ASSAGGIO CHE NON ARRIVA NON E' UN VICOLO CIECO ═══
+      // Prima: se l'assaggio pronto di ElevenLabs non partiva (vietato
+      // dalla CSP fino a oggi, ma anche una rete lenta o un indirizzo
+      // scaduto bastano) si scriveva 'error' in un pallino e finiva li':
+      // quella voce non si poteva sentire in nessun modo. Ora il guasto
+      // dell'assaggio fa PROVARE LA STRADA VERA — la nostra rotta, che la
+      // voce la genera — invece di lasciare l'utente col pallino rosso.
       if (voice.preview) {
-        const audio = new Audio(voice.preview);
-        audioRef.current = audio;
-        audio.onended = () => { setPlayingVoice(null); setTestResults(prev => ({ ...prev, [key]: 'ok' })); };
-        audio.onerror = () => { setPlayingVoice(null); setTestResults(prev => ({ ...prev, [key]: 'error' })); };
-        await audio.play();
-        setTestResults(prev => ({ ...prev, [key]: 'playing' }));
-        return;
+        const suonato = await new Promise((esito) => {
+          const audio = new Audio(voice.preview);
+          audioRef.current = audio;
+          audio.onended = () => { setPlayingVoice(null); setTestResults(prev => ({ ...prev, [key]: 'ok' })); };
+          audio.onerror = () => esito(false);
+          audio.play().then(() => esito(true)).catch(() => esito(false));
+        });
+        if (suonato) { setTestResults(prev => ({ ...prev, [key]: 'playing' })); return; }
+        if (audioRef.current) { try { audioRef.current.pause(); } catch { /* non stava suonando: e' proprio il caso che stiamo gestendo */ } audioRef.current = null; }
       }
       const start = Date.now();
       const res = await fetch('/api/tts-elevenlabs', { signal: AbortSignal.timeout(30000) /* b.363 — prima non c'era tetto di attesa: se la rete restava muta la chiamata pendeva per sempre e l'utente non vedeva mai un esito */,

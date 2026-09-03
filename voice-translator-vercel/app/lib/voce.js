@@ -93,6 +93,18 @@ function interrompi(el) {
   marcaFermato(el);
   const eraGiaFermo = !!el.paused;
   try { el.pause(); } catch { /* era gia fermo: nulla da interrompere */ }
+  // ═══ b.617 — CHI E' STATO INTERROTTO NON E' PIU' «LA VOCE IN CORSO» ═══
+  // Trovato dal vivo (collaudo 03/09): uscito dalla lezione, in Chat e in
+  // Home restava il telecomando acceso con scritto «Prof.ssa Margaret» e i
+  // tasti play/stop, su un audio che non esisteva piu. E' lo stesso
+  // fenomeno che la b.405 aveva chiuso da un'altra parte («la pillola
+  // restava accesa sul silenzio finche non si cambiava pagina»), e il
+  // motivo e' che `interrompi` marcava e fermava ma non liberava mai il
+  // registro: `stato().attivo` guarda `corrente`, e `corrente` restava lui.
+  // La PAUSA (che si riprende) passa da `pausa()` e non da qui: solo
+  // un'interruzione VERA libera. Il segno sull'elemento resta, quindi chi
+  // aspetta la fine del turno (`parlaTurno`) continua a leggerlo.
+  if (corrente === el) { corrente = null; etichetta = ''; avvisa(); }
   if (!eraGiaFermo) return;               // il `pause()` ha gia avvisato tutti
   try { el.dispatchEvent(new Event('pause')); return; } catch { /* non e un elemento vero: si bussa a mano */ }
   try { el.onpause?.(); } catch { /* nessuno in ascolto: nulla da svegliare */ }

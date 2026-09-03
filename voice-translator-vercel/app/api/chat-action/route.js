@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { withApiGuard } from '../../lib/apiGuard.js';
 import { resolveAuth, trackDailySpend } from '../../lib/apiAuth.js';
-import { buildCompactTranscript, getActionPrompt, isCJKConversation } from '../../lib/chatActions.js';
+import { buildCompactTranscript, getActionPrompt, isCJKConversation, inquadraTrascrizione, COMPITO_AZIONE } from '../../lib/chatActions.js';
 import { callLLM } from '../../lib/llmCaller.js';
 import { riserva, commit, release } from '../../wallet/riserva.js';
 import { costoAzioneChat } from '../../wallet/consumo.js';
@@ -146,6 +146,10 @@ async function handlePost(request) {
 
     // Build transcript and prompt
     const transcript = buildCompactTranscript(messages);
+    // b.617 — la trascrizione entra RECINTATA, col compito ripetuto dopo:
+    // senza, il modello continuava il dialogo e le battute inventate
+    // uscivano come «riassunto». Vedi chatActions.js.
+    const turnoUtente = inquadraTrascrizione(transcript, COMPITO_AZIONE[action] || COMPITO_AZIONE.summary);
     const systemPrompt = getActionPrompt(action, { members, mode, domain });
 
     let result;
@@ -156,7 +160,7 @@ async function handlePost(request) {
         const callQwen = await getCallQwen();
         result = await callQwen({
           model: 'gpt-4o-mini', // Will be remapped to qwen-turbo
-          messages: [{ role: 'user', content: transcript }],
+          messages: [{ role: 'user', content: turnoUtente }],
           systemPrompt,
           temperature: 0.4,
           maxTokens: 2000,
@@ -168,7 +172,7 @@ async function handlePost(request) {
           provider: 'openai',
           model: 'gpt-4o-mini',
           apiKey: auth.apiKey,
-          messages: [{ role: 'user', content: transcript }],
+          messages: [{ role: 'user', content: turnoUtente }],
           systemPrompt,
           temperature: 0.4,
           maxTokens: 2000,
@@ -180,7 +184,7 @@ async function handlePost(request) {
         provider: 'openai',
         model: 'gpt-4o-mini',
         apiKey: auth.apiKey,
-        messages: [{ role: 'user', content: transcript }],
+        messages: [{ role: 'user', content: turnoUtente }],
         systemPrompt,
         temperature: 0.4,
         maxTokens: 2000,
