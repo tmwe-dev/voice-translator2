@@ -64,7 +64,7 @@ function BarraReazioni({ msgId, conte, mie, onReagisci, onRispondi, C, compatta 
         <button onClick={() => { vibrate(10); onRispondi(msgId); }}
           aria-label={L('replyToMessage')}
           style={{ ...bottone(false), fontWeight: 500 }}>
-          Rispondi
+          {L('replyWord')}{/* b.615 — era «Rispondi» cablato: in russo restava italiano */}
           {conte?.risposte > 0 && <span style={{ fontWeight: 500 }}>{conte.risposte}</span>}
         </button>
       )}

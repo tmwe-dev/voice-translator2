@@ -267,6 +267,39 @@ perche il working tree lo conteneva ancora.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.615** (push #891) — I DIFETTI MINORI DEL COLLAUDO (03/09),
+  chiusi uno a uno. Luca: «siamo in ambiente di test, vai avanti».
+
+  (1) `&nbsp;` grezzo nei riassunti del Mondo: `decodifica` (estrai.js)
+  e `decodificaEntita` (ricerca.js) non conoscevano `&nbsp;`/`&#160;` —
+  le altre tre decodifiche del repo si' (registro, videoUfficiale,
+  interpreteVideo: quattro copie divergenti, DEBITO: una sola).
+  (2) `/api/mondo/gradimento` 429 al caricamento: l'effetto di
+  FeedNotizieMondo chiedeva le stesse otto chiavi a OGNI scorrimento
+  (indiceAttivo) — ora ricorda cosa ha chiesto (`chiaviChiesteRef`) e
+  respira 350 ms. (4) Pill del telecomando accesa in Home a chiamata
+  finita: `suona()` liberava `corrente` solo su `ended`; un audio rotto o
+  abortito restava «in corso» per sempre — ora anche `error`/`abort`.
+  (6) Prefetch TTS dopo «Ferma» in lezione: `parlaBilingue` guardava solo
+  `fermatoDavvero` sull'audio GIA' suonato; lo Stop fra un pezzo e l'altro,
+  col file dopo ancora in viaggio, non fermava niente (e si pagava) —
+  `deveFermare` chiesto prima di ogni pezzo e prima di suonare cio' che
+  arriva; LifeView passa `() => stopLetturaRef.current`. (7) «Invite an
+  expert» copiato in inglese in 36 pacchetti su 38 e «Rispondi» cablato in
+  BarraReazioni: `inviteGuruTitle` tradotto in tutte le 38 lingue, chiave
+  nuova `replyWord` in tutte le 38. (8) Soglia del silenzio: `1000` scritto
+  due volte, a 4 byte dal silenzio misurato (996) — costante unica
+  `BYTE_MINIMI_BLOCCO_CON_VOCE = 1500`.
+  NON in questa versione (sono RIMOZIONI, versione a parte b.616):
+  (3) `/api/analytics` 401 — la rotta non ha piu' azioni («Unknown
+  action» sempre) e monitor.js le manda beacon senza gettone: codice
+  morto da entrambi i lati; (5) i due bottoni «+» e «fotocamera» di
+  RoomView aprono LO STESSO pannello Azioni AI (la fotocamera non e' una
+  fotocamera). TaxiTalk (vista orfana): registrato, non tocco senza
+  ordine. 12 prove nuove (`b615-difetti-minori-collaudo`).
+  [VERIFICATO] eslint 0 errori, build ok, suite. [ATTESO] i tre difetti a
+  schermo (pill, striscia, Rispondi in RU) li rivede Luca dal vivo.
+
 - Versione: **b.614** (push #890) — TEST FISICO su b.613, tre cose
   trovate dal vivo; la prima e' un P0 sui soldi PRE-ESISTENTE dal 22/08.
 

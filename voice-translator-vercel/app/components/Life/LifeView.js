@@ -1345,6 +1345,8 @@ function Impara({ compagni, L, C, lingua, userToken, testoP, muto, accent, card,
           userToken,
           // b.483 — la parola che compare sul telecomando dell'audio
           chi: tutor?.nome || L('lifeLesson'),
+          // b.615 — «Ferma» vale anche per il pezzo che sta ancora arrivando
+          deveFermare: () => stopLetturaRef.current,
         }, (a) => { audioLezioneRef.current = a; });
         if (stopLetturaRef.current) break;
         // b.313 — hai alzato la mano DURANTE il paragrafo? Ora e' finito: il

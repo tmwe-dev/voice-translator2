@@ -30,7 +30,10 @@ function decodifica(s) {
   return (s || '')
     .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"')
     .replace(/&#39;|&apos;/g, "'").replace(/&#(\d+);/g, (_, n) => String.fromCodePoint(Number(n)))
-    .replace(/&amp;/g, '&').trim();
+    // b.615 — `&nbsp;` arrivava grezzo fino ai riassunti del Mondo (collaudo
+    // 03/09): la descrizione degli articoli passa di qui, e qui mancava.
+    .replace(/&nbsp;|&#160;|\u00a0/g, ' ')
+    .replace(/&amp;/g, '&').replace(/\s+/g, ' ').trim();
 }
 
 function assolutizza(url, base) {

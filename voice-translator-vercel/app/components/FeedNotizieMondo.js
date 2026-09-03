@@ -541,14 +541,23 @@ export default function FeedNotizieMondo({ aperto, onChiudi, C, L, argomenti = [
 
   // si chiedono i conteggi delle slide che si stanno guardando, non di
   // tutte: una manciata di indirizzi per volta.
+  // b.615 — UNA VOLTA PER INDIRIZZO, NON UNA PER SCORRIMENTO. Questo
+  // effetto ripartiva a ogni slide (indiceAttivo) e a ogni ricrescita del
+  // feed (elementi), chiedendo ogni volta le stesse otto chiavi: due
+  // richieste per scorrimento, e al tetto di 120/minuto bastava sfogliare
+  // — collaudo 03/09: 429 su /api/mondo/gradimento gia' al caricamento.
+  // Ora si ricorda cosa si e' gia' chiesto e si chiede solo il nuovo, con
+  // un attimo di respiro per chi sfoglia in fretta.
+  const chiaviChiesteRef = useRef(new Set());
   useEffect(() => {
     if (!aperto || !elementi.length) return undefined;
     const chiavi = elementi.slice(Math.max(0, indiceAttivo - 2), indiceAttivo + 6)
       .map((el) => chiaveContenuto(el?.dati?.url || (el?.dati?.id ? `youtube.com/watch?v=${el.dati.id}` : '')))
-      .filter(Boolean);
+      .filter((k) => k && !chiaviChiesteRef.current.has(k));
     if (!chiavi.length) return undefined;
     let vivo = true;
-    (async () => {
+    const respiro = setTimeout(async () => {
+      chiavi.forEach((k) => chiaviChiesteRef.current.add(k));
       try {
         const [rCuori, rFacce] = await Promise.all([
           fetch(`/api/mondo/gradimento?chiavi=${encodeURIComponent(chiavi.join(','))}`, { signal: AbortSignal.timeout(8000) }),
@@ -565,9 +574,12 @@ export default function FeedNotizieMondo({ aperto, onChiudi, C, L, argomenti = [
           if (vivo && d2?.conteggi) setConteggiFacce((prima) => ({ ...prima, ...d2.conteggi }));
         }
         return;
-      } catch { /* senza conteggi il cuore si mette lo stesso */ }
-    })();
-    return () => { vivo = false; };
+      } catch {
+        // senza conteggi il cuore si mette lo stesso — e si potra' richiedere
+        chiavi.forEach((k) => chiaviChiesteRef.current.delete(k));
+      }
+    }, 350);
+    return () => { vivo = false; clearTimeout(respiro); };
   }, [aperto, elementi, indiceAttivo]);
 
   // b.544 — il tocco: prima si accende (chi tocca deve vedere subito),

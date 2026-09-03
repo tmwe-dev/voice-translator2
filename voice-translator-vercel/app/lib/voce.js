@@ -125,6 +125,13 @@ export function suona(audioEl, nome = '') {
   // tenere scritto CHI ha parlato per ultimo mentre si prepara la voce
   // dopo: se no il telecomando resterebbe li muto e anonimo.
   audioEl.addEventListener('ended', () => { if (corrente === audioEl) corrente = null; avvisa(); });
+  // b.615 — LA PILL CHE NON SI SPEGNEVA (collaudo 03/09: telecomando ancora
+  // acceso in Home, a chiamata finita). Un audio che si rompe o viene
+  // abortito non arriva mai a `ended`: `corrente` restava lui, per sempre,
+  // e il telecomando lo mostrava come "in corso". Anche il guasto libera.
+  const suFine = () => { if (corrente === audioEl) corrente = null; avvisa(); };
+  audioEl.addEventListener('error', suFine);
+  audioEl.addEventListener('abort', suFine);
   avvisa();
 }
 

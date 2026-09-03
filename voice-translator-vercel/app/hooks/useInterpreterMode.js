@@ -41,6 +41,13 @@ const log = createLogger('interpreter');
 // ═══════════════════════════════════════
 
 const CHUNK_DURATION = 3000; // 3 seconds (legacy mode)
+// b.615 — IL SILENZIO PESA 996 BYTE. Misurato dal vivo (collaudo 03/09, b.613):
+// un giro di 3 s di solo silenzio, dopo il filtro del rumore, e' un WebM da
+// 996 byte; una frase corta ne fa 8.000 e passa. La soglia era 1000 —
+// scritta due volte, a 4 byte dal silenzio: un soffio di rumore e Whisper
+// riceveva (e faceva pagare) un blocco vuoto. Ora una costante sola, con
+// un margine vero: sotto questa misura non c'e' voce.
+const BYTE_MINIMI_BLOCCO_CON_VOCE = 1500;
 
 // b.247 — tetto della coda dei blocchi audio in attesa di essere tradotti.
 // Dodici blocchi da 3 secondi sono 36 secondi di parlato accumulato: oltre
@@ -199,7 +206,7 @@ export default function useInterpreterMode({
   // `processingRef` serve solo a garantire che si elabori uno per volta.
   const processChunk = useCallback(async (blob) => {
     if (!activeRef.current) return;
-    if (!blob || blob.size < 1000) return; // Skip tiny/silent chunks
+    if (!blob || blob.size < BYTE_MINIMI_BLOCCO_CON_VOCE) return; // blocchi vuoti o di solo silenzio (b.615)
 
     try {
       // 1. STT — Transcribe audio
@@ -367,7 +374,7 @@ export default function useInterpreterMode({
   // scarto in SILENZIO.
   const accodaChunk = useCallback((blob) => {
     if (!activeRef.current) return;
-    if (!blob || blob.size < 1000) return; // blocchi vuoti o di solo silenzio
+    if (!blob || blob.size < BYTE_MINIMI_BLOCCO_CON_VOCE) return; // blocchi vuoti o di solo silenzio (b.615)
     codaChunkRef.current.push(blob);
     if (codaChunkRef.current.length > MAX_CODA_CHUNK) {
       const scartati = codaChunkRef.current.length - MAX_CODA_CHUNK;

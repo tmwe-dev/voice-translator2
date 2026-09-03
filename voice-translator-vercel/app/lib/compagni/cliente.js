@@ -295,8 +295,16 @@ export function reportFinale({ argomento, briefing, statoFonti, discussione, lin
  * I pezzi vicini nella stessa lingua sono già uniti da segmentiPerVoce, così
  * non si paga una chiamata per ogni parola.
  */
-export async function parlaBilingue({ voceId, voceAssistente, testo, linguaParlata, linguaStudiata, userToken, modoVoce, onVoce, chi }, onAudio) {
+export async function parlaBilingue({ voceId, voceAssistente, testo, linguaParlata, linguaStudiata, userToken, modoVoce, onVoce, chi, deveFermare }, onAudio) {
   const pezzi = segmentiPerVoce(testo, { linguaParlata, linguaStudiata });
+  // b.615 — IL «FERMA» PREMUTO MENTRE SI ASPETTA LA VOCE. `fermatoDavvero`
+  // guarda l'audio gia' suonato: se lo Stop arriva fra un pezzo e l'altro,
+  // quando il file del pezzo dopo e' ancora in viaggio, non c'e' nessun
+  // audio da marcare e il pezzo dopo parte (e si paga) lo stesso — visto
+  // dal vivo (collaudo 03/09): dopo «Ferma» ancora chiamate a
+  // /api/tts-elevenlabs. `deveFermare` e' la domanda che chi chiama sa
+  // rispondere in ogni istante; si fa PRIMA di chiedere ogni pezzo e
+  // dentro parlaTurno prima di suonare cio' che e' arrivato.
   // b.363 — CHI INTERROMPE DEVE FAR TACERE ANCHE IL PEZZO DOPO. Una frase con
   // parti in lingua straniera non si dice in un fiato: si dice in due, tre,
   // quattro turni di voce. Chi usciva dalla lezione (o premeva Interrompi)
@@ -307,8 +315,10 @@ export async function parlaBilingue({ voceId, voceAssistente, testo, linguaParla
   // ha messo in pausa) ora ferma anche questo giro.
   let ultimo = null;
   for (const p of pezzi) {
+    if (deveFermare?.()) break;
     const suaLingua = p.lingua === linguaStudiata;
     await parlaTurno({
+      deveFermare,
       // b.342 — la voce effettiva del MAESTRO (non dell'assistente) risale
       // al chiamante, che la blocca per le risposte alle interruzioni.
       onVoce: suaLingua ? undefined : onVoce,
@@ -345,8 +355,9 @@ export async function parlaBilingue({ voceId, voceAssistente, testo, linguaParla
  * `chi` e il nome che il telecomando mostra; `onAudio` resta per chi deve
  * tenere il riferimento o cambiare la velocita.
  */
-export async function parlaTurno({ voceId, testo, lingua, userToken, modoVoce, onVoce, chi }, onAudio) {
+export async function parlaTurno({ voceId, testo, lingua, userToken, modoVoce, onVoce, chi, deveFermare }, onAudio) {
   try {
+    if (deveFermare?.()) return;   // b.615 — fermato prima ancora di chiedere
     const r = await fetch('/api/tts-elevenlabs', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -359,6 +370,7 @@ export async function parlaTurno({ voceId, testo, lingua, userToken, modoVoce, o
     // e ripassarla ai turni successivi (stessa voce per lettura e risposte).
     try { const v = r.headers.get('X-Voce'); if (v && onVoce) onVoce(v); } catch { /* solo un extra */ }
     const blob = await r.blob();
+    if (deveFermare?.()) return;   // b.615 — arrivato, ma nel frattempo si e' fermato: non si suona
     const url = URL.createObjectURL(blob);
     await new Promise((risolvi) => {
       const audio = new Audio(url);

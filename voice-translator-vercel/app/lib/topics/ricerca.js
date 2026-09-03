@@ -31,6 +31,7 @@ function decodificaEntita(s) {
     .replace(/&lt;/g, '<').replace(/&gt;/g, '>')
     .replace(/&quot;/g, '"').replace(/&#39;|&apos;/g, "'")
     .replace(/&#(\d+);/g, (_, n) => String.fromCodePoint(Number(n)))
+    .replace(/&nbsp;|&#160;|\u00a0/g, ' ')   // b.615
     .replace(/&amp;/g, '&')
     .replace(/<[^>]+>/g, '')
     .replace(/\s+/g, ' ')
