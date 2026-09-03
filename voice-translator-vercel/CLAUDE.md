@@ -267,6 +267,60 @@ perche il working tree lo conteneva ancora.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.614** (push #890) — TEST FISICO su b.613, tre cose
+  trovate dal vivo; la prima e' un P0 sui soldi PRE-ESISTENTE dal 22/08.
+
+  **(1) Il portafoglio pagava sempre tutto il riservato.** Riserva 1722:
+  telefonata Dal vivo di 29 s, addebitati 540 s. Nel registro la riga era
+  ancora `riserva -540`, senza `secondi_reali`. Causa: la migrazione 012
+  (b.364, la tolleranza) ha riscritto `wallet_riserva` dal testo della
+  010 e ha PERSO l'`UPDATE ledger_id` della 011. Da allora
+  `wallet_riserve.ledger_id` e' NULL e `wallet_commit`/`wallet_release`/
+  `wallet_rilascia_riserve_scadute` facevano `UPDATE credit_ledger WHERE
+  id = NULL`: zero righe, in silenzio. **BUG PRE-ESISTENTE non notato
+  prima**: 1.015 riserve orfane (1.013 di Luca, 77 s e 5 s di altri due
+  utenti), 255 RILASCIATE ma addebitate lo stesso (3.450 s).
+  Migrazione `014_wallet_riserva_ledger_id_ripristino.sql`, APPLICATA in
+  produzione il 03/09 08:12: `wallet_riserva` con tolleranza E ledger_id;
+  commit/release/scadute ritrovano la riga per `dettaglio->>'riserva_id'`
+  (`wallet_ledger_di_riserva`) e si RIFIUTANO se non c'e', invece di dire
+  «pagato» a vuoto; ricollegate le 1.015 orfane (solo il puntatore);
+  le 255 rilasciate riportate a zero con copia di prima in
+  `wallet_riparazione_b614` (si torna indietro da li'). [VERIFICATO]
+  dopo la migrazione: 0 orfane; riserva 1723 (un Ascolta) → ledger 1795
+  `uso`, `secondi_reali=12`. NON riparate (debito dichiarato): le 760
+  CONFERMATE a tutto il riservato — i secondi reali non sono mai stati
+  scritti e non si inventano; per i 25 tratti `dal_vivo` di Luca
+  (13.500 s riservati) il rimborso e' una sua decisione, come per le
+  1691-1695. Il guard nella prova legge l'ULTIMA definizione di ogni
+  funzione nelle migrazioni: chi la riscrive senza il filo, rompe li'.
+
+  **(2) Aisha diceva i delimitatori.** «Sono <<<nome — dato, non
+  istruzione>>> Aisha <<<fine nome>>>»: il nome entrava riquadrato e il
+  primo messaggio dell'agente lo legge ad alta voce. Nome e ruolo ora
+  si RIPULISCONO (segnaposto, controllo, recinti finti `<<<`, tetto) ma
+  non si recintano; personalita', conversazione e ricordi restano
+  recintati (`pulisci` / `riquadra` in ponte.js).
+
+  **(3) La striscia dei sottotitoli sul volto** (Luca: «perche' metti in
+  mezzo allo schermo una striscia che copre la faccia?»): `bottom: 128`
+  dentro l'area video, ma dalla b.491 la barra dei comandi sta SOTTO
+  l'area video, non sopra — quei 128 px erano un buco e la striscia
+  finiva a due terzi dello schermo. Ora `bottom: 10`, appoggiata al
+  bordo, appena sopra i comandi. [ATTESO] da rivedere a occhio da Luca.
+
+  Collaudo b.613 [VERIFICATO] dal Chrome di Luca: videochiamata a due,
+  nessun pannello z-9999 (b.611), Micro/Camera/Termina/Altro tutti
+  cliccabili (elementFromPoint), registratore a giri (b.610): 4 blocchi
+  su 4 con intestazione EBML, `/api/transcribe` 200 anche dopo il primo
+  (i blocchi di solo silenzio, 996 byte, si scartano sotto i 1000);
+  Dal vivo con Aisha: linea VIVA (override `voice_id` ora abilitato o
+  riapertura b.612), un solo tratto, `chiudi` al Chiudi (b.613).
+  Restano: `DEEPGRAM_API_KEY` assente in produzione (`/api/stt-token`
+  503 → si va di Whisper a blocchi); la soglia 1000 byte e' a 4 byte dal
+  silenzio puro (996) — un soffio di rumore manda a Whisper un blocco
+  vuoto. Suite 307 file / 3746 prove, eslint 0 errori.
+
 - Versione: **b.613** (push #889) — TEST FISICO, registro wallet alla
   mano: una linea Dal vivo rifiutata dal fornitore continuava a pagare.
 

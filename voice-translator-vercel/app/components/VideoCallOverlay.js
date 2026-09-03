@@ -403,9 +403,18 @@ const VideoCallOverlay = memo(function VideoCallOverlay({
                   di icone (richiesta di Luca: comandi raccolti, pagina vuota). */}
 
               {/* (2) il sottotitolo, da solo, in basso: la parte che si legge */}
+              {/* ═══ INIZIO b.614 — la striscia scende SUL BORDO del video.
+                  COSA: `bottom: 128` → `bottom: 10`. PERCHE: Luca dal vivo
+                  (collaudo 03/09): «una striscia in mezzo allo schermo che
+                  copre la faccia». Il 128 veniva da quando la barra dei
+                  comandi galleggiava SOPRA il video; dalla b.491 la barra e'
+                  un fratello flex sotto l'area video, quindi quei 128 px
+                  erano solo un buco — e la striscia finiva a due terzi
+                  dello schermo, sul volto. Ora si appoggia al bordo
+                  inferiore dell'area video, appena sopra i comandi. ═══ */}
               {mostraTesto && (
               <div style={{
-                position: 'absolute', bottom: 128, left: 14, right: 14,
+                position: 'absolute', bottom: 10, left: 14, right: 14,
                 background: 'rgba(5,7,15,0.84)', backdropFilter: 'blur(18px)',
                 border: '1px solid rgba(160,190,255,0.16)', borderRadius: 20,
                 padding: '12px 14px 10px',
@@ -499,6 +508,7 @@ const VideoCallOverlay = memo(function VideoCallOverlay({
                 )}
               </div>
               )}
+              {/* ═══ FINE b.614 ═══ */}
 
               {/* ═══ FINE b.278 ═══ */}
               </>
