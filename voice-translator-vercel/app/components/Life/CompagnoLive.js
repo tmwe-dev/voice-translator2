@@ -104,6 +104,8 @@ function CompagnoLive({ compagno, lingua, userToken, contesto, onChiudi, onFine,
   // collego | vivo | chiusa_da_te | caduta | caduta_rete | guasto_fornitore
   // | microfono_negato | avvio_fallito | credito_finito | non_configurato
   const [stato, setStato] = useState('collego');
+  const statoRef = useRef('collego');   // b.613 — letto dalle richiamate del fornitore, che non vedono lo stato aggiornato
+  useEffect(() => { statoRef.current = stato; }, [stato]);
   const [modo, setModo] = useState('listening'); // listening | speaking
   const [micSpento, setMicSpento] = useState(false);
   // P1.3 — si sa se il comando del microfono ESISTE davvero prima di
@@ -165,6 +167,24 @@ function CompagnoLive({ compagno, lingua, userToken, contesto, onChiudi, onFine,
       }).catch(() => { /* il conto lo chiudera il cron delle riserve scadute */ });
     } catch { /* nemmeno la partenza della chiamata e riuscita: il conto lo chiudera il cron delle riserve scadute */ }
   }, [userToken, fermaBattito]);
+
+  // ═══ b.613 — UNA LINEA CADUTA NON DEVE CONTINUARE A PAGARE. ═══
+  // Trovato dal vivo (collaudo 03/09, registro wallet alla mano): la
+  // telefonata con Aisha e' stata RIFIUTATA dal fornitore un secondo dopo
+  // l'apertura (voce non consentita, vedi b.612), la scheda diceva
+  // «Guasto della linea vocale» — e intanto il battito continuava:
+  // ogni due minuti un tratto nuovo, cinque tratti CONFERMATI da 540
+  // secondi di credito (45 minuti) per una telefonata mai avvenuta,
+  // finche' non si e' premuto Chiudi. Il conto si chiude sul tempo
+  // trascorso dall'apertura, e il tempo passava. Da qui in poi ogni
+  // esito finale che NON e' «vivo» ferma il battito e chiude il conto
+  // subito: si paga il tempo davvero passato (pochi secondi), non
+  // l'attesa davanti a una scheda d'errore. Riprova apre un conto nuovo
+  // (P1.4), quindi chiudere qui non gli toglie niente.
+  const chiudiPerGuasto = useCallback(() => {
+    fermaBattito();
+    chiudiConto();
+  }, [fermaBattito, chiudiConto]);
 
   // P1.1 — i turni parlati diventano messaggi della chat scritta. Prima
   // la continuita era a senso unico: lo scritto entrava nel dal-vivo, il
@@ -366,6 +386,8 @@ function CompagnoLive({ compagno, lingua, userToken, contesto, onChiudi, onFine,
           const esito = classificaChiusura(d, chiusuraVolutaRef.current);
           setStato((s) => (s.startsWith('microfono') || s === 'avvio_fallito' ? s : esito));
           if (d?.message) setDettaglio(String(d.message));
+          // b.613 — la linea e' caduta (o chiusa): il conto si chiude ORA.
+          if (esito !== 'chiusa_da_te') chiudiPerGuasto();
         },
         onError: (messaggio) => {
           log.warn('[CompagnoLive] errore di linea:', messaggio);
@@ -378,6 +400,7 @@ function CompagnoLive({ compagno, lingua, userToken, contesto, onChiudi, onFine,
           // senza buttare giu la chiamata. Prima dell'apertura, e fatale.
           setDettaglio(String(messaggio || ''));
           setStato((s) => (s === 'vivo' ? s : 'guasto_fornitore'));
+          if (statoRef.current !== 'vivo') chiudiPerGuasto();   // b.613 — mai aperta: non si paga l'attesa
         },
         onModeChange: ({ mode }) => { if (mioTurno()) setModo(mode); },
         onMessage: ({ message, source }) => {
@@ -401,7 +424,7 @@ function CompagnoLive({ compagno, lingua, userToken, contesto, onChiudi, onFine,
           setDettaglio(L('liveVoiceNotAllowed'));
         } catch (e) {
           log.warn('[b.612] riapertura senza voce fallita:', e?.message || e);
-          if (mioTurno()) { setStato('guasto_fornitore'); setDettaglio(String(e?.message || e || '')); }
+          if (mioTurno()) { setStato('guasto_fornitore'); setDettaglio(String(e?.message || e || '')); chiudiPerGuasto(); }   // b.613
         }
       };
       const apriLinea = async (conVoce) => {
@@ -439,7 +462,7 @@ function CompagnoLive({ compagno, lingua, userToken, contesto, onChiudi, onFine,
         // per non lasciarne una a meta fra due modi diversi.
         setDettaglio(L('liveVoiceNotAllowed'));
       }
-      if (!conv) { setStato('guasto_fornitore'); return; }
+      if (!conv) { setStato('guasto_fornitore'); chiudiPerGuasto(); return; }   // b.613
       convRef.current = conv;
       // P1.3 — il comando del microfono si mostra SOLO se la libreria lo
       // espone davvero. Prima, quando non c'era, si scriveva una proprieta
@@ -449,9 +472,9 @@ function CompagnoLive({ compagno, lingua, userToken, contesto, onChiudi, onFine,
       setMuteDisponibile(typeof conv.setMicMuted === 'function');
     } catch (e) {
       log.warn('[CompagnoLive] apertura fallita:', e);
-      if (mioTurno()) { setStato('avvio_fallito'); setDettaglio(String(e?.message || e || L('errorTitle'))); }
+      if (mioTurno()) { setStato('avvio_fallito'); setDettaglio(String(e?.message || e || L('errorTitle'))); chiudiPerGuasto(); }   // b.613
     }
-  }, [compagno, lingua, userToken, consegnaTurni, chiudiConto, fermaBattito, L]);
+  }, [compagno, lingua, userToken, consegnaTurni, chiudiConto, fermaBattito, chiudiPerGuasto, L]);
 
   useEffect(() => {
     vivoRef.current = true;

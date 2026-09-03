@@ -267,6 +267,28 @@ perche il working tree lo conteneva ancora.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.613** (push #889) — TEST FISICO, registro wallet alla
+  mano: una linea Dal vivo rifiutata dal fornitore continuava a pagare.
+
+  `wallet_riserve` di Luca, 03/09 07:01→07:11: la telefonata con Aisha
+  e' stata chiusa dal fornitore un secondo dopo l'apertura (b.612), la
+  scheda diceva «Guasto della linea vocale» — e intanto il battito
+  continuava a rinnovare: **5 tratti `dal_vivo` da 540 secondi,
+  CONFERMATI** (45 minuti di credito, 15,99 cent l'uno) per una
+  telefonata mai avvenuta, finche' non si e' premuto Chiudi dieci minuti
+  dopo. Il conto si chiude sul tempo dall'apertura, e il tempo passava.
+  **BUG PRE-ESISTENTE, P0 sui soldi.** Ora ogni esito finale che non e'
+  «vivo» (guasto del fornitore, caduta, caduta di rete, avvio fallito,
+  linea mai aperta) ferma il battito e chiude il conto SUBITO
+  (`chiudiPerGuasto`): si pagano i secondi davvero passati. Riprova apre
+  un conto nuovo (P1.4), quindi non perde niente. `statoRef` per le
+  richiamate del fornitore, che vedono lo stato vecchio. 3 prove di
+  comportamento (chiusura da fornitore → `chiudi` subito e zero rinnovi;
+  avvio fallito → idem; linea viva → il battito continua e nessuna
+  chiusura). Da decidere con Luca: rimborso dei 45 minuti (riserve
+  1691-1695) — dato suo, non si tocca senza il suo ok.
+  [VERIFICATO] eslint 0 errori, build ok, suite 306 file / 3735 prove.
+
 - Versione: **b.612** (push #888) — TEST FISICO Life «Dal vivo»: la
   telefonata col Compagno moriva subito, «Guasto della linea vocale —
   Override for field 'voice_id' is not allowed by config».

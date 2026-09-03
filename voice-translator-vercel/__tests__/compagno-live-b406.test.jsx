@@ -490,3 +490,56 @@ describe('b.612 — la voce rifiutata alla chiusura riapre la linea senza voce',
     expect(screen.getByText(/Guasto della linea vocale/)).toBeTruthy();
   });
 });
+
+// ═══════════════════════════════════════════════════════════════
+// b.613 — TROVATO DAL VIVO (registro wallet 03/09): la linea rifiutata dal
+// fornitore restava «aperta» per il conto: il battito continuava e cinque
+// tratti da 540 secondi sono stati CONFERMATI per una telefonata mai
+// avvenuta, finche' non si e' premuto Chiudi.
+// ═══════════════════════════════════════════════════════════════
+describe('b.613 — una linea caduta chiude il conto subito, senza aspettare Chiudi', () => {
+  let onLinePrima;
+  beforeEach(() => {
+    onLinePrima = Object.getOwnPropertyDescriptor(global.navigator, 'onLine');
+    Object.defineProperty(global.navigator, 'onLine', { value: true, configurable: true });
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+    if (onLinePrima) Object.defineProperty(global.navigator, 'onLine', onLinePrima);
+    else delete global.navigator.onLine;
+  });
+
+  it('chiusa dal fornitore per un errore → azione chiudi PRIMA di qualunque Chiudi dell\'utente, e nessun rinnovo dopo', async () => {
+    permesso.corpo.battitoSecondi = 15;
+    await apri({ userToken: 'gettone-1' });
+    act(() => { ultima().opzioni.onConnect(); });
+    expect(chiamate.some((c) => c.corpo.azione === 'chiudi')).toBe(false);
+    act(() => { ultima().opzioni.onDisconnect({ reason: 'error', message: 'server error' }); });
+    const chiusura = chiamate.find((c) => c.corpo.azione === 'chiudi');
+    expect(chiusura, 'il conto si chiude da solo').toBeTruthy();
+    expect(chiusura.corpo.sessioneId).toBe('sess-1');
+    const rinnoviPrima = chiamate.filter((c) => c.corpo.azione === 'rinnova').length;
+    await act(async () => { await vi.advanceTimersByTimeAsync(40000); });
+    expect(chiamate.filter((c) => c.corpo.azione === 'rinnova').length, 'il battito e\' fermo').toBe(rinnoviPrima);
+  });
+
+  it('avvio fallito (il fornitore non risponde) → il conto si chiude lo stesso', async () => {
+    permesso.corpo.battitoSecondi = 15;
+    await apri({ userToken: 'gettone-1' });
+    act(() => { ultima().opzioni.onError('connection refused'); });
+    await respira();
+    expect(chiamate.some((c) => c.corpo.azione === 'chiudi')).toBe(true);
+    await act(async () => { await vi.advanceTimersByTimeAsync(40000); });
+    expect(chiamate.filter((c) => c.corpo.azione === 'rinnova').length).toBe(0);
+  });
+
+  it('una linea VIVA non chiude niente da sola (il battito continua)', async () => {
+    permesso.corpo.battitoSecondi = 15;
+    await apri({ userToken: 'gettone-1' });
+    act(() => { ultima().opzioni.onConnect(); });
+    await act(async () => { await vi.advanceTimersByTimeAsync(40000); });
+    expect(chiamate.filter((c) => c.corpo.azione === 'rinnova').length).toBeGreaterThan(0);
+    expect(chiamate.some((c) => c.corpo.azione === 'chiudi')).toBe(false);
+  });
+});
