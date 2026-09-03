@@ -267,6 +267,22 @@ perche il working tree lo conteneva ancora.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.616** (push #892) — SOLO RIMOZIONI, dal collaudo del 03/09
+  (mai mischiate con i cambi di b.615).
+
+  (3) `/api/analytics`: dalla b.422 non aveva piu' nessuna azione
+  («Unknown action» sempre) e gli unici a bussare erano i due
+  `navigator.sendBeacon` di monitor.js — senza gettone, quindi 401 dal
+  primo giorno. Via la rotta, via i due beacon (una richiesta in meno per
+  ogni errore, contata nel rate-limit e in nessun registro; gli errori li
+  raccoglie Sentry). Tolta dalla lista di rotte-admin-chiuse-b351.
+  (5) RoomView: via il bottone con l'icona della FOTOCAMERA che apriva lo
+  stesso pannello Azioni AI del «+» (b.589 gli aveva dato la stessa
+  aria-label: due bottoni, un pannello, nessuna foto). Resta il «+».
+  Prove che vedono l'assenza: `b616-rimozioni-collaudo`. NON rimosso:
+  TaxiTalk (vista orfana `taxi-chat`) — e' una funzione intera, si toglie
+  solo su ordine. [VERIFICATO] eslint 0 errori, build ok, suite.
+
 - Versione: **b.615** (push #891) — I DIFETTI MINORI DEL COLLAUDO (03/09),
   chiusi uno a uno. Luca: «siamo in ambiente di test, vai avanti».
 

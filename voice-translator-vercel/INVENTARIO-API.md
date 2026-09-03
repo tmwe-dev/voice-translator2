@@ -8,7 +8,7 @@
 > contro chiave. Il resto sta sotto "da leggere", e non si chiama
 > difetto.
 
-Rotte totali: **43** — vive: **39**, rimosse: **4**
+Rotte totali: **39** — vive: **38**, rimosse: **1**
 
 ## Come si legge
 
@@ -26,7 +26,6 @@ Rotte totali: **43** — vive: **39**, rimosse: **4**
 | Rotta | Metodi | Guardia | Chiave guardia | Chiavi proprie | Valida ingresso | Rispetta Diretta | Verifica sessione |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | /api/admin | POST | si | admin | — | — | — | si |
-| /api/analytics | POST | si | analytics | — | — | — | si |
 | /api/auth | POST | si | auth | auth-otp | — | — | si |
 | /api/chat-action | POST | si | chat-action | — | — | — | — |
 | /api/compiti | POST | si | compiti | — | — | — | si |
@@ -48,7 +47,7 @@ Rotte totali: **43** — vive: **39**, rimosse: **4**
 | /api/stripe | POST | si | stripe | — | — | — | — |
 | /api/stt-token | POST | si | stt-token | — | — | — | si |
 | /api/subscription | POST | si | subscription | — | — | — | si |
-| /api/summary | POST | si | summary | — | — | — | si |
+| /api/summary | POST | si | summary | — | — | si | si |
 | /api/test-login | POST | si | test-login | — | — | — | — |
 | /api/transcribe | POST | si | transcribe | — | — | — | — |
 | /api/translate | POST | si | translate | — | si | — | — |
@@ -68,9 +67,6 @@ Rotte totali: **43** — vive: **39**, rimosse: **4**
 ## Rotte rimosse (rispondono 410)
 
 - `/api/lending`
-- `/api/process`
-- `/api/provider-route`
-- `/api/translate-stream`
 
 ## Difetti (confrontati, non sospettati)
 

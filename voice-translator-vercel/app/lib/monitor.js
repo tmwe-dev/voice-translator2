@@ -71,14 +71,11 @@ export const reportError = async (error, context = {}) => {
     log.warn('IndexedDB unavailable:', e.message);
   }
 
-  // Send to analytics endpoint (optional, fire-and-forget)
-  try {
-    if (typeof navigator !== 'undefined' && navigator.sendBeacon) {
-      navigator.sendBeacon('/api/analytics', JSON.stringify(errorRecord));
-    }
-  } catch (e) {
-    // Silently fail
-  }
+  // b.616 — SOLO RIMOZIONE: qui partiva un `navigator.sendBeacon` verso
+  // /api/analytics, senza gettone. Quella porta rispondeva 401 a tutto
+  // dal primo giorno (e dalla b.422 non aveva piu' nessuna azione): il
+  // beacon era una richiesta in piu' per ogni errore, contata nel
+  // rate-limit e in nessun registro. Gli errori veri li raccoglie Sentry.
 };
 
 /**
@@ -96,15 +93,7 @@ const reportMetric = async (name, value, tags = {}) => {
   };
 
   metricsStore[name] = metric;
-
-  // Optional: Send to analytics endpoint
-  try {
-    if (typeof navigator !== 'undefined' && navigator.sendBeacon) {
-      navigator.sendBeacon('/api/analytics', JSON.stringify({ metric }));
-    }
-  } catch (e) {
-    // Silently fail
-  }
+  // b.616 — via anche il secondo beacon verso /api/analytics (vedi sopra).
 };
 
 /**

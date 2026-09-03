@@ -1147,22 +1147,13 @@ const RoomView = memo(function RoomView({
                 color: S.colors.textPrimary, fontSize: 16, outline: 'none', fontFamily: FONT,
                 padding: '8px 0' }}
             />
-            {/* la fotocamera, come nel template */}
-            {/* b.589 — stessa etichetta sbagliata del bottone gemello sopra:
-                vedi commento li'. */}
-            <button onClick={() => { vibrate(); setShowChatActions(true); }}
-              aria-label={L('chatActionsTitle')} title={L('chatActionsTitle')}
-              style={{ width: 44, height: 44, borderRadius: 12, flexShrink: 0, padding: 0,
-                border: `1px solid ${S.colors.accent1}57`, background: `${S.colors.accent1}14`,
-                color: S.colors.textPrimary, cursor: 'pointer',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                WebkitTapHighlightColor: 'transparent' }}>
-              <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
-                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
-                <circle cx="12" cy="13" r="4" />
-              </svg>
-            </button>
+            {/* b.616 — SOLO RIMOZIONE: qui c'era un secondo bottone con
+                l'icona della FOTOCAMERA che apriva lo stesso pannello di
+                Azioni AI del «+» qui sopra (b.589 gli aveva gia' dato la
+                stessa etichetta «Azioni chat»: due bottoni, un pannello).
+                Non scattava foto, non allegava niente: una promessa a
+                schermo che il tocco non manteneva. Collaudo 03/09: due
+                aria-label uguali fianco a fianco. Il «+» resta. */}
             {/* b.475, collaudo di Luca: «perche dici di tener premuto? Tutti
                   devono funzionare come nella home».
                   Aveva ragione due volte. Primo: questo tasto apriva un

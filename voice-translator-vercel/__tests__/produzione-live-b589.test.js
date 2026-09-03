@@ -73,7 +73,8 @@ describe('b.589 — RoomView: i due bottoni che aprono le Azioni AI hanno l\'eti
   const src = leggi('app/components/RoomView.js');
 
   it('nessun bottone che apre showChatActions usa piu l\'etichetta "addShort" (foto/file/posizione)', () => {
-    expect(src.match(/setShowChatActions\(true\); \}\}\s*\n\s*aria-label=\{L\('chatActionsTitle'\)\}/g)?.length).toBe(2);
+    // b.616 — il gemello con la fotocamera finta e' stato tolto: ne resta uno.
+    expect(src.match(/setShowChatActions\(true\); \}\}\s*\n\s*aria-label=\{L\('chatActionsTitle'\)\}/g)?.length).toBe(1);
     expect(src).not.toMatch(/setShowChatActions\(true\); \}\}\s*\n\s*aria-label=\{L\('addShort'\)\}/);
   });
 });

@@ -19,7 +19,9 @@ const ROTTE = [
   // Il BYOK vero passa da /api/user (azione 'save-keys'), che salva le
   // chiavi cifrate su Redis — ed e quello che resolveAuth legge.
   { nome: 'wallet/admin', modulo: '../app/api/wallet/admin/route.js', metodi: ['GET', 'POST'] },
-  { nome: 'analytics', modulo: '../app/api/analytics/route.js', metodi: ['POST'] },
+  // b.616 — /api/analytics non c'e piu: dalla b.422 non aveva azioni
+  // («Unknown action» sempre) e gli unici a bussare erano due beacon
+  // senza gettone di monitor.js, anche loro tolti.
   // b.349 — anche la rotta PeepOff pretende la sessione: dentro ci sono
   // chiavi pubbliche e presenza, e il risolutore non deve essere anonimo.
   { nome: 'peepoff', modulo: '../app/api/peepoff/route.js', metodi: ['POST'] },
