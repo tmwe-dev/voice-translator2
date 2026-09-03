@@ -267,6 +267,51 @@ perche il working tree lo conteneva ancora.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.621** — PROTOCOLLO BONIFICA, FASE 1 COMPLETATA (INVENTARIO):
+  SUPERFICIE DATI, USCITE, RISORSE ESTERNE, INTERRUTTORI, OBBLIGHI.
+
+  Solo documentazione, nessun file di prodotto toccato. Nuovo
+  `INVENTARIO-FASE1.md` copre le cinque categorie della Fase 1 non ancora
+  censite (i punti di ingresso restano in INVENTARIO-API.md).
+
+  Superficie dati: censite le 31 tabelle Supabase del progetto
+  `voicetranslate` con conteggio righe [VERIFICATO via `list_tables`].
+  9 a 0 righe (mondo_comment_translations, mondo_title_translations,
+  mondo_follows, compagno_memorie, corsi_pubblici, voci_lingue,
+  profilo_studente, compiti_scansioni, peepoff_segnali): tutte
+  raggiungibili da codice vivo (Lente 1 positiva), nessun verdetto finale
+  possibile senza Lente 2 (traffico reale nel tempo) — messe in
+  **quarantena osservativa fino al 03/12/2026** (criterio [ASSUNTO], non
+  concordato con Luca: se restano a 0 a quella data si riclassificano).
+  `wallet_riparazione_b614` (255 righe) verificata NON orfana: e' il
+  backup di rollback della riparazione b.614 (migrazione 014), citata in
+  questo stesso file — obbligatorio invisibile, non si tocca.
+
+  Risorse esterne: censite a mano ~20 famiglie di variabili d'ambiente
+  (Supabase, Redis, Stripe, 6 provider AI/TTS/STT, OAuth, VAPID, TURN,
+  Sentry, Resend, sicurezza interna). Trovato un difetto confrontato:
+  `app/api/test-login/route.js:44` legge `GOOGLE_GEMINI_KEY`, ma il nome
+  vero ovunque nel resto del sistema (e in `.env.example`) e'
+  `GEMINI_API_KEY` — probabile refuso mai valorizzato su Vercel.
+  Impatto basso (rotta di test dietro ADMIN_PASS, non tocca la
+  traduzione vera). Classificato impalcatura, **non corretto qui**: e'
+  un fix di un solo file, da fare in una registrazione separata, per non
+  mescolare inventario e correzione (regola inviolabile n.3 del
+  Protocollo).
+
+  Uscite, interruttori, obblighi: censiti (notifiche push, email Resend,
+  chiamate ai provider AI, Sentry; DEV_MODE/TESTING_MODE/VERCEL_ENV,
+  modalita' Diretta rispettata da 4 rotte, ruoli admin; pagine
+  privacy/terms, `/api/user/export` per GDPR, `cancellazione.js`,
+  `encryption.js`). Dettaglio completo in INVENTARIO-FASE1.md.
+
+  **Debito residuo dichiarato**: Fase 2 (Tre Lenti) applicata solo alle
+  due voci sopra, non a tutto l'inventario — richiede la stessa
+  osservazione nel tempo del punto sulle tabelle vuote. Il refuso
+  GOOGLE_GEMINI_KEY resta da correggere. Fase 3 (classificazione), Fase 4
+  (quarantena formale con contatori), Fase 5 in poi: non iniziate,
+  dipendono dai dati di Lente 2 che non esistono ancora.
+
 - Versione: **b.620** — PROTOCOLLO BONIFICA, FASE 0 E INIZIO FASE 1:
   L'INVENTARIO API MENTIVA A META'.
 
