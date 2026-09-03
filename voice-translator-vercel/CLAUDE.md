@@ -267,6 +267,37 @@ perche il working tree lo conteneva ancora.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.612** (push #888) — TEST FISICO Life «Dal vivo»: la
+  telefonata col Compagno moriva subito, «Guasto della linea vocale —
+  Override for field 'voice_id' is not allowed by config».
+
+  Collaudo 03/09 (Chrome di Luca, Aisha → Dal vivo): la sessione si
+  apriva (signed URL 200) e un attimo dopo il fornitore la CHIUDEVA con
+  `reason: 'error'` e quel messaggio. b.431 riconosceva il rifiuto della
+  voce solo da `onError` e dall'eccezione di `startSession`: la chiusura
+  no, quindi finiva come guasto del fornitore, e Riprova ripeteva il
+  giro. Ora `onDisconnect` riconosce il rifiuto della voce e riapre la
+  linea senza voce, UNA volta; un errore qualunque resta un guasto.
+  **BUG PRE-ESISTENTE**: il Dal vivo era rotto per chiunque abbia un
+  Compagno con voce propria, cioe' tutti i predefiniti. Causa a monte,
+  da sistemare da Luca sull'agente ElevenLabs (Security → Overrides →
+  abilitare `voice_id`, come Ermes): finche' resta spenta, ogni telefonata
+  paga un'apertura in piu'. 3 prove di comportamento (riapertura senza
+  voce; errore qualunque = guasto; una volta sola). Le prove hanno
+  trovato anche che «senza rete» lasciava `navigator.onLine=false` alle
+  prove dopo: isolato.
+  Altri esiti del giro fisico (b.603 in produzione, senza modifiche):
+  chat Compagno OK (6,7 s + voce 4,2 s); Prima prova testo/voce/detta OK;
+  «Dove vai» trova «Stazione Tramway Vaprio» per «Stazione Centrale
+  Milano» (geocoder: qualita' bassa, debito); Mondo: `&nbsp;` grezzo nei
+  riassunti degli articoli, `/api/mondo/gradimento` 429 al primo
+  caricamento, video YouTube fermo sullo spinner 15 s; `/api/analytics`
+  401 da loggato; TaxiTalk (`taxi-chat`) e' una vista senza nessuna porta
+  (orfana da b.430); l'invito `?lang=ru` ha riscritto lang/uiLang nelle
+  preferenze del profilo (atteso per un ospite, ma condiviso su stesso
+  browser). Rimessi: `vt-prefs` lang/uiLang = it.
+  [VERIFICATO] eslint 0 errori, build ok, suite 306 file / 3732 prove.
+
 - Versione: **b.611** (push #887) — SOLO rimozione: `InterpreterView`,
   il terzo schermo sopra la chiamata.
 

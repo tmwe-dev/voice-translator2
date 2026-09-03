@@ -20,7 +20,7 @@
 // Non e' un vezzo: e' l'unico modo perche' non resti indietro un'altra
 // volta — e la prova sw-cache-viva-b547 diventa rossa se i due si
 // allontanano troppo.
-const CACHE_VERSION = 887; // = PUSH di lib/constants.js (b.611)
+const CACHE_VERSION = 888; // = PUSH di lib/constants.js (b.612)
 const CACHE_NAME = `vt-cache-v${CACHE_VERSION}`;
 const TTS_CACHE_NAME = `vt-tts-v${CACHE_VERSION}`;
 const TRANSLATE_CACHE_NAME = `vt-translate-v${CACHE_VERSION}`;

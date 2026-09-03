@@ -348,6 +348,21 @@ function CompagnoLive({ compagno, lingua, userToken, contesto, onChiudi, onFine,
         onConnect: () => { if (mioTurno()) setStato('vivo'); },
         onDisconnect: (d) => {
           if (!mioTurno()) return;
+          // b.612 — TROVATO DAL VIVO (collaudo 03/09, Chrome di Luca): il
+          // rifiuto della voce NON arrivava da onError ne' come eccezione
+          // di startSession (i due casi che b.431 copriva): la sessione si
+          // apriva, e un attimo dopo il fornitore la CHIUDEVA con
+          // `reason: 'error'` e il messaggio «Override for field 'voice_id'
+          // is not allowed by config». Questo ramo la classificava come
+          // guasto del fornitore e la telefonata moriva li', con il tasto
+          // Riprova che ripeteva lo stesso giro. Ora il rifiuto della voce
+          // si riconosce ANCHE qui, e si riapre senza voce, una volta.
+          if (conVoce && rifiutoDellaVoce(d?.message) && !riaperturaSenzaVoceRef.current) {
+            riaperturaSenzaVoceRef.current = true;
+            log.warn('[b.612] il fornitore ha chiuso per la voce: si riapre con la sua');
+            riapriSenzaVoce();
+            return;
+          }
           const esito = classificaChiusura(d, chiusuraVolutaRef.current);
           setStato((s) => (s.startsWith('microfono') || s === 'avvio_fallito' ? s : esito));
           if (d?.message) setDettaglio(String(d.message));
@@ -376,6 +391,19 @@ function CompagnoLive({ compagno, lingua, userToken, contesto, onChiudi, onFine,
           setRighe((r) => [...r.slice(-24), { chi: source === 'user' ? 'tu' : 'lui', testo }]);
         },
       });
+      const riaperturaSenzaVoceRef = { current: false };
+      const riapriSenzaVoce = async () => {
+        try {
+          const nuova = await apriLinea(false);
+          if (!mioTurno()) { nuova?.endSession?.().catch?.(() => {}); return; }
+          convRef.current = nuova;
+          setMuteDisponibile(typeof nuova?.setMicMuted === 'function');
+          setDettaglio(L('liveVoiceNotAllowed'));
+        } catch (e) {
+          log.warn('[b.612] riapertura senza voce fallita:', e?.message || e);
+          if (mioTurno()) { setStato('guasto_fornitore'); setDettaglio(String(e?.message || e || '')); }
+        }
+      };
       const apriLinea = async (conVoce) => {
         const opz = opzioniLinea(conVoce);
         try {

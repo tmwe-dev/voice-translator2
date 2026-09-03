@@ -438,3 +438,55 @@ describe('b.550 — le parole del dal-vivo ci sono in tutte e 38 le lingue', () 
     expect(src, 'la scorciatoia del ripiego non serve piu').not.toMatch(/conRipiego/);
   });
 });
+
+// ═══════════════════════════════════════════════════════════════
+// b.612 — TROVATO DAL VIVO (collaudo 03/09): il rifiuto della voce arrivava
+// come CHIUSURA («reason: error», «Override for field 'voice_id' is not
+// allowed by config»), non da onError ne' da startSession. b.431 copriva
+// solo quei due: la telefonata moriva come «guasto del fornitore».
+// ═══════════════════════════════════════════════════════════════
+describe('b.612 — la voce rifiutata alla chiusura riapre la linea senza voce', () => {
+  // la prova «senza rete» qui sopra lascia navigator.onLine = false nel
+  // giro completo: qui la rete c'e', e lo si dice esplicitamente.
+  let onLinePrima;
+  beforeEach(() => {
+    onLinePrima = Object.getOwnPropertyDescriptor(global.navigator, 'onLine');
+    Object.defineProperty(global.navigator, 'onLine', { value: true, configurable: true });
+  });
+  afterEach(() => {
+    if (onLinePrima) Object.defineProperty(global.navigator, 'onLine', onLinePrima);
+    else delete global.navigator.onLine;
+  });
+  it('prima sessione con voce → chiusa dal fornitore per la voce → seconda sessione SENZA voce, stato vivo', async () => {
+    await apri();
+    expect(sessioni.length).toBe(1);
+    expect(sessioni[0].opzioni.overrides?.tts?.voiceId).toBe('v1');
+    act(() => { sessioni[0].opzioni.onConnect(); });
+    act(() => { sessioni[0].opzioni.onDisconnect({ reason: 'error', message: "Override for field 'voice_id' is not allowed by config." }); });
+    await respira();
+    await respira();
+    expect(sessioni.length).toBe(2);
+    expect(sessioni[1].opzioni.overrides).toBeUndefined();
+    expect(screen.queryByText(/Guasto della linea vocale/)).toBeNull();
+    act(() => { sessioni[1].opzioni.onConnect(); });
+    expect(screen.queryByText(/Guasto della linea vocale/)).toBeNull();
+  });
+  it('una chiusura per un errore QUALUNQUE resta un guasto (non si riapre a vuoto)', async () => {
+    await apri();
+    act(() => { sessioni[0].opzioni.onConnect(); });
+    act(() => { sessioni[0].opzioni.onDisconnect({ reason: 'error', message: 'server error' }); });
+    await respira();
+    expect(sessioni.length).toBe(1);
+    expect(screen.getByText(/Guasto della linea vocale/)).toBeTruthy();
+  });
+  it('si riapre UNA volta sola: se anche la seconda cade per la voce, e\' un guasto', async () => {
+    await apri();
+    act(() => { sessioni[0].opzioni.onDisconnect({ reason: 'error', message: "Override for field 'voice_id' is not allowed by config." }); });
+    await respira();
+    expect(sessioni.length).toBe(2);
+    act(() => { sessioni[1].opzioni.onDisconnect({ reason: 'error', message: "Override for field 'voice_id' is not allowed by config." }); });
+    await respira();
+    expect(sessioni.length).toBe(2);
+    expect(screen.getByText(/Guasto della linea vocale/)).toBeTruthy();
+  });
+});
