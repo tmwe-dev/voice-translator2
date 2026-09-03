@@ -267,6 +267,63 @@ perche il working tree lo conteneva ancora.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.620** — PROTOCOLLO BONIFICA, FASE 0 E INIZIO FASE 1:
+  L'INVENTARIO API MENTIVA A META'.
+
+  Luca ha chiesto di applicare il Protocollo Bonifica (metodo completo
+  di analisi/pulizia pre-consegna) a BarTalk. Fase 0 (congelamento):
+  fotografia dello stato (b.619/45a10d6), rete di prove fatta girare per
+  intero — 311 file, 3782 prove, tutte verdi (282s) — eslint 0 errori,
+  rollback verificato disponibile su Vercel (repuntamento, non rebuild)
+  ma non eseguito per davvero (nessun motivo per rischiarlo su prod senza
+  necessita').
+
+  Fase 1 (inventario), punti di ingresso: `scripts/inventario-api.mjs`
+  (generatore di INVENTARIO-API.md, gia' esistente da b.616) leggeva
+  `fs.readdirSync(app/api)` **senza ricorsione** — un solo livello di
+  cartelle. Ogni rotta annidata piu' in fondo spariva dall'inventario
+  senza che nessun segnale lo dicesse: **45 rotte su 84** (54%), incluse
+  TUTTE quelle del wallet (ricarica, webhook, admin, benvenuto, voucher,
+  regalo, i due cron), il webhook Stripe, tutto compagni/*, le sotto-rotte
+  di mondo/*, topics/*, auth/*, taxi/*, user/export. Corretto con un
+  cammino ricorsivo (`trovaRotte`).
+
+  Con tutte le 84 rotte viste, lo script ne segnalava 3 come "senza
+  nessuna protezione": falsi allarmi, verificati uno per uno leggendo il
+  codice (mai un solo segnale) — `/api/mondo/live` usa `checkRateLimit`
+  diretto (e' SSE, non puo' passare dal wrapper), i due webhook Stripe
+  verificano la firma HMAC (`constructEvent` / header `stripe-signature`,
+  quest'ultimo dentro `wallet/stripe.js`, non nel sorgente della rotta:
+  serviva un secondo segnale). Corretto anche questo — la regola dello
+  script stesso, scritta nella sua intestazione ("un inventario che grida
+  al lupo e' peggio di uno assente"), vale anche per i suoi propri bug.
+
+  **Verificato a mano, non solo per script** (Lente 3 — intento storico):
+  `/api/stripe` (checkout) e' disattivata con un 410 esplicito dalla
+  b.158, motivo scritto nel file — non si tocca. `/api/stripe/webhook` e'
+  dichiarata nel suo stesso commento "gemello legacy, resta solo per
+  completare sessioni gia' aperte prima di questo deploy" — quarantena
+  gia' decisa da tempo, non da me. Confermato sui dati: `credit_ledger`
+  (il wallet vero, che legge `/api/wallet/webhook`) ha un solo acquisto
+  Stripe registrato, del 03/08 — il flusso vivo oggi e' quello nuovo, il
+  vecchio resta per compatibilita' come dichiarato. Le tre rotte OAuth
+  (`auth/apple`, `auth/google`, `auth/google-callback`) segnalate come
+  "identita' dal corpo senza sessione" sono corrette: verificano il
+  token del provider crittograficamente (JWT Apple con RSA-SHA256), non
+  hanno una sessione precedente da controllare perche' la stanno creando.
+
+  [VERIFICATO] `node scripts/inventario-api.mjs` -> 84 rotte, 83 vive,
+  0 doppi conteggi, 0 scoperte reali. Prove `inventario-onesto` e
+  `tabelle-vive-b422`: 23/23 verdi. eslint 0 errori. Nessun codice di
+  prodotto toccato — solo lo strumento diagnostico.
+
+  Debito residuo dichiarato: Fase 1 dell'inventario coperta solo per
+  "punti di ingresso" (rotte API, pagine, cron). Restano da censire
+  superficie dati, uscite, risorse esterne, interruttori, dipendenze
+  (gia' fotografate in Fase 0), obblighi. La Lente 2 (traffico reale) e
+  la Fase 4 (quarantena) del protocollo richiedono settimane di
+  osservazione: non comprimibili in una sessione, dichiarato a Luca.
+
 - Versione: **b.619** (push #895) — QUELLO CHE SERVIVA DA ERMES, E UN
   DIFETTO NUOVO TROVATO MENTRE LO PROVAVO.
 

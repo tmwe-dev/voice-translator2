@@ -76,7 +76,23 @@ export function esamina(nome, sorgente) {
   const metodi = [...t.matchAll(/export\s+(?:async\s+function|const)\s+(GET|POST|PUT|PATCH|DELETE)/g)]
     .map((m) => m[1]);
 
-  const guardia = /withApiGuard/.test(t);
+  // b.620 — "guardia" cercava solo withApiGuard e dichiarava "scoperte"
+  // tre rotte protette in un altro modo altrettanto valido: /api/mondo/live
+  // (SSE, chiama checkRateLimit direttamente — non puo' passare da un
+  // wrapper pensato per risposte non-stream) e i due webhook Stripe
+  // (protetti dalla verifica di firma HMAC — piu' forte di un rate limit,
+  // e' l'unico modo per sapere che e' davvero Stripe a chiamare). Tre
+  // falsi allarmi sono il modo piu' rapido per far smettere di leggere
+  // l'elenco: lo stesso guasto che l'intestazione di questo file racconta.
+  // La verifica firma a volte vive in un file di dominio importato
+  // (wallet/webhook chiama leggiWebhook() di wallet/stripe.js), non nel
+  // sorgente della rotta: constructEvent non c'e' qui da vedere. Leggere
+  // l'header stripe-signature e' pero' un segnale che non mente — nessuno
+  // lo legge se non sta per verificare una firma webhook.
+  const guardia = /withApiGuard/.test(t)
+    || /checkRateLimit\s*\(/.test(t)
+    || /webhooks\.constructEvent\s*\(/.test(t)
+    || /stripe-signature/.test(t);
   const prefisso = prefissoDellaGuardia(t);
   const proprie = chiaviProprie(t);
 
@@ -130,9 +146,26 @@ export function esamina(nome, sorgente) {
   };
 }
 
+// b.620 — leggeva solo il primo livello di app/api/: ogni rotta annidata
+// piu in fondo (wallet/ricarica, compagni/genera, mondo/avvisi, taxi/
+// destination, stripe/webhook...) non veniva mai vista. 45 rotte su 84,
+// comprese TUTTE quelle del wallet e il webhook Stripe, sparivano
+// dall'inventario senza che nessun segnale lo dicesse. Cammino ricorsivo:
+// ogni cartella che contiene una route.js e una foglia da censire.
+function trovaRotte(dir, prefisso = '') {
+  const trovate = [];
+  for (const voce of fs.readdirSync(dir, { withFileTypes: true })) {
+    if (!voce.isDirectory()) continue;
+    const sub = path.join(dir, voce.name);
+    const nomeRelativo = prefisso ? `${prefisso}/${voce.name}` : voce.name;
+    if (fs.existsSync(path.join(sub, 'route.js'))) trovate.push(nomeRelativo);
+    trovate.push(...trovaRotte(sub, nomeRelativo));
+  }
+  return trovate;
+}
+
 export function inventario() {
-  return fs.readdirSync(RADICE)
-    .filter((n) => fs.existsSync(path.join(RADICE, n, 'route.js')))
+  return trovaRotte(RADICE)
     .map((n) => esamina(n))
     .filter(Boolean)
     .sort((a, b) => a.rotta.localeCompare(b.rotta));
