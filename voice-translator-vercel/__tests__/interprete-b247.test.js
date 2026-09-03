@@ -464,7 +464,13 @@ describe('ciò che non deve essersi rotto', () => {
   it('la pipeline di ripiego a blocchi da 3 secondi c\'è ancora', () => {
     const s = modalita();
     expect(s).toContain('const CHUNK_DURATION = 3000;');
-    expect(s).toContain('recorder.start(CHUNK_DURATION)');
+    // b.610 — QUESTA RIGA DIFENDEVA IL DIFETTO. `recorder.start(3000)`
+    // consegna fette senza intestazione, e Whisper le rifiutava tutte
+    // tranne la prima (registri Vercel, collaudo 03/09). Ora il blocco
+    // dura ancora 3 secondi, ma ogni giro e' un registratore intero.
+    expect(s).toContain('recorder.start();');
+    expect(s).not.toContain('recorder.start(CHUNK_DURATION)');
+    expect(s).toMatch(/setTimeout\(\(\) => \{[\s\S]{0,120}recorder\.stop\(\)[\s\S]{0,80}\}, CHUNK_DURATION\)/);
     expect(s).toContain("fetch('/api/transcribe'");
   });
 

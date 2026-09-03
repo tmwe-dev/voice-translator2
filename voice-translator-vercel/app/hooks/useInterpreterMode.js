@@ -88,6 +88,7 @@ export default function useInterpreterMode({
   const daRendereRef = useRef(null);        // b.277 — la copia del microfono unico da rendere
 
   const recorderRef = useRef(null);
+  const giroTimerRef = useRef(null);   // b.610 — il temporizzatore del giro di registrazione
   const streamRef = useRef(null);
   const noiseGateRef = useRef(null);
   const activeRef = useRef(false);
@@ -406,22 +407,43 @@ export default function useInterpreterMode({
         ? 'audio/webm;codecs=opus'
         : 'audio/webm';
 
-      const recorder = new MediaRecorder(recordStream, { mimeType });
-      recorderRef.current = recorder;
-
-      // b.247 — il blocco non si elabora piu qui: si ACCODA. Prima veniva
-      // passato dritto a processChunk, che lo buttava via se era ancora
-      // occupato con il precedente.
-      recorder.ondataavailable = (e) => {
-        if (e.data && e.data.size > 0 && activeRef.current) {
-          accodaChunkRef.current?.(e.data);
-        }
-      };
-
-      // La coda parte vuota: quello che era rimasto da una sessione
-      // precedente non ha piu niente a che fare con questa.
+      // ═══ b.610 — IL REGISTRATORE VA A GIRI, NON A FETTE. ═══
+      // Trovato dal vivo (collaudo 03/09, registri Vercel alla mano): con
+      // `recorder.start(3000)` il MediaRecorder consegna FETTE di un unico
+      // file WebM — e solo la PRIMA porta l'intestazione (EBML, tracce).
+      // Le fette dopo sono cluster nudi: Whisper le rifiuta tutte con
+      // «400 Audio file might be corrupted or unsupported» (durata
+      // dichiarata 0). Nei registri: primo blocco 200, poi 500 a
+      // ripetizione ogni 3 secondi — i ~205 errori/7gg di b.597 e il
+      // «poi non traduce» di Luca. Con la chiave Deepgram assente in
+      // produzione (stt-token 503) QUESTO era l'unico percorso vivo, quindi
+      // l'interprete in videochiamata traduceva al massimo i primi 3
+      // secondi. Ora ogni giro e' un registratore nuovo: start() senza
+      // fetta, stop() dopo CHUNK_DURATION, e il blocco consegnato e' un
+      // file WebM intero, con la sua intestazione. Il flusso resta lo
+      // stesso, il giro dopo parte da onstop: nessun buco udibile.
       codaChunkRef.current = [];
-      recorder.start(CHUNK_DURATION);
+      const avviaGiro = () => {
+        let recorder;
+        try { recorder = new MediaRecorder(recordStream, { mimeType }); }
+        catch (e) { log.error('[Interpreter] MediaRecorder non parte:', e); return; }
+        recorderRef.current = recorder;
+        // b.247 — il blocco non si elabora qui: si ACCODA.
+        recorder.ondataavailable = (e) => {
+          if (e.data && e.data.size > 0 && activeRef.current) accodaChunkRef.current?.(e.data);
+        };
+        recorder.onstop = () => {
+          if (recorderRef.current !== recorder) return;   // fermato dallo stop vero: niente giro dopo
+          if (activeRef.current) avviaGiro();
+        };
+        try { recorder.start(); } catch (e) { log.error('[Interpreter] start() rifiutato:', e); return; }
+        giroTimerRef.current = setTimeout(() => {
+          giroTimerRef.current = null;
+          try { if (recorder.state === 'recording') recorder.stop(); } catch { /* il registratore era gia fermo: il giro dopo parte da onstop */ }
+        }, CHUNK_DURATION);
+      };
+      activeRef.current = true;
+      avviaGiro();
       setActive(true);
       setErroreAvvio(null);
       audioFallitiRef.current = 0;
@@ -441,10 +463,12 @@ export default function useInterpreterMode({
       //
       // Si chiude tutto quello che potrebbe essere rimasto aperto, nello
       // stesso ordine in cui lo chiude lo stop normale.
-      try {
-        if (recorderRef.current && recorderRef.current.state !== 'inactive') recorderRef.current.stop();
-      } catch { /* il registratore non era mai partito: niente da fermare */ }
+      clearTimeout(giroTimerRef.current); giroTimerRef.current = null;
+      const registratoreAvvio = recorderRef.current;
       recorderRef.current = null;
+      try {
+        if (registratoreAvvio && registratoreAvvio.state !== 'inactive') registratoreAvvio.stop();
+      } catch { /* il registratore non era mai partito: niente da fermare */ }
       if (noiseGateRef.current) {
         try { noiseGateRef.current.destroy(); } catch { /* era gia chiuso: chiudere due volte non e un guasto */ }
         noiseGateRef.current = null;
@@ -470,10 +494,14 @@ export default function useInterpreterMode({
     // svuota: e parlato di una conversazione chiusa.
     activeRef.current = false;
     codaChunkRef.current = [];
-    if (recorderRef.current && recorderRef.current.state !== 'inactive') {
-      try { recorderRef.current.stop(); } catch { /* era gia chiuso: chiudere due volte non e un guasto */ }
-    }
+    // b.610 — prima il temporizzatore e il ref, poi lo stop: onstop non
+    // deve far ripartire un giro su una sessione chiusa.
+    clearTimeout(giroTimerRef.current); giroTimerRef.current = null;
+    const ultimoRegistratore = recorderRef.current;
     recorderRef.current = null;
+    if (ultimoRegistratore && ultimoRegistratore.state !== 'inactive') {
+      try { ultimoRegistratore.stop(); } catch { /* era gia chiuso: chiudere due volte non e un guasto */ }
+    }
     if (noiseGateRef.current) {
       try { noiseGateRef.current.destroy(); } catch { /* era gia chiuso: chiudere due volte non e un guasto */ }
       noiseGateRef.current = null;
@@ -496,8 +524,11 @@ export default function useInterpreterMode({
       // audio in attesa di essere tradotti.
       activeRef.current = false;
       codaChunkRef.current = [];
-      if (recorderRef.current && recorderRef.current.state !== 'inactive') {
-        try { recorderRef.current.stop(); } catch { /* era gia chiuso: chiudere due volte non e un guasto */ }
+      clearTimeout(giroTimerRef.current); giroTimerRef.current = null;   // b.610
+      const registratoreSmontaggio = recorderRef.current;
+      recorderRef.current = null;
+      if (registratoreSmontaggio && registratoreSmontaggio.state !== 'inactive') {
+        try { registratoreSmontaggio.stop(); } catch { /* era gia chiuso: chiudere due volte non e un guasto */ }
       }
       if (streamRef.current) {
         // b.277 — se era una copia del microfono unico si rende al master.

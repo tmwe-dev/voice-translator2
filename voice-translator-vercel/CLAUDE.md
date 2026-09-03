@@ -267,6 +267,39 @@ perche il working tree lo conteneva ancora.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.610** (push #886) — TEST FISICO in produzione (b.603,
+  Chrome di Luca, stanza a due + videochiamata + interprete): TROVATA LA
+  CAUSA del «poi non traduce». Il ripiego a blocchi consegnava file
+  senza intestazione.
+
+  Registri Vercel durante la prova: `/api/transcribe` primo blocco 200,
+  poi **500 ogni 3 secondi** — «400 Audio file might be corrupted or
+  unsupported», `durataSecDichiarata: 0`, 6-49 KB. Causa:
+  `recorder.start(CHUNK_DURATION)` fa consegnare al MediaRecorder FETTE
+  di un unico WebM, e solo la prima porta l'intestazione (EBML, tracce);
+  le altre sono cluster nudi che Whisper rifiuta. Sono i ~205 errori/7gg
+  di b.597 — che avevo lasciato come [ASSUNTO] «non ho la prova che sia
+  legato alla videochiamata»: ora e' [VERIFICATO], ed e' PROPRIO la
+  videochiamata. Peggio: in produzione `/api/stt-token` risponde **503
+  «Set DEEPGRAM_API_KEY»** (variabile assente su Vercel), quindi lo
+  streaming Deepgram non parte MAI e questo ripiego era l'unico percorso
+  vivo: ogni interprete traduceva al massimo i primi 3 secondi.
+  Fix: registratore a giri — ogni CHUNK_DURATION un MediaRecorder nuovo,
+  `start()` senza fetta, `stop()` dal temporizzatore, il giro dopo parte
+  da `onstop`; lo stop vero azzera temporizzatore e ref PRIMA di fermare,
+  cosi' onstop non riapre un giro. 3 prove di comportamento con un
+  MediaRecorder finto (renderHook): nessuna fetta, giro nuovo dopo 3 s,
+  nessun giro fantasma dopo lo stop, nessun blocco in coda a
+  conversazione chiusa. 1 ancora (b247) riscritta: difendeva il difetto.
+  **BUG PRE-ESISTENTE, non notato prima** (l'audit b.597 ha letto il
+  codice e i conteggi, non i corpi dei log — che la retention non dava;
+  e' servito il collaudo dal vivo).
+  Da fare da Luca: `DEEPGRAM_API_KEY` su Vercel (production) se si vuole
+  lo streaming (b.172 lo spegneva per la CHAT, ma per l'INTERPRETE la
+  policy lo ammette e senza chiave resta il ripiego a 3+3 secondi).
+  [VERIFICATO] eslint 0 errori, build ok, suite 306 file / 3729 prove.
+  [ATTESO] la prova dal vivo del fix dopo il deploy.
+
 - Versione: **b.609** (push #885) — Il Compagno dal vivo impara da Ermes
   (TMWE 2.0, ~/Downloads/erp-analisi): le parti utili, senza chiave.
 
