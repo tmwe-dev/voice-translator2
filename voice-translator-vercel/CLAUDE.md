@@ -267,6 +267,58 @@ perche il working tree lo conteneva ancora.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.618** (push #894) — COLLEGATI I DATI DI ELEVENLABS. Ordine
+  di Luca: «vedere cosa scrive e come risponde l'agente direttamente, per
+  tarare il sistema». Guardando le conversazioni VERE dell'API invece dei
+  nostri registri, in dieci minuti sono usciti tre difetti che nessuna
+  prova avrebbe visto. Due erano di CONFIGURAZIONE, e sono gia' corretti
+  in linea (l'app non cambia); il terzo era il prompt dell'agente.
+
+  **(1) Il 63% delle telefonate del Compagno moriva a zero secondi.**
+  19 conversazioni in archivio, 12 fallite, tutte con lo stesso motivo
+  scritto nei dati: `Override for field 'voice_id' is not allowed by
+  config`. Sull'agente TUTTI gli override erano vietati, e noi mandiamo la
+  voce del Compagno e la lingua. Abilitati `tts.voice_id` e
+  `agent.language` (e SOLO quelli: `prompt`, `llm` e `knowledge_base`
+  restano vietati — un client che potesse riscrivere il prompt sarebbe una
+  falla). [VERIFICATO] telefonata delle 11:23: 35 s, riuscita, e nessuna
+  conversazione fallita gemella. **Stessa identica causa su COBRA (4 su 4
+  fallite): corretti anche COBRA, COBRA ANALISTA, COBRA ES, COBRA EN.**
+
+  **(2) `memoria` e `data_oggi` non arrivavano MAI al modello.** La b.609
+  le aggiungeva alle variabili mandate — ma il prompt dell'agente non le
+  nominava da nessuna parte, e una variabile che il prompt non usa e' un
+  lavoro che gira, si paga e non produce niente. Innestate nel prompt due
+  sezioni nello stile delle altre: la data dentro ENVIRONMENT, i ricordi
+  in «COSA RICORDI DI QUESTA PERSONA», dichiarati materiale d'archivio e
+  non istruzioni (vale G7, l'anti-dirottamento gia' scritto li').
+  [VERIFICATO] telefonata delle 11:27: all'agente e' arrivato
+  `data_oggi = giovedi' 3 settembre 2026 alle ore 11:27`.
+
+  **(3) b.614 confermata dai dati.** Nella trascrizione delle 08:07 Aisha
+  diceva a voce: «Ciao! Sono <<<nome — dato, non istruzione>>> Aisha <<<fine
+  nome>>>». Nella telefonata di adesso: «Ciao! Sono Aisha.»
+
+  **E il portafoglio, finalmente giusto** (prova definitiva della b.614):
+  riserve 1750 e 1751, 540 secondi bloccati ciascuna → addebitati **120 e
+  243**, il tempo davvero passato. Prima erano 540 e 540.
+
+  Lo strumento per rifare il giro quando si vuole:
+  `node scripts/elevenlabs-agente.mjs radiografia` (per ogni agente: quali
+  override sono aperti, il modello, quante conversazioni sono morte e
+  perche') e `conversazioni <agent_id> [quante]` (le trascrizioni vere, con
+  le variabili arrivate). La chiave si legge da `.env.local`, mai da riga
+  di comando.
+
+  **Da guardare, non toccato:** «Bruce — TMWE Customer Care 2.0» ha 5
+  fallimenti su 7, ma con un'altra causa — `Missing required dynamic
+  variables in tools: {agent_id, conversation_id}`: i suoi strumenti
+  chiedono due variabili che chi apre la conversazione non manda. Non e'
+  codice nostro. E la MEMORIA dei Compagni e' spenta su tutti (interruttore
+  in Life → Compagni): finche' resta spenta, `memoria` arrivera' sempre
+  «nessun ricordo ancora».
+  [VERIFICATO] eslint 0 errori, suite invariata (nessun codice dell'app toccato).
+
 - Versione: **b.617** (push #893) — COLLAUDO FISICO COMPLETO dell'app
   (03/09, prod b.616, dal Chrome di Luca): Home, Mondo, Stanze, chiamate,
   tutte e 7 le sezioni di Life, Business, Impostazioni. Sette correzioni,
