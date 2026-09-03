@@ -3,7 +3,7 @@ import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { FONT } from '../../lib/constants.js';
 import { zittisci, suInterruzione } from '../../lib/voce.js';
 import Icon from '../Icon.js';
-import { prendiVoce, rendiVoce } from '../../lib/microfonoMaster.js';   // b.602
+import { chiediPermessoVoce } from '../../lib/microfonoMaster.js';   // b.602, b.619
 import { createLogger } from '../../lib/logger.js';
 const log = createLogger('CompagnoLive');   // b.604 — niente console.* sparsi: tutto dal logger
 
@@ -249,7 +249,10 @@ function CompagnoLive({ compagno, lingua, userToken, contesto, onChiudi, onFine,
       try {
         // b.602 — la prova di permesso passa dal microfono unico: se il
         // master e' gia aperto (chiamata in corso) non si riapre l'hardware.
-        rendiVoce(await prendiVoce());
+        // b.619 — e se non lo e', si chiede SOLO il permesso senza accendere
+        // e spegnere l'hardware a 48 kHz: la libreria del fornitore lo vuole
+        // a 16 e se lo apre da se (vedi microfonoMaster.chiediPermessoVoce).
+        await chiediPermessoVoce();
       } catch (e) {
         if (mioTurno()) { setStato('microfono_negato'); setDettaglio(`${L('liveMicUnavailable')} (${e?.name || ''}) ${L('liveMicCheckPermission')}`); }
         return;

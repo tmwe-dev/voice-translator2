@@ -189,11 +189,21 @@ describe('b.602 — le copie sono sparite', () => {
     }
   });
   it('le tre schermate Life passano dal microfono unico', () => {
-    for (const p of ['app/components/Life/LifeView.js', 'app/components/Life/PannelloPronuncia.js', 'app/components/Life/CompagnoLive.js']) {
+    // Chi ha bisogno della VOCE ne chiede una copia e la rende.
+    for (const p of ['app/components/Life/LifeView.js', 'app/components/Life/PannelloPronuncia.js']) {
       const s = leggi(p).split('\n').filter(l => !l.trim().startsWith('//')).join('\n');
       expect(s, p).not.toMatch(/getUserMedia\(\{ audio: true \}\)/);
       expect(s, p).toMatch(/prendiVoce\(\)/);
       expect(s, p).toMatch(/rendiVoce\(/);
     }
+    // b.619 — il Compagno dal vivo NON ha bisogno della voce: gliela prende
+    // la libreria del fornitore. A lui serve solo sapere se il permesso c'e,
+    // e lo chiede al microfono unico come tutti gli altri: quello che questa
+    // prova difende — che nessuna schermata apra il microfono per conto suo —
+    // vale identico.
+    const c = leggi('app/components/Life/CompagnoLive.js').split('\n').filter(l => !l.trim().startsWith('//')).join('\n');
+    expect(c).not.toMatch(/getUserMedia\(/);
+    expect(c).toMatch(/chiediPermessoVoce\(\)/);
+    expect(c).toMatch(/from '\.\.\/\.\.\/lib\/microfonoMaster\.js'/);
   });
 });

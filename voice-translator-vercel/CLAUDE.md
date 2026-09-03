@@ -267,6 +267,55 @@ perche il working tree lo conteneva ancora.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.619** (push #895) — QUELLO CHE SERVIVA DA ERMES, E UN
+  DIFETTO NUOVO TROVATO MENTRE LO PROVAVO.
+
+  **Il confronto con Ermes, fatto sui dati e non a naso.** Luca: «l'agente
+  di jose-master e' molto reattivo, dipende dal setting o dal codice?».
+  Messe a confronto le due configurazioni sull'API: **sono quasi identiche**
+  — stesso modello (gemini-2.5-flash), stessa voce (eleven_flash_v2_5),
+  stessa latenza di streaming (3), stesso ASR (scribe_realtime, high,
+  pcm 16k), stesso modo turno. Dal setting non c'era niente da rubare.
+  Le differenze vere erano due, e sono state chiuse:
+
+  (1) **L'attesa del turno: 7 secondi contro i 60 di Ermes.** Con 7 il
+  Compagno riprende la parola appena fai una pausa per pensare — nella
+  trascrizione delle 08:07 Aisha dice «Sembra che tu non abbia risposto.
+  Ci sei ancora?» dopo un silenzio breve. Portata a **25 s** sul Compagno
+  e sui quattro agenti COBRA (configurazione, gia' in linea).
+
+  (2) **Il permesso del microfono.** Ermes chiede `getUserMedia({audio:
+  true})` e basta; noi chiedevamo una COPIA al microfono unico e la
+  rendevamo subito — l'hardware si accendeva a 48.000 Hz, si spegneva, e
+  la libreria del fornitore lo riapriva a 16.000: tre operazioni per una
+  domanda sola, e su iPhone quel valzer costa e ogni tanto lascia il
+  dispositivo occupato. Nuova `chiediPermessoVoce()` in microfonoMaster:
+  nessun vincolo, presa chiusa subito, e se il microfono e' gia' acceso
+  (chiamata in corso) non lo tocca. La prova b.602 ancorata al testo e'
+  stata riallineata al suo SENSO (nessuna schermata apre il microfono per
+  conto suo), non cancellata.
+
+  Il resto della reattivita' di Ermes (WebRTC invece di WebSocket, con la
+  cancellazione d'eco del browser) ce l'avevamo gia' dalla b.609.
+
+  **(3) IL DIFETTO NUOVO, visto due volte durante il collaudo:** si apre la
+  Tavola rotonda, i Compagni parlano, si torna indietro col «‹» — e in
+  Chat resta il telecomando acceso che dice «Archimede», poi «Alex»: la
+  voce CONTINUA dopo che sei uscito. La b.617 aveva chiuso il caso
+  dell'interruzione esplicita; questo e' l'altro, piu' banale: si esce e
+  basta, e nessuno fermava niente. Ora Tavolo e Life fermano la voce allo
+  smontaggio.
+
+  **Collaudo di b.617 in produzione, tutto verificato dal vivo:**
+  il Riassunto ora riassume davvero («Kenji parla del prezzo dei biglietti
+  del treno Frecciarossa…») col titolo tradotto, invece di continuare la
+  conversazione con battute mai dette; la Tavola rotonda parte da sola
+  sull'obiettivo scritto; il titolo a interruttore spento e' «Stanza
+  Diretta» senza la promessa; `/api/topics/riassunto` risponde 200 al
+  sondaggio; le voci si sentono (la CSP passa, e se l'assaggio non parte
+  si genera dalla rotta).
+  [VERIFICATO] eslint 0 errori, prove nuove in `b619-permesso-microfono`.
+
 - Versione: **b.618** (push #894) — COLLEGATI I DATI DI ELEVENLABS. Ordine
   di Luca: «vedere cosa scrive e come risponde l'agente direttamente, per
   tarare il sistema». Guardando le conversazioni VERE dell'API invece dei

@@ -1,6 +1,6 @@
 'use client';
 import { memo, useState, useRef, useCallback, useEffect } from 'react';
-import { suInterruzione, apriCiclo } from '../../lib/voce.js';
+import { suInterruzione, apriCiclo, ferma as fermaVoce } from '../../lib/voce.js';
 import { FONT, vibrate } from '../../lib/constants.js';
 import Icon from '../Icon.js';
 import { parlaTavolo, parlaTurno, sintesiTavolo, preparaBriefing, reportFinale, aggiornaRiassunto } from '../../lib/compagni/cliente.js';
@@ -80,6 +80,14 @@ function Tavolo({ compagni, L, C = {}, lingua, userToken, testoP, muto, accent, 
   const fermaRef = useRef(fermaTutto);
   useEffect(() => { fermaRef.current = fermaTutto; }, [fermaTutto]);
   useEffect(() => suInterruzione(() => fermaRef.current()), []);
+
+  // b.619 — CHI ESCE DALLA STANZA NON DEVE SENTIRE ANCORA LE VOCI.
+  // Collaudo 03/09: aperta la Tavola rotonda, i due Compagni parlano; si
+  // torna indietro col «‹» e in Chat resta il telecomando acceso col nome
+  // di Archimede — perche' nessuno, allo smontaggio, fermava la voce ne'
+  // chiudeva il giro. La b.617 aveva chiuso il caso dell'INTERRUZIONE
+  // esplicita; questo e' l'altro: si esce e basta.
+  useEffect(() => () => { try { fermaVoce(); } catch { /* niente da fermare */ } }, []);
   const [errore, setErrore] = useState('');
   const [obiettivo, setObiettivo] = useState(obiettivoIniziale || ''); // b.226 — Debate: l'obiettivo comune
   // b.302 — la Tavola rotonda assorbe il Dossier: puo partire da FONTI

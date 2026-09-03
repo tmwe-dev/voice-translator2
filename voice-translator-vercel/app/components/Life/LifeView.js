@@ -356,6 +356,14 @@ function Podcast({ compagni, L, C, lingua, userToken, testoP, muto, accent, card
   const fermatoRef = useRef(false);
   // b.363 — lo Stop del telecomando ferma anche questa fabbrica di turni
   useEffect(() => suInterruzione(() => { fermatoRef.current = true; }), []);
+
+  // b.619 — e chi lascia Life mentre una voce parla (podcast o lezione) la
+  // lascia dietro di se: allo smontaggio si ferma tutto e il telecomando
+  // si spegne. Vedi lo stesso commento in Tavolo.js.
+  useEffect(() => () => {
+    fermatoRef.current = true;
+    try { fermaAudio(); } catch { /* niente da fermare */ }
+  }, []);
   const audioRef = useRef(null);
   // b.482 — il rosso dell'avviso viene dal tema: scritto a mano restava
   // lo stesso anche sui temi chiari, dove non era piu leggibile.
@@ -729,6 +737,8 @@ function Impara({ compagni, L, C, lingua, userToken, testoP, muto, accent, card,
   const stopLetturaRef = useRef(false);
   // b.363 — lo Stop del telecomando ferma anche la lettura della lezione
   useEffect(() => suInterruzione(() => { stopLetturaRef.current = true; }), []);
+  // b.619 — chi lascia la lezione a meta' non se la porta dietro (vedi sopra).
+  useEffect(() => () => { stopLetturaRef.current = true; }, []);
   // b.313 — ALZO LA MANO: interrompo il Maestro, chiedo, lui risponde e poi
   // riprende. La mano alzata NON taglia: il Maestro FINISCE il paragrafo, poi
   // si gira verso di te. `interruzionePendenteRef` = mano alzata in attesa che

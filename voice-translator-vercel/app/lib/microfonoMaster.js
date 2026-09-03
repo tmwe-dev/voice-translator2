@@ -80,6 +80,35 @@ export function rendiVoce(stream) {
   }
 }
 
+/**
+ * b.619 — SOLO IL PERMESSO, SENZA ACCENDERE NIENTE.
+ *
+ * Chi apre la telefonata col Compagno non ha bisogno di una COPIA della
+ * voce: gliela prende da se la libreria del fornitore, con i parametri
+ * che vuole lei (PCM a 16 kHz). A noi serve una cosa sola prima di
+ * partire: sapere se il permesso c'e, per poter dire «manca il microfono»
+ * invece di «la linea non si apre».
+ *
+ * Prima si chiedeva una copia al master e la si rendeva subito: apriva
+ * l'hardware a 48 kHz, lo chiudeva un istante dopo, e la libreria lo
+ * riapriva daccapo — tre operazioni sul microfono per una domanda sola,
+ * e su iPhone quel valzer costa centinaia di millesimi e ogni tanto
+ * lascia il dispositivo occupato. Ermes (jose-master), che e' vistosamente
+ * pronto a rispondere, chiede il permesso e basta: `getUserMedia({audio:
+ * true})`, nessun vincolo.
+ *
+ * Se il master e' GIA acceso (una chiamata in corso) non si tocca niente:
+ * il permesso c'e gia, per definizione.
+ */
+export async function chiediPermessoVoce() {
+  if (vivo()) return true;
+  const s = await navigator.mediaDevices.getUserMedia({ audio: true });
+  // Il permesso e' quello che cercavamo: la presa si chiude subito, cosi
+  // la libreria trova il microfono libero e se lo configura come vuole.
+  s.getTracks().forEach((t) => { try { t.stop(); } catch { /* la traccia era gia ferma (il browser l'ha chiusa da se): fermarla di nuovo non e un guasto */ } });
+  return true;
+}
+
 /** Per il monitor: quante copie sono in giro adesso. */
 // b.363 — qui c'era copieInGiro, che diceva quante copie del microfono
 // erano in prestito. Serviva a guardare dentro, ma non la guardava
