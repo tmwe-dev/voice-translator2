@@ -267,6 +267,57 @@ perche il working tree lo conteneva ancora.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.628** (push #901) — IL REGISTRO DELLE VISITE: LA
+  QUARANTENA DELLE ROTTE COMINCIA A CONTARE.
+
+  L'audit della b.627 si e chiuso con una domanda senza risposta: quali
+  delle 84 rotte non servono piu a nessuno. Il codice dice chi PUO
+  essere chiamato; per sapere chi VIENE chiamato serve il traffico vero,
+  e su Vercel il traffico vero si perde — un giorno di registri, e una
+  rotta che lavora una volta al mese in un giorno non si vede. Sulle
+  finestre corte il Protocollo e categorico: «due settimane dichiarano
+  morto tutto cio che vive a trimestre». Quindi non si guarda meglio: si
+  tiene il conto dove non si dimentica.
+
+  **Cosa e stato messo** (Fase 4 del Protocollo, la quarantena con
+  registro):
+  · migrazione **015**, tabella `rotte_visite` — una riga per rotta con
+    quante volte, il primo e l'ultimo passaggio — e la funzione atomica
+    `segna_visita_rotta` (upsert con incremento: due richieste insieme
+    contano due). **APPLICATA in produzione** il 04/09;
+  · `app/lib/registroRotte.js`, agganciato in `withApiGuard` — da cui
+    passano **83 rotte su 84**.
+
+  **Cosa NON registra, per scelta:** nessuna persona, nessun indirizzo
+  IP, nessun gettone, nessun contenuto. Solo il nome della rotta, senza
+  la query. Non e un registro di chi naviga: e l'elenco delle porte
+  ancora usate.
+
+  **Tre regole, tutte «non disturbare»** — e ognuna ha la sua prova:
+  1. non si aspetta (nessun `await`: la richiesta dell'utente non
+     rallenta di un millisecondo);
+  2. non si lamenta (se il registro non risponde l'errore resta li: un
+     conteggio perso non vale un errore in faccia a chi sta traducendo);
+  3. non insiste (al massimo una scrittura al minuto per rotta: per
+     sapere che una rotta e viva non serve contarla cinquanta volte).
+
+  **Criterio di uscita, dichiarato adesso e non in corsa:** si legge il
+  registro il **3 dicembre 2026** — la stessa data della quarantena
+  delle nove tabelle vuote, cosi si guarda tutto in un giro. Le rotte a
+  zero visite dopo tre mesi passano da «sospette» a «non abitate», e
+  solo allora si decide se finirle o toglierle. Prima di quella data non
+  si tocca niente.
+
+  **Fuori dal conteggio, e va detto:** `/api/mondo/live/ingest` e
+  `/api/og` non passano da `withApiGuard` (la prima e chiusa da un
+  segreto, la seconda e aperta per WhatsApp e i social), quindi non si
+  contano da sole. Sono due, e si sa gia che lavorano: si guardano a
+  mano.
+
+  **Come si torna indietro:** `DROP TABLE rotte_visite` +
+  `DROP FUNCTION segna_visita_rotta`, e via la riga in apiGuard. Non ci
+  sono dati di prodotto dentro: si perde l'osservazione, non il lavoro.
+
 - Versione: **b.627** (push #900) — SOLO RIMOZIONE: C'ERANO ANCORA DUE
   MODI DI FAR PAGARE, E UNO ERA MORTO MA IMPORTABILE.
 

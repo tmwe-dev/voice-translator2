@@ -1,5 +1,6 @@
 import { createLogger } from './logger.js';
 import { checkRateLimit, getRateLimitKey } from './rateLimit.js';
+import { segnaVisita, nomeRotta } from './registroRotte.js';   // b.628
 import { NextResponse } from 'next/server';
 import { timingSafeEqual } from 'crypto';
 
@@ -79,6 +80,13 @@ export function withApiGuard(handler, opts = {}) {
   } = opts;
 
   return async function guardedHandler(req) {
+    // b.628 — DA QUI PASSANO 83 ROTTE SU 84: e il posto giusto per
+    // tenere il conto di quali sono ancora vive. Una riga sola, e non
+    // si aspetta: se il registro non risponde, non se ne accorge
+    // nessuno. Il perche, e cosa NON viene registrato (nessuna persona,
+    // nessun indirizzo, nessun contenuto), sta in lib/registroRotte.js.
+    segnaVisita(nomeRotta(req));
+
     // 1. IP-based rate limiting
     const ipKey = getRateLimitKey(req, prefix);
     const ipRl = await checkRateLimit(ipKey, maxRequests);
