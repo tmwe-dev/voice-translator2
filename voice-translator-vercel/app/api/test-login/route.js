@@ -41,7 +41,11 @@ async function handlePost(req) {
     if (process.env.OPENAI_API_KEY) testKeys.openai = process.env.OPENAI_API_KEY;
     if (process.env.ANTHROPIC_API_KEY) testKeys.anthropic = process.env.ANTHROPIC_API_KEY;
     if (process.env.ELEVENLABS_API_KEY) testKeys.elevenlabs = process.env.ELEVENLABS_API_KEY;
-    if (process.env.GOOGLE_GEMINI_KEY) testKeys.gemini = process.env.GOOGLE_GEMINI_KEY;
+    // b.622 — leggeva GOOGLE_GEMINI_KEY, nome che non esiste in nessun altro
+    // punto del sistema (apiAuth.js, translate-test-llm, health e .env.example
+    // usano tutti GEMINI_API_KEY): condizione sempre falsa, la chiave Gemini
+    // non e' mai finita fra quelle di collaudo.
+    if (process.env.GEMINI_API_KEY) testKeys.gemini = process.env.GEMINI_API_KEY;
 
     if (Object.keys(testKeys).length > 0) {
       user = await saveApiKeys(TEST_EMAIL, testKeys, true);

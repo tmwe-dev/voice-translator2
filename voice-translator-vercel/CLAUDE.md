@@ -267,6 +267,28 @@ perche il working tree lo conteneva ancora.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.622** — LA CHIAVE DI GEMINI AVEVA DUE NOMI, E QUELLO USATO
+  IN COLLAUDO NON ESISTEVA.
+
+  Debito dichiarato in b.621, chiuso qui in una registrazione sola (un file
+  di prodotto, una riga). `/api/test-login` metteva fra le chiavi di collaudo
+  `process.env.GOOGLE_GEMINI_KEY`: nome che non compare in nessun altro punto
+  del sistema — `apiAuth.js` (la traduzione vera), `translate-test-llm`,
+  `health` e `.env.example` usano tutti `GEMINI_API_KEY`. Condizione sempre
+  falsa: la chiave Gemini non e' mai arrivata all'utente di collaudo, in
+  silenzio, da quando la riga esiste. [VERIFICATO] leggendo tutti e cinque i
+  punti d'uso.
+
+  Impatto reale: basso e circoscritto. `/api/test-login` e' dietro
+  `ADMIN_PASS` e serve solo a preparare l'utente di prova; la traduzione in
+  produzione legge `GEMINI_API_KEY` per conto suo e non e' mai stata toccata
+  da questo refuso.
+
+  Prova che vede l'assenza (`b622-chiave-gemini-un-nome-solo`): nessun file
+  di `app/` legge piu' quel nome dall'ambiente, e test-login usa
+  `GEMINI_API_KEY`. [VERIFICATO] guastando di proposito la riga: entrambe le
+  prove falliscono, ripristinata tornano verdi.
+
 - Versione: **b.621** — PROTOCOLLO BONIFICA, FASE 1 COMPLETATA (INVENTARIO):
   SUPERFICIE DATI, USCITE, RISORSE ESTERNE, INTERRUTTORI, OBBLIGHI.
 
