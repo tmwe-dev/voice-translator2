@@ -105,9 +105,23 @@ async function handlePost(req) {
         // e' la mossa che ha meno probabilita di riuscire. Una pausa
         // breve prima del secondo tentativo e' un'ipotesi ragionevole,
         // non una conferma: da riprendere se i 112 non calano.
-        log.warn('primo tentativo muto, riprovo', { voce: voiceName, lingua: lang2, attesaMs: 400 });
+        // b.626 — b.598 si chiudeva con «da riprendere se i 112 non
+        // calano», ma per saperlo serviva un dato che nessuno registrava:
+        // quante volte la pausa SALVA la sintesi. Il fallimento finale e
+        // un `error` e si conserva sette giorni; questa riga era un `warn`
+        // e ne durava uno — cosi si vedevano solo i casi persi, mai quelli
+        // recuperati, e la mitigazione restava impossibile da giudicare.
+        // Ora l'esito del secondo tentativo si scrive per intero, allo
+        // stesso livello del guasto: al prossimo giro il conto si fa.
+        log.error('Edge TTS: primo tentativo muto, riprovo', { voce: voiceName, lingua: lang2, attesaMs: 400 });
         await new Promise((resolve) => setTimeout(resolve, 400));
         audioBuffer = await sintetizza();
+        log.error('Edge TTS: esito del secondo tentativo', {
+          voce: voiceName,
+          lingua: lang2,
+          riuscito: !!(audioBuffer && audioBuffer.length),
+          byte: audioBuffer?.length || 0,
+        });
       }
     } catch (synthErr) {
       // b.363 — qui si rispediva al client `stack`: le prime cinque righe

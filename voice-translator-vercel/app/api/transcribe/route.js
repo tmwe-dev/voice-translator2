@@ -168,7 +168,22 @@ async function handlePost(req) {
       // violerebbe la regola "nessun fix senza prova". Questa riga non
       // corregge: fotografa cosa arriva DAVVERO, cosi il prossimo caso
       // (quasi certo, e ricorrente) ha il dato che oggi manca.
-      log.warn('Whisper ha rifiutato l\'audio:', {
+      //
+      // b.626 — LA FOTOGRAFIA SI CANCELLAVA PRIMA CHE QUALCUNO LA
+      // GUARDASSE. La riga qui sopra e stata scritta in b.593 apposta per
+      // dare al prossimo caso il dato che mancava. Poi il caso e successo
+      // — 132 volte in sette giorni, l'ultima il 3 settembre — e il dato
+      // non c'era lo stesso. Motivo, verificato sui registri veri: i log
+      // di Vercel si conservano UN GIORNO, mentre l'aggregato degli
+      // ERRORI si conserva sette. Questo era un `warn`: quando ci si
+      // accorge del guasto, la sua fotografia e gia sparita. Verificato:
+      // nei 28 gruppi degli ultimi sette giorni ci sono 65 righe, TUTTE
+      // di livello error, nessun warn.
+      //
+      // Non e un guasto grave da urlare: e una misura che deve
+      // sopravvivere fino a quando la si legge. Da qui in avanti resta
+      // sette giorni, e il prossimo caso si potra finalmente capire.
+      log.error('Whisper ha rifiutato l\'audio:', {
         byte: buffer.length,
         tipoDichiarato: audioFile.type || '?',
         durataSecDichiarata: durataSec,

@@ -267,6 +267,42 @@ perche il working tree lo conteneva ancora.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.626** (push #899) — I DUE GUASTI CHE «NON SI POTEVANO
+  CAPIRE»: LA MISURA SPARIVA PRIMA CHE QUALCUNO LA LEGGESSE.
+
+  Luca ha chiesto perche' i due difetti lasciati aperti in b.623 non si
+  correggessero. Guardandoli davvero, hanno la stessa causa, ed e una
+  causa nostra, non del fornitore.
+
+  `/api/transcribe` («400 audio corrotto», 132 volte in 7 giorni) e
+  `/api/tts-edge` (503 col ripiego, «sintesi riuscita ma audio vuoto»)
+  erano gia stati indagati — b.593 e b.598 — e in entrambi i casi la
+  conclusione era la stessa, corretta: non correggere alla cieca,
+  piantare una riga che fotografi cosa succede davvero, e decidere al
+  caso successivo. Le righe sono state piantate. I casi successivi sono
+  arrivati. Il dato non c'era lo stesso.
+
+  **Perche' [VERIFICATO sui registri veri]:** su Vercel i log normali si
+  conservano UN GIORNO, l'aggregato degli errori SETTE. Le due righe
+  diagnostiche erano `warn`: quando ci si accorge del guasto (che capita
+  ogni pochi giorni) la loro fotografia e' gia stata buttata. Prova
+  diretta: nei 28 gruppi degli ultimi sette giorni ci sono 65 righe,
+  **tutte di livello error, nessun warn**. Le due indagini non erano
+  ferme per mancanza di idee: erano ferme perche' lo strumento di misura
+  buttava via il risultato prima della lettura.
+
+  **Corretto:** entrambe le diagnosi passano a `log.error` (stesso testo,
+  stessi dati), e su tts-edge si registra anche **l'esito del secondo
+  tentativo** — il numero che b.598 chiedeva («da riprendere se i 112 non
+  calano») e che nessuno stava contando: senza, si vedevano solo i casi
+  persi e mai quelli salvati dalla pausa.
+
+  Nessun fix alla cieca sull'audio: qui si ripara lo strumento, che e' il
+  primo passo del Protocollo («non si pulisce quello che non si sa
+  misurare»). Al prossimo caso — e capitera' — il dato ci sara'.
+
+  Prova che vede l'assenza: `b626-la-misura-sopravvive`.
+
 - Versione: **b.625** (push #898) — I QUATTRO FIX DI b.623 VERIFICATI IN
   PRODUZIONE, E IL COLLAUDO ARRIVA IN FONDO: «1 TERMINI».
 
