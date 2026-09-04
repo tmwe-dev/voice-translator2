@@ -267,6 +267,45 @@ perche il working tree lo conteneva ancora.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.629** (push #902) — IL FASCICOLO DI BONIFICA, CON DENTRO
+  LE TRE COSE CHE MANCANO.
+
+  Luca ha rimesso davanti il Protocollo Bonifica per intero. Il documento
+  dice di rileggerlo *prima* di una consegna, e la sua Fase 7 pretende un
+  fascicolo con otto voci — l'ultima delle quali, il debito residuo, e
+  quella che rende credibili le altre sette. Scritto:
+  `FASCICOLO-BONIFICA.md`. Solo documentazione, nessun file di prodotto
+  toccato.
+
+  Il fascicolo dice cosa e stato tolto (40 righe piu 4 import, una sola
+  registrazione: b.627), con quale verdetto delle tre lenti, con quali
+  prove, cosa NON e stato toccato e perche, cosa resta in quarantena e
+  fino a quando (3 dicembre), come si torna indietro, e la soglia di
+  allarme — decisa adesso: si torna indietro senza discutere se compare
+  un errore su una rotta del wallet che prima non c'era, o se
+  `credit_ledger` registra un movimento senza riserva, o se il fail rate
+  supera il 5% su 24 ore.
+
+  **La parte che conta e la nona sezione: la bonifica NON e chiusa,** e
+  le lacune hanno un nome:
+  1. **Il ritorno non e mai stato provato.** E la regola inviolabile n.2
+     — «non si consegna quello che non si sa spegnere». Il rollback
+     risulta disponibile su Vercel ma non e mai stato eseguito ne
+     cronometrato: oggi e una speranza, non un piano.
+  2. **Nessuna esecuzione a specchio.** Su un sistema che muove denaro il
+     Protocollo la vuole obbligatoria a zero differenze. Le 3812 prove
+     verdi non la sostituiscono: usano l'immaginazione di chi le ha
+     scritte, non la realta.
+  3. **Nessun secondo paio d'occhi.** Chi ha tolto e chi ha verificato
+     sono lo stesso, e per il denaro il Protocollo chiede un revisore
+     indipendente.
+
+  Manca anche l'ambiente di prova: si e sempre lavorato sulla produzione.
+
+  Finche queste restano aperte il lavoro fatto e buono ma **non e una
+  bonifica firmata**: e una bonifica in corso, con la quarantena che
+  conta e la data sul calendario.
+
 - Versione: **b.628** (push #901) — IL REGISTRO DELLE VISITE: LA
   QUARANTENA DELLE ROTTE COMINCIA A CONTARE.
 
