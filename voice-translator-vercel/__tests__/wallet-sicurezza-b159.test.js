@@ -99,9 +99,18 @@ describe('/api/chat-action: ora addebita davvero (b.159)', () => {
     expect(consumo).toContain('export function costoAzioneChat()');
   });
 
-  it('addebita.js espone addebitaAzioneChat', () => {
-    const addebita = leggi('app/wallet/addebita.js');
-    expect(addebita).toContain('export async function addebitaAzioneChat(utente)');
+  // b.627 — questa prova guardava nel posto sbagliato: chiedeva che
+  // addebita.js esportasse `addebitaAzioneChat`, cioe il VECCHIO modo di
+  // far pagare (addebito DOPO il fornitore), tolto perche sostituito da
+  // riserva → commit. Quello che b.159 voleva davvero garantire — che
+  // /api/chat-action faccia pagare, e a costo fisso — e ancora vero: si
+  // controlla dove il pagamento avviene adesso.
+  it('/api/chat-action fa pagare davvero, a costo fisso, col giro riserva → commit', () => {
+    const rotta = leggi('app/api/chat-action/route.js');
+    expect(rotta).toMatch(/import\s*\{[^}]*riserva[^}]*commit[^}]*\}\s*from/);
+    expect(rotta).toContain('costoAzioneChat');
+    expect(rotta).toMatch(/\briserva\(/);
+    expect(rotta).toMatch(/\bcommit\(/);
   });
 });
 

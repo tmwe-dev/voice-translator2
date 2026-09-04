@@ -30,14 +30,23 @@ import path from 'path';
 const RADICE = path.join(__dirname, '..');
 const leggi = (p) => fs.readFileSync(path.join(RADICE, p), 'utf8');
 
-describe('wallet/addebita.js: preventivoTesto e la STESSA formula di addebitaTesto (b.161)', () => {
-  const src = leggi('app/wallet/addebita.js');
+describe('preventivoTesto e lo STESSO conto con cui si paga davvero (b.161)', () => {
+  // b.627 — la proprieta e sempre quella: il numero che si chiede PRIMA
+  // e il numero che si paga DOPO, se no si blocca chi puo pagare o passa
+  // chi non puo. Prima era garantita perche addebitaTesto chiamava
+  // preventivoTesto; ora quella funzione non c'e piu — la riserva stessa
+  // e calcolata con preventivoTesto, quindi preventivo e addebito non
+  // sono piu due conti da tenere allineati: sono lo stesso numero.
+  it('/api/translate riserva esattamente il preventivo, e committa quella riserva', () => {
+    const rotta = leggi('app/api/translate/route.js');
+    expect(rotta).toContain('preventivoTesto(text.length)');
+    expect(rotta).toMatch(/riserva\(billingEmail,\s*costoPrevisto/);
+    expect(rotta).toMatch(/\bcommit\(/);
+  });
 
-  it('preventivoTesto esiste ed e usata da addebitaTesto (niente drift fra preventivo e addebito vero)', () => {
+  it('preventivoTesto resta una funzione sola, in addebita.js', () => {
+    const src = leggi('app/wallet/addebita.js');
     expect(src).toContain('export function preventivoTesto(caratteri) {');
-    const i = src.indexOf('export async function addebitaTesto(utente, caratteri) {');
-    const corpo = src.slice(i, src.indexOf('return scala(utente, costo,', i));
-    expect(corpo).toContain('const costo = preventivoTesto(caratteri);');
   });
 });
 

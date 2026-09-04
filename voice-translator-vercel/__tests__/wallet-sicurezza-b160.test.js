@@ -84,11 +84,22 @@ describe('/api/translate: un fallback verso la piattaforma non parte se una chia
 });
 
 describe('Voice Clone: il pre-check ElevenLabs ora e fail-closed (b.160)', () => {
-  it('creditoInsufficientePerClonazione passa {failClosed:true}', () => {
-    const src = leggi('app/wallet/addebita.js');
-    const i = src.indexOf('export async function creditoInsufficientePerClonazione');
-    expect(i).toBeGreaterThan(-1);
-    const corpo = src.slice(i, i + 400);
-    expect(corpo).toMatch(/creditoInsufficiente\(utente,\s*COSTO_CLONAZIONE_SECONDI,\s*\{\s*failClosed:\s*true\s*\}\)/);
+  // b.627 — la proprieta da difendere e sempre la stessa: se il credito
+  // non si riesce a leggere, la clonazione NON parte (fail-closed) — un
+  // guasto del database non deve regalare una chiamata da €5 a
+  // ElevenLabs. Ma il pre-controllo `creditoInsufficientePerClonazione`
+  // non esiste piu: dalla b.164 la clonazione prende una RISERVA vera
+  // prima di chiamare il fornitore, e una riserva che non riesce ferma
+  // la richiesta per costruzione — chiusa piu stretta di prima. La prova
+  // guarda li.
+  it('la clonazione riserva PRIMA di chiamare ElevenLabs, e senza riserva non parte', () => {
+    const rotta = leggi('app/api/voice-clone/route.js');
+    // la riserva e per il costo fisso della clonazione
+    expect(rotta).toMatch(/riserva\([^)]*COSTO_CLONAZIONE_SECONDI/);
+    // e se non riesce, si esce: nessuna chiamata al fornitore
+    const i = rotta.indexOf('riserva(');
+    const dopo = rotta.slice(i, i + 700);
+    expect(dopo).toMatch(/if\s*\(\s*!\s*r\.ok\s*\)/);
+    expect(dopo).toMatch(/return\s+NextResponse\.json/);
   });
 });

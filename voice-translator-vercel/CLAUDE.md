@@ -267,6 +267,69 @@ perche il working tree lo conteneva ancora.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.627** (push #900) — SOLO RIMOZIONE: C'ERANO ANCORA DUE
+  MODI DI FAR PAGARE, E UNO ERA MORTO MA IMPORTABILE.
+
+  Ordine di Luca: audit completo, «probabilmente c'e ancora codice morto
+  appeso». Fatto su tutto il repo con gli strumenti veri (madge, knip) e
+  con la verifica a mano di ogni segnalazione. Il risultato onesto e che
+  il codice sta bene: **zero cicli di dipendenza**, **zero `console.*`
+  sparsi**, due soli TODO — e sono due decisioni di prodotto in attesa
+  (l'indirizzo di assistenza vero). Nessun refactoring necessario.
+
+  **Una cosa vera pero c'era, e toccava il denaro.** In
+  `app/wallet/addebita.js` vivevano ancora sei funzioni del VECCHIO modo
+  di far pagare — `addebitaVoce`, `addebitaVocePremium`, `addebitaTesto`,
+  `addebitaAzioneChat`, `creditoInsufficientePerClonazione`,
+  `addebitaClonazione` — quelle che addebitavano DOPO aver chiamato il
+  fornitore, sostituite dal giro riserva → commit/release nelle b.161,
+  b.161-bis e b.164 proprio perche lasciavano aperta una finestra di
+  corsa. Restavano quindi due modi di far pagare la stessa cosa, uno vivo
+  e uno morto ma ancora importabile: bastava chiamarne uno per saltare la
+  riserva senza accorgersene.
+
+  **Le tre lenti, prima di togliere** [VERIFICATO]:
+  · nessuna rotta le chiamava: in tutto `app/` i loro nomi comparivano
+    solo dentro i commenti che spiegano perche non si usano piu;
+  · nessuna prova le eseguiva: le nove prove che le nominano verificano
+    l'OPPOSTO, cioe che le rotte non le chiamino
+    (`expect(src).not.toContain('await addebitaClonazione(')`);
+  · il motivo per cui erano nate e scritto nel diario ed e superato.
+
+  Tolte 40 righe piu quattro import rimasti orfani. **Sola sottrazione:
+  nessun comportamento cambiato.**
+
+  **Quattro prove storiche si sono accorte — ed e cosi che doveva
+  andare.** Difendevano proprieta vere sul denaro (il pre-controllo della
+  clonazione fail-closed; chat-action che fa pagare a costo fisso;
+  preventivo e addebito che non possono divergere su testo e voce
+  premium). Verificato una per una che **ogni proprieta e ancora
+  garantita, e in modo piu forte**: la riserva viene presa PRIMA del
+  fornitore e col preventivo stesso come importo, quindi i due conti non
+  sono piu due numeri da tenere allineati — sono lo stesso numero. Le
+  prove non sono state cancellate: sono state riportate dove il
+  comportamento vive adesso, e ognuna e stata verificata guastando la
+  proprieta sul sistema nuovo (tutte e quattro diventano rosse).
+
+  **Non toccato, e perche** — knip segnala anche altro, ma verificato a
+  mano non e morto:
+  · le costanti di listino (`PREZZO_VENDITA_CENT_MIN`,
+    `COSTO_PROVIDER_CENT_MIN`, `COSTO_AVATAR_CENT`, `CAMBIO_EUR_USD`):
+    hanno la ragione scritta accanto — «serve per calcolare margine e ore
+    incluse». Sono i numeri del prodotto tenuti in un posto solo:
+    obbligatorio invisibile, si documenta e non si tocca;
+  · gli 84 «file non usati»: falsi positivi del bug di knip gia
+    documentato in b.595 — fra loro `CreateRoomSheet`, `LifeView`,
+    `BusinessView`, aperti a mano in produzione oggi stesso;
+  · `LIVE_TETTO_MINUTI/SECONDI`: alias voluti dei nomi vecchi, motivo
+    scritto, e `LIVE_TETTO_SECONDI` e usato dalle prove.
+
+  **Debito dichiarato:** quali ROTTE non ricevono traffico resta una
+  domanda aperta. Vercel conserva un giorno di registri, e su una
+  finestra cosi corta il Protocollo e esplicito — due settimane
+  dichiarano morto tutto cio che vive a trimestre. Le rotte si osservano,
+  non si giudicano oggi.
+
 - Versione: **b.626** (push #899) — I DUE GUASTI CHE «NON SI POTEVANO
   CAPIRE»: LA MISURA SPARIVA PRIMA CHE QUALCUNO LA LEGGESSE.
 

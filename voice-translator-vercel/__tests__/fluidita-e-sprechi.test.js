@@ -139,9 +139,17 @@ describe('la voce premium non si regala piu', () => {
     // Se i due conti divergessero si bloccherebbe chi puo pagare, o si
     // lascerebbe passare chi non puo: il difetto tornerebbe da un'altra
     // porta.
+    //
+    // b.627 — il secondo controllo cercava `addebitaVocePremium`, il
+    // vecchio addebito-dopo-il-fornitore, tolto. Oggi i due conti non
+    // possono divergere per una ragione piu forte di prima: la riserva
+    // e' calcolata con preventivoVocePremium, quindi il numero chiesto
+    // prima e' letteralmente il numero pagato dopo.
     const a = app('wallet/addebita.js');
     expect(a).toMatch(/export function preventivoVocePremium[\s\S]{0,200}costoElevenLabsCaratteri/);
-    expect(a).toMatch(/addebitaVocePremium[\s\S]{0,200}costoElevenLabsCaratteri/);
+    const rotta = app('api/tts-elevenlabs/route.js');
+    expect(rotta).toContain('preventivoVocePremium(cleanText.length)');
+    expect(rotta).toMatch(/riserva\(pagante,\s*costoPrevisto/);
   });
 
   it('senza saldo leggibile non si blocca nessuno, salvo chi lo chiede espressamente', () => {

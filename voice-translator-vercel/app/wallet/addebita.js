@@ -15,9 +15,11 @@
 // ═══════════════════════════════════════════════════════════════
 
 import { spendibile, scalaSeDisponibile } from './contabilita.js';
-import { costoConversazione, costoElevenLabsCaratteri, costoMessaggioTesto, costoRiassunto, costoAzioneChat } from './consumo.js';
-import { costoProviderCent, CARATTERI_PER_SECONDO } from './provider-costi.js';
-import { COSTO_CLONAZIONE_SECONDI } from './tariffe.js';
+// b.627 — restano i tre conti che servono ancora: gli altri quattro
+// (costoConversazione, costoAzioneChat, costoProviderCent,
+// COSTO_CLONAZIONE_SECONDI) entravano solo per le funzioni tolte.
+import { costoElevenLabsCaratteri, costoMessaggioTesto, costoRiassunto } from './consumo.js';
+import { CARATTERI_PER_SECONDO } from './provider-costi.js';
 import { createLogger } from '../lib/logger.js';
 const log = createLogger('addebita');   // b.604 — niente console.* sparsi: tutto dal logger
 
@@ -90,35 +92,6 @@ export function preventivoVocePremium(caratteri) {
 }
 
 /**
- * Un pezzo di conversazione vocale standard (STT + traduzione + voce base).
- * @returns {'ok'|'esaurito'|'saltato'}
- */
-export async function addebitaVoce(utente, secondi) {
-  if (!utente || !secondi) return 'saltato';
-  const costo = costoConversazione(secondi, false);
-  return scala(utente, costo, {
-    tipo: 'voce',
-    secondi_audio: Math.ceil(secondi),
-    costo_cent: costoProviderCent(secondi, 'gpt-5.4-mini', 'edge-tts'),
-  });
-}
-
-/**
- * Sintesi vocale premium ElevenLabs (fattura a caratteri, moltiplicatore 3x).
- * @returns {'ok'|'esaurito'|'saltato'}
- */
-export async function addebitaVocePremium(utente, caratteri) {
-  if (!utente || !caratteri) return 'saltato';
-  const costo = costoElevenLabsCaratteri(caratteri);
-  const secondiParlato = Math.ceil(caratteri / CARATTERI_PER_SECONDO);
-  return scala(utente, costo, {
-    tipo: 'voce_premium',
-    caratteri,
-    costo_cent: costoProviderCent(secondiParlato, 'gpt-5.4-mini', 'elevenlabs-flash'),
-  });
-}
-
-/**
  * Quanto costera (in secondi di credito) un messaggio di testo di N
  * caratteri? STESSA formula di addebitaTesto, cosi il preventivo non
  * puo mai disallinearsi dall'addebito vero.
@@ -140,22 +113,6 @@ export function preventivoTesto(caratteri) {
 }
 
 /**
- * Un messaggio tradotto (testo scritto o voce riconosciuta nel browser).
- * Costo: i caratteri diventano secondi (~17 car = 1s), minimo 5 secondi.
- * @returns {'ok'|'esaurito'|'saltato'}
- */
-export async function addebitaTesto(utente, caratteri) {
-  if (!utente || !caratteri) return 'saltato';
-  const secondiParlato = Math.ceil(caratteri / CARATTERI_PER_SECONDO);
-  const costo = preventivoTesto(caratteri);
-  return scala(utente, costo, {
-    tipo: 'testo',
-    caratteri,
-    costo_cent: costoProviderCent(secondiParlato, 'gpt-5.4-mini', 'edge-tts'),
-  });
-}
-
-/**
  * Riassunto AI di fine conversazione (costo fisso).
  * @returns {'ok'|'esaurito'|'saltato'}
  */
@@ -164,44 +121,35 @@ export async function addebitaRiassunto(utente) {
   return scala(utente, costoRiassunto(), { tipo: 'riassunto', costo_cent: 0.05 });
 }
 
-/**
- * b.159 — Azione chat AI (riassunto/report/analisi/consiglio/vocabolario
- * generati da /api/chat-action, fino a 2000 token di risposta). Prima
- * NON esisteva nessun addebito per questa rotta: costo fisso, come per
- * addebitaRiassunto.
- * @returns {'ok'|'esaurito'|'saltato'}
- */
-export async function addebitaAzioneChat(utente) {
-  if (!utente) return 'saltato';
-  return scala(utente, costoAzioneChat(), { tipo: 'azione_chat', costo_cent: 0.12 });
-}
-
-/**
- * Il credito basta per clonare una voce (costo fisso, €5,00)?
- * Da chiamare PRIMA di parlare con ElevenLabs, come per la voce premium.
- *
- * b.160 — CONFERMATO (secondo audit esterno, punto 7): chiamava
- * creditoInsufficiente SENZA {failClosed:true}. La clonazione con
- * chiave di piattaforma e' esattamente lo stesso caso della voce
- * premium ElevenLabs (nessun percorso "chiave propria" per chi non ne
- * ha una — qui la propria chiave, quando c'e, salta questo controllo
- * a monte, vedi voice-clone/route.js): un guasto Supabase diventava
- * "credito sempre sufficiente", ElevenLabs veniva chiamato (costo
- * reale, €5 equivalenti), e l'addebito successivo poteva fallire in
- * silenzio ('saltato'). Ora fail-closed, come tts-elevenlabs.
- */
-export async function creditoInsufficientePerClonazione(utente) {
-  return creditoInsufficiente(utente, COSTO_CLONAZIONE_SECONDI, { failClosed: true });
-}
-
-/**
- * Clonazione voce ElevenLabs (costo fisso, una tantum, €5,00).
- * @returns {'ok'|'esaurito'|'saltato'}
- */
-export async function addebitaClonazione(utente) {
-  if (!utente) return 'saltato';
-  return scala(utente, COSTO_CLONAZIONE_SECONDI, { tipo: 'clonazione_voce', costo_cent: 500 });
-}
+// ═══════════════════════════════════════════════════════════════
+// b.627 — SOLO RIMOZIONE: qui vivevano ancora SEI funzioni del vecchio
+// modo di far pagare — addebitaVoce, addebitaVocePremium,
+// addebitaTesto, addebitaAzioneChat, creditoInsufficientePerClonazione,
+// addebitaClonazione. Addebitavano DOPO aver chiamato il fornitore, e
+// per questo sono state sostituite dal giro riserva → commit/release
+// nelle b.161, b.161-bis e b.164: l'addebito dopo lasciava aperta una
+// finestra di corsa fra due richieste dello stesso utente, e il
+// servizio poteva restare non pagato.
+//
+// Verificate con le tre lenti prima di toglierle:
+// · nessuna rotta le chiamava piu: in tutto app/ i loro nomi comparivano
+//   soltanto dentro i commenti che spiegano perche non si usano
+//   (tts/route.js, voice-clone/route.js);
+// · nessuna prova le eseguiva: le nove prove che le nominano verificano
+//   l'OPPOSTO — che le rotte non le chiamino piu
+//   (`expect(src).not.toContain('await addebitaClonazione(')`);
+// · il motivo per cui erano nate e scritto nel diario ed e superato.
+//
+// Restavano quindi due modi di far pagare la stessa cosa, uno vivo e uno
+// morto ma ancora importabile: bastava che qualcuno, domani, chiamasse
+// addebitaVoce invece di riserva per saltare la riserva senza
+// accorgersene. Su un sistema che tocca il denaro, due formule per lo
+// stesso importo non sono uno spreco: sono un incidente in attesa.
+//
+// Restano vive, e non si toccano, le funzioni che il giro nuovo usa
+// davvero: creditoFinito, creditoInsufficiente, preventivoTesto,
+// preventivoVocePremium, addebitaRiassunto.
+// ═══════════════════════════════════════════════════════════════
 
 // ── Unica scrittura: prova a scalare, non far mai cadere la chiamata ──
 async function scala(utente, secondi, dettaglio) {
