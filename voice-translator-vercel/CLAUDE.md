@@ -267,6 +267,38 @@ perche il working tree lo conteneva ancora.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.625** (push #898) — I QUATTRO FIX DI b.623 VERIFICATI IN
+  PRODUZIONE, E IL COLLAUDO ARRIVA IN FONDO: «1 TERMINI».
+
+  **b.623 provata dal vivo su produzione, non dedotta** [VERIFICATO]:
+  1. Dal «+» → «Apri una stanza pubblica» il foglio ora si apre davvero:
+     nome, tipo di stanza, interruttori, categoria. Creata una stanza di
+     prova (privata) fino in fondo — codice 022D6B20, `/api/room` POST
+     200, QR, «In attesa del partner», entrata nella stanza, mandato un
+     messaggio, comparso con reazioni e spunta. Il guasto delle tre
+     incarnazioni e chiuso end-to-end, non solo «il foglio compare».
+  2. In Impostazioni la versione dice ora «BarTalk b.623».
+  3. Sull'articolo del Corriere ripreso da MSN la bandiera degli Stati
+     Uniti e sparita: resta la sola fonte, come vuole la regola.
+  4. Il ramo del feed vuoto e coperto dalla sua prova (il feed vivo e
+     pieno, quel ramo non si vede a mano).
+
+  **Sezioni chiuse in questo giro** (mai aperte prima): «Prova le voci»
+  (ElevenLabs, 361 voci elencate), AI Hub e glossario con le sue quattro
+  schede (Interprete, Glossario, Automazioni con auto-saluto e riepilogo
+  accesi, Stile), «Esporta i tuoi dati», Guida/FAQ.
+
+  **Difetto trovato e corretto:** aggiunta la prima voce al glossario, il
+  contatore diceva «**1 termini**». Ora uno ha il suo nome
+  (`termCountOne`); le altre lingue prendono l'inglese dal ripiego di
+  `i18n.js`, come per ogni chiave nuova. Prova: `b625-uno-non-e-plurale`.
+
+  **Falso allarme, dichiarato:** avevo sospettato che «Esporta i tuoi
+  dati» fosse un bottone morto — nessuna chiamata di rete al click.
+  Verificato nel codice: l'esportazione e un file costruito nel browser
+  (Blob + download), non passa dal server. Funziona, e per giunta esclude
+  di proposito token e chiavi dal file.
+
 - Versione: **b.624** (push #897) — COLLAUDO FISICO, SECONDA META':
   LIFE, BUSINESS, RUBRICA, PEEPOFF. IL TITOLO DI «VITA» ERA IN INGLESE.
 

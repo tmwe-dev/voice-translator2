@@ -135,7 +135,10 @@ const AIView = memo(function AIView({
               marginLeft: 'auto', fontSize: 11, padding: '3px 8px', borderRadius: 8,
               background: S.colors.accent2Bg, color: S.colors.accent2, fontWeight: 500,
             }}>
-              {glossaryTerms.length} {L('termsCount')}
+              {/* b.625 — «1 termini». Collaudo dal vivo: aggiunta la prima
+                  voce al glossario, il contatore diceva «1 termini». Il
+                  numero e il nome vanno d'accordo: uno solo ha il suo. */}
+              {glossaryTerms.length} {glossaryTerms.length === 1 ? L('termCountOne') : L('termsCount')}
             </span>
           </div>
 
