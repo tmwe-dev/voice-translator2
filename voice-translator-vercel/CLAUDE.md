@@ -267,6 +267,72 @@ perche il working tree lo conteneva ancora.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.630** (push #903) — LE DUE PROVE CHE MANCAVANO, E CIO CHE
+  HANNO TROVATO: UN BUCO APERTO DALLO STRUMENTO STESSO DELLA BONIFICA.
+
+  Ordine di Luca: procedi con la bonifica. Delle tre lacune dichiarate
+  nel fascicolo (b.629) due si potevano chiudere senza toccare la
+  produzione, e sono state chiuse.
+
+  **1. Esecuzione a specchio — FATTA** (Fase 6, la prova regina).
+  Caricate in parallelo b.619 (prima) e b.629 (dopo), confrontate le
+  uscite su 115 casi presi dalla realta: testi da 0 a 12.000 caratteri,
+  audio da 0 a un'ora, tutte le costanti di tariffa, 17 domini.
+  **4 differenze su 115, e zero sui numeri del denaro.** Le quattro sono
+  la stessa cosa e sono volute: `paeseDaDominio` sugli aggregatori
+  (msn.com, yahoo.com) che ora torna `null` invece di «US» — il fix della
+  bandiera, b.623. Nessun preventivo, nessun costo, nessuna tariffa e
+  cambiata di un centesimo.
+
+  **2. Revisione indipendente — FATTA** (Fase 5, ultimo punto). Il diff
+  di prodotto (1013 righe) letto da chi non l'aveva scritto, senza dargli
+  le conclusioni di chi aveva lavorato. Ha trovato tre difetti che il
+  primo giro non poteva vedere:
+
+  · **Un buco di sicurezza aperto ieri da b.628, cioe dallo strumento
+    stesso della bonifica.** `segna_visita_rotta` e SECURITY DEFINER —
+    scavalca la RLS per costruzione — e in PostgreSQL l'EXECUTE su una
+    funzione nuova va a PUBLIC per default, che `anon` eredita. Chiunque,
+    con la chiave pubblica che sta nel bundle del browser, poteva
+    scrivere righe a piacere nel registro: cioe **avvelenare la misura
+    con cui il 3 dicembre si decidera cosa togliere**. In questo stesso
+    repository la convenzione esisteva gia (003, 008, 013) ed era stata
+    dimenticata. Migrazione **016**, APPLICATA, e **verificata
+    dall'esterno con la chiave pubblica vera: 401 permission denied in
+    scrittura e in lettura**, mentre il servizio continua a scrivere.
+  · **Il registro non contava 8 rotte, non 1.** Il numero «83 su 84» era
+    sbagliato: veniva da `inventario-api.mjs`, che conta le rotte
+    non-410, non quelle che passano dalla guardia. Quelle vere sono 76.
+    Fra le otto scoperte c'era **`/api/wallet/webhook`, la rotta che
+    incassa i pagamenti Stripe**: al 3 dicembre avrebbe letto zero visite
+    proprio li. Registro aggiunto a mano alle sei rotte vive fuori dalla
+    guardia, e una prova ora impedisce che ne nasca una invisibile.
+  · **La sentinella della versione stava per dare un falso allarme**: la
+    correzione di b.623 era a meta (lettura del push facoltativa, ma
+    confronto secco). Alla prima versione senza «(push #NNN)» sarebbe
+    diventata rossa per niente — e un falso allarme in una sentinella e
+    peggio di nessuna sentinella.
+
+  **Dichiarato e non corretto, di proposito** (§8 del fascicolo):
+  · **`/api/topics/riassunto` usa ancora il vecchio schema di addebito**,
+    e questo rende FALSA l'affermazione «un solo modo di far pagare»
+    fatta in b.627. Verificato di persona: controlla il credito (97-104),
+    chiama OpenAI (112), addebita dopo con `addebitaRiassunto` (148)
+    **ignorandone l'esito**. E la finestra di corsa che b.161-bis
+    dichiarava chiusa. Non corretto qui perche e un cambio di
+    comportamento sul denaro e merita la sua registrazione: **e il primo
+    lavoro da fare**.
+  · `costoConversazione` e rimasta senza chiamanti dopo b.627 (la tengono
+    viva tre prove): zombie, ma e una formula di prezzo — marcata nel
+    file, in quarantena fino al 3 dicembre. Toglierla di corsa sarebbe la
+    pulizia opportunistica che il Protocollo vieta.
+
+  **Resta aperta una sola lacuna delle tre: il ritorno non e mai stato
+  provato.** Provarlo davvero significa riportare la produzione alla
+  versione precedente per il tempo della misura — e non esiste un
+  ambiente di prova. E una decisione di Luca, non di chi ha fatto il
+  lavoro.
+
 - Versione: **b.629** (push #902) — IL FASCICOLO DI BONIFICA, CON DENTRO
   LE TRE COSE CHE MANCANO.
 

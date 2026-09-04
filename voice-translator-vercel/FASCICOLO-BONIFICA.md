@@ -44,8 +44,25 @@ stesso importo è un incidente in attesa*.
 
 ## 3. Con quale prova
 
-**L'esecuzione a specchio non è stata fatta** (vedi §9, è la lacuna più
-seria). Le altre due prove della Fase 6 sì:
+**L'esecuzione a specchio è stata eseguita** (b.630). Metodo: caricate in
+parallelo le due versioni — b.619 prima della bonifica e b.629 dopo — e
+confrontate le uscite su **115 casi** presi dalla realtà del prodotto:
+lunghezze di testo da 0 a 12.000 caratteri, durate audio da 0 a un'ora,
+tutte le costanti di tariffa, e 17 domini di fonti.
+
+| Esito | |
+|---|---|
+| Casi confrontati | 115 |
+| Differenze totali | **4** |
+| Differenze sui **numeri del denaro** | **0** |
+
+Le quattro differenze sono tutte volute e spiegate, e sono la stessa
+cosa: `paeseDaDominio` per `msn.com`, `www.msn.com`, `it.msn.com` e
+`yahoo.com` restituiva `"US"` e ora restituisce `null` — è il fix della
+bandiera sbagliata (b.623). Nessun preventivo, nessun costo, nessuna
+tariffa è cambiata di un centesimo.
+
+Le altre due prove della Fase 6:
 
 - **La prova che le prove servono** — eseguita su ogni correzione del
   ciclo, non a campione: ogni fix è stato guastato di proposito e la sua
@@ -112,9 +129,68 @@ Fotografia di riferimento (Fase 0, 04/09): nessun errore di codice attivo
 negli ultimi due giorni; `/api/transcribe` 132 «400 audio corrotto» in 7
 giorni; Circuit OPEN Redis sporadici.
 
+## 7-bis. La revisione indipendente (Fase 5, ultimo punto)
+
+**Eseguita** in b.630. Il diff dei file di prodotto (1013 righe, da b.619
+a b.629) è stato letto da un revisore che non lo aveva scritto, senza
+dargli le conclusioni di chi aveva lavorato. Verdetto: *approvo con
+riserve*. Ha trovato cinque cose che il primo giro non aveva visto, e
+questo è il motivo per cui il Protocollo la pretende.
+
+**Corrette subito, in b.630:**
+
+1. **Buco di sicurezza introdotto in b.628.** `segna_visita_rotta` è
+   `SECURITY DEFINER` — scavalca la RLS per costruzione — e in PostgreSQL
+   l'EXECUTE su una funzione nuova è concesso a PUBLIC per default. In
+   questo stesso repository la convenzione esiste già (migrazioni 003,
+   008, 013): ogni funzione così va revocata. Non era stato fatto:
+   chiunque, con la chiave pubblica che sta nel bundle del browser,
+   poteva scrivere righe a piacere nel registro — cioè **avvelenare la
+   misura con cui il 3 dicembre si deciderà cosa togliere**. Chiuso con
+   `REVOKE EXECUTE ... FROM public, anon, authenticated` e `REVOKE ALL`
+   sulla tabella. **Verificato dall'esterno con la chiave pubblica vera:
+   401 `permission denied` sia in scrittura sia in lettura**, e il
+   servizio continua a scrivere.
+2. **Il registro non contava 8 rotte, non 1.** Il numero «83 su 84» era
+   sbagliato: veniva da `scripts/inventario-api.mjs`, che conta le rotte
+   non-410, non quelle che passano dalla guardia. Quelle vere sono **76**.
+   Fra le otto scoperte c'era **`/api/wallet/webhook`, la rotta che
+   incassa i pagamenti Stripe**: al 3 dicembre il criterio avrebbe letto
+   zero visite proprio lì. Aggiunto il registro a mano alle sei rotte vive
+   fuori dalla guardia (i due webhook, snapshot, registro, live, ingest).
+3. **La sentinella della versione avrebbe dato un falso allarme.** La
+   correzione di b.623 era a metà: la lettura del push era diventata
+   facoltativa, ma il confronto no. Alla prima versione senza `(push
+   #NNN)` — cioè il caso che aveva motivato la correzione — sarebbe
+   diventata rossa per niente. Un falso allarme in una sentinella è
+   peggio di nessuna sentinella: la si impara a ignorare.
+
+**Dichiarate, non corrette — vedi §8:** l'affermazione «un solo modo di
+far pagare» non era vera, e `costoConversazione` è rimasta orfana.
+
 ## 8. Il debito residuo
 
 Quello che si è visto e deliberatamente non fatto.
+
+0. **`/api/topics/riassunto` usa ancora il vecchio schema di addebito —
+   e questo rende FALSA l'affermazione fatta in b.627.** Trovato dal
+   revisore indipendente, verificato di persona: la rotta controlla il
+   credito (righe 97-104), chiama OpenAI (112), e addebita **dopo** con
+   `addebitaRiassunto` (148) **ignorandone l'esito**. È esattamente la
+   finestra di corsa che b.161-bis dichiarava chiusa: due richieste
+   concorrenti con un secondo di credito passano entrambe il controllo,
+   chiamano entrambe il fornitore, e una sola paga. Lo stesso importo
+   (`costoRiassunto()`) viene incassato in due modi diversi —
+   riserva/commit in `/api/summary`, addebito-dopo qui. **Non corretto
+   oggi di proposito**: è un cambio di comportamento sul denaro, e merita
+   la sua registrazione, non la coda di un'altra. È il primo lavoro da
+   fare.
+0-bis. **`costoConversazione` è rimasta senza chiamanti** dopo la
+   rimozione di b.627: la tengono in vita solo tre prove. È uno zombie e
+   la cura sarebbe togliere l'export — ma è una formula di prezzo, e
+   toglierla di corsa nella stessa registrazione che l'ha scoperta
+   sarebbe la pulizia opportunistica che il Protocollo vieta. Marcata nel
+   file, in quarantena fino al 3 dicembre.
 
 1. **`/api/transcribe`** — 132 rifiuti «audio corrotto o non supportato»
    in 7 giorni, 3 utenti. La causa non è nota: la diagnosi che doveva
@@ -145,27 +221,42 @@ per nome.
 | 2 — Tre lenti | **parziale** | lenti 1 e 3 fatte; la lente 2 ha cominciato a raccogliere solo il 04/09 |
 | 3 — Classificazione | **fatta** sulle voci esaminate | |
 | 4 — Quarantena | **avviata** | scade il 03/12 |
-| 5 — Asportazione | **fatta una volta** | ma il diff **non è stato letto da qualcuno che non l'ha scritto**, e per un sistema che muove denaro il Protocollo chiede un secondo revisore indipendente |
-| 6 — Prova del contrario | **parziale** | la prova che le prove vedono l'assenza ✓ (nove volte); **esecuzione a specchio: NON FATTA**; **prova del ritorno sulla versione finale: NON FATTA** |
+| 5 — Asportazione | **fatta** | una registrazione di sole sottrazioni, e il diff **è stato letto da un revisore indipendente** (§7-bis) |
+| 6 — Prova del contrario | **quasi completa** | la prova che le prove vedono l'assenza ✓ (nove volte); **esecuzione a specchio ✓** (115 casi, 0 differenze sul denaro); **prova del ritorno: ancora NON FATTA** |
 | 7 — Consegna | questo documento | |
 | 8 — Sorveglianza | **non assegnata** | il Protocollo chiede «una persona con nome» |
 
-**Le tre lacune che contano**, in ordine:
+**Delle tre lacune dichiarate il 4 settembre, due sono chiuse:**
+
+- ~~Nessuna esecuzione a specchio~~ → **fatta**: 115 casi, 4 differenze
+  tutte volute, **zero sui numeri del denaro** (§3).
+- ~~Nessun secondo paio d'occhi~~ → **fatto**: revisione indipendente sul
+  diff, che ha trovato un buco di sicurezza, un conteggio sbagliato di 8
+  rotte e un falso allarme in arrivo (§7-bis).
+
+**Restano aperte:**
 
 1. **Il ritorno non è mai stato provato.** È la regola inviolabile n. 2 —
-   «non si consegna quello che non si sa spegnere». Oggi è una speranza,
-   non un piano.
-2. **Nessuna esecuzione a specchio.** Su un sistema che muove denaro è
-   obbligatoria a zero differenze. Le 3812 prove verdi non la
-   sostituiscono: usano l'immaginazione di chi le ha scritte, non la
-   realtà.
-3. **Nessun secondo paio d'occhi.** Chi ha tolto è la persona meno adatta
-   a controllare cosa ha tolto — e in questo ciclo chi ha tolto e chi ha
-   verificato sono lo stesso.
+   «non si consegna quello che non si sa spegnere». Il rollback risulta
+   disponibile su Vercel, ma disponibile non è provato: finché non lo si
+   esegue e cronometra, è una speranza. Provarlo per davvero significa
+   riportare la produzione alla versione precedente per il tempo della
+   misura: è una decisione che spetta a Luca, non a chi ha fatto il
+   lavoro.
+2. **Non esiste un ambiente di prova.** Si è sempre lavorato sulla
+   produzione. È la ragione per cui il punto 1 costa una decisione invece
+   di essere un esercizio di routine.
+3. **Nessuno sorveglia con nome e cognome** (Fase 8).
 
-Finché queste tre restano aperte, il lavoro fatto è buono ma **non è una
-bonifica firmata**. È una bonifica in corso, con la quarantena che conta
-e la data segnata sul calendario.
+**Che cosa ha insegnato la revisione indipendente**: delle cinque cose
+trovate, tre erano difetti che il primo giro non poteva vedere — e uno
+era un buco di sicurezza aperto *dallo strumento stesso della bonifica*,
+il registro nato per misurare. È la dimostrazione pratica della regola:
+chi ha tolto è la persona meno adatta a controllare cosa ha tolto.
+
+Finché il ritorno non è provato, il lavoro fatto è buono e ora anche
+verificato da altri occhi, ma **non è una bonifica firmata**. È una
+bonifica in corso, con la quarantena che conta e la data sul calendario.
 
 > *Non si consegna un sistema perché funziona. Si consegna quando si sa
 > che cosa contiene, perché ogni pezzo c'è, come dimostrarlo, e come

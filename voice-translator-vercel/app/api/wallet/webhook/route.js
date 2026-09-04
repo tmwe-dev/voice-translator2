@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { leggiWebhook, estraiPagamento } from '../../../wallet/stripe.js';
 import { registraAcquistoStripe } from '../../../wallet/contabilita.js';
 import { createLogger } from '../../../lib/logger.js';
+import { segnaVisita } from '../../../lib/registroRotte.js';   // b.630
 
 const log = createLogger('wallet-webhook');
 
@@ -21,6 +22,13 @@ const log = createLogger('wallet-webhook');
 // comunque 200 — cosi Stripe smette di ritentare un evento che in
 // realtà è già stato processato correttamente.
 export async function POST(req) {
+// b.630 — IL REGISTRO NON VEDEVA QUESTA ROTTA. Il conteggio delle
+// visite (b.628) e agganciato a withApiGuard, e questa rotta non ci
+// passa: al 3 dicembre avrebbe letto zero visite su una rotta viva.
+// Trovato dal secondo revisore: le rotte fuori dalla guardia sono otto,
+// non una. Qui si segna a mano, con lo stesso strumento.
+  segnaVisita('/api/wallet/webhook');
+
   try {
     const corpo = await req.text(); // testo grezzo: serve per la firma
     const firma = req.headers.get('stripe-signature');

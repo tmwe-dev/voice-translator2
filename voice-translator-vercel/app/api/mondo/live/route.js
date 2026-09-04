@@ -1,6 +1,7 @@
 import { acquireIngestLock, getLastIngestAt, readLiveEvents, releaseIngestLock } from '../../../lib/mondo/liveStore.js';
 import { ingestMondoLive } from '../../../lib/mondo/liveIngest.js';
 import { checkRateLimit, getRateLimitKey } from '../../../lib/rateLimit.js';
+import { segnaVisita } from '../../../lib/registroRotte.js';   // b.630
 
 export const maxDuration = 60;
 export const dynamic = 'force-dynamic';
@@ -29,6 +30,13 @@ function interessa(e, { topics, countries, breaking }) {
 }
 
 export async function GET(req) {
+// b.630 — IL REGISTRO NON VEDEVA QUESTA ROTTA. Il conteggio delle
+// visite (b.628) e agganciato a withApiGuard, e questa rotta non ci
+// passa: al 3 dicembre avrebbe letto zero visite su una rotta viva.
+// Trovato dal secondo revisore: le rotte fuori dalla guardia sono otto,
+// non una. Qui si segna a mano, con lo stesso strumento.
+  segnaVisita('/api/mondo/live');
+
   // EventSource si riconnette da solo. Il limite lascia ampio margine a
   // riconnessioni reali ma impedisce di trasformare il bus in uno scraper.
   const rl = await checkRateLimit(getRateLimitKey(req, 'mondo-live-sse'), 30);

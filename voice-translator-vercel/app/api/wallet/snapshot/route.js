@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { fotografaTutti } from '../../../wallet/riconciliazione.js';
 import { safeCompare } from '../../../lib/apiGuard.js';
+import { segnaVisita } from '../../../lib/registroRotte.js';   // b.630
 
 // ═══ SNAPSHOT CONTATORI PROVIDER ═══
 // GET (con x-admin-pass o CRON_SECRET): legge i contatori veri dei
@@ -18,6 +19,13 @@ import { safeCompare } from '../../../lib/apiGuard.js';
 // credenziale, non deducibile dal codice), ma toglie la stessa
 // debolezza di temporizzazione gia corretta altrove.
 export async function GET(req) {
+// b.630 — IL REGISTRO NON VEDEVA QUESTA ROTTA. Il conteggio delle
+// visite (b.628) e agganciato a withApiGuard, e questa rotta non ci
+// passa: al 3 dicembre avrebbe letto zero visite su una rotta viva.
+// Trovato dal secondo revisore: le rotte fuori dalla guardia sono otto,
+// non una. Qui si segna a mano, con lo stesso strumento.
+  segnaVisita('/api/wallet/snapshot');
+
   // b.166 — CONFERMATO (caccia al tesoro): safeCompare toglie l'attacco a
   // tempo, ma senza un limite al NUMERO di tentativi un ADMIN_PASS/
   // CRON_SECRET debole o parzialmente compromesso poteva essere provato

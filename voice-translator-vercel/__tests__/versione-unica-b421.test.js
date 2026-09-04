@@ -54,8 +54,19 @@ describe('la versione dichiarata e quella vera', () => {
     ].join('\n')).toBe(d.versione);
   });
 
-  it('e anche il numero di rilascio combacia', () => {
-    expect(PUSH).toBe(dalDiario().push);
+  it('e anche il numero di rilascio combacia, quando il diario lo dichiara', () => {
+    // b.630 — corretto a meta in b.623 e trovato dal secondo revisore.
+    // Li si era reso FACOLTATIVO il «(push #NNN)» nella lettura del
+    // diario, ma qui il confronto era rimasto secco: alla prima versione
+    // scritta senza numero di push — cioe esattamente il caso b.620-622
+    // che aveva motivato la correzione — `push` vale null e questa prova
+    // sarebbe diventata rossa per niente. Un falso allarme in una
+    // sentinella e peggio di nessuna sentinella: la si impara a
+    // ignorare. Se il diario il numero non lo dichiara, non c'e niente
+    // da confrontare.
+    const d = dalDiario();
+    if (d.push === null) return;
+    expect(PUSH).toBe(d.push);
   });
 
   it('la versione ha la forma giusta, non una stringa qualunque', () => {

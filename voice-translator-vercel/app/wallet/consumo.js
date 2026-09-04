@@ -23,6 +23,22 @@ import { MOLTIPLICATORE_PREMIUM } from './tariffe.js';
 
 /**
  * Un pezzo di conversazione vocale.
+ *
+ * b.630 — NON HA PIU CHIAMANTI IN PRODUZIONE, e va detto qui. Il suo
+ * unico consumatore era `addebitaVoce`, tolta in b.627 insieme al
+ * vecchio giro di addebito: da allora questa formula vive solo perche la
+ * chiamano tre prove (`__tests__/wallet/wallet.test.js`). Per il
+ * Protocollo e uno **zombie**, e la cura sarebbe togliere l'export.
+ *
+ * NON si tocca oggi, e il motivo va scritto: e una FORMULA DI PREZZO, e
+ * l'ha trovata il secondo revisore quando il primo giro non l'aveva
+ * vista. Toglierla adesso, di corsa, sarebbe la «pulizia opportunistica»
+ * che il Protocollo vieta — «gia che c'ero» e la frase che precede
+ * l'incidente. Va in quarantena con le altre voci, scadenza 3 dicembre:
+ * se a quella data la voce standard risultera fatturata solo dal giro
+ * riserva → commit, si toglie in una registrazione sua, di sole
+ * sottrazioni, con la sua prova.
+ *
  * @param {number} secondiParlato - durata dell'audio processato
  * @param {boolean} vocePremium - true se il TTS era ElevenLabs
  * @returns {number} secondi di credito da scalare

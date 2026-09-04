@@ -3,6 +3,7 @@ import { safeCompare } from '../../../lib/apiGuard.js';
 import { TESTATE, perIlRegistro } from '../../../lib/topics/testate.js';
 import { fontiViste, fontiDaProvare } from '../../../lib/topics/deposito.js';
 import { feedDelDominio } from '../../../lib/topics/registro.js';
+import { segnaVisita } from '../../../lib/registroRotte.js';   // b.630
 
 // ═══════════════════════════════════════════════════════════════
 // IL GUARDIANO DEL REGISTRO (b.565)
@@ -30,6 +31,13 @@ import { feedDelDominio } from '../../../lib/topics/registro.js';
 const QUANTE_PER_GIRO = 20;
 
 export async function GET(req) {
+// b.630 — IL REGISTRO NON VEDEVA QUESTA ROTTA. Il conteggio delle
+// visite (b.628) e agganciato a withApiGuard, e questa rotta non ci
+// passa: al 3 dicembre avrebbe letto zero visite su una rotta viva.
+// Trovato dal secondo revisore: le rotte fuori dalla guardia sono otto,
+// non una. Qui si segna a mano, con lo stesso strumento.
+  segnaVisita('/api/mondo/registro');
+
   // stesso controllo delle altre rotte di servizio: la chiave del cron
   // o quella dell'amministratore, con un tetto ai tentativi (b.166).
   const { checkRateLimit, getRateLimitKey } = await import('../../../lib/rateLimit.js');
