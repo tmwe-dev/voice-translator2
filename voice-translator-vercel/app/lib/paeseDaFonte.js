@@ -39,7 +39,7 @@ const TESTATE = {
   'abcnews.go.com': 'US', 'foxnews.com': 'US', 'usatoday.com': 'US', 'npr.org': 'US',
   'politico.com': 'US', 'axios.com': 'US', 'time.com': 'US', 'newsweek.com': 'US',
   'forbes.com': 'US', 'cnbc.com': 'US', 'theverge.com': 'US', 'wired.com': 'US',
-  'techcrunch.com': 'US', 'espn.com': 'US', 'msn.com': 'US', 'yahoo.com': 'US',
+  'techcrunch.com': 'US', 'espn.com': 'US',
   'lemonde.fr': 'FR', 'lefigaro.fr': 'FR', 'france24.com': 'FR', 'rfi.fr': 'FR', 'afp.com': 'FR',
   'spiegel.de': 'DE', 'zeit.de': 'DE', 'faz.net': 'DE', 'dw.com': 'DE', 'welt.de': 'DE',
   'elpais.com': 'ES', 'elmundo.es': 'ES', 'abc.es': 'ES', 'lavanguardia.com': 'ES',
@@ -56,6 +56,19 @@ const TESTATE = {
   'timesofisrael.com': 'IL', 'jpost.com': 'IL', 'hurriyetdailynews.com': 'TR',
 };
 
+// b.623 — GLI AGGREGATORI NON SONO TESTATE, E NON DICONO IL PAESE.
+// Collaudo dal vivo: un articolo del Corriere della Sera ripubblicato
+// su MSN portava la bandiera degli Stati Uniti, perche' 'msn.com' era
+// in TESTATE come 'US'. Ma msn.com (come yahoo.com) non e' una
+// redazione: e' una vetrina che ospita le altre, e il suo dominio dice
+// solo dove l'articolo e' RIPUBBLICATO, mai da dove viene. Sono
+// esattamente i «suffissi bugiardi» qui sotto, in forma di dominio: si
+// tolgono dalla tabella e si elencano qui, cosi il paese resta null e
+// sopra la foto non compare nessuna bandiera. La regola scritta in
+// testa a questo file — «mai una bandiera indovinata», «meglio fermo
+// che nel posto sbagliato» — vale anche per loro.
+const AGGREGATORI = new Set(['msn.com', 'yahoo.com', 'news.google.com', 'flipboard.com']);
+
 // Suffissi nazionali che NON sono il paese che sembrano, o che sono
 // generici: si lasciano fuori invece di mandare il globo a caso.
 // .tv = Tuvalu ma la usano le televisioni; .io = territorio britannico
@@ -67,6 +80,12 @@ const SUFFISSI_BUGIARDI = new Set(['tv', 'io', 'me', 'co', 'cc', 'ai', 'to', 'ly
 export function paeseDaDominio(dominio, codiciNoti) {
   const d = String(dominio || '').trim().toLowerCase().replace(/^www\./, '');
   if (!d) return null;
+
+  // b.623 — prima di tutto: un aggregatore non dice il paese di niente.
+  if (AGGREGATORI.has(d)) return null;
+  for (const a of AGGREGATORI) {
+    if (d.endsWith('.' + a)) return null;
+  }
 
   if (TESTATE[d]) return TESTATE[d];
   // sottodominio di una testata nota (es. edition.cnn.com)

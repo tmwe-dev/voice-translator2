@@ -267,6 +267,69 @@ perche il working tree lo conteneva ancora.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.623** (push #896) — COLLAUDO FISICO DELL'APP VIVA: QUATTRO DIFETTI,
+  UNO DEI QUALI E' UN BOTTONE MORTO PER LA TERZA VOLTA.
+
+  Ordine di Luca: rifare tutti i collaudi fisici, anche sui pezzi
+  toccati da b.620-b.622, con l'app vera aperta nel suo Chrome.
+  Percorso: Home, Chat/Stanze, Community/Mondo, lettore notizie,
+  Impostazioni per intero, Credito (con voucher finto), menu «+».
+
+  1. **P0 — «Apri una stanza pubblica» (menu «+») non apriva niente.**
+     Provato quattro volte, due schermate di partenza diverse: dal «+»
+     si finiva nel lettore delle notizie e la stanza non nasceva.
+     Console pulita, nessuna chiamata a `/api/room`: da fuori pareva un
+     bottone morto. Causa trovata coi numeri, non a naso:
+     `CreateRoomSheet` stava a `zIndex: 70`, il pannello a schermo
+     pieno di `FinestraSulMondo` (l'articolo rimasto aperto) sta a 96.
+     Il foglio si apriva DAVVERO, ma sotto. Portato a 98: sopra ogni
+     pannello di contenuto, sotto il foglio del «+» (100) che si chiude
+     da solo. **Terza incarnazione dello stesso guasto** (b.146:
+     interruttore che nessuno leggeva; b.326: montato solo dentro una
+     vista; oggi: coperto da chi sta piu in alto). [VERIFICATO] dal vivo
+     prima, prova di comportamento dopo.
+
+  2. **P1 — la versione mostrata era ferma a b.619** (difetto mio,
+     introdotto non aggiornando `APP_VERSION` in b.620, b.621 e b.622).
+     Quel numero e' cio che l'utente legge in Impostazioni, cio che
+     parte nella mail di «Segnala un problema» e cio che finisce
+     nell'esportazione dei dati: per tre versioni chi avesse segnalato
+     un guasto avrebbe dichiarato una versione che non stava usando.
+     Ora `APP_VERSION` e' allineata, e una prova la confronta con la
+     prima riga di questo file: non puo' piu' restare indietro in
+     silenzio.
+
+  3. **P2 — bandiera sbagliata sulle notizie riprese dagli aggregatori.**
+     Visto dal vivo: un articolo del Corriere della Sera ripubblicato su
+     MSN portava la bandiera degli Stati Uniti, perche' `msn.com` era in
+     TESTATE come 'US'. Ma msn.com e yahoo.com non sono redazioni: sono
+     vetrine, e il loro dominio dice dove l'articolo e' ripubblicato,
+     mai da dove viene. Tolti dalle testate e messi in `AGGREGATORI`
+     (con news.google.com e flipboard.com): il paese torna `null` e
+     nessuna bandiera viene disegnata — come gia' dice la regola in
+     testa a quel file, «mai una bandiera indovinata».
+
+  4. **P2 — il feed diceva due cose opposte insieme.** Nella schermata
+     di attesa comparivano sempre, una sotto l'altra, la rotella con
+     «Sto cercando altro…» e «Niente da mostrare qui: cerca prima
+     qualcosa». Uno dei due e' per forza falso. Ora sono due rami:
+     finche' non e' pronto gira la rotella, quando e' pronto e vuoto si
+     dice solo che non c'e' niente.
+
+  **Falso allarme, dichiarato:** avevo segnalato come difetto le due
+  linguette mozzate sul bordo sinistro. Verificato nel codice: sono
+  attaccate al bordo per progetto (b.360/b.363/b.400, decise con Luca).
+  Nessuna correzione fatta.
+
+  **Salute live [VERIFICATO]**: 28 gruppi di errore in 7 giorni,
+  ordinati per ultima occorrenza. Nessun errore di codice attivo negli
+  ultimi due giorni: il piu' frequente (131) e' un avviso di Node
+  (`url.parse` deprecato), non un guasto. `leggiConte is not a
+  function` su `/api/reazioni` (43 volte) e' fermo al 28/08 e non si
+  ripresenta. Restano da guardare, non toccati qui: `/api/transcribe`
+  «400 Audio file might be corrupted» (132 volte, ultimo il 03/09) e i
+  «Circuit OPEN redis:upstash» sporadici.
+
 - Versione: **b.622** — LA CHIAVE DI GEMINI AVEVA DUE NOMI, E QUELLO USATO
   IN COLLAUDO NON ESISTEVA.
 

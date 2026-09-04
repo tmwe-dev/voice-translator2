@@ -149,7 +149,16 @@ function CreateRoomSheet({ open, onClose, onCreate, preimpostato }) {
 
   return (
     <div style={{
-      position: 'fixed', inset: 0, zIndex: 70,
+      // b.623 — STESSO GUASTO DI b.146 E b.326, PER LA TERZA VIA.
+      // Collaudo dal vivo: dal «+» → «Apri una stanza pubblica» si
+      // finiva nel lettore delle notizie e la stanza non nasceva mai.
+      // Il foglio si apriva davvero, ma stava a 70 mentre il lettore a
+      // schermo pieno di FinestraSulMondo sta a 96: nasceva SOTTO, e
+      // da fuori pareva un bottone morto. Chi chiede di aprire una
+      // stanza l'ha chiesta adesso: il foglio va sopra qualunque
+      // pannello di contenuto (96) e sotto il foglio del «+» (100),
+      // che si chiude da solo al cambio di vista.
+      position: 'fixed', inset: 0, zIndex: 98,
       background: 'rgba(0,0,0,0.6)',
       display: 'flex', flexDirection: 'column', justifyContent: 'flex-end',
     }} onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}

@@ -943,18 +943,32 @@ export default function FeedNotizieMondo({ aperto, onChiudi, C, L, argomenti = [
             alignItems: 'center', justifyContent: 'center',
             padding: 24, textAlign: 'center', gap: 14,
           }}>
-            <span aria-hidden="true" style={{
-              width: 34, height: 34, borderRadius: '50%',
-              border: '2.5px solid rgba(150,178,255,0.28)',
-              borderTopColor: 'rgba(170,196,255,0.95)',
-              animation: 'vtGira 0.9s linear infinite',
-            }} />
-            <div style={{ fontSize: 15, fontWeight: 500, color: '#fff', fontFamily: FONT }}>
-              {L('growingWord')}
-            </div>
-            <div style={{ fontSize: 12.5, color: 'rgba(255,255,255,0.6)', fontFamily: FONT }}>
-              {L('feedVuoto')}
-            </div>
+            {/* b.623 — DUE STATI DIVERSI, NON DUE FRASI INSIEME.
+                Collaudo dal vivo: qui comparivano SEMPRE, l'uno sotto
+                l'altro, la rotella con «Sto cercando altro…» e «Niente
+                da mostrare qui: cerca prima qualcosa». Uno dei due e'
+                per forza falso: se sta cercando non e' vero che non c'e'
+                niente, e se ha finito e non ha trovato niente non sta
+                piu' cercando. Adesso: finche' non e' `pronto` si dice
+                che sta cercando; quando e' pronto e l'elenco e' vuoto si
+                dice che non c'e' niente, e la rotella si ferma. */}
+            {!pronto ? (
+              <>
+                <span aria-hidden="true" style={{
+                  width: 34, height: 34, borderRadius: '50%',
+                  border: '2.5px solid rgba(150,178,255,0.28)',
+                  borderTopColor: 'rgba(170,196,255,0.95)',
+                  animation: 'vtGira 0.9s linear infinite',
+                }} />
+                <div style={{ fontSize: 15, fontWeight: 500, color: '#fff', fontFamily: FONT }}>
+                  {L('growingWord')}
+                </div>
+              </>
+            ) : (
+              <div style={{ fontSize: 15, fontWeight: 500, color: 'rgba(255,255,255,0.75)', fontFamily: FONT }}>
+                {L('feedVuoto')}
+              </div>
+            )}
             <style>{'@keyframes vtGira { to { transform: rotate(360deg); } }'}</style>
           </div>
         )}

@@ -54,7 +54,13 @@ export function metaScelta(prefs) {
     || 'en';
 }
 
-export const APP_VERSION = 'b.619';
+// b.623 — Va aggiornata a OGNI versione: questo numero e quello che
+// l'utente legge in Impostazioni, quello che parte nella mail di
+// «Segnala un problema» e quello scritto dentro l'esportazione dei
+// dati. Restata a b.619 per tre versioni (b.620, b.621, b.622): chi
+// avesse segnalato un guasto in quei giorni avrebbe dichiarato una
+// versione che non stava usando.
+export const APP_VERSION = 'b.623';
 
 // ── Numero di rilascio, visibile in alto a sinistra nella home ──
 // Serve a Luca per sapere a colpo d'occhio se la pagina che ha davanti e
@@ -62,7 +68,7 @@ export const APP_VERSION = 'b.619';
 // ancora arrivato al suo browser (o la pagina viene dalla cache).
 // VA AUMENTATO DI UNO A OGNI PUSH SU main. Corrisponde al numero di
 // commit del ramo: `git rev-list --count HEAD`.
-export const PUSH = 895;
+export const PUSH = 896;
 
 export const APP_URL = process.env.NEXT_PUBLIC_URL || 'https://voice-translator2.vercel.app';
 

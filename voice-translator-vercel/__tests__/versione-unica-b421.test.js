@@ -21,12 +21,23 @@ import { APP_VERSION, PUSH } from '../app/lib/constants.js';
 const leggi = (p) => readFileSync(join(process.cwd(), p), 'utf8');
 
 // La versione piu recente dichiarata nel diario: la prima riga
-// «- Versione: **b.NNN** (push #NNN)» dopo «Stato corrente».
+// «- Versione: **b.NNN**» dopo «Stato corrente», col push se c'e.
+//
+// b.623 — LA SENTINELLA GUARDAVA LA PORTA SBAGLIATA (difetto suo,
+// pre-esistente, trovato col collaudo fisico). Il «(push #NNN)» era
+// OBBLIGATORIO nel motivo di ricerca: b.620, b.621 e b.622 sono uscite
+// senza numero di push (pubblicate su main, non da una richiesta di
+// unione) e questa funzione, non trovandole, saltava a b.619 piu in
+// basso — cioe confrontava APP_VERSION con una versione vecchia di tre
+// e la trovava «giusta». Per tre versioni la prova era verde mentre in
+// Impostazioni compariva un numero falso: esattamente il guasto che
+// questo file esiste per impedire. Ora il push e facoltativo, e la
+// riga presa e sempre la prima.
 function dalDiario() {
   const md = leggi('CLAUDE.md');
   const dopo = md.slice(md.indexOf('## Stato corrente'));
-  const m = dopo.match(/- Versione:\s*\*\*(b\.\d+)\*\*\s*\(push #(\d+)\)/);
-  return m ? { versione: m[1], push: Number(m[2]) } : null;
+  const m = dopo.match(/- Versione:\s*\*\*(b\.\d+)\*\*(?:\s*\(push #(\d+)\))?/);
+  return m ? { versione: m[1], push: m[2] ? Number(m[2]) : null } : null;
 }
 
 describe('la versione dichiarata e quella vera', () => {
