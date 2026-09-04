@@ -267,6 +267,40 @@ perche il working tree lo conteneva ancora.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.624** (push #897) — COLLAUDO FISICO, SECONDA META':
+  LIFE, BUSINESS, RUBRICA, PEEPOFF. IL TITOLO DI «VITA» ERA IN INGLESE.
+
+  Continuazione diretta di b.623: le sezioni che quel giro non aveva
+  aperto. Provate dal vivo: **Vita** (podcast, 14 Compagni, scelta del
+  Compagno, giri 2/3/4, «Genera e ascolta»), **Business** (le tre voci),
+  **Rubrica/BizCard** (Scan, Contatti, Esporta con i quattro formati,
+  Setup con motore OCR e webhook), **PeepOff** (impronta, le quattro
+  schede, il modulo di scrittura). Console pulita ovunque.
+
+  **Difetto trovato e corretto:** il titolo della sezione era la parola
+  `Life` scritta a mano nel codice, mentre la voce che ci porta, in
+  Home, si chiama «Vita» (`lifeEntry`, dal dizionario). Chiunque, in
+  qualunque lingua, entrava in «Vita» e ci trovava scritto «Life». Ora
+  il titolo e la stessa parola che ha portato l'utente fin li. Prova che
+  vede l'assenza: `b624-titoli-tradotti`.
+
+  **Falso allarme, dichiarato:** avevo segnalato anche «Round» come non
+  tradotto. Verificato: e una voce del dizionario (`lifeRounds` → «Round»
+  in italiano, «Rounds» in inglese), scelta di traduzione, non un refuso.
+
+  **Debito residuo dichiarato** (visto, non toccato, e perche):
+  · Le schede «Scan» e «Setup» della Rubrica sono in inglese in
+    un'interfaccia italiana, ma non stanno in BarTalk: la Rubrica e
+    l'app sorella BizCard, servita da `public/scanner/index.html`. Altro
+    perimetro: si tocca in un giro suo, non di straforo qui.
+  · `/api/tts-edge` risponde **503** e il sistema ripiega su `/api/tts`
+    (200): la voce si sente lo stesso, ma il fornitore Edge sta
+    fallendo. Coerente con «Edge TTS: sintesi riuscita ma audio vuoto»
+    (17 volte nei log). Da guardare a parte.
+  · Non collaudabili da qui, servono microfono e audio veri: traduzione
+    vocale, videochiamata, prova delle voci, clonazione voce. Restano a
+    Luca.
+
 - Versione: **b.623** (push #896) — COLLAUDO FISICO DELL'APP VIVA: QUATTRO DIFETTI,
   UNO DEI QUALI E' UN BOTTONE MORTO PER LA TERZA VOLTA.
 

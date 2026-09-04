@@ -224,7 +224,12 @@ function LifeView({ onApriStanza }) {
           {'‹'}
         </button>
         <Icon name="star" size={20} color={accent} />
-        <span style={{ fontSize: 20, fontWeight: 500 }}>Life</span>
+        {/* b.624 — IL TITOLO ERA SCRITTO A MANO IN INGLESE. Collaudo dal
+            vivo: in Home questa sezione si chiama «Vita» (lifeEntry, dal
+            dizionario), e appena si entra il titolo diventava «Life» —
+            in italiano, in russo, in giapponese, sempre. Ora e la stessa
+            parola che ha portato l'utente fin qui. */}
+        <span style={{ fontSize: 20, fontWeight: 500 }}>{L('lifeEntry')}</span>
       </div>
 
       {/* ═══ b.503 — TAVOLA F: «le sette sezioni non stanno piu in fila
