@@ -267,6 +267,72 @@ perche il working tree lo conteneva ancora.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.636** (push #909) — LE DOMANDE INDIPENDENTI NON SI
+  ASPETTANO PIU A VICENDA.
+
+  Terzo intervento dopo l'audit. Sempre senza fornitori nuovi.
+
+  L'audit del 05/09 ha contato riga per riga i viaggi di rete che ogni
+  rotta della catena fa PRIMA di rispondere e che **non c'entrano niente
+  con l'IA**: **14 su `/api/transcribe`, 13 su `/api/translate`**. Con
+  un giro che deve stare sotto i 3 secondi, quella e la differenza fra
+  un ritardo fermo e uno che cresce.
+
+  Qui si tolgono tre attese in fila fra domande che non si leggono a
+  vicenda. **Nessuna decisione cambia**: cambia solo chi aspetta chi.
+
+  1. **`getSession`** — il rinnovo della scadenza (`EXPIRE`) e la
+     lettura del nome dal profilo (`getUser`) erano in fila per
+     abitudine. Il commento di b.536 diceva gia «il rinnovo non blocca
+     la risposta»: ma davanti c'era un `await`, quindi la bloccava.
+  2. **`resolveAuth`** — il profilo e il saldo partono tutti e due dalla
+     stessa email e nessuno dei due serve all'altro. Erano in fila: un
+     viaggio a Redis PIU una RPC su Supabase, per ogni rotta, per ogni
+     blocco. Adesso partono insieme.
+  3. **I due contatori giornalieri** — tetto personale e tetto di
+     piattaforma vivono su chiavi diverse e non si leggono a vicenda.
+     Due `INCRBYFLOAT` in fila, adesso insieme. **Le riserve restano
+     atomiche una per una**: e quello che chiude la finestra di corsa di
+     b.170, e non si tocca.
+
+  **Cosa NON cambia, e le prove lo verificano**: l'ordine dei rifiuti
+  (prima 401 «non esisti», poi 402 «niente credito»); il gate che guarda
+  la chiave DAVVERO usata e non la preferenza dichiarata (b.159); la
+  riserva atomica invece di GET+confronto (b.170); e il fatto che
+  rifiutando non si lasci niente a gonfiare i contatori (b.632).
+
+  **Cosa cambia e va detto**: con «usa la tua chiave» il saldo viene
+  letto anche quando non serve — una lettura in piu, mai un addebito. E
+  il prezzo per togliere un'attesa in fila a tutti gli altri, che sono
+  la grande maggioranza.
+
+  In piu, una semplificazione che il cambiamento ha reso possibile: il
+  rollback dei contatori era scritto **due volte**, in due rami, e il
+  ramo di piattaforma doveva ricordarsi anche di quello utente. Adesso
+  c'e **un posto solo** che rende tutto quello che si e preso
+  (`rendiTutto`), e i due rifiuti lo chiamano.
+
+  **Sette prove storiche si sono accorte, e nessuna e stata indebolita**:
+  `caccia-al-tesoro-b170` (il rollback ha cambiato forma: adesso la
+  prova verifica anche che TUTTI E DUE i rifiuti rendano, non solo che
+  esistano due sottrazioni — controllo piu stretto di prima),
+  `wallet-sicurezza-b159` (uno dei tre gate legge adesso il saldo
+  chiesto in parallelo: la prova verifica che quel valore venga proprio
+  da `creditoFinito`), `caccia-al-tesoro-b168` (l'ordine 401-prima-di-402
+  si verifica sugli stessi passi, con le ancore nuove), `chi-paga` (il
+  `parseFloat` non e piu attaccato all'`await`: si verifica su tutti e
+  due i valori grezzi, e che non sia diventato `parseInt`),
+  `campi-che-combaciano` (il nome arriva sempre dal profilo, la
+  variabile si chiama `utente`), `sessione-viva-b536` (la protezione del
+  rinnovo era un `try/await`, adesso e un `.catch()` sulla promessa: si
+  verifica che ci sia, e che le due domande si aspettino insieme), piu
+  `wallet-sicurezza-b154` (finestra di prossimita allargata).
+
+  Prove: `b636-viaggi-in-parallelo` (9), di cui una di comportamento —
+  con un Redis finto che tiene appese le risposte si dimostra che i due
+  comandi risultano gia partiti mentre nessuno dei due ha risposto.
+  Prova del contrario: rimettendoli in fila, due diventano rosse.
+
 - Versione: **b.635** (push #908) — DUE FILE, NON UNA: LA VOCE ESCE DAL
   PERCORSO CRITICO E L'IMBUTO SI APRE.
 

@@ -98,7 +98,25 @@ export async function resolveAuth({
     }
     {
       billingEmail = session.email;
-      const user = await getUser(billingEmail);
+      // ═══ b.636 — IL PROFILO E IL SALDO NON SI ASPETTANO A VICENDA ═══
+      // Tutti e due partono dalla stessa email e nessuno dei due serve
+      // all'altro: erano in fila, e ogni rotta della catena
+      // dell'interprete pagava la somma di un viaggio a Redis piu una
+      // RPC su Supabase. Adesso partono insieme.
+      //
+      // COSA NON CAMBIA: l'ordine dei rifiuti. Prima si guarda se
+      // l'utente esiste (401), poi se ha credito (402) — identico a
+      // prima, e le prove di b.154/b.159/b.168 lo verificano.
+      //
+      // COSA CAMBIA, e va detto: con «usa la tua chiave» il saldo viene
+      // letto anche quando non serve (una lettura in piu, mai un
+      // addebito). E il prezzo per togliere un'attesa in fila a tutti
+      // gli altri, che sono la grande maggioranza.
+      const saldoServe = !skipCreditCheck;
+      const [user, senzaCredito] = await Promise.all([
+        getUser(billingEmail),
+        saldoServe ? creditoFinito(billingEmail) : Promise.resolve(false),
+      ]);
       // b.168 — CONFERMATO (audit esterno 15/8): una sessione VALIDA il
       // cui utente non esiste piu (account cancellato, incoerenza fra
       // Redis e Supabase) cadeva qui senza mai entrare nell'`if (user)`
@@ -146,7 +164,7 @@ export async function resolveAuth({
         // "usa la tua chiave" senza (piu) averne una valida. Cio che
         // conta e' quale chiave viene DAVVERO usata (isOwnKey), non la
         // preferenza dichiarata.
-        if (!isOwnKey && !skipCreditCheck && await creditoFinito(billingEmail)) {
+        if (!isOwnKey && !skipCreditCheck && senzaCredito) {
           throw NextResponse.json({ error: ERRORS.NO_CREDITS }, { status: 402 });
         }
       }
@@ -341,32 +359,50 @@ export async function resolveAuth({
       // Il limite PER UTENTE serve solo se c'e un utente identificato
       // da addebitare — anonimo non ha una chiave utente da limitare
       // qui (lo protegge comunque withApiGuard per IP).
-      if (billingEmail) {
-        const dailyKey = `daily:${billingEmail}:${todayUTC}`;
-        const nuovoTotaleUtente = parseFloat(await redis('INCRBYFLOAT', dailyKey, BUDGET_RESERVE_CENTS)) || 0;
-        if (nuovoTotaleUtente <= BUDGET_RESERVE_CENTS + 1e-9) await redis('EXPIRE', dailyKey, 90000);
-        if (DAILY_LIMITS.PER_USER > 0 && (nuovoTotaleUtente - BUDGET_RESERVE_CENTS) >= DAILY_LIMITS.PER_USER) {
-          await redis('INCRBYFLOAT', dailyKey, -BUDGET_RESERVE_CENTS); // annulla la riserva: non si procede
-          throw NextResponse.json({ error: ERRORS.DAILY_LIMIT }, { status: 429 });
-        }
-        riservatoUtenteCents = BUDGET_RESERVE_CENTS;
-      }
-
-      // Check platform total daily spend — SEMPRE, anche per l'accesso
-      // libero: e l'unico tetto che protegge la piattaforma quando non
-      // c'e nessun billingEmail da limitare singolarmente.
+      // ═══ b.636 — I DUE CONTATORI SONO DUE CHIAVI DIVERSE ═══
+      // Il tetto personale e quello di piattaforma vivono su chiavi
+      // separate e non si leggono a vicenda: erano in fila per come e
+      // nato il codice (b.170), e ogni rotta pagava due viaggi a Upstash
+      // invece di uno. Adesso le due riserve si prendono INSIEME e poi
+      // si guardano i due esiti. Le riserve restano atomiche una per
+      // una — e quello che chiude la finestra di corsa, e non cambia.
+      const dailyKey = billingEmail ? `daily:${billingEmail}:${todayUTC}` : null;
       const platformDailyKey = `daily:platform:${todayUTC}`;
-      const nuovoTotalePiattaforma = parseFloat(await redis('INCRBYFLOAT', platformDailyKey, BUDGET_RESERVE_CENTS)) || 0;
-      if (nuovoTotalePiattaforma <= BUDGET_RESERVE_CENTS + 1e-9) await redis('EXPIRE', platformDailyKey, 90000);
+      const [grezzoUtente, grezzoPiattaforma] = await Promise.all([
+        dailyKey ? redis('INCRBYFLOAT', dailyKey, BUDGET_RESERVE_CENTS) : Promise.resolve(null),
+        redis('INCRBYFLOAT', platformDailyKey, BUDGET_RESERVE_CENTS),
+      ]);
+      // Prese tutte e due: da qui in poi ogni uscita deve renderle.
+      if (dailyKey) riservatoUtenteCents = BUDGET_RESERVE_CENTS;
+      riservatoPiattaformaCents = BUDGET_RESERVE_CENTS;
+
+      const nuovoTotaleUtente = parseFloat(grezzoUtente) || 0;
+      const nuovoTotalePiattaforma = parseFloat(grezzoPiattaforma) || 0;
+      const scadenze = [];
+      if (dailyKey && nuovoTotaleUtente <= BUDGET_RESERVE_CENTS + 1e-9) scadenze.push(redis('EXPIRE', dailyKey, 90000));
+      if (nuovoTotalePiattaforma <= BUDGET_RESERVE_CENTS + 1e-9) scadenze.push(redis('EXPIRE', platformDailyKey, 90000));
+      if (scadenze.length) await Promise.all(scadenze).catch(() => { /* senza scadenza la chiave resta: la pulizia e del giorno dopo */ });
+
+      // b.636 — un solo posto da cui si rende tutto quello che si e
+      // preso: prima il rollback era scritto due volte, in due rami, e
+      // il ramo di piattaforma doveva ricordarsi anche di quello utente.
+      const rendiTutto = async () => {
+        const resi = [];
+        if (riservatoUtenteCents && dailyKey) resi.push(redis('INCRBYFLOAT', dailyKey, -riservatoUtenteCents));
+        if (riservatoPiattaformaCents) resi.push(redis('INCRBYFLOAT', platformDailyKey, -riservatoPiattaformaCents));
+        riservatoUtenteCents = 0;
+        riservatoPiattaformaCents = 0;
+        await Promise.all(resi).catch(() => { /* il contatore si sgonfia da solo a scadenza */ });
+      };
+
+      if (dailyKey && DAILY_LIMITS.PER_USER > 0 && (nuovoTotaleUtente - BUDGET_RESERVE_CENTS) >= DAILY_LIMITS.PER_USER) {
+        await rendiTutto();
+        throw NextResponse.json({ error: ERRORS.DAILY_LIMIT }, { status: 429 });
+      }
       if (DAILY_LIMITS.PLATFORM_TOTAL > 0 && (nuovoTotalePiattaforma - BUDGET_RESERVE_CENTS) >= DAILY_LIMITS.PLATFORM_TOTAL) {
-        await redis('INCRBYFLOAT', platformDailyKey, -BUDGET_RESERVE_CENTS);
-        if (riservatoUtenteCents) {
-          await redis('INCRBYFLOAT', `daily:${billingEmail}:${todayUTC}`, -riservatoUtenteCents);
-          riservatoUtenteCents = 0;
-        }
+        await rendiTutto();
         throw NextResponse.json({ error: ERRORS.PLATFORM_LIMIT }, { status: 503 });
       }
-      riservatoPiattaformaCents = BUDGET_RESERVE_CENTS;
     } catch (e) {
       // If it's a NextResponse (our own error), re-throw it
       if (e instanceof Response || e?.status) throw e;

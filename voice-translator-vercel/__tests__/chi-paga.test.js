@@ -131,7 +131,13 @@ describe('il contatore di spesa segue la spesa vera', () => {
     // parseFloat, mai da parseInt: l'intento (niente decimali troncati)
     // resta lo stesso, cambia solo dove avviene la lettura.
     expect(auth, 'parseInt("4.7") da 4').not.toMatch(/parseInt\(await redis\('(GET|INCRBYFLOAT)', dailyKey\)/);
-    expect(auth).toMatch(/parseFloat\(await redis\('INCRBYFLOAT', dailyKey, BUDGET_RESERVE_CENTS\)\)/);
+    // b.636 — le due riserve si prendono insieme (Promise.all), quindi
+    // il valore grezzo si legge dopo, non attaccato all'await. Cio che
+    // conta resta identico: parseFloat, mai parseInt.
+    expect(auth).toMatch(/redis\('INCRBYFLOAT', dailyKey, BUDGET_RESERVE_CENTS\)/);
+    expect(auth).toMatch(/parseFloat\(grezzoUtente\)/);
+    expect(auth).toMatch(/parseFloat\(grezzoPiattaforma\)/);
+    expect(auth, 'parseInt("4.7") da 4').not.toMatch(/parseInt\(grezzo/);
     expect(leggi('api/startrek/route.js'))
       .not.toMatch(/parseInt\(await redis\('GET', `daily:/);
   });

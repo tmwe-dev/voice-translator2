@@ -41,7 +41,9 @@ describe('apiAuth: token invalido e accesso libero (b.154)', () => {
     // b.170 — finestra allargata: qui ora c'e anche la nota estesa sulla
     // riserva-budget atomica (vedi apiAuth.js), piu lunga del vecchio
     // GET+confronto che sostituisce.
-    const blocco = src.slice(iCheck, iCheck + 3200);
+    // b.636 — finestra allargata di nuovo: qui c'e ora anche la nota
+    // sulle due riserve prese insieme. Le due verifiche non cambiano.
+    const blocco = src.slice(iCheck, iCheck + 5200);
     // Il vecchio `if (billingEmail && !isOwnKey && !skipCreditCheck)`
     // avvolgeva TUTTO, tetto di piattaforma incluso.
     expect(blocco).toMatch(/if\s*\(!isOwnKey\s*&&\s*!skipCreditCheck\)/);

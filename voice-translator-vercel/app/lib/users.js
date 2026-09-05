@@ -230,15 +230,20 @@ export async function getSession(token) {
   // scade mai, chi sparisce per una settimana rientra — che e' la regola
   // che qualunque persona si aspetta. Il rinnovo non blocca la risposta:
   // se Redis non risponde, si prosegue con la sessione valida che abbiamo.
-  try { await redis('EXPIRE', `session:${token}`, 604800); }
-  catch { /* senza rinnovo la sessione resta valida fino alla scadenza vecchia */ }
-
-  if (session.email && !session.name) {
-    try {
-      const user = await getUser(session.email);
-      if (user?.name) session.name = user.name;
-    } catch { /* il nome resta assente: si prosegue con l'email */ }
-  }
+  // ═══ b.636 — DUE DOMANDE INDIPENDENTI, UN VIAGGIO SOLO ═══
+  // Il rinnovo della scadenza e la lettura del nome non hanno niente a
+  // che vedere l'uno con l'altro: erano in fila per abitudine, e ogni
+  // rotta della catena dell'interprete pagava la somma dei due. Il
+  // commento qui sopra diceva gia «il rinnovo non blocca la risposta» —
+  // ma c'era un `await` davanti, quindi la bloccava. Adesso partono
+  // insieme e si aspetta il piu lento, non la somma.
+  const rinnovo = redis('EXPIRE', `session:${token}`, 604800)
+    .catch(() => { /* senza rinnovo la sessione resta valida fino alla scadenza vecchia */ });
+  const nome = (session.email && !session.name)
+    ? getUser(session.email).catch(() => null)
+    : Promise.resolve(null);
+  const [, utente] = await Promise.all([rinnovo, nome]);
+  if (utente?.name) session.name = utente.name;
   return session;
 }
 

@@ -41,10 +41,16 @@ describe('b.536 — la sessione si rinnova mentre la usi', () => {
     // la nascita: scadenza fissa a 7 giorni
     expect(u).toMatch(/createSession[\s\S]{0,400}'EX', 604800/);
     // l'uso: rinnovo della STESSA durata, dentro getSession
-    const dentro = u.slice(u.indexOf('export async function getSession'), u.indexOf('export async function getSession') + 2200);
+    const dentro = u.slice(u.indexOf('export async function getSession'), u.indexOf('export async function getSession') + 3400);   // b.636 — finestra allargata: qui c'e ora la nota sulle due domande in parallelo
     expect(dentro).toMatch(/redis\('EXPIRE', `session:\$\{token\}`, 604800\)/);
-    // e non deve poter far cadere la lettura: sta in un try
-    expect(dentro).toMatch(/try \{ await redis\('EXPIRE'/);
+    // b.636 — e non deve poter far cadere la lettura. Prima la
+    // protezione era un `try { await ... }`; adesso il rinnovo parte
+    // INSIEME alla lettura del profilo (il commento di b.536 diceva gia
+    // «il rinnovo non blocca la risposta»: ma c'era un await davanti, e
+    // quindi la bloccava). La protezione e la stessa, in forma di
+    // `.catch()` sulla promessa.
+    expect(dentro).toMatch(/const rinnovo = redis\('EXPIRE'[\s\S]{0,160}\.catch\(/);
+    expect(dentro, 'e si aspettano insieme, non in fila').toMatch(/await Promise\.all\(\[rinnovo, nome\]\)/);
   });
 });
 

@@ -189,9 +189,18 @@ describe('apiAuth: il gate credito conta la chiave USATA, non la preferenza (b.1
     expect(src).not.toMatch(/!isOwnKey\s*&&\s*!hostUser\.useOwnKeys/);
   });
 
-  it('restano tre controlli `!isOwnKey && !skipCreditCheck && await creditoFinito`', () => {
-    const occorrenze = src.match(/!isOwnKey\s*&&\s*!skipCreditCheck\s*&&\s*await creditoFinito/g) || [];
+  it('restano tre gate che contano la chiave USATA, non la preferenza', () => {
+    // b.636 — in uno dei tre il saldo non si chiede piu QUI: si chiede
+    // insieme al profilo, poco sopra, e qui si legge il risultato
+    // (`senzaCredito`). La proprieta difesa e identica — il gate guarda
+    // `!isOwnKey`, cioe la chiave davvero usata — e sotto si verifica
+    // che quel risultato venga proprio da `creditoFinito`.
+    const occorrenze = src.match(/!isOwnKey\s*&&\s*!skipCreditCheck\s*&&\s*(await creditoFinito|senzaCredito)/g) || [];
     expect(occorrenze.length).toBe(3);
+    expect(src, 'il saldo letto in parallelo e sempre quello del wallet')
+      .toMatch(/saldoServe \? creditoFinito\(billingEmail\) : Promise\.resolve\(false\)/);
+    expect(src, 'e si aspettano insieme, non in fila')
+      .toMatch(/const \[user, senzaCredito\] = await Promise\.all\(/);
   });
 });
 

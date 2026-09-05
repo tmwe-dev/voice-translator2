@@ -157,10 +157,16 @@ describe('apiAuth.js: un token che punta a un utente inesistente viene rifiutato
 
   it('dopo getUser(billingEmail), user assente fa uscire con 401 PRIMA del controllo credito', () => {
     const path1 = src.slice(src.indexOf('if (userToken) {'), src.indexOf('} else if'));
-    const idxGetUser = path1.indexOf('await getUser(billingEmail)');
+    // b.636 — il profilo non si chiede piu da solo con un `await`
+    // davanti: si chiede INSIEME al saldo, e qui si legge il risultato.
+    // La proprieta difesa e identica — utente assente = 401, e prima del
+    // controllo credito — e l'ordine si verifica sugli stessi passi.
+    const idxGetUser = path1.indexOf('getUser(billingEmail)');
     const idxGuard = path1.indexOf('if (!user) {');
     const idxThrow = path1.indexOf('ERRORS.UNAUTHORIZED', idxGuard);
-    const idxCredito = path1.indexOf('creditoFinito(billingEmail)');
+    // Il gate del credito adesso legge `senzaCredito` (il saldo chiesto
+    // in parallelo): e quello il punto che deve stare DOPO il 401.
+    const idxCredito = path1.indexOf('&& senzaCredito');
     expect(idxGetUser).toBeGreaterThan(-1);
     expect(idxGuard).toBeGreaterThan(idxGetUser);
     expect(idxThrow).toBeGreaterThan(idxGuard);

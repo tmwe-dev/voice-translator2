@@ -126,7 +126,10 @@ describe('la cronologia si archivia e si ritrova con la stessa chiave', () => {
     expect(u).toMatch(/getSession/);
     expect(u, 'getSession deve arricchire la sessione col nome del profilo')
       .toMatch(/session\.email && !session\.name/);
-    expect(u).toMatch(/user\?\.name.*session\.name = user\.name|session\.name = user\.name/s);
+    // b.636 — il profilo si chiede in parallelo al rinnovo della
+    // sessione, e la variabile si chiama `utente`. Il nome arriva dallo
+    // stesso posto di prima: il profilo, non il client.
+    expect(u).toMatch(/session\.name = (user|utente)\.name/);
   });
 
   it('entrambe le rotte della cronologia risolvono l\'identita allo stesso modo', () => {

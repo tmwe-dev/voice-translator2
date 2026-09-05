@@ -75,9 +75,17 @@ describe('Budget giornaliero: la riserva e atomica, non piu GET+confronto', () =
 
   it('quando rifiuta per tetto superato, ANNULLA la riserva presa (non la lascia a gonfiare il contatore)', () => {
     const blocco = codice.slice(codice.indexOf('riservatoUtenteCents = 0'), codice.indexOf('return { apiKey'));
-    // Due rollback: uno sul contatore utente, uno sul platform.
-    const rollback = blocco.match(/INCRBYFLOAT', [^,]+, -BUDGET_RESERVE_CENTS/g) || [];
-    expect(rollback.length).toBeGreaterThanOrEqual(2);
+    // b.636 — il rollback era scritto due volte, in due rami, e il ramo
+    // di piattaforma doveva ricordarsi anche di quello utente. Ora c'e
+    // UN posto solo che rende tutto quello che si e preso (`rendiTutto`),
+    // e i due rifiuti lo chiamano. La proprieta difesa e la stessa —
+    // rifiutando non si lascia niente a gonfiare i contatori — e il
+    // controllo e piu stretto: si verifica che TUTTI E DUE i rifiuti
+    // rendano, non solo che esistano due sottrazioni.
+    const rollback = blocco.match(/INCRBYFLOAT', [^,]+, -riservato\w+Cents/g) || [];
+    expect(rollback.length, 'si rende il contatore utente e quello di piattaforma').toBeGreaterThanOrEqual(2);
+    const rifiuti = blocco.match(/await rendiTutto\(\);[\s\S]{0,160}?throw NextResponse/g) || [];
+    expect(rifiuti.length, 'sia il tetto personale sia quello di piattaforma rendono prima di rifiutare').toBe(2);
   });
 
   it('trackDailySpend netta la riserva: incrementa (costo - riservato), non il costo pieno', () => {
