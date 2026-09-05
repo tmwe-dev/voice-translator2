@@ -29,7 +29,10 @@ import { trackDailySpend } from '../../../lib/apiAuth.js';
 import { withApiGuard } from '../../../lib/apiGuard.js';
 import { createLogger } from '../../../lib/logger.js';
 import { normalizzaQuery } from '../../../lib/topics/servizio.js';
-import { addebitaRiassunto, creditoFinito, creditoInsufficiente } from '../../../wallet/addebita.js';
+// b.631 — via il vecchio giro (creditoFinito + creditoInsufficiente +
+// addebitaRiassunto DOPO il fornitore): adesso riserva → commit/release,
+// come /api/summary e come le altre sette rotte che pagano.
+import { riserva, commit, release } from '../../../wallet/riserva.js';
 import { costoRiassunto } from '../../../wallet/consumo.js';
 
 const log = createLogger('topics-riassunto');
@@ -94,13 +97,33 @@ async function handlePost(req) {
   // b.159 — CONFERMATO (audit b.158, punto 7): stesso buco di
   // /api/summary, stessa correzione — gate prima della chiamata,
   // niente sintesi gratis quando il wallet e a zero.
+  //
+  // ═══ b.631 — QUEL GATE NON BASTAVA, E LO SAPEVAMO GIA DA b.171 ═══
+  // Trovato dal secondo revisore della bonifica, e verificato: qui era
+  // rimasto il VECCHIO giro — si leggeva il saldo (creditoFinito +
+  // creditoInsufficiente), si chiamava OpenAI, e si addebitava DOPO con
+  // addebitaRiassunto, per giunta ignorandone l'esito.
+  //
+  // Leggere il saldo non lo blocca: due richieste dello stesso utente
+  // con un solo secondo di credito passavano ENTRAMBE il controllo,
+  // chiamavano ENTRAMBE il fornitore, e una sola pagava. E la stessa
+  // finestra di corsa che b.171 aveva chiuso su /api/summary — che fa
+  // esattamente questo lavoro, allo stesso prezzo — e che b.161-bis
+  // aveva chiuso su transcribe, translate, tts, tts-elevenlabs.
+  // Restavano cosi due modi di incassare lo stesso importo: qui il
+  // vecchio, li il nuovo.
+  //
+  // Adesso il costo fisso si blocca SUBITO e atomicamente, prima di
+  // chiamare OpenAI: commit dopo il successo, release se qualcosa va
+  // storto. Con chiave propria non si riserva niente, come prima.
+  let riservaId = null;
+  const costoR = costoRiassunto();
   if (billingEmail && !isOwnKey) {
-    if (await creditoFinito(billingEmail, { failClosed: true })) {
-      return NextResponse.json({ error: 'Credito esaurito' }, { status: 402 });
-    }
-    if (await creditoInsufficiente(billingEmail, costoRiassunto(), { failClosed: true })) {
+    const r = await riserva(billingEmail, costoR, { tipo: 'riassunto', topic: String(titolo).slice(0, 80) });
+    if (!r.ok) {
       return NextResponse.json({ error: 'Credito insufficiente' }, { status: 402 });
     }
+    riservaId = r.riservaId;
   }
 
   const openai = new OpenAI({ apiKey });
@@ -127,13 +150,28 @@ REGOLE INVIOLABILI:
     max_tokens: 400,
   });
   } catch (e) {
+    // b.631 — il fornitore non ha consegnato: il credito torna intero.
+    // Non e un uso, non si paga.
+    if (riservaId) { await release(riservaId, 'fornitore_non_disponibile').catch(() => {}); riservaId = null; }
     log.error('sintesi: fornitore non disponibile:', e);
     return NextResponse.json({ error: 'Servizio non disponibile, riprova tra poco' }, { status: 502 });
   }
 
   const testo = (completion.choices?.[0]?.message?.content || '').trim();
-  if (!testo) return NextResponse.json({ error: 'sintesi vuota' }, { status: 502 });
+  if (!testo) {
+    // b.631 — sintesi vuota: OpenAI ha risposto ma non ha consegnato
+    // niente di leggibile. Nemmeno questo si fa pagare.
+    if (riservaId) { await release(riservaId, 'sintesi_vuota').catch(() => {}); riservaId = null; }
+    return NextResponse.json({ error: 'sintesi vuota' }, { status: 502 });
+  }
 
+  // b.631 — RETE DI SICUREZZA. Da qui al commit non dovrebbe poter
+  // fallire niente, ma «non dovrebbe» non basta quando in mezzo c'e una
+  // riserva aperta: un conto che esplode o un imprevisto lascerebbero
+  // bloccato il credito di chi ha appena letto la sua sintesi. Se
+  // succede, il credito torna e la sintesi si consegna lo stesso — il
+  // lavoro e stato fatto, e non e colpa sua.
+  try {
   // Contabilita DOPO il lavoro riuscito, come da ordine verificato.
   const costEurCents = usdToEurCents(calcGptCost(completion.usage));
   if (billingEmail && !isOwnKey) {
@@ -144,8 +182,18 @@ REGOLE INVIOLABILI:
     const charge = Math.max(MIN_CHARGE.SUMMARY, costEurCents);
     trackDailySpend(billingEmail, charge).catch((e) => log.error('tracking sintesi fallito:', e));
   }
-  // ── Wallet: addebito vero, stesso conto fisso di /api/summary ──
-  await addebitaRiassunto(isOwnKey ? null : billingEmail);
+  // ── Wallet: conferma la riserva presa prima di OpenAI ──
+  // b.631 — costo fisso, quindi commit allo stesso importo riservato:
+  // il numero chiesto prima e il numero pagato dopo, sempre. Con chiave
+  // propria la riserva non c'era e il wallet non si tocca.
+  if (riservaId) {
+    await commit(riservaId, costoR, { tipo: 'riassunto' });
+    riservaId = null;
+  }
+  } catch (e) {
+    if (riservaId) { await release(riservaId, 'errore_imprevisto').catch(() => {}); riservaId = null; }
+    log.error('sintesi: contabilita fallita, credito restituito:', e?.message);
+  }
 
   try { await redis('SET', k, testo, 'EX', TTL_SINTESI); } catch { /* senza cache si vive */ }
   return NextResponse.json({ sintesi: testo, daCache: false });

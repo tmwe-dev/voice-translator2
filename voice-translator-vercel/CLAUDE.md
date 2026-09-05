@@ -267,6 +267,44 @@ perche il working tree lo conteneva ancora.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.631** (push #904) — LA SINTESI DEL MONDO SI PAGA PRIMA,
+  NON DOPO: CHIUSA L'ULTIMA FINESTRA DI CORSA SUL DENARO.
+
+  Ordine di Luca: correggi gli errori. Il primo dei tre trovati dal
+  secondo revisore della bonifica, e il piu grave.
+
+  `/api/topics/riassunto` era **l'ultima rotta rimasta col vecchio giro**:
+  leggeva il saldo (`creditoFinito` + `creditoInsufficiente`), chiamava
+  OpenAI, e addebitava DOPO con `addebitaRiassunto` — per giunta
+  ignorandone l'esito. Leggere il saldo non lo blocca: due richieste
+  dello stesso utente con un solo secondo di credito passavano ENTRAMBE
+  il controllo, chiamavano ENTRAMBE il fornitore, e una sola pagava.
+  E la stessa finestra di corsa che b.171 aveva chiuso su `/api/summary`
+  — che fa esattamente questo lavoro, allo stesso prezzo — e che
+  b.161-bis aveva chiuso su transcribe, translate, tts, tts-elevenlabs.
+  Restavano due modi di incassare lo stesso importo: qui il vecchio, li
+  il nuovo.
+
+  **Adesso e riserva → commit/release, come tutte le altre**: il costo
+  fisso si blocca prima di chiamare OpenAI, e la riserva e fail-closed
+  per costruzione. Tre uscite fra riserva e commit, e tutte e tre
+  restituiscono il credito: fornitore caduto, sintesi vuota, imprevisto.
+  Aggiunta anche la rete finale (try attorno alla contabilita): se
+  esplode un conto, il credito torna e **la sintesi si consegna lo
+  stesso** — il lavoro e stato fatto, e non e colpa di chi l'ha chiesto.
+
+  Con questo, l'affermazione «un solo modo di far pagare» — che in b.627
+  era falsa, e il fascicolo lo dichiarava — **adesso e vera**.
+
+  **Una prova storica si e accorta, ed e cosi che doveva andare.**
+  `wallet-sicurezza-b159` verificava che il gate leggesse il saldo prima
+  di OpenAI. La proprieta da difendere resta la stessa (niente sintesi
+  gratis col wallet a zero) ma il gate che cercava era proprio quello
+  insufficiente: riportata sulla riserva, che e piu stretta.
+
+  Prove: `b631-riassunto-riserva-prima` (7), verificate spostando la
+  riserva dopo la chiamata a OpenAI — due diventano rosse.
+
 - Versione: **b.630** (push #903) — LE DUE PROVE CHE MANCAVANO, E CIO CHE
   HANNO TROVATO: UN BUCO APERTO DALLO STRUMENTO STESSO DELLA BONIFICA.
 

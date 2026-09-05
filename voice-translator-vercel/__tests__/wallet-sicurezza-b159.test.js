@@ -162,12 +162,21 @@ describe('/api/summary e /api/topics/riassunto: gate PRIMA di chiamare OpenAI (b
     expect(iGate).toBeLessThan(iOpenai);
   });
 
-  it('topics/riassunto: creditoFinito/creditoInsufficiente prima di "new OpenAI"', () => {
+  // b.631 — la proprieta e sempre quella che b.159 voleva: niente
+  // sintesi gratis quando il wallet e a zero. Ma il gate che questa
+  // prova cercava — leggere il saldo prima di chiamare OpenAI — non
+  // bastava, e il secondo revisore l'ha dimostrato: leggere il saldo non
+  // lo blocca, e due richieste concorrenti passavano entrambe. Adesso la
+  // rotta prende una RISERVA vera prima del fornitore, che e fail-closed
+  // per costruzione: piu stretto del gate che c'era qui.
+  it('topics/riassunto: riserva vera prima di "new OpenAI", non un semplice controllo del saldo', () => {
     const src = leggi('app/api/topics/riassunto/route.js');
-    const iGate = src.indexOf('creditoFinito(billingEmail');
+    const iRiserva = src.indexOf('await riserva(billingEmail, costoR');
     const iOpenai = src.indexOf('new OpenAI({ apiKey })');
-    expect(iGate).toBeGreaterThan(-1);
-    expect(iGate).toBeLessThan(iOpenai);
+    expect(iRiserva).toBeGreaterThan(-1);
+    expect(iRiserva).toBeLessThan(iOpenai);
+    // e senza riserva non si prosegue
+    expect(src.slice(iRiserva, iRiserva + 400)).toMatch(/if\s*\(\s*!\s*r\.ok\s*\)[\s\S]{0,140}402/);
   });
 });
 
