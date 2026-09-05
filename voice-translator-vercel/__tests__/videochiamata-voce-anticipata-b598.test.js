@@ -105,8 +105,19 @@ describe('b.598 — la voce locale attenua il partner subito, non dopo il giro d
     for (const p of ['app/hooks/useInterpreterMode.js', 'app/hooks/useStreamingInterpreter.js']) {
       const f = leggi(p);
       expect(f, p).toMatch(/avvisaVoceLocale.*from '\.\.\/lib\/eventi\.js'/);
-      expect(f, p).toMatch(/onCambio: avvisaVoceLocale/);
+      // b.634 — nel ripiego a blocchi il cancello ha adesso DUE
+      // ascoltatori con lo stesso segnale: la stanza (attenuazione) e il
+      // registratore (il taglio della frase). Quindi `onCambio` non punta
+      // piu direttamente all'aiutante ma a `suVoce`, che lo chiama per
+      // primo. La proprieta difesa e' la stessa — il segnale del cancello
+      // arriva alla stanza — e qui si verifica che ci arrivi davvero.
+      expect(f, p).toMatch(/onCambio: (avvisaVoceLocale|suVoce)/);
     }
+    const rip = leggi('app/hooks/useInterpreterMode.js');
+    const iSuVoce = rip.indexOf('const suVoce = (parlando) => {');
+    expect(iSuVoce, 'il ripiego passa dal suo gestore').toBeGreaterThan(-1);
+    expect(rip.slice(iSuVoce, iSuVoce + 300), 'e la prima cosa che fa e avvisare la stanza')
+      .toMatch(/avvisaVoceLocale\(parlando\)/);
   });
 
   it('la stanza ascolta i due segnali e li mette in OR', () => {

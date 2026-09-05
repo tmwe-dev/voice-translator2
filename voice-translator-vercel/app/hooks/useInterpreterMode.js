@@ -40,7 +40,51 @@ const log = createLogger('interpreter');
 // Works on both voice and video calls.
 // ═══════════════════════════════════════
 
-const CHUNK_DURATION = 3000; // 3 seconds (legacy mode)
+// ═══ b.634 — IL TAGLIO LO DECIDE LA VOCE, NON L'OROLOGIO ═══
+//
+// Ordine di Luca: «noi non abbiamo bisogno di nessun servizio esterno.
+// Dobbiamo semplicemente consegnare al traduttore e a ElevenLabs il
+// testo da tradurre il piu velocemente possibile».
+//
+// Fino a qui il registratore tagliava OGNI 3 SECONDI, a orologio, senza
+// guardare se qualcuno stesse parlando (`CHUNK_DURATION`, tolta qui).
+// Tre conseguenze, tutte misurate in produzione il 05/09:
+//
+//  1. Il taglio cadeva a meta parola. Le due meta finivano in due
+//     chiamate Whisper che non sanno l'una dell'altra: 770 blocchi
+//     mandati a trascrivere, 388 traduzioni uscite. META DEL PARLATO
+//     NON PRODUCEVA NIENTE.
+//  2. Il buco fra lo stop di un registratore e l'avvio del successivo
+//     cadeva anch'esso dove capita — spesso in mezzo a una frase.
+//  3. Si spendeva un giro intero (Whisper + traduzione + voce, ~4 s) per
+//     finestre di tre secondi contenenti mezza parola, o niente.
+//
+// Il rilevatore c'era gia e non lo usava nessuno per questo:
+// `noiseGate.js` sa in tempo reale quando si comincia e si smette di
+// parlare (serviva solo ad attenuare la voce del partner, b.598).
+// Adesso e lui a decidere quando la frase e finita:
+//
+//   parla        -> il registratore gira, e ogni pausa breve non conta
+//   tace 700 ms  -> la frase e finita: si consegna il blocco
+//   tace e basta -> non si consegna NIENTE (prima era un giro pagato)
+//
+// Il buco fra un registratore e l'altro adesso cade NEL SILENZIO, che e
+// il solo posto dove non si perde niente. Nessun servizio nuovo, nessun
+// costo nuovo: lo stesso Whisper, chiamato quando ha senso chiamarlo.
+
+/** Quanto silenzio chiude una frase. Sotto i ~500 ms si taglierebbe fra
+ *  due parole della stessa frase; sopra il secondo si aspetta per niente. */
+const CODA_SILENZIO_MS = 700;
+/** Nessun blocco piu corto di cosi: una tosse o un «si» isolato non
+ *  meritano un giro intero di trascrizione, traduzione e voce. */
+const MIN_FRASE_MS = 1200;
+/** Il tetto: chi parla senza mai fermarsi viene spezzato lo stesso, ma
+ *  a nove secondi invece che a tre — un pezzo di frase lungo si traduce
+ *  molto meglio di uno corto. */
+const MAX_FRASE_MS = 9000;
+/** Se il cancello del rumore non parte (browser senza Web Audio), non si
+ *  sa quando si parla: si torna a tagliare a orologio, ma piu largo. */
+const TETTO_SENZA_CANCELLO_MS = 4000;
 // b.615 — IL SILENZIO PESA 996 BYTE. Misurato dal vivo (collaudo 03/09, b.613):
 // un giro di 3 s di solo silenzio, dopo il filtro del rumore, e' un WebM da
 // 996 byte; una frase corta ne fa 8.000 e passa. La soglia era 1000 —
@@ -96,6 +140,14 @@ export default function useInterpreterMode({
 
   const recorderRef = useRef(null);
   const giroTimerRef = useRef(null);   // b.610 — il temporizzatore del giro di registrazione
+  // b.634 — il taglio a voce: quando ha cominciato questo giro, se ci ha
+  // parlato qualcuno, il temporizzatore della pausa, e se il blocco va
+  // buttato invece che consegnato.
+  const inizioGiroRef = useRef(0);
+  const haParlatoRef = useRef(false);
+  const silenzioTimerRef = useRef(null);
+  const scartaGiroRef = useRef(false);
+  const armaChiusuraRef = useRef(null);
   const streamRef = useRef(null);
   const noiseGateRef = useRef(null);
   const activeRef = useRef(false);
@@ -400,8 +452,23 @@ export default function useInterpreterMode({
       // parlare (non quando la traduzione e pronta, secondi dopo):
       // vedi avvisaVoceLocale in cima al file.
       let recordStream = rawStream;
+      // b.634 — il cancello del rumore ha adesso DUE mestieri con lo
+      // stesso segnale: dire alla stanza che sto parlando (b.598, per
+      // l'attenuazione) e dire al registratore quando la frase e finita.
+      // Un rilevatore solo, due ascoltatori: non se ne aggiunge un altro.
+      const suVoce = (parlando) => {
+        try { avvisaVoceLocale(parlando); } catch { /* nessun ascoltatore: il taglio prosegue */ }
+        if (!activeRef.current) return;
+        if (parlando) {
+          haParlatoRef.current = true;
+          // ha ripreso a parlare: la pausa non era la fine della frase
+          if (silenzioTimerRef.current) { clearTimeout(silenzioTimerRef.current); silenzioTimerRef.current = null; }
+          return;
+        }
+        armaChiusuraRef.current?.();
+      };
       try {
-        const ng = createNoiseGate(rawStream, { threshold: -45, onCambio: avvisaVoceLocale });
+        const ng = createNoiseGate(rawStream, { threshold: -45, onCambio: suVoce });
         if (ng?.cleanStream) {
           noiseGateRef.current = ng;
           recordStream = ng.cleanStream;
@@ -409,6 +476,10 @@ export default function useInterpreterMode({
       } catch (e) {
         log.warn('[Interpreter] Noise gate unavailable, using raw stream:', e);
       }
+      // Senza cancello non si sa quando si parla: si torna al taglio a
+      // orologio, e si assume che ogni giro contenga voce (altrimenti si
+      // butterebbe tutto).
+      const senzaCancello = !noiseGateRef.current;
 
       const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
         ? 'audio/webm;codecs=opus'
@@ -430,13 +501,52 @@ export default function useInterpreterMode({
       // file WebM intero, con la sua intestazione. Il flusso resta lo
       // stesso, il giro dopo parte da onstop: nessun buco udibile.
       codaChunkRef.current = [];
+
+      // b.634 — CHIUDE IL GIRO. `scarta` vero (o nessuna voce in questo
+      // giro) vuol dire: fermati e NON consegnare niente. Il registratore
+      // successivo parte comunque da onstop, quindi non resta mai un
+      // momento in cui il microfono non e registrato.
+      const chiudiGiro = (scarta = false) => {
+        const recorder = recorderRef.current;
+        if (!recorder || recorder.state !== 'recording') return;
+        scartaGiroRef.current = scarta || !haParlatoRef.current;
+        try { recorder.stop(); } catch { /* era gia fermo: il giro dopo parte da onstop */ }
+      };
+
+      // b.634 — ARMA LA CHIUSURA quando cala il silenzio. Se la frase e
+      // ancora troppo corta non si chiude: si aspetta il tempo che
+      // manca, cosi un «si» isolato non si porta via un giro intero.
+      // Ogni ripresa di voce disarma (vedi `suVoce`).
+      const armaChiusura = () => {
+        if (!activeRef.current || !haParlatoRef.current) return;
+        if (silenzioTimerRef.current) return;
+        const trascorso = Date.now() - inizioGiroRef.current;
+        const attesa = Math.max(CODA_SILENZIO_MS, MIN_FRASE_MS - trascorso);
+        silenzioTimerRef.current = setTimeout(() => {
+          silenzioTimerRef.current = null;
+          chiudiGiro();
+        }, attesa);
+      };
+      armaChiusuraRef.current = armaChiusura;
+
       const avviaGiro = () => {
         let recorder;
         try { recorder = new MediaRecorder(recordStream, { mimeType }); }
         catch (e) { log.error('[Interpreter] MediaRecorder non parte:', e); return; }
         recorderRef.current = recorder;
+        // b.634 — un giro nuovo comincia sempre da zero: nessuna voce
+        // ancora sentita, niente da scartare, e l'ora di partenza per
+        // sapere quanto e lungo.
+        inizioGiroRef.current = Date.now();
+        haParlatoRef.current = senzaCancello;
+        scartaGiroRef.current = false;
+        if (silenzioTimerRef.current) { clearTimeout(silenzioTimerRef.current); silenzioTimerRef.current = null; }
         // b.247 — il blocco non si elabora qui: si ACCODA.
         recorder.ondataavailable = (e) => {
+          // b.634 — giro senza voce: si butta qui, prima della coda. E il
+          // giro che prima costava una trascrizione, una traduzione e una
+          // sintesi per non dire niente.
+          if (scartaGiroRef.current) return;
           if (e.data && e.data.size > 0 && activeRef.current) accodaChunkRef.current?.(e.data);
         };
         recorder.onstop = () => {
@@ -444,10 +554,12 @@ export default function useInterpreterMode({
           if (activeRef.current) avviaGiro();
         };
         try { recorder.start(); } catch (e) { log.error('[Interpreter] start() rifiutato:', e); return; }
+        // b.634 — il tetto: chi non si ferma mai viene spezzato lo stesso.
+        // Senza cancello del rumore questo tetto E il taglio.
         giroTimerRef.current = setTimeout(() => {
           giroTimerRef.current = null;
-          try { if (recorder.state === 'recording') recorder.stop(); } catch { /* il registratore era gia fermo: il giro dopo parte da onstop */ }
-        }, CHUNK_DURATION);
+          chiudiGiro();
+        }, senzaCancello ? TETTO_SENZA_CANCELLO_MS : MAX_FRASE_MS);
       };
       activeRef.current = true;
       avviaGiro();
@@ -471,6 +583,11 @@ export default function useInterpreterMode({
       // Si chiude tutto quello che potrebbe essere rimasto aperto, nello
       // stesso ordine in cui lo chiude lo stop normale.
       clearTimeout(giroTimerRef.current); giroTimerRef.current = null;
+      // b.634 — anche il temporizzatore della pausa: senza questo, una
+      // chiusura armata potrebbe fermare un registratore di una
+      // conversazione gia chiusa.
+      clearTimeout(silenzioTimerRef.current); silenzioTimerRef.current = null;
+      armaChiusuraRef.current = null;
       const registratoreAvvio = recorderRef.current;
       recorderRef.current = null;
       try {
@@ -504,6 +621,11 @@ export default function useInterpreterMode({
     // b.610 — prima il temporizzatore e il ref, poi lo stop: onstop non
     // deve far ripartire un giro su una sessione chiusa.
     clearTimeout(giroTimerRef.current); giroTimerRef.current = null;
+      // b.634 — anche il temporizzatore della pausa: senza questo, una
+      // chiusura armata potrebbe fermare un registratore di una
+      // conversazione gia chiusa.
+      clearTimeout(silenzioTimerRef.current); silenzioTimerRef.current = null;
+      armaChiusuraRef.current = null;
     const ultimoRegistratore = recorderRef.current;
     recorderRef.current = null;
     if (ultimoRegistratore && ultimoRegistratore.state !== 'inactive') {
@@ -531,7 +653,12 @@ export default function useInterpreterMode({
       // audio in attesa di essere tradotti.
       activeRef.current = false;
       codaChunkRef.current = [];
-      clearTimeout(giroTimerRef.current); giroTimerRef.current = null;   // b.610
+      clearTimeout(giroTimerRef.current); giroTimerRef.current = null;
+      // b.634 — anche il temporizzatore della pausa: senza questo, una
+      // chiusura armata potrebbe fermare un registratore di una
+      // conversazione gia chiusa.
+      clearTimeout(silenzioTimerRef.current); silenzioTimerRef.current = null;
+      armaChiusuraRef.current = null;   // b.610
       const registratoreSmontaggio = recorderRef.current;
       recorderRef.current = null;
       if (registratoreSmontaggio && registratoreSmontaggio.state !== 'inactive') {

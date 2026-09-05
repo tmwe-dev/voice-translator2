@@ -267,6 +267,73 @@ perche il working tree lo conteneva ancora.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.634** (push #907) — IL TAGLIO LO DECIDE LA VOCE, NON
+  L'OROLOGIO: META DEL PARLATO SMETTE DI SPARIRE.
+
+  Primo intervento dopo l'audit dell'interprete in videochiamata
+  (`AUDIT-INTERPRETE-VIDEOCHIAMATA.md`). Ordine di Luca: «noi non
+  abbiamo bisogno di nessun servizio esterno. Dobbiamo semplicemente
+  consegnare al traduttore e a ElevenLabs il testo da tradurre il piu
+  velocemente possibile». Questo intervento non aggiunge nessun
+  fornitore e non costa un centesimo in piu: **costa di meno**.
+
+  Il registratore tagliava **ogni 3 secondi, a orologio**, senza
+  guardare se qualcuno stesse parlando. Tre conseguenze, tutte misurate
+  in produzione il 05/09:
+
+   1. Il taglio cadeva **a meta parola**, e le due meta finivano in due
+      chiamate a Whisper che non sanno l'una dell'altra. Nei conteggi
+      Vercel di 7 giorni: **770 blocchi mandati a trascrivere, 388
+      traduzioni uscite**. Meta del parlato non produceva niente.
+   2. Anche il buco fra lo stop di un registratore e l'avvio del
+      successivo (b.610) cadeva dove capita — spesso dentro una frase.
+   3. Si pagava un giro intero — Whisper + traduzione + sintesi, ~4
+      secondi di catena — per finestre di tre secondi che contenevano
+      mezza parola, o soltanto silenzio.
+
+  **Il rilevatore c'era gia, e per questo non lo usava nessuno.**
+  `noiseGate.js` sa in tempo reale quando si comincia e si smette di
+  parlare: serviva solo ad attenuare la voce del partner (b.598).
+  Adesso lo stesso identico segnale ha due ascoltatori — la stanza e il
+  registratore — e non se ne aggiunge un secondo:
+
+      parla        -> il registratore gira, e le pause fra le parole non contano
+      tace 700 ms  -> la frase e finita: si consegna il blocco
+      tace e basta -> non si consegna NIENTE (prima era un giro pagato)
+
+  Il buco fra un registratore e l'altro adesso cade **nel silenzio**,
+  che e il solo posto dove non si perde niente. Tre misure, e il perche
+  di ognuna: `CODA_SILENZIO_MS` 700 (sotto i 500 si taglia fra due
+  parole della stessa frase, sopra il secondo si aspetta per niente);
+  `MIN_FRASE_MS` 1200 (una tosse o un «si» isolato non meritano un giro
+  intero); `MAX_FRASE_MS` 9000 (chi non si ferma mai viene spezzato lo
+  stesso, ma un pezzo lungo si traduce molto meglio di uno corto).
+  Senza cancello del rumore — browser senza Web Audio — si torna al
+  taglio a orologio, ma a 4 secondi, e si assume che ci sia voce:
+  altrimenti si butterebbe tutto.
+
+  **Cosa cambia in bolletta**: meno chiamate, non piu. Ogni giro a vuoto
+  che prima costava una trascrizione, una traduzione e una sintesi per
+  non dire niente, adesso non parte proprio.
+
+  Non chiude ancora l'imbuto: la coda resta seriale e la voce sta ancora
+  dentro il percorso critico. Quello e il prossimo intervento, ed e a
+  parte (Protocollo Bonifica, un pezzo per registrazione).
+
+  **Due prove storiche si sono accorte, e nessuna e stata indebolita.**
+  `interprete-b247` pretendeva `CHUNK_DURATION` e lo `stop()` a orologio:
+  riportata sulle misure nuove e su `chiudiGiro`, che e adesso l'unico
+  posto da cui si ferma il registratore. `videochiamata-voce-anticipata-b598`
+  pretendeva `onCambio: avvisaVoceLocale`: adesso il cancello punta a
+  `suVoce`, e la prova verifica che la PRIMA cosa che fa sia avvisare la
+  stanza — la proprieta difesa e la stessa, il controllo e piu stretto.
+
+  Prove: `registratore-a-giri-b610` riscritta e ampliata (7, di cui 5
+  nuove di comportamento: il taglio sulla pausa, la frase troppo corta
+  che aspetta, chi riprende a parlare e non viene tagliato a meta, il
+  silenzio che non manda niente a trascrivere, il tetto). Prova del
+  contrario: togliendo la chiusura sulla pausa, tre diventano rosse.
+
 - Versione: **b.633** (push #906) — DUE VOLTE «SI» IN UN MINUTO, E LA
   SECONDA LA PAGAVI DUE VOLTE.
 

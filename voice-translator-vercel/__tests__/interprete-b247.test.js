@@ -461,16 +461,26 @@ describe('PROVA VERA — tre blocchi audio di fila, nessuno perso', () => {
 // CIÒ CHE NON DEVE ESSERSI ROTTO
 // ───────────────────────────────────────────────────────────────
 describe('ciò che non deve essersi rotto', () => {
-  it('la pipeline di ripiego a blocchi da 3 secondi c\'è ancora', () => {
+  it('la pipeline di ripiego a blocchi c\'è ancora, e ogni giro è un file intero', () => {
     const s = modalita();
-    expect(s).toContain('const CHUNK_DURATION = 3000;');
+    // b.634 — il blocco non dura piu 3 secondi fissi: dura una FRASE.
+    // `CHUNK_DURATION` non esiste piu, al suo posto ci sono le misure
+    // del taglio a voce. La proprieta difesa qui — il ripiego esiste, e
+    // ogni giro consegna un WebM intero — e' rimasta la stessa.
+    expect(s).not.toContain('const CHUNK_DURATION');
+    expect(s).toContain('const CODA_SILENZIO_MS = 700;');
+    expect(s).toContain('const MAX_FRASE_MS = 9000;');
     // b.610 — QUESTA RIGA DIFENDEVA IL DIFETTO. `recorder.start(3000)`
     // consegna fette senza intestazione, e Whisper le rifiutava tutte
-    // tranne la prima (registri Vercel, collaudo 03/09). Ora il blocco
-    // dura ancora 3 secondi, ma ogni giro e' un registratore intero.
+    // tranne la prima (registri Vercel, collaudo 03/09). Ogni giro deve
+    // restare un registratore intero: questo non cambia con b.634.
     expect(s).toContain('recorder.start();');
-    expect(s).not.toContain('recorder.start(CHUNK_DURATION)');
-    expect(s).toMatch(/setTimeout\(\(\) => \{[\s\S]{0,120}recorder\.stop\(\)[\s\S]{0,80}\}, CHUNK_DURATION\)/);
+    expect(s).not.toMatch(/recorder\.start\([A-Z_0-9]/);
+    // b.634 — il taglio ha due cause: la pausa della voce e il tetto.
+    // Tutte e due devono finire in `chiudiGiro`, che e' l'unico posto da
+    // cui si ferma il registratore (prima era uno `stop()` sparso).
+    expect(s).toMatch(/silenzioTimerRef\.current = setTimeout\(\(\) => \{[\s\S]{0,160}chiudiGiro\(\)/);
+    expect(s).toMatch(/giroTimerRef\.current = setTimeout\(\(\) => \{[\s\S]{0,160}chiudiGiro\(\)[\s\S]{0,200}MAX_FRASE_MS/);
     expect(s).toContain("fetch('/api/transcribe'");
   });
 
