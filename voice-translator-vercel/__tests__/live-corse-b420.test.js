@@ -54,6 +54,9 @@ vi.mock('../app/wallet/riserva.js', () => ({
 
 vi.mock('../app/lib/apiAuth.js', () => ({
   resolveAuth: async () => ({ apiKey: 'chiave', isOwnKey: false, billingEmail: 'luca@esempio.it' }),
+  // b.632 — ponte.js rende la riserva sul tetto giornaliero: il finto
+  // deve esporla, o l'import esplode.
+  rilasciaRiservaGiornaliera: async () => undefined,
 }));
 
 const deposito = new Map();

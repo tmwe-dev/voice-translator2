@@ -267,6 +267,61 @@ perche il working tree lo conteneva ancora.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.632** (push #905) — I CINQUE CENTESIMI CHE NESSUNO
+  RENDEVA: IL TETTO GIORNALIERO SI CONSUMAVA ANCHE SENZA SPENDERE.
+
+  Secondo dei tre difetti trovati dal revisore indipendente della
+  bonifica. Non e un buco nei soldi: e un buco nel PERMESSO di spendere,
+  che e peggio da diagnosticare perche non lascia traccia contabile.
+
+  Da b.170, `resolveAuth` riserva 5 centesimi sul contatore giornaliero
+  personale e 5 su quello di piattaforma PRIMA di ogni chiamata a
+  pagamento — serve a chiudere la finestra di corsa sui tetti (due
+  richieste concorrenti non leggono piu lo stesso valore vecchio).
+  A nettare quella riserva contro il costo vero e **solo**
+  `trackDailySpend`, che si chiama **solo quando la chiamata riesce**.
+
+  Ogni uscita anticipata fra le due lasciava i 5 centesimi appesi fino
+  alla scadenza della chiave, ~25 ore dopo: 402 credito insufficiente,
+  400 corpo non valido, 502 fornitore caduto, testo vuoto. Il conto e
+  presto fatto: il tetto personale e 500 centesimi, quindi **cento
+  rifiuti di fila chiudono fuori l'utente per un giorno intero senza
+  che abbia speso nulla** — e da tutto, non solo dalla rotta che ha
+  fallito. `/api/transcribe` rifiuta 132 audio corrotti in sette giorni:
+  il meccanismo non e teorico.
+
+  In `app/lib/compagni/ponte.js` era peggio: quel file `trackDailySpend`
+  non l'ha **mai** chiamato. Quindi li la riserva restava appesa
+  **sempre**, anche a chiamata perfettamente riuscita — quattro porte
+  (testo, visione, avatar, linea dal vivo), cinque centesimi ognuna,
+  ogni volta.
+
+  E in `/api/translate` ce n'era anche una **seconda**, invisibile: il
+  riscatto con gpt-4o richiama `resolveAuth`, quindi riserva di nuovo,
+  ma il netto finale passava solo la prima. Adesso si sommano.
+
+  **La correzione ha la stessa forma del `release` del portafoglio**:
+  se non si e consumato, si rende. `rilasciaRiservaGiornaliera` in
+  apiAuth.js — che e `trackDailySpend` con costo vero ZERO, cosi il
+  netto diventa esattamente lo storno e non si duplica la logica dei
+  contatori. Nelle cinque rotte va in un `finally`: qualunque strada
+  prenda l'uscita, la riserva torna. Fuoco-e-dimentica: restituire un
+  credito non deve poter allungare o far fallire la risposta.
+
+  **DEBITO DICHIARATO, e va detto chiaro**: i compagni adesso sono
+  *invisibili* al tetto di piattaforma. Non e una regressione — non ci
+  sono mai stati dentro, `ponte.js` non ha mai tracciato la spesa — ma
+  prima quei 5 centesimi appesi facevano da tetto per sbaglio, con un
+  numero che non c'entrava col costo vero e che non si azzerava mai.
+  Aggiungere il conto vero dei compagni e un intervento a se: b.632
+  **restituisce soltanto, non cambia cosa si misura** (Protocollo
+  Bonifica, regola 3 — mai mescolare togliere e cambiare).
+
+  Prove: `b632-riserva-budget-restituita` (16), di cui quattro di
+  comportamento su Redis finto — compresa la ricostruzione dei cento
+  rifiuti che azzeravano il tetto. Prova del contrario: annullando lo
+  storno e togliendo un `finally`, tre diventano rosse.
+
 - Versione: **b.631** (push #904) — LA SINTESI DEL MONDO SI PAGA PRIMA,
   NON DOPO: CHIUSA L'ULTIMA FINESTRA DI CORSA SUL DENARO.
 

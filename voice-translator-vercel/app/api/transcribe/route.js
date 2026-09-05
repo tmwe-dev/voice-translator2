@@ -5,7 +5,7 @@ import { writeFile, unlink } from 'fs/promises';
 import { createReadStream } from 'fs';
 import { join } from 'path';
 import { randomUUID } from 'crypto';
-import { resolveAuth, trackDailySpend } from '../../lib/apiAuth.js';
+import { resolveAuth, trackDailySpend, rilasciaRiservaGiornaliera } from '../../lib/apiAuth.js';
 import { MIN_CREDITS, MIN_CHARGE, calcWhisperCost, usdToEurCents } from '../../lib/config.js';
 import { createLogger } from '../../lib/logger.js';
 import { assertElaborazioneConsentita, DirectModeError } from '../../lib/sessionGuard.js';
@@ -35,6 +35,10 @@ const log = createLogger('transcribe');
  */
 async function handlePost(req) {
   let riservaId = null;
+  // b.632 — la riserva di budget presa da resolveAuth, finche non e
+  // nettata da trackDailySpend. Se resta piena all'uscita, si rende:
+  // vedi il finally in fondo.
+  let riservaGiorno = null;
   try {
     const formData = await req.formData();
     const audioFile = formData.get('audio');
@@ -94,6 +98,7 @@ async function handlePost(req) {
       provider: 'openai',
       minCredits: MIN_CREDITS.PROCESS,
     });
+    riservaGiorno = { email: billingEmail, u: riservatoUtenteCents, p: riservatoPiattaformaCents };
 
     const bytes = await audioFile.arrayBuffer();
     const buffer = Buffer.from(bytes);
@@ -216,6 +221,7 @@ async function handlePost(req) {
       const costoEurCents = usdToEurCents(costoUsd);
       // b.170 — netta la riserva fatta da resolveAuth (vedi apiAuth.js).
       trackDailySpend(billingEmail, Math.max(MIN_CHARGE.PROCESS, costoEurCents), riservatoUtenteCents, riservatoPiattaformaCents).catch(() => {});
+      riservaGiorno = null; // nettata qui: il finally non deve renderla due volte
     }
 
     // ── b.107 · la ricevuta che sostituisce la parola del client ──
@@ -246,6 +252,15 @@ async function handlePost(req) {
     if (e instanceof NextResponse) return e;
     log.error('Error:', e);
     return NextResponse.json({ error: 'Internal error' }, { status: 500 });
+  } finally {
+    // b.632 — uscita anticipata (400, 402, fornitore caduto, imprevisto):
+    // il costo vero non c'e mai stato, quindi la riserva sul tetto
+    // giornaliero torna indietro. Fuoco-e-dimentica: restituire un
+    // credito non deve poter allungare o far fallire la risposta.
+    if (riservaGiorno) {
+      rilasciaRiservaGiornaliera(riservaGiorno.email, riservaGiorno.u, riservaGiorno.p).catch(() => {});
+      riservaGiorno = null;
+    }
   }
 }
 

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { withApiGuard } from '../../lib/apiGuard.js';
 import { getSession, getUser } from '../../lib/users.js';
-import { resolveAuth, trackDailySpend } from '../../lib/apiAuth.js';
+import { resolveAuth, trackDailySpend, rilasciaRiservaGiornaliera } from '../../lib/apiAuth.js';
 import { MIN_CREDITS, MIN_CHARGE, calcElevenLabsCost, usdToEurCents } from '../../lib/config.js';
 import { preprocessForTTS } from '../../lib/ttsPreprocessor.js';
 import { getELVoiceForLang, getELModelForLang } from '../../lib/voiceDefaults.js';
@@ -90,6 +90,9 @@ async function handlePost(req) {
   // prima del blocco try interno.
   let riservaId = null;
   let costoPrevisto = 0;
+  // b.632 — la riserva di budget presa da resolveAuth, finche non e
+  // nettata da trackDailySpend. Se resta piena all'uscita, si rende.
+  let riservaGiorno = null;
   try {
     const { text, voiceId, langCode, userToken, roomId, roomSessionToken, avatarName, speechMode } = await req.json();
 
@@ -117,6 +120,7 @@ async function handlePost(req) {
       provider: 'elevenlabs',
       minCredits: MIN_CREDITS.TTS_ELEVENLABS,
     });
+    riservaGiorno = { email: billingEmail, u: riservatoUtenteCents, p: riservatoPiattaformaCents };
 
     // ── Wallet: la voce premium costa 3x — blocco PRIMA di chiamare ElevenLabs ──
     // b.157 — audit pagamenti: qui il guasto-nella-lettura-del-saldo va
@@ -281,6 +285,7 @@ async function handlePost(req) {
             // b.594 — MODULO 3: fuoco-e-dimentica come /api/tts, non piu
             // await che allunga la risposta se Redis e' lento.
             trackDailySpend(billingEmail, charge1, riservatoUtenteCents, riservatoPiattaformaCents).catch((e) => log.warn('Fallback daily-spend tracking failed:', e?.message));
+            riservaGiorno = null; // nettata qui: il finally non deve renderla due volte
           }
           // b.164 — stesso audio dello stesso testo, solo un modello di
           // riserva: si conferma la STESSA riserva presa sopra, non se
@@ -319,6 +324,7 @@ async function handlePost(req) {
       // b.170 — netta la riserva fatta da resolveAuth (vedi apiAuth.js).
       // b.594 — MODULO 3: fuoco-e-dimentica come /api/tts, non piu await.
       trackDailySpend(billingEmail, charge, riservatoUtenteCents, riservatoPiattaformaCents).catch((e) => log.error('ElevenLabs daily-spend tracking error:', e));
+      riservaGiorno = null; // nettata qui: il finally non deve renderla due volte
     }
 
     const buffer = Buffer.from(await response.arrayBuffer());
@@ -357,6 +363,13 @@ async function handlePost(req) {
     if (e instanceof NextResponse) return e;
     log.error('ElevenLabs TTS error:', e);
     return NextResponse.json({ error: 'Internal error' }, { status: 500 });
+  } finally {
+    // b.632 — uscita anticipata: nessun costo vero, quindi la riserva
+    // sul tetto giornaliero torna indietro. Fuoco-e-dimentica.
+    if (riservaGiorno) {
+      rilasciaRiservaGiornaliera(riservaGiorno.email, riservaGiorno.u, riservaGiorno.p).catch(() => {});
+      riservaGiorno = null;
+    }
   }
 }
 

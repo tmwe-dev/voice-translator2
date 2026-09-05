@@ -425,3 +425,36 @@ export async function trackDailySpend(email, amountCents, riservatoUtenteCents =
     log.error('Daily spend tracking error:', e);
   }
 }
+
+/**
+ * b.632 — LA RISERVA DI BUDGET CHE NESSUNO RESTITUIVA
+ *
+ * Trovato dal secondo revisore della bonifica, e verificato leggendo il
+ * codice: `resolveAuth` riserva BUDGET_RESERVE_CENTS (5) sul contatore
+ * personale E su quello di piattaforma PRIMA di ogni chiamata a
+ * pagamento (b.170, per chiudere la finestra di corsa sui tetti). Ma
+ * l'UNICO posto che nettava quella riserva era `trackDailySpend`, che
+ * si chiama solo quando la chiamata e ANDATA A BUON FINE.
+ *
+ * Ogni uscita anticipata fra le due — credito insufficiente (402),
+ * corpo non valido (400), fornitore che esplode (502), testo vuoto —
+ * lasciava i 5 centesimi appesi sul contatore fino alla scadenza della
+ * chiave, ~25 ore dopo. Non e denaro dell'utente (il wallet e un altro
+ * conto, e quello si rilascia): e il suo TETTO DI SPESA. Cento
+ * richieste rifiutate di fila — e /api/transcribe ne rifiuta 132 in
+ * sette giorni per audio corrotto — bruciano 500 centesimi su un tetto
+ * personale di 500: l'utente resta chiuso fuori per un giorno intero
+ * senza aver speso nulla. Sul contatore di piattaforma (€100) lo stesso
+ * meccanismo, moltiplicato per tutti.
+ *
+ * Questa e la restituzione mancante. E la stessa forma del `release`
+ * del portafoglio: se non si e consumato, si rende.
+ *
+ * Nota di implementazione: e `trackDailySpend` con costo vero ZERO —
+ * il netto diventa `0 - riservato`, cioe esattamente lo storno. Non si
+ * duplica la logica dei contatori: si riusa quella gia provata.
+ */
+export async function rilasciaRiservaGiornaliera(email, riservatoUtenteCents = 0, riservatoPiattaformaCents = 0) {
+  if (riservatoUtenteCents <= 0 && riservatoPiattaformaCents <= 0) return;
+  return trackDailySpend(email, 0, riservatoUtenteCents, riservatoPiattaformaCents);
+}

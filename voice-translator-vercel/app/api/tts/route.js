@@ -1,7 +1,7 @@
 import OpenAI from 'openai';
 import { NextResponse } from 'next/server';
 import { withApiGuard } from '../../lib/apiGuard.js';
-import { resolveAuth, trackDailySpend } from '../../lib/apiAuth.js';
+import { resolveAuth, trackDailySpend, rilasciaRiservaGiornaliera } from '../../lib/apiAuth.js';
 import { preventivoTesto } from '../../wallet/addebita.js';
 import { riserva, commit, release } from '../../wallet/riserva.js';
 import { costoProviderCent, CARATTERI_PER_SECONDO } from '../../wallet/provider-costi.js';
@@ -59,6 +59,9 @@ async function handlePost(req) {
   // imprevisto, anche uno che scoppia prima del blocco try interno.
   let riservaId = null;
   let costoPrevisto = 0;
+  // b.632 — la riserva di budget presa da resolveAuth, finche non e
+  // nettata da trackDailySpend. Se resta piena all'uscita, si rende.
+  let riservaGiorno = null;
   try {
     // Validate input
     const body = await req.json();
@@ -89,6 +92,7 @@ async function handlePost(req) {
       provider: 'openai',
       minCredits: MIN_CREDITS.TTS_OPENAI,
     });
+    riservaGiorno = { email: billingEmail, u: riservatoUtenteCents, p: riservatoPiattaformaCents };
 
     const openai = new OpenAI({ apiKey });
     const lang2 = (langCode || '').replace(/-.*/, '');
@@ -134,6 +138,7 @@ async function handlePost(req) {
       }
       // b.170 — netta la riserva fatta da resolveAuth (vedi apiAuth.js).
       trackDailySpend(billingEmail, charge, riservatoUtenteCents, riservatoPiattaformaCents).catch(() => {});
+      riservaGiorno = null; // nettata qui: il finally non deve renderla due volte
     }
 
     // ── TTS Router: check if a better engine is available for this language ──
@@ -267,6 +272,13 @@ async function handlePost(req) {
     if (e instanceof NextResponse) return e;
     log.error('TTS error:', e);
     return apiError(ErrorCode.TTS_FAILED, e.message);
+  } finally {
+    // b.632 — uscita anticipata: nessun costo vero, quindi la riserva
+    // sul tetto giornaliero torna indietro. Fuoco-e-dimentica.
+    if (riservaGiorno) {
+      rilasciaRiservaGiornaliera(riservaGiorno.email, riservaGiorno.u, riservaGiorno.p).catch(() => {});
+      riservaGiorno = null;
+    }
   }
 }
 

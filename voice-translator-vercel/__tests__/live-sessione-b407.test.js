@@ -40,6 +40,9 @@ vi.mock('../app/lib/apiAuth.js', () => ({
     if (autorizzazione.esplode) throw new Error('non autorizzato');
     return { apiKey: autorizzazione.chiave, isOwnKey: autorizzazione.isOwnKey, billingEmail: autorizzazione.email };
   },
+  // b.632 — ponte.js rende la riserva sul tetto giornaliero: il finto
+  // deve esporla, o l'import esplode.
+  rilasciaRiservaGiornaliera: async () => undefined,
 }));
 
 // ── il deposito veloce, finto ──

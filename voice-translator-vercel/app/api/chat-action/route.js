@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { withApiGuard } from '../../lib/apiGuard.js';
-import { resolveAuth, trackDailySpend } from '../../lib/apiAuth.js';
+import { resolveAuth, trackDailySpend, rilasciaRiservaGiornaliera } from '../../lib/apiAuth.js';
 import { buildCompactTranscript, getActionPrompt, isCJKConversation, inquadraTrascrizione, COMPITO_AZIONE } from '../../lib/chatActions.js';
 import { callLLM } from '../../lib/llmCaller.js';
 import { riserva, commit, release } from '../../wallet/riserva.js';
@@ -41,6 +41,9 @@ async function handlePost(request) {
   // errore la puo restituire (release) qualunque cosa vada storto dopo
   // averla presa. Stesso schema di tts/route.js.
   let riservaId = null;
+  // b.632 — la riserva di budget presa da resolveAuth, finche non e
+  // nettata da trackDailySpend. Se resta piena all'uscita, si rende.
+  let riservaGiorno = null;
   try {
     const body = await request.json();
 
@@ -97,6 +100,7 @@ async function handlePost(request) {
       minCredits: MIN_CREDITS.CHAT_ACTION,
       skipCreditCheck: false,
     });
+    riservaGiorno = { email: auth?.billingEmail || null, u: auth?.riservatoUtenteCents || 0, p: auth?.riservatoPiattaformaCents || 0 };
 
     if (!auth?.apiKey) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
@@ -218,6 +222,7 @@ async function handlePost(request) {
       // resolveAuth (vedi apiAuth.js): sistema diverso dal wallet qui
       // sopra (centesimi di budget piattaforma vs secondi di wallet).
       trackDailySpend(paganteReale, MIN_CHARGE.CHAT_ACTION, auth.riservatoUtenteCents, auth.riservatoPiattaformaCents).catch(() => {});
+      riservaGiorno = null; // nettata qui: il finally non deve renderla due volte
     }
 
     return NextResponse.json({
@@ -233,6 +238,16 @@ async function handlePost(request) {
     if (riservaId) await release(riservaId, 'errore_imprevisto').catch(() => {});
     log.error('Error:', err);
     return NextResponse.json({ error: 'Internal error' }, { status: 500 });
+  } finally {
+    // b.632 — uscita anticipata: nessun costo vero, quindi la riserva
+    // sul tetto giornaliero torna indietro. Qui vale anche per il caso
+    // «chiave propria»: paganteReale e nullo e trackDailySpend non
+    // viene chiamato, ma resolveAuth aveva comunque riservato sul
+    // contatore DI PIATTAFORMA. Fuoco-e-dimentica.
+    if (riservaGiorno) {
+      rilasciaRiservaGiornaliera(riservaGiorno.email, riservaGiorno.u, riservaGiorno.p).catch(() => {});
+      riservaGiorno = null;
+    }
   }
 }
 

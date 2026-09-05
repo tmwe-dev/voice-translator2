@@ -22,7 +22,7 @@
 // ═══════════════════════════════════════════════════════════════
 
 import OpenAI, { toFile } from 'openai';
-import { resolveAuth } from '../apiAuth.js';
+import { resolveAuth, rilasciaRiservaGiornaliera } from '../apiAuth.js';
 import { riserva, commit, release } from '../../wallet/riserva.js';
 import { preventivoTesto } from '../../wallet/addebita.js';
 import { COSTO_AVATAR_SECONDI, LIVE_TRATTO_SECONDI, LIVE_SOGLIA_RINNOVO, LIVE_BATTITO_SECONDI, MOLTIPLICATORE_DAL_VIVO, creditoDalVivo } from '../../wallet/tariffe.js';
@@ -96,6 +96,21 @@ export async function generaTesto({
     return { ok: false, motivo: 'non-autorizzato', status: 401 };
   }
   const { apiKey, isOwnKey, billingEmail } = auth;
+  // b.632 — I COMPAGNI NON HANNO MAI CONTATO NEL TETTO GIORNALIERO,
+  // MA NE CONSUMAVANO IL BORDO. resolveAuth riserva 5+5 centesimi sui
+  // contatori giornalieri (utente e piattaforma) prima di ogni chiamata
+  // a pagamento; a nettarli e solo trackDailySpend, che QUESTO file non
+  // ha mai chiamato. Risultato: ogni chiamata a un compagno lasciava
+  // appesi 5 centesimi sul tetto personale (500) e 5 su quello di
+  // piattaforma (10000), per ~25 ore, anche quando andava tutto bene.
+  // Cento chiamate e l'utente restava chiuso fuori da TUTTO — traduzioni
+  // comprese — senza aver speso un centesimo di quel tetto.
+  // Qui si rende subito: il conto vero dei compagni e il portafoglio
+  // (riserva/commit qui sotto), non questo contatore.
+  // DEBITO DICHIARATO (fascicolo §debito): i compagni restano invisibili
+  // al tetto di piattaforma. Aggiungere il conto vero e un intervento a
+  // parte — b.632 restituisce soltanto, non cambia cosa si misura.
+  rilasciaRiservaGiornaliera(auth.billingEmail, auth.riservatoUtenteCents, auth.riservatoPiattaformaCents).catch(() => {});
 
   // 2. Riserva (solo se paga la piattaforma). Stima prudente sul tetto output.
   let riservaId = null;
@@ -226,6 +241,10 @@ export async function leggiImmagine({ immagineDataUrl = '', istruzione = '', use
   try { auth = await resolveAuth({ userToken, provider: 'openai' }); }
   catch { return { ok: false, motivo: 'non-autorizzato', status: 401 }; }
   const { apiKey, isOwnKey, billingEmail } = auth;
+  // b.632 — si rende subito la riserva sul tetto giornaliero: questo
+  // file non chiama mai trackDailySpend, quindi nessuno la nettava e
+  // restava appesa ~25 ore. Vedi la nota estesa in generaTesto.
+  rilasciaRiservaGiornaliera(auth.billingEmail, auth.riservatoUtenteCents, auth.riservatoPiattaformaCents).catch(() => {});
 
   let riservaId = null;
   const paga = billingEmail && !isOwnKey;
@@ -273,6 +292,10 @@ export async function generaAvatar({ prompt = '', userToken = null, riferimentoD
     return { ok: false, motivo: 'non-autorizzato', status: 401 };
   }
   const { apiKey, isOwnKey, billingEmail } = auth;
+  // b.632 — si rende subito la riserva sul tetto giornaliero: questo
+  // file non chiama mai trackDailySpend, quindi nessuno la nettava e
+  // restava appesa ~25 ore. Vedi la nota estesa in generaTesto.
+  rilasciaRiservaGiornaliera(auth.billingEmail, auth.riservatoUtenteCents, auth.riservatoPiattaformaCents).catch(() => {});
 
   // Riserva a costo fisso (un'immagine). Solo se paga la piattaforma.
   let riservaId = null;
@@ -521,6 +544,10 @@ export async function apriLineaDalVivo({ compagno, email, userToken, nomeLingua,
   try { auth = await resolveAuth({ userToken, provider: 'elevenlabs' }); }
   catch { return { ok: false, motivo: 'non-autorizzato', status: 401 }; }
   const { apiKey, isOwnKey, billingEmail } = auth;
+  // b.632 — si rende subito la riserva sul tetto giornaliero: questo
+  // file non chiama mai trackDailySpend, quindi nessuno la nettava e
+  // restava appesa ~25 ore. Vedi la nota estesa in generaTesto.
+  rilasciaRiservaGiornaliera(auth.billingEmail, auth.riservatoUtenteCents, auth.riservatoPiattaformaCents).catch(() => {});
   if (!apiKey) return { ok: false, motivo: 'chiave-mancante', status: 503 };
 
   // Chi paga: la stessa regola del resto di Life. Con chiave propria

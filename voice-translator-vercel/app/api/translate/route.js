@@ -4,7 +4,7 @@ import { proteggiEmoji, ripristinaEmoji } from '../../lib/emojiScudo.js';
 import { withApiGuard } from '../../lib/apiGuard.js';
 import { addCost } from '../../lib/store.js';
 import { deductLendingTokens } from '../../lib/users.js';
-import { resolveAuth, trackDailySpend } from '../../lib/apiAuth.js';
+import { resolveAuth, trackDailySpend, rilasciaRiservaGiornaliera } from '../../lib/apiAuth.js';
 import { MIN_CREDITS, MIN_CHARGE, calcGptCost, calcTtsCost, usdToEurCents, roundCost, roundEurCents } from '../../lib/config.js';
 import { redis } from '../../lib/redis.js';
 // b.422 — getSupabaseAdmin non serve piu qui: serviva solo alla
@@ -33,6 +33,13 @@ async function handlePost(req) {
   // imprevisto dopo la riserva, anche uno che scoppia prima ancora di
   // arrivare al blocco try interno piu sotto.
   let riservaId = null;
+  // b.632 — le riserve di budget prese da resolveAuth (qui puo esserne
+  // presa una SECONDA: il riscatto con gpt-4o piu sotto richiama
+  // resolveAuth). Si sommano: sono increment sulle stesse due chiavi.
+  // Quel che resta all'uscita si rende — vedi il finally in fondo.
+  let riservaGiornoUtente = 0;
+  let riservaGiornoPiattaforma = 0;
+  let riservaGiornoEmail = null;
   try {
     // ── b.106 · qui c'era un SECONDO limitatore sulla STESSA chiave ──
     // withApiGuard, in fondo al file, conta gia su "translate:IP" con
@@ -185,6 +192,9 @@ async function handlePost(req) {
       provider: authProvider,
       minCredits: MIN_CREDITS.TRANSLATE,
     });
+    riservaGiornoEmail = billingEmail;
+    riservaGiornoUtente += riservatoUtenteCents || 0;
+    riservaGiornoPiattaforma += riservatoPiattaformaCents || 0;
 
     // ── b.161 · saldo positivo ma insufficiente: si blocca PRIMA, non dopo ──
     // CONFERMATO (quarto audit esterno, punto 1): resolveAuth chiede solo
@@ -437,6 +447,12 @@ async function handlePost(req) {
                   minCredits: 0,
                 });
                 retryKey = retryAuth.apiKey;
+                // b.632 — questa e una SECONDA riserva sul tetto
+                // giornaliero, e nessuno la nettava: trackDailySpend piu
+                // sotto passa solo quella della prima resolveAuth. Ogni
+                // riscatto lasciava appesi 5+5 centesimi per ~25 ore.
+                riservaGiornoUtente += retryAuth.riservatoUtenteCents || 0;
+                riservaGiornoPiattaforma += retryAuth.riservatoPiattaformaCents || 0;
                 if (isOwnKey && !retryAuth.isOwnKey) {
                   isOwnKey = false;
                 }
@@ -579,7 +595,11 @@ async function handlePost(req) {
       // b.170 — si netta la riserva fatta da resolveAuth prima della
       // chiamata (vedi la nota in apiAuth.js): senza, il contatore
       // conterebbe due volte per ogni traduzione.
-      bgTasks.push(trackDailySpend(billingEmail, Math.max(MIN_CHARGE.TRANSLATE, msgCostEurCents), riservatoUtenteCents, riservatoPiattaformaCents).catch(() => {}));
+      bgTasks.push(trackDailySpend(billingEmail, Math.max(MIN_CHARGE.TRANSLATE, msgCostEurCents), riservaGiornoUtente, riservaGiornoPiattaforma).catch(() => {}));
+      // b.632 — nettate qui (tutte, compresa quella del riscatto): il
+      // finally non deve renderle una seconda volta.
+      riservaGiornoUtente = 0;
+      riservaGiornoPiattaforma = 0;
     }
     if (isLending && lendingCodeUsed) {
       const tokenEstimate = Math.ceil((text.length + (translated?.length || 0)) / 4);
@@ -724,6 +744,16 @@ async function handlePost(req) {
     // ── FINE b.90 ──
 
     return apiError(ErrorCode.TRANSLATION_FAILED, 'Translation service temporarily unavailable');
+  } finally {
+    // b.632 — uscita anticipata (400, 402, fornitore caduto, ripiego
+    // Google che non addebita nulla): nessun costo vero, quindi la
+    // riserva sul tetto giornaliero torna indietro. Fuoco-e-dimentica:
+    // restituire un credito non deve poter allungare la risposta.
+    if (riservaGiornoUtente > 0 || riservaGiornoPiattaforma > 0) {
+      rilasciaRiservaGiornaliera(riservaGiornoEmail, riservaGiornoUtente, riservaGiornoPiattaforma).catch(() => {});
+      riservaGiornoUtente = 0;
+      riservaGiornoPiattaforma = 0;
+    }
   }
 }
 

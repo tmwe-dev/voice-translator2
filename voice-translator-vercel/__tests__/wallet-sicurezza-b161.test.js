@@ -319,13 +319,18 @@ describe('/api/translate: il retry GPT-4o riporta la vera isOwnKey del retry, no
 
   it('se il retry NON usa una chiave propria, isOwnKey esterna si allinea (diventa false)', () => {
     const i = src.indexOf('const retryAuth = await resolveAuth({');
-    const dopo = src.slice(i, i + 400);
+    // b.632 — finestra allargata: fra la chiamata e l'allineamento di
+    // isOwnKey c'e ora la nota (e il conteggio) della SECONDA riserva sul
+    // tetto giornaliero. La proprieta verificata e la stessa: le due cose
+    // stanno vicine, nello stesso blocco.
+    const dopo = src.slice(i, i + 1200);
     expect(dopo).toMatch(/if\s*\(isOwnKey\s*&&\s*!retryAuth\.isOwnKey\)\s*\{\s*isOwnKey\s*=\s*false;/);
   });
 
   it('un fallimento del retryAuth (wallet esaurito) non manda in crash: si tiene il testo originale', () => {
     const i = src.indexOf('const retryAuth = await resolveAuth({');
-    const blocco = src.slice(i - 20, i + 500);
+    // b.632 — stessa ragione della finestra qui sopra.
+    const blocco = src.slice(i - 20, i + 1300);
     expect(blocco).toContain('} catch { /* wallet esaurito o chiave assente: niente retry pagato, si tiene il testo originale */ }');
   });
 });
