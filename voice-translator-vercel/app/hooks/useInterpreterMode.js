@@ -93,6 +93,38 @@ const TETTO_SENZA_CANCELLO_MS = 4000;
 // un margine vero: sotto questa misura non c'e' voce.
 const BYTE_MINIMI_BLOCCO_CON_VOCE = 1500;
 
+// ═══ b.635 — LA VOCE ESCE DAL PERCORSO CRITICO ═══
+//
+// La coda dei blocchi era UNA SOLA e teneva dentro tutto: trascrizione,
+// traduzione, sottotitolo, sintesi vocale, base64 e invio sul canale
+// dati. Finche non finiva l'ultimo di quei passi, il blocco successivo
+// non cominciava il primo.
+//
+// Misurato in produzione il 05/09 (tabella `translations`, stanza vera,
+// 302 intervalli): la catena chiudeva un giro ogni 6-8 secondi, e NON
+// UN SOLO intervallo sotto i 4 secondi. Il microfono ne consegna uno
+// ogni 3: entra piu del doppio di quello che esce, la coda cresce fino
+// al tetto e da li in poi si buttano i blocchi piu VECCHI. Da fuori:
+// quaranta secondi di ritardo e meta conversazione persa.
+//
+// Ma la sintesi vocale non serve al blocco successivo. Serve solo al
+// partner, e arriva quando arriva (b.277 aveva gia staccato il
+// sottotitolo dalla voce per lo stesso motivo). Quindi adesso ci sono
+// DUE code, ognuna in fila per conto suo:
+//
+//   coda 1 (parola) — Whisper -> traduzione -> sottotitolo al partner
+//   coda 2 (voce)   — sintesi -> base64 -> canale dati
+//
+// L'ordine resta garantito dentro ognuna, ed e cio che conta: i
+// sottotitoli si leggono in ordine, le voci si sentono in ordine. Ma
+// mentre la voce della frase 1 si sta sintetizzando, la frase 2 e gia
+// da Whisper. Il giro critico perde tutto il tempo della sintesi.
+//
+// Il tetto della coda voce e piccolo apposta: se la sintesi non tiene
+// il passo, la voce di sei frasi fa non serve a nessuno — meglio dirne
+// meno e in tempo. Si butta la piu VECCHIA, e lo si dichiara.
+const MAX_CODA_VOCE = 4;
+
 // b.247 — tetto della coda dei blocchi audio in attesa di essere tradotti.
 // Dodici blocchi da 3 secondi sono 36 secondi di parlato accumulato: oltre
 // quella soglia non si e piu in ritardo, si e in un'altra conversazione, e
@@ -156,6 +188,11 @@ export default function useInterpreterMode({
   // b.247 — coda FIFO dei blocchi audio (vedi `accodaChunk`)
   const codaChunkRef = useRef([]);
   const accodaChunkRef = useRef(null);
+  // b.635 — coda FIFO delle FRASI GIA TRADOTTE in attesa di voce.
+  // Corre in parallelo alla prima: vedi la nota su MAX_CODA_VOCE.
+  const codaVoceRef = useRef([]);
+  const voceInCorsoRef = useRef(false);
+  const accodaVoceRef = useRef(null);
 
   // Keep refs in sync
   useEffect(() => { activeRef.current = active; }, [active]);
@@ -358,40 +395,83 @@ export default function useInterpreterMode({
         });
       }
 
-      // 3. TTS — Generate audio of translation
-      //
-      // b.381 — IL RIPIEGO TORNAVA ALLA VECCHIA ARCHITETTURA: un solo
-      // motore e un `return` muto. b.598: campo `lang` che ElevenLabs
-      // non leggeva. b.599 — la richiesta ai due motori (ordine, due
-      // tentativi, 402, 204, circuit breaker) e' la STESSA funzione dello
-      // streaming: lib/audio/voceTradotta.js. Le divergenze fra le due
-      // copie sono finite.
-      const { blob: ttsBlob, motivo } = await chiediVoce(translated, {
-        langCode: partnerLang, roomId,
-        roomSessionToken: roomSessionTokenRef?.current,
-        userToken, preferisciEleven,
-      });
-      if (motivo === 'niente-da-dire') return;   // b.552 — sole emoji/punteggiatura
-      if (!ttsBlob) {
-        // b.381 — il silenzio era la cosa peggiore: chi parla continuava a
-        // parlare credendo che dall'altra parte si sentisse.
-        log.warn('[interprete] nessun motore vocale disponibile: la traduzione resta scritta');
-        lancia(EVENTO.VOCE_NON_DISPONIBILE);
-        // b.598 — l'evento sopra non lo ascolta nessuno: si dice anche
-        // nel modo che la UI e il partner capiscono davvero (b.352).
-        try { webrtc?.sendDirectMessage?.({ type: MSG.VOCE_MANCATA }); } catch { /* canale chiuso: il sottotitolo e' gia partito */ }
-        setVoceGuastaLegacy(true);
-        setTimeout(() => setVoceGuastaLegacy(false), 8000);
-        return;
-      }
-      // 4. Send via DataChannel to partner — b.277 il sottotitolo e gia
-      // partito, qui viaggia solo la voce. b.599: base64 e pezzi da 10 KB
-      // nel modulo unico.
-      inviaAudioDC(webrtc, await blobABase64(ttsBlob));
+      // 3. La voce: NON qui. b.635 — si accoda e la fa la seconda fila,
+      // mentre questa riprende subito col blocco successivo. Prima
+      // sintesi, base64 e invio stavano in mezzo al percorso critico e
+      // ritardavano la trascrizione della frase dopo, che non c'entra
+      // niente con loro.
+      accodaVoceRef.current?.(translated);
     } catch (e) {
       log.warn('[Interpreter] Process chunk error:', e);
     }
-  }, [myLang, partnerLang, roomId, roomSessionTokenRef, userToken, webrtc, preferisciEleven]);
+    // b.635 — `preferisciEleven` non serve piu qui: la voce e nella
+    // seconda fila. Il resto (stanza, gettoni, lingue) serve ancora.
+  }, [myLang, partnerLang, roomId, roomSessionTokenRef, userToken, webrtc]);
+
+  // ═══ b.635 — LA SECONDA FILA: DALLA FRASE TRADOTTA ALLA VOCE ═══
+  // Sintesi, base64, invio sul canale dati. Una frase alla volta, in
+  // ordine — l'ordine qui conta quanto prima: due voci che partono
+  // insieme non si capiscono. Ma questa fila non blocca piu la prima.
+  const diciERimanda = useCallback(async (translated) => {
+    // b.381 — IL RIPIEGO TORNAVA ALLA VECCHIA ARCHITETTURA: un solo
+    // motore e un `return` muto. b.598: campo `lang` che ElevenLabs
+    // non leggeva. b.599 — la richiesta ai due motori (ordine, due
+    // tentativi, 402, 204, circuit breaker) e' la STESSA funzione dello
+    // streaming: lib/audio/voceTradotta.js. Le divergenze fra le due
+    // copie sono finite.
+    const { blob: ttsBlob, motivo } = await chiediVoce(translated, {
+      langCode: partnerLang, roomId,
+      roomSessionToken: roomSessionTokenRef?.current,
+      userToken, preferisciEleven,
+    });
+    if (motivo === 'niente-da-dire') return;   // b.552 — sole emoji/punteggiatura
+    if (!ttsBlob) {
+      // b.381 — il silenzio era la cosa peggiore: chi parla continuava a
+      // parlare credendo che dall'altra parte si sentisse.
+      log.warn('[interprete] nessun motore vocale disponibile: la traduzione resta scritta');
+      lancia(EVENTO.VOCE_NON_DISPONIBILE);
+      // b.598 — l'evento sopra non lo ascolta nessuno: si dice anche
+      // nel modo che la UI e il partner capiscono davvero (b.352).
+      try { webrtc?.sendDirectMessage?.({ type: MSG.VOCE_MANCATA }); } catch { /* canale chiuso: il sottotitolo e' gia partito */ }
+      setVoceGuastaLegacy(true);
+      setTimeout(() => setVoceGuastaLegacy(false), 8000);
+      return;
+    }
+    // b.277 il sottotitolo e gia partito, qui viaggia solo la voce.
+    // b.599: base64 e pezzi da 10 KB nel modulo unico.
+    inviaAudioDC(webrtc, await blobABase64(ttsBlob));
+  }, [partnerLang, roomId, roomSessionTokenRef, userToken, webrtc, preferisciEleven]);
+
+  const elaboraCodaVoce = useCallback(async () => {
+    if (voceInCorsoRef.current) return;
+    voceInCorsoRef.current = true;
+    try {
+      while (codaVoceRef.current.length > 0 && activeRef.current) {
+        const testo = codaVoceRef.current.shift();
+        try { await diciERimanda(testo); }
+        catch (e) { log.warn('[Interpreter] voce non consegnata:', e?.message || e); }
+      }
+    } finally {
+      voceInCorsoRef.current = false;
+      // Interprete spento: quello che resta e la voce di una
+      // conversazione finita. Non si consegna.
+      if (!activeRef.current) codaVoceRef.current = [];
+    }
+  }, [diciERimanda]);
+
+  const accodaVoce = useCallback((translated) => {
+    if (!activeRef.current || !translated) return;
+    codaVoceRef.current.push(translated);
+    if (codaVoceRef.current.length > MAX_CODA_VOCE) {
+      const scartate = codaVoceRef.current.length - MAX_CODA_VOCE;
+      codaVoceRef.current.splice(0, scartate);
+      // b.247 insegna: lo scarto in SILENZIO era il difetto, non lo scarto.
+      log.warn(`[Interpreter] b.635 — coda voce piena (max ${MAX_CODA_VOCE}): scartate ${scartate} frasi, le piu vecchie. Il sottotitolo resta, la voce no: la sintesi non tiene il passo.`);
+    }
+    elaboraCodaVoce();
+  }, [elaboraCodaVoce]);
+
+  useEffect(() => { accodaVoceRef.current = accodaVoce; }, [accodaVoce]);
 
   // Keep processChunkRef in sync so recorder.ondataavailable always calls latest version
   // (avoids stale closure if myLang/partnerLang/userToken change mid-recording)
@@ -501,6 +581,7 @@ export default function useInterpreterMode({
       // file WebM intero, con la sua intestazione. Il flusso resta lo
       // stesso, il giro dopo parte da onstop: nessun buco udibile.
       codaChunkRef.current = [];
+      codaVoceRef.current = [];   // b.635 — si riparte con tutte e due le file vuote
 
       // b.634 — CHIUDE IL GIRO. `scarta` vero (o nessuna voce in questo
       // giro) vuol dire: fermati e NON consegnare niente. Il registratore
@@ -618,6 +699,7 @@ export default function useInterpreterMode({
     // svuota: e parlato di una conversazione chiusa.
     activeRef.current = false;
     codaChunkRef.current = [];
+    codaVoceRef.current = [];   // b.635 — anche le frasi in attesa di voce
     // b.610 — prima il temporizzatore e il ref, poi lo stop: onstop non
     // deve far ripartire un giro su una sessione chiusa.
     clearTimeout(giroTimerRef.current); giroTimerRef.current = null;
@@ -653,6 +735,7 @@ export default function useInterpreterMode({
       // audio in attesa di essere tradotti.
       activeRef.current = false;
       codaChunkRef.current = [];
+      codaVoceRef.current = [];   // b.635 — anche le frasi in attesa di voce
       clearTimeout(giroTimerRef.current); giroTimerRef.current = null;
       // b.634 — anche il temporizzatore della pausa: senza questo, una
       // chiusura armata potrebbe fermare un registratore di una

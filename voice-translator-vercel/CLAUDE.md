@@ -267,6 +267,56 @@ perche il working tree lo conteneva ancora.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.635** (push #908) — DUE FILE, NON UNA: LA VOCE ESCE DAL
+  PERCORSO CRITICO E L'IMBUTO SI APRE.
+
+  Secondo intervento dopo l'audit. Anche questo senza un fornitore nuovo
+  e senza un centesimo in piu.
+
+  La coda dei blocchi era **una sola** e teneva dentro tutto: Whisper,
+  traduzione, sottotitolo, sintesi vocale, base64, invio sul canale
+  dati. Finche non finiva l'ULTIMO di quei passi, il blocco successivo
+  non cominciava il PRIMO.
+
+  Misurato in produzione il 05/09 (tabella `translations`, stanza vera,
+  302 intervalli fra un blocco e il successivo): la catena chiudeva un
+  giro ogni **6-8 secondi**, e **non un solo intervallo sotto i 4**. Il
+  microfono ne consegna uno ogni 3: entra piu del doppio di quello che
+  esce, la coda cresce fino al tetto di 12 e da li in poi si buttano i
+  blocchi **piu vecchi**. Da fuori: quaranta secondi di ritardo e meta
+  conversazione persa. E l'imbuto che Luca aveva chiesto di trovare.
+
+  **Ma la sintesi vocale non serve al blocco successivo.** Serve al
+  partner, e arriva quando arriva — b.277 aveva gia staccato il
+  sottotitolo dalla voce esattamente per questo motivo, ma si era
+  fermato a meta strada: il sottotitolo partiva prima, e poi il blocco
+  restava comunque fermo ad aspettare la voce.
+
+  Adesso sono **due file**, ognuna in ordine per conto suo:
+
+      coda 1 (parola) — Whisper -> traduzione -> sottotitolo al partner
+      coda 2 (voce)   — sintesi -> base64 -> canale dati
+
+  L'ordine dentro ognuna resta garantito, ed e cio che conta: i
+  sottotitoli si leggono in ordine, le voci si sentono una alla volta —
+  due voci che partono insieme non si capiscono. Ma mentre la voce della
+  frase 1 si sintetizza, **la frase 2 e gia da Whisper**. Il giro
+  critico perde tutto il tempo della sintesi.
+
+  Il tetto della seconda fila e piccolo apposta (`MAX_CODA_VOCE` 4): se
+  la sintesi non tiene il passo, la voce di sei frasi fa non serve a
+  nessuno — meglio dirne meno e in tempo. Si butta la piu vecchia, e
+  **lo si dichiara nel registro**: b.247 ha insegnato che il difetto non
+  era lo scarto, era lo scarto in silenzio. Il sottotitolo di quelle
+  frasi resta comunque: si perde la voce, non il senso.
+
+  Prove: `b635-voce-fuori-dal-percorso-critico` (5), di cui due di
+  comportamento vero — con la sintesi della prima frase tenuta ferma a
+  meta, la seconda frase **arriva lo stesso** a trascrizione, traduzione
+  e sottotitolo; e le due voci restano comunque una dietro l'altra.
+  Prova del contrario: rimettendo l'attesa della voce dentro
+  `processChunk`, la prima diventa rossa.
+
 - Versione: **b.634** (push #907) — IL TAGLIO LO DECIDE LA VOCE, NON
   L'OROLOGIO: META DEL PARLATO SMETTE DI SPARIRE.
 
