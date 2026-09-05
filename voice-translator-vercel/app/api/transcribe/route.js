@@ -196,6 +196,30 @@ async function handlePost(req) {
       });
       await unlink(tempPath).catch(() => {});
       if (riservaId) { await release(riservaId, 'whisper_fallito'); riservaId = null; }
+      // ═══ b.639 — UN AUDIO CHE NON SI PUO USARE NON E UN GUASTO NOSTRO ═══
+      // Trovato dal vivo (collaudo 05/09, dal Chrome di Luca, mandando a
+      // posta un file che Whisper non digerisce): il fornitore risponde
+      // «400 Audio file might be corrupted or unsupported» e questa riga
+      // rilanciava, quindi il catch esterno rispondeva 500 «Internal
+      // error». Sbagliato in tre modi:
+      //  · un audio inutilizzabile e un problema di CIO CHE E' ARRIVATO,
+      //    non del server: la risposta giusta e 400;
+      //  · ogni 500 finisce su Sentry come guasto interno e nel conto
+      //    degli errori di ogni audit — e' rumore che nasconde i guasti
+      //    veri, la stessa battaglia di b.617 e b.626;
+      //  · a chi chiama non arriva nessun motivo: l'interprete conta il
+      //    fallimento (tre di fila accendono `problemaAudio`) senza poter
+      //    dire ALL'UTENTE che il microfono sta consegnando roba muta.
+      // Adesso si distingue: se il rifiuto viene dal fornitore (400) e
+      // l'audio, e si risponde 400 con un motivo leggibile; qualunque
+      // altra cosa (rete, timeout, quota) resta un guasto del fornitore e
+      // continua a risalire come prima.
+      if (e?.status === 400) {
+        return NextResponse.json(
+          { error: 'Audio non utilizzabile', motivo: 'audio_non_supportato' },
+          { status: 400 }
+        );
+      }
       throw e;
     }
     await unlink(tempPath).catch(() => {});

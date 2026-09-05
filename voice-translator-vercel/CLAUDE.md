@@ -267,6 +267,63 @@ perche il working tree lo conteneva ancora.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.639** (push #912) — UN AUDIO CHE NON SI PUO USARE NON E
+  UN GUASTO NOSTRO: IL 500 CHE DOVEVA ESSERE UN 400.
+
+  Secondo difetto trovato dallo stesso collaudo fisico del 05/09, e
+  questo era **pre-esistente**, non mio: mandando a `/api/transcribe` un
+  file che Whisper non digerisce, la rotta ha risposto **500 «Internal
+  error»**, due volte su due. Nei registri Vercel, la causa vera:
+
+      {"tag":"transcribe","msg":"Whisper ha rifiutato l'audio:",
+       "byte":24912,"tipoDichiarato":"audio/mpeg","durataSecDichiarata":0}
+      {"tag":"transcribe","msg":"Error:",
+       "error":"400 Audio file might be corrupted or unsupported"}
+
+  Il fornitore dice **400**, e noi lo trasformiamo in **500**. Sbagliato
+  in tre modi:
+
+   1. un audio inutilizzabile e un problema di CIO CHE E' ARRIVATO, non
+      del server: la risposta giusta e 400;
+   2. ogni 500 finisce su Sentry come guasto interno e nel conto degli
+      errori di ogni audit — e rumore che nasconde i guasti veri, la
+      stessa battaglia di b.617 e b.626;
+   3. a chi chiama non arriva nessun motivo: l'interprete conta il
+      fallimento (tre di fila accendono `problemaAudio`) senza poter
+      dire all'utente che il microfono sta consegnando roba muta.
+
+  Adesso si distingue: un rifiuto del fornitore per l'audio (400)
+  risponde 400 con `motivo: 'audio_non_supportato'`; qualunque altra
+  cosa — rete, timeout, quota — resta un guasto del fornitore e risale
+  come prima. Il credito torna prima di rispondere, come gia faceva: un
+  audio rifiutato non si paga.
+
+  La diagnostica di b.626 resta dov'era e a livello `error`: e quella
+  che ha permesso di capire la causa in trenta secondi invece che in
+  due settimane, ed e servita davvero.
+
+  **Nota onesta sul collaudo**: il file che ha provocato il 500 era un
+  MP3 mandato da me con nome `.webm` — quindi la causa del rifiuto era
+  il mio test, non un difetto del percorso normale. Il difetto trovato
+  non e «Whisper rifiuta»: e **come rispondiamo quando rifiuta**. Con un
+  WebM vero (voce sintetizzata dal nostro stesso motore, 4,15 s) la
+  rotta ha risposto 200 con la trascrizione esatta in 2864 ms.
+
+  **La catena, misurata dal vivo su produzione b.636** (mediane, dal
+  Chrome di Luca): `/api/transcribe` **2864 ms** su 4,15 s di parlato,
+  `/api/translate` **2615 ms**, `/api/tts-edge` **2330 ms**. In fila
+  facevano **7809 ms per frase** — e coincide con i 6-8 secondi misurati
+  sugli intervalli della tabella `translations`: **conferma indipendente
+  della diagnosi dell'audit**. Con b.635 il percorso critico scende a
+  **5479 ms** (la voce corre a fianco): **-30%**. Ma con un parlato di
+  4 secondi il ritardo cresce ancora di ~1,3 s a frase: **e b.637
+  (Scribe, 150 ms al posto dei 2864 di Whisper) il pezzo che chiude
+  davvero il conto**, portando il percorso critico a ~2,8 s, sotto la
+  durata del parlato.
+
+  Prove: `b639-audio-non-utilizzabile` (4). Prova del contrario:
+  disattivando il ramo del 400, due diventano rosse.
+
 - Versione: **b.638** (push #911) — «APERTO» E «DENTRO» NON SONO LA
   STESSA COSA: IL DIFETTO CHE SOLO IL COLLAUDO POTEVA TROVARE.
 
