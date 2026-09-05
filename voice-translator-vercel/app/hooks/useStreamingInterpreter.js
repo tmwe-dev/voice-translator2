@@ -14,8 +14,8 @@ import {
 } from '../lib/audio/voceTradotta.js';
 import { EVENTO, MSG, avvisaVoceLocale } from '../lib/eventi.js';
 // b.602 — chiave, socket e cattura PCM16: un client solo (lib/audio/
-// deepgramLive.js), condiviso con SpeakerView e useDeepgramSTT.
-import { chiediChiaveDeepgram, apriDeepgram } from '../lib/audio/deepgramLive.js';
+// sttLive.js), condiviso con SpeakerView e useDeepgramSTT.
+import { chiediChiaveSTT, apriAscolto } from '../lib/audio/sttLive.js';
 const log = createLogger('streaming');
 
 // ═══════════════════════════════════════════════════════════════
@@ -97,7 +97,6 @@ export default function useStreamingInterpreter({
   const currentTranslationRef = useRef('');   // Traduzione corrente della frase in corso
   const ttsQueueRef = useRef([]);             // Coda TTS frasi completate
   const processingTTSRef = useRef(false);
-  const deepgramKeyRef = useRef(null);
 
   // Subtitle cleanup timers
   const subtitleTimersRef = useRef([]);
@@ -106,22 +105,16 @@ export default function useStreamingInterpreter({
   useEffect(() => { activeRef.current = active; }, [active]);
   useEffect(() => { convContextRef.current = conversationContext; }, [conversationContext]);
 
-  // ═══ FETCH DEEPGRAM KEY ═══
-  useEffect(() => {
-    // b.247 — la decisione «Deepgram si o no» era scritta in DUE posti che
-    // non si parlavano: useDeepgramSTT.js la spegneva (b.172) e questo file
-    // chiamava /api/stt-token lo stesso. Ora la risposta e una sola e sta in
-    // lib/sttPolicy.js; qui ci si limita a chiederla.
-    if (!deepgramAmmesso(USO.INTERPRETE)) return;
-    // b.161 — roomSessionToken obbligatorio per il percorso roomId (vedi
-    // stt-token/route.js, punto 2 quarto audit).
-    // b.363 — chiamata senza scadenza: se restava appesa la chiave
-    // Deepgram non arrivava mai e l'interprete non partiva, in silenzio.
-    // La lettura del corpo ora e protetta: una pagina d'errore al posto
-    // del JSON faceva esplodere la catena invece di ripiegare su null.
-    chiediChiaveDeepgram({ userToken, roomId, roomSessionToken: roomSessionTokenRef?.current })
-      .then(k => { if (k) deepgramKeyRef.current = k; });
-  }, [userToken, roomId, roomSessionTokenRef]);
+  // ═══ b.637 — IL GETTONE NON SI CHIEDE PIU IN ANTICIPO ═══
+  // Qui c'era un effetto che, al montaggio, chiedeva il gettone e lo
+  // teneva in un ref per tutta la vita del componente. Con Deepgram
+  // funzionava (chiave temporanea, riusabile finche viva). Il gettone di
+  // ElevenLabs e MONOUSO e dura 15 minuti: conservarlo vuol dire aprire
+  // il socket con un gettone gia consumato — cioe un interprete che non
+  // parte, e il ripiego a blocchi che riprende in silenzio.
+  // Adesso se ne chiede UNO PER SOCKET, dentro `start()`, dove serve. La
+  // decisione «trascrizione dal vivo si o no» (sttPolicy, b.247) e gia
+  // controllata li: togliendo l'effetto non si e tolto nessun cancello.
 
   // ═══ INCREMENTAL TRANSLATION ═══
   // Traduce un frammento di frase con il conversation context
@@ -459,13 +452,12 @@ export default function useStreamingInterpreter({
       return false;
     }
 
-    if (!deepgramKeyRef.current) {
-      // b.363 — secondo tentativo per la chiave (con scadenza, dentro il client unico).
-      deepgramKeyRef.current = await chiediChiaveDeepgram({ userToken, roomId, roomSessionToken: roomSessionTokenRef?.current });
-    }
-
-    if (!deepgramKeyRef.current) {
-      log.error('[StreamInterp] No Deepgram key available');
+    // b.637 — un gettone per socket, sempre fresco (vedi la nota sopra).
+    // b.363 — con scadenza, e la lettura del corpo protetta: una pagina
+    // d'errore al posto del JSON faceva esplodere la catena.
+    const credenziale = await chiediChiaveSTT({ userToken, roomId, roomSessionToken: roomSessionTokenRef?.current });
+    if (!credenziale) {
+      log.error('[StreamInterp] nessun gettone per la trascrizione dal vivo');
       return false;
     }
 
@@ -506,11 +498,12 @@ export default function useStreamingInterpreter({
       } catch { /* filtro del rumore non applicabile: si registra il flusso cosi com e */ }
 
       // b.602 — socket, cattura PCM16 e lettura dei messaggi: client unico.
-      // b.247 — una sola porta d'uscita: apriDeepgram risolve null se non
+      // b.247 — una sola porta d'uscita: apriAscolto risolve null se non
       // si apre (e ha gia spento tutto), altrimenti { chiudi }.
       const speechLang = getLang(myLang)?.speech || 'en-US';
-      const sessione = await apriDeepgram({
-        chiave: deepgramKeyRef.current,
+      const sessione = await apriAscolto({
+        chiave: credenziale.chiave,
+        fornitore: credenziale.fornitore,
         stream: recordStream,
         lingua: speechLang,
         utteranceEndMs: SENTENCE_PAUSE_MS,

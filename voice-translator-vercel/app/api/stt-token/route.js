@@ -115,23 +115,88 @@ async function handler(req) {
     return NextResponse.json({ error: 'Credito esaurito', creditoEsaurito: true }, { status: 402 });
   }
 
-  const deepgramKey = process.env.DEEPGRAM_API_KEY;
-  if (!deepgramKey) {
+  // ═══ b.637 — LA TRASCRIZIONE DAL VIVO LA FA CHI GIA CI PARLA ═══
+  //
+  // Ordine di Luca: «noi non abbiamo bisogno di nessun servizio esterno,
+  // Deepgram o altra minchiata. Abbiamo gia ElevenLabs a disposizione».
+  // Ha ragione, e i conti gli danno ragione due volte:
+  //
+  //   ElevenLabs Scribe v2 Realtime — $0,39/ora, ~150 ms, 90+ lingue
+  //   Deepgram nova-2                — $0,46/ora, fornitore NUOVO
+  //
+  // Stessa chiave che gia paga la voce (ELEVENLABS_API_KEY), nessun
+  // account nuovo, nessun contratto nuovo, e ore gia comprese nel piano.
+  //
+  // E soprattutto: fino a qui questa rotta rispondeva 503 a TUTTI,
+  // sempre — `DEEPGRAM_API_KEY` non e mai stata impostata in produzione
+  // (22 su 22 nei registri Vercel dei 7 giorni al 05/09). Quindi
+  // l'interprete in streaming — 687 righe scritte, provate e mai
+  // eseguite — non e MAI partito, e ogni videochiamata ripiegava sui
+  // blocchi da 3 secondi. Non era una scelta: era una variabile
+  // d'ambiente mancante, in silenzio.
+  //
+  // I GETTONI. Non si manda mai al telefono la chiave vera: ElevenLabs
+  // emette un gettone monouso che scade in 15 minuti
+  // (`/v1/single-use-token/realtime_scribe`), Deepgram una chiave
+  // temporanea da 60 secondi. Stessa disciplina di prima.
+  //
+  // Deepgram resta come RIPIEGO e non si tocca: se un domani la chiave
+  // c'e, funziona. Ma non e piu la prima scelta, e la sua assenza non e
+  // piu un guasto.
+  const chiaveEleven = process.env.ELEVENLABS_API_KEY;
+  const chiaveDeepgram = process.env.DEEPGRAM_API_KEY;
+  if (!chiaveEleven && !chiaveDeepgram) {
     // b.363 — uscita di guasto muta: dal registro sembrava che non
     // fosse successo niente. La trascrizione dal vivo era spenta per tutti, in silenzio.
-    log.warn('Trascrizione dal vivo: DEEPGRAM_API_KEY assente');
+    log.warn('Trascrizione dal vivo: nessuna chiave (ELEVENLABS_API_KEY / DEEPGRAM_API_KEY)');
     return NextResponse.json(
-      { error: 'Streaming STT not configured. Set DEEPGRAM_API_KEY.' },
+      { error: 'Streaming STT not configured. Set ELEVENLABS_API_KEY.' },
+      { status: 503 }
+    );
+  }
+
+  if (chiaveEleven) {
+    try {
+      const res = await fetch('https://api.elevenlabs.io/v1/single-use-token/realtime_scribe', {
+        method: 'POST',
+        headers: { 'xi-api-key': chiaveEleven },
+        signal: AbortSignal.timeout(8000),
+      });
+      if (res.ok) {
+        const data = await res.json().catch(() => ({}));
+        if (data?.token) {
+          return NextResponse.json({
+            key: data.token,
+            fornitore: 'elevenlabs',
+            temporary: true,
+            expiresIn: 900,   // 15 minuti, e monouso
+          });
+        }
+        log.error('Trascrizione dal vivo: ElevenLabs non ha restituito il gettone');
+      } else {
+        log.warn('Gettone Scribe non emesso:', res.status);
+      }
+    } catch (e) {
+      log.warn('Gettone Scribe non emesso:', e?.message || e);
+    }
+    // b.637 — non si esce qui: se sotto c'e Deepgram, si prova quello.
+    // Un guasto momentaneo di un fornitore non deve spegnere la
+    // trascrizione dal vivo quando ce n'e un altro configurato.
+  }
+
+  if (!chiaveDeepgram) {
+    return NextResponse.json(
+      { error: 'Temporary STT key creation failed. Streaming STT unavailable.' },
       { status: 503 }
     );
   }
 
   try {
-    // Request a temporary key from Deepgram (valid for short time)
+    // Ripiego: chiave temporanea da Deepgram (valida 60 secondi)
     const res = await fetch('https://api.deepgram.com/v1/keys', {
       method: 'POST',
       headers: {
-        'Authorization': `Token ${deepgramKey}`,
+        'Authorization': `Token ${chiaveDeepgram}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
@@ -162,6 +227,7 @@ async function handler(req) {
     }
     return NextResponse.json({
       key: data.key,
+      fornitore: 'deepgram',
       temporary: true,
       expiresIn: 60,
     });

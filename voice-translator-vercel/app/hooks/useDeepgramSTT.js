@@ -4,9 +4,9 @@ import { getLang } from '../lib/constants.js';
 import { deepgramAmmesso, USO } from '../lib/sttPolicy.js';
 import { createLogger } from '../lib/logger.js';
 // b.602 — chiave, socket e cattura PCM16: client Deepgram unico
-// (lib/audio/deepgramLive.js), lo stesso di interprete e relatore. Qui
+// (lib/audio/sttLive.js), lo stesso di interprete e relatore. Qui
 // c'era la seconda delle tre copie. La voce viene dal microfono unico.
-import { chiediChiaveDeepgram, apriDeepgram } from '../lib/audio/deepgramLive.js';
+import { chiediChiaveSTT, apriAscolto } from '../lib/audio/sttLive.js';
 import { prendiVoce, rendiVoce } from '../lib/microfonoMaster.js';
 const log = createLogger('deepgram');
 
@@ -37,7 +37,6 @@ export default function useDeepgramSTT({
   const sessioneRef = useRef(null);      // b.602 — { chiudi } dal client unico
   const deepgramStreamRef = useRef(null);
   const daRendereRef = useRef(null);     // b.602 — copia del microfono unico da rendere
-  const deepgramKeyRef = useRef(null);
 
   // b.172 — DEEPGRAM DISATTIVATO su richiesta esplicita dell'utente
   // ("non voglio Deepgram"). Deepgram e la dettatura vocale (voce→testo)
@@ -116,10 +115,10 @@ export default function useDeepgramSTT({
     streamingModeRef.current = true;
     setStreamingMsg({ original: '', translated: null, isStreaming: true });
 
-    if (!deepgramKeyRef.current) {
-      deepgramKeyRef.current = await chiediChiaveDeepgram({ userToken, roomId, roomSessionToken: roomSessionTokenRef?.current });
-    }
-    if (!deepgramKeyRef.current) return false;
+    // b.637 — un gettone per socket: quello di ElevenLabs e monouso e
+    // conservarlo vuol dire aprire il socket con un gettone consumato.
+    const credenziale = await chiediChiaveSTT({ userToken, roomId, roomSessionToken: roomSessionTokenRef?.current });
+    if (!credenziale) return false;
 
     let stream;
     try { stream = await prendiVoce(); daRendereRef.current = stream; }
@@ -136,8 +135,8 @@ export default function useDeepgramSTT({
     }
     deepgramStreamRef.current = stream;
 
-    const sessione = await apriDeepgram({
-      chiave: deepgramKeyRef.current, stream, lingua: dgLang,
+    const sessione = await apriAscolto({
+      chiave: credenziale.chiave, fornitore: credenziale.fornitore, stream, lingua: dgLang,
       utteranceEndMs: 1500,
       onTesto: (transcript, isFinal) => {
         if (isFinal) {

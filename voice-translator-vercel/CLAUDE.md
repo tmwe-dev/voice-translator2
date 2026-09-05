@@ -267,6 +267,94 @@ perche il working tree lo conteneva ancora.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.637** (push #910) — LA TRASCRIZIONE DAL VIVO LA FA CHI
+  GIA CI PARLA: SCRIBE v2 REALTIME AL POSTO DI DEEPGRAM.
+
+  Quarto intervento dopo l'audit, e quello che accende il motore buono.
+  Ordine di Luca: «noi non abbiamo bisogno di nessun servizio esterno,
+  Deepgram o altra minchiata. Abbiamo gia ElevenLabs a disposizione».
+
+  Ha ragione, e i conti gli danno ragione due volte:
+
+      ElevenLabs Scribe v2 Realtime — $0,39/ora, ~150 ms, 90+ lingue
+      Deepgram nova-2               — $0,46/ora, fornitore NUOVO
+
+  Stessa chiave che gia paga la voce (`ELEVENLABS_API_KEY`), nessun
+  account nuovo, nessun contratto nuovo, ore gia comprese nel piano.
+
+  **E soprattutto: fino a qui `/api/stt-token` rispondeva 503 a TUTTI,
+  sempre.** `DEEPGRAM_API_KEY` non e mai stata impostata in produzione —
+  22 richieste su 22 nei registri Vercel dei 7 giorni al 05/09, tutte
+  con lo stesso avviso. Quindi l'interprete in streaming
+  (`useStreamingInterpreter`, 687 righe scritte, provate e mai eseguite)
+  **non e mai partito**, e ogni videochiamata ripiegava sui blocchi da 3
+  secondi. Non era una scelta di architettura: era una variabile
+  d'ambiente mancante, in silenzio, da sempre.
+
+  **Cosa cambia, e dove.** Le differenze fra i due fornitori sono TRE, e
+  stanno tutte dentro un file solo:
+
+   1. l'indirizzo — `wss://api.elevenlabs.io/v1/speech-to-text/realtime`
+      con `model_id=scribe_v2_realtime`, `audio_format=pcm_16000` e
+      `commit_strategy=vad`;
+   2. come si mandano i campioni — gli stessi PCM16 a 16 kHz per tutti e
+      due, grezzi per Deepgram, dentro un `input_audio_chunk` JSON per
+      ElevenLabs;
+   3. come si legge la risposta — `partial_transcript` e
+      `committed_transcript` invece di `Results` e `UtteranceEnd`.
+
+  Chi chiama non sa nemmeno chi sta trascrivendo, e non deve saperlo.
+
+  **`commit_strategy=vad` e la ragione vera per cui questo fornitore sta
+  bene qui**: il taglio delle frasi lo fa LUI, sul parlato, e ogni
+  `committed_transcript` E una frase finita. Da questa parte non si
+  inseguono piu pause e soglie.
+
+  **Il file ha cambiato nome insieme al codice.** Era
+  `deepgramLive.js`, con `chiediChiaveDeepgram` e `apriDeepgram`: con
+  due fornitori quel nome sarebbe una bugia, e un nome che mente e
+  peggio di un nome brutto. Adesso e `sttLive.js`, `chiediChiaveSTT` e
+  `apriAscolto`. Tre chiamanti aggiornati (interprete, traduzione dal
+  vivo, relatore): tutti e tre guadagnano Scribe senza altre modifiche.
+
+  **UNA COSA E CAMBIATA DAVVERO, e va detta**: il gettone di ElevenLabs
+  e **monouso** e dura 15 minuti. Prima lo si chiedeva al montaggio del
+  componente e lo si teneva in un ref per tutta la sua vita — con
+  Deepgram funzionava (chiave temporanea riusabile). Conservarne uno
+  monouso vuol dire aprire il socket con un gettone gia consumato: cioe
+  un interprete che non parte e il ripiego a blocchi che riprende in
+  silenzio — esattamente il difetto che stiamo chiudendo. Adesso se ne
+  chiede **uno per socket**, nel momento in cui serve. I tre ref sono
+  spariti con l'anticipo, e la decisione «trascrizione dal vivo si o no»
+  (sttPolicy, b.247) resta dov'era, dentro l'avvio: togliendo l'anticipo
+  non si e tolto nessun cancello.
+
+  **Deepgram resta come ripiego e non si tocca**: se un domani la chiave
+  c'e, funziona. Ma non e piu la prima scelta, e la sua assenza non e
+  piu un guasto. E un guasto momentaneo di ElevenLabs non spegne la
+  trascrizione: si prova l'altro.
+
+  I cancelli di `/api/stt-token` sono identici e le prove lo verificano:
+  sessione, identita di stanza (b.161), modalita Diretta (b.111/b.167) e
+  credito fail-closed (b.157) restano tutti PRIMA dell'emissione del
+  gettone.
+
+  **Due prove storiche si sono accorte, e nessuna e stata indebolita**:
+  `deepgram-client-unico-b602`, che importava dal file vecchio —
+  rinominata in `stt-client-unico-b602` e riportata sui nomi nuovi, le
+  sue 14 verifiche sul client unico restano tutte; e `interprete-b247`,
+  che verificava la guardia della policy sull'effetto di anticipo —
+  adesso la verifica dentro `start()`, che e l'unico posto dove il
+  gettone si chiede davvero. La proprieta difesa e la stessa: se la
+  policy dice di no, non si chiede nessun gettone.
+
+  Prove: `b637-scribe-al-posto-di-deepgram` (15), di cui due di
+  comportamento con socket e AudioContext finti: con ElevenLabs il
+  gettone viaggia nella query e i campioni partono in JSON base64, con
+  Deepgram nel sottoprotocollo e grezzi. Prova del contrario: cambiando
+  `vad` in `manual`, togliendo l'imbustamento JSON e il campo
+  `fornitore`, tre diventano rosse.
+
 - Versione: **b.636** (push #909) — LE DOMANDE INDIPENDENTI NON SI
   ASPETTANO PIU A VICENDA.
 

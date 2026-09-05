@@ -3,8 +3,9 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { float32AInt16, avviaCatturaPCM16 } from '../app/lib/audio/catturaPCM16.js';
 import {
-  chiediChiaveDeepgram, urlDeepgram, leggiMessaggioDeepgram, apriDeepgram,
-} from '../app/lib/audio/deepgramLive.js';
+  chiediChiaveSTT, urlDeepgram, leggiMessaggioDeepgram, apriAscolto,
+  urlElevenLabs, leggiMessaggioElevenLabs,
+} from '../app/lib/audio/sttLive.js';
 const leggi = (p) => readFileSync(join(process.cwd(), p), 'utf8');
 
 // b.602 — Modulo C dell'audit di architettura (b.598): tre client Deepgram
@@ -69,20 +70,23 @@ describe('catturaPCM16', () => {
   });
 });
 
-describe('deepgramLive — chiave, url, messaggi', () => {
-  it('chiediChiaveDeepgram: un corpo solo, con scadenza, mai un\'eccezione', async () => {
+describe('sttLive — chiave, url, messaggi', () => {
+  it('chiediChiaveSTT: un corpo solo, con scadenza, mai un\'eccezione', async () => {
     const chiamate = [];
     const fetchImpl = vi.fn(async (u, o) => { chiamate.push([u, JSON.parse(o.body), o.signal]); return { ok: true, json: async () => ({ key: 'K' }) }; });
-    expect(await chiediChiaveDeepgram({ userToken: 'u', roomId: 'R', roomSessionToken: 'T', fetchImpl })).toBe('K');
+    // b.637 — torna anche CHI trascrive; una risposta vecchia senza quel
+    // campo vale 'deepgram', come prima.
+    expect(await chiediChiaveSTT({ userToken: 'u', roomId: 'R', roomSessionToken: 'T', fetchImpl }))
+      .toEqual({ chiave: 'K', fornitore: 'deepgram' });
     expect(chiamate[0][0]).toBe('/api/stt-token');
     expect(chiamate[0][1]).toEqual({ userToken: 'u', roomId: 'R', roomSessionToken: 'T' });
     expect(chiamate[0][2]).toBeInstanceOf(AbortSignal);
     // senza stanza il gettone di stanza non parte (b.161: non e' suo)
-    await chiediChiaveDeepgram({ userToken: 'u', roomSessionToken: 'T', fetchImpl });
+    await chiediChiaveSTT({ userToken: 'u', roomSessionToken: 'T', fetchImpl });
     expect(chiamate[1][1]).toEqual({ userToken: 'u' });
-    expect(await chiediChiaveDeepgram({ fetchImpl: async () => ({ ok: false }) })).toBeNull();
-    expect(await chiediChiaveDeepgram({ fetchImpl: async () => ({ ok: true, json: async () => { throw new Error('html'); } }) })).toBeNull();
-    expect(await chiediChiaveDeepgram({ fetchImpl: async () => { throw new Error('rete'); } })).toBeNull();
+    expect(await chiediChiaveSTT({ fetchImpl: async () => ({ ok: false }) })).toBeNull();
+    expect(await chiediChiaveSTT({ fetchImpl: async () => ({ ok: true, json: async () => { throw new Error('html'); } }) })).toBeNull();
+    expect(await chiediChiaveSTT({ fetchImpl: async () => { throw new Error('rete'); } })).toBeNull();
   });
 
   it('urlDeepgram: lingua ridotta a due lettere, parametri voluti presenti', () => {
@@ -106,7 +110,7 @@ describe('deepgramLive — chiave, url, messaggi', () => {
   });
 });
 
-describe('deepgramLive — apriDeepgram con socket finto', () => {
+describe('sttLive — apriAscolto con socket finto', () => {
   let sockets;
   class SocketFinto {
     constructor(url, protocolli) { this.url = url; this.protocolli = protocolli; this.readyState = 0; this.inviati = []; sockets.push(this); }
@@ -119,7 +123,7 @@ describe('deepgramLive — apriDeepgram con socket finto', () => {
 
   it('si apre: la chiave viaggia nel sotto-protocollo, i campioni partono solo a socket aperto, i messaggi arrivano gia letti', async () => {
     const onTesto = vi.fn(), onFineFrase = vi.fn();
-    const p = apriDeepgram({ chiave: 'K', stream: {}, lingua: 'it', onTesto, onFineFrase, WebSocketImpl: SocketFinto });
+    const p = apriAscolto({ chiave: 'K', stream: {}, lingua: 'it', onTesto, onFineFrase, WebSocketImpl: SocketFinto });
     sockets[0].apri();
     const sess = await p;
     expect(sess).not.toBeNull();
@@ -141,7 +145,7 @@ describe('deepgramLive — apriDeepgram con socket finto', () => {
   });
 
   it('non si apre entro la scadenza: null, socket chiuso, niente cattura (una sola porta d\'uscita)', async () => {
-    const p = apriDeepgram({ chiave: 'K', stream: {}, lingua: 'it', WebSocketImpl: SocketFinto, scadenzaAperturaMs: 1000 });
+    const p = apriAscolto({ chiave: 'K', stream: {}, lingua: 'it', WebSocketImpl: SocketFinto, scadenzaAperturaMs: 1000 });
     await vi.advanceTimersByTimeAsync(1001);
     expect(await p).toBeNull();
     expect(sockets[0].readyState).toBe(3);
@@ -152,14 +156,14 @@ describe('deepgramLive — apriDeepgram con socket finto', () => {
   });
 
   it('cade prima di aprirsi (chiave rifiutata): null subito, senza aspettare la scadenza', async () => {
-    const p = apriDeepgram({ chiave: 'K', stream: {}, lingua: 'it', WebSocketImpl: SocketFinto });
+    const p = apriAscolto({ chiave: 'K', stream: {}, lingua: 'it', WebSocketImpl: SocketFinto });
     sockets[0].onclose();
     expect(await p).toBeNull();
   });
 
   it('cade DOPO l\'apertura: onChiuso avvisa una volta e la cattura si ferma', async () => {
     const onChiuso = vi.fn();
-    const p = apriDeepgram({ chiave: 'K', stream: {}, lingua: 'it', onChiuso, WebSocketImpl: SocketFinto });
+    const p = apriAscolto({ chiave: 'K', stream: {}, lingua: 'it', onChiuso, WebSocketImpl: SocketFinto });
     sockets[0].apri();
     const sess = await p;
     sockets[0].readyState = 3;
@@ -170,7 +174,7 @@ describe('deepgramLive — apriDeepgram con socket finto', () => {
   });
 
   it('un ascoltatore che scoppia non fa cadere il socket', async () => {
-    const p = apriDeepgram({ chiave: 'K', stream: {}, lingua: 'it', onTesto: () => { throw new Error('boom'); }, WebSocketImpl: SocketFinto });
+    const p = apriAscolto({ chiave: 'K', stream: {}, lingua: 'it', onTesto: () => { throw new Error('boom'); }, WebSocketImpl: SocketFinto });
     sockets[0].apri(); await p;
     expect(() => sockets[0].onmessage({ data: JSON.stringify({ type: 'Results', channel: { alternatives: [{ transcript: 'x' }] } }) })).not.toThrow();
   });
@@ -184,7 +188,7 @@ describe('b.602 — le copie sono sparite', () => {
       expect(s, p).not.toMatch(/createScriptProcessor/);
       expect(s, p).not.toMatch(/Int16Array/);
       expect(s, p).not.toMatch(/['"]\/api\/stt-token['"]/);
-      expect(s, p).toMatch(/from '\.\.\/(?:\.\.\/)?lib\/audio\/deepgramLive\.js'/);
+      expect(s, p).toMatch(/from '\.\.\/(?:\.\.\/)?lib\/audio\/sttLive\.js'/);
       expect(s, p).toMatch(/prendiVoce\(\)/);
     }
   });

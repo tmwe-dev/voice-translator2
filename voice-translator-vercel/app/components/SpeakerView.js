@@ -16,7 +16,7 @@ import { useApp } from '../contexts/AppContext.js';
 import { glossarioPerTesto } from '../lib/glossario.js'; // b.95
 // b.602 — chiave, socket e cattura PCM16: client Deepgram unico; la voce
 // dal microfono unico dell'app (copia), come fanno chiamata e interprete.
-import { chiediChiaveDeepgram, apriDeepgram } from '../lib/audio/deepgramLive.js';
+import { chiediChiaveSTT, apriAscolto } from '../lib/audio/sttLive.js';
 import { prendiVoce, rendiVoce } from '../lib/microfonoMaster.js';
 import { ascolta as ascoltaDettatura } from '../lib/dettatura.js';   // b.603 — la dettatura in un posto solo
 import { procuraVoce, suonaBlob } from '../lib/audio/voceTradotta.js';   // b.603 — il ciclo dei motori e il lettore, in un posto solo
@@ -98,7 +98,6 @@ function SpeakerView({ userToken }) {
   const sessioneRef = useRef(null);   // b.602 — { chiudi } dal client Deepgram unico
   const streamRef = useRef(null);
   const daRendereRef = useRef(null);  // b.602 — la copia del microfono unico da rendere
-  const dgKeyRef = useRef(null);
   const sentenceRef = useRef('');
   const translateTimerRef = useRef(null);
   const audioRef = useRef(null);
@@ -153,9 +152,10 @@ function SpeakerView({ userToken }) {
   // il ramo Deepgram non si attivava mai, si ripiegava sempre e solo
   // sulla registrazione a blocchi senza che nessuno se ne accorgesse.
   // b.602 — la chiave si chiede in un modo solo (con scadenza, b.363).
-  useEffect(() => {
-    chiediChiaveDeepgram({ userToken }).then(k => { if (k) dgKeyRef.current = k; });
-  }, [userToken]);
+  // b.637 — e non piu in anticipo: il gettone di ElevenLabs e MONOUSO e
+  // dura 15 minuti, quindi uno chiesto al montaggio sarebbe gia
+  // consumato (o scaduto) quando parte davvero il dal-vivo. Se ne chiede
+  // uno per socket, dentro startLiveMode.
 
   // ── Auto-scroll history ──
   useEffect(() => {
@@ -458,8 +458,8 @@ function SpeakerView({ userToken }) {
   // ── Live mode (Deepgram streaming) ──
   const startLiveMode = useCallback(async () => {
     vibrate();
-    if (!dgKeyRef.current) dgKeyRef.current = await chiediChiaveDeepgram({ userToken });
-    if (!dgKeyRef.current) { setMode('batch'); startBatchRecord(); return; }
+    const credenziale = await chiediChiaveSTT({ userToken });
+    if (!credenziale) { setMode('batch'); startBatchRecord(); return; }
     setRecording(true); setLiveText(''); setTranslatedText(''); sentenceRef.current = '';
     try {
       // b.602 — la voce e' una copia del microfono unico (b.277); se il
@@ -477,8 +477,8 @@ function SpeakerView({ userToken }) {
       // b.602 — il socket, la cattura PCM16 e la lettura dei messaggi sono
       // nel client unico. Qui c'era la TERZA copia, l'unica che collegava
       // il processore all'uscita audio (eco): sparita con la copia.
-      const sessione = await apriDeepgram({
-        chiave: dgKeyRef.current, stream, lingua: speechLang,
+      const sessione = await apriAscolto({
+        chiave: credenziale.chiave, fornitore: credenziale.fornitore, stream, lingua: speechLang,
         utteranceEndMs: 900, endpointing: 400,
         onTesto: (transcript, isFinal) => {
           if (isFinal) {

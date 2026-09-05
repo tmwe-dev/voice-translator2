@@ -61,12 +61,12 @@ describe('un avvio fallito non lascia acceso un secondo microfono', () => {
     const i = s.indexOf('const abortaStreaming = useCallback(');
     const corpo = s.slice(i, s.indexOf('const start = useCallback('));
     // b.602 — ScriptProcessor, AudioContext e WebSocket vivono nel client
-    // unico (lib/audio/deepgramLive.js) e si chiudono con `chiudi()`;
+    // unico (lib/audio/sttLive.js) e si chiudono con `chiudi()`;
     // qui restano il cancello del rumore e le tracce del microfono.
     expect(corpo, 'la sessione Deepgram (socket + cattura)').toContain('sess.chiudi()');
     expect(corpo, 'le tracce del microfono').toContain('.getTracks().forEach');
     expect(corpo, 'il cancello del rumore').toContain('noiseGateRef.current.destroy()');
-    const client = leggi('app/lib/audio/catturaPCM16.js') + leggi('app/lib/audio/deepgramLive.js');
+    const client = leggi('app/lib/audio/catturaPCM16.js') + leggi('app/lib/audio/sttLive.js');
     expect(client, 'lo ScriptProcessor').toContain('processor.disconnect()');
     expect(client, "l'AudioContext").toContain('audioCtx.close()');
     expect(client, 'il WebSocket').toContain('s.close()');
@@ -86,7 +86,7 @@ describe('un avvio fallito non lascia acceso un secondo microfono', () => {
   it('OGNI esito negativo passa dall\'abort — era il difetto', () => {
     const s = streaming();
     // Prima gli esiti negativi erano due `resolve(false)` sparsi e nudi.
-    // b.602 — la porta d'uscita unica sta nel client (apriDeepgram → null
+    // b.602 — la porta d'uscita unica sta nel client (apriAscolto → null
     // dopo aver chiuso tutto: provata per comportamento in
     // deepgram-client-unico-b602.test.js). Qui: OGNI `return false` di
     // start() e' preceduto dall'abort, e il null del client lo chiama.
@@ -95,7 +95,7 @@ describe('un avvio fallito non lascia acceso un secondo microfono', () => {
     expect(corpoStart).toContain('if (!sessione) {');
     const iNull = corpoStart.indexOf('if (!sessione) {');
     expect(corpoStart.slice(iNull, iNull + 200)).toContain('abortaStreaming();');
-    const c = leggi('app/lib/audio/deepgramLive.js');
+    const c = leggi('app/lib/audio/sttLive.js');
     const i = c.indexOf('const concludi = (esito)');
     expect(i, 'la porta d\'uscita unica deve esistere').toBeGreaterThan(-1);
     const corpo = c.slice(i, i + 300);
@@ -114,7 +114,7 @@ describe('un avvio fallito non lascia acceso un secondo microfono', () => {
   it('il temporizzatore di apertura viene ANNULLATO quando si conclude', () => {
     // Prima restava armato anche dopo una connessione riuscita.
     // b.602 — nel client unico.
-    const s = leggi('app/lib/audio/deepgramLive.js');
+    const s = leggi('app/lib/audio/sttLive.js');
     expect(s).toContain('clearTimeout(timerApertura)');
     expect(s).toMatch(/let risolto = false/);
   });
@@ -254,13 +254,19 @@ describe('quale motore STT si usa lo decide un posto solo', () => {
     expect(s).toContain("from '../lib/sttPolicy.js'");
     // Prima chiamava /api/stt-token comunque: ora la chiamata è dentro la
     // guardia della policy.
-    const iGuardia = s.indexOf('if (!deepgramAmmesso(USO.INTERPRETE)) return;');
-    const iFetch = s.indexOf('chiediChiaveDeepgram(');   // b.602 — la chiave si chiede al client unico
-    expect(iGuardia, 'la guardia sulla chiave deve esistere').toBeGreaterThan(-1);
-    expect(iGuardia, 'e precedere la richiesta della chiave').toBeLessThan(iFetch);
-    // E anche start() non parte se la policy dice di no.
+    // b.637 — il gettone non si chiede piu in anticipo al montaggio
+    // (quello di ElevenLabs e monouso: conservarlo vuol dire aprire il
+    // socket con un gettone consumato). Quindi la guardia della policy
+    // non ha piu due posti dove stare: resta quello che conta, l'avvio.
+    // La proprieta difesa e la stessa — non si chiede nessun gettone se
+    // la policy dice di no — e qui si verifica sull'ordine dentro start.
     const iStart = s.indexOf('const start = useCallback(');
-    expect(s.slice(iStart, iStart + 400)).toContain('deepgramAmmesso(USO.INTERPRETE)');
+    const corpoStart = s.slice(iStart);
+    const iGuardia = corpoStart.indexOf('deepgramAmmesso(USO.INTERPRETE)');
+    const iFetch = corpoStart.indexOf('chiediChiaveSTT(');
+    expect(iGuardia, 'la guardia deve esistere dentro start').toBeGreaterThan(-1);
+    expect(iFetch, 'e il gettone si chiede li').toBeGreaterThan(-1);
+    expect(iGuardia, 'la guardia precede la richiesta del gettone').toBeLessThan(iFetch);
   });
 });
 
