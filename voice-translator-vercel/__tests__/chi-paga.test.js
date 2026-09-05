@@ -84,8 +84,14 @@ describe('se pagare: lo dice una ricevuta, non il client', () => {
       .toMatch(/!giaPagatoDavvero/);
 
     const lib = leggi('lib/ricevute.js');
-    expect(lib, 'strappare significa cancellare: la seconda volta si paga')
-      .toMatch(/redis\('DEL', k\)/);
+    // b.633 — la ricevuta non e piu un interruttore (SET/DEL) ma un
+    // CONTATORE: due voci uguali pagate valgono due traduzioni gratis,
+    // non una. La proprieta difesa qui resta la stessa — una ricevuta
+    // vale una volta sola — ma adesso vale una volta sola CIASCUNA.
+    expect(lib, 'strappare significa consumarne una: finite le ricevute, si paga')
+      .toMatch(/redis\('DECR', k\)/);
+    expect(lib, 'emetterne una in piu, non sovrascrivere quella che c\'era')
+      .toMatch(/redis\('INCR', k\)/);
   });
 
   it('la ricevuta e legata a chi paga E al testo', () => {

@@ -519,11 +519,28 @@ async function handlePost(req) {
     // l'addebito: una riga nel browser e traduzioni gratis a vita.
     // Ora /api/transcribe lascia una ricevuta legata a chi paga e al testo
     // trascritto, e qui la si strappa: vale una volta sola.
+    //
+    // b.633 — E QUANDO LA RICEVUTA NON SI PUO NEMMENO LEGGERE?
+    // Prima: `false`, cioe «non risulta pagato», cioe si addebitava il
+    // testo SOPRA la voce gia addebitata da /api/transcribe. Con Redis
+    // irraggiungibile — e le scritture si rilanciano apposta, vedi
+    // redis.js b.566 — ogni messaggio vocale si pagava DUE VOLTE, in
+    // silenzio, per tutta la durata del guasto.
+    // Adesso «non lo so» non e piu «non pagato»: in quel caso non si
+    // addebita. Si sbaglia dalla parte dell'utente, come gia fa il tetto
+    // giornaliero quando Redis cade (apiAuth.js, fail-open) — e come
+    // impone il fatto che l'errore non e suo.
+    // COSTO DICHIARATO: durante un guasto Redis anche le traduzioni di
+    // solo testo (che una ricevuta non ce l'hanno mai avuta) passano
+    // senza addebito. E il prezzo, limitato al guasto, per non
+    // addebitare due volte chi ha parlato.
     let giaPagatoDavvero = false;
     if (billingEmail && !isOwnKey) {
       try {
         const { strappaRicevutaVoce } = await import('../../lib/ricevute.js');
-        giaPagatoDavvero = await strappaRicevutaVoce(billingEmail, text);
+        const esito = await strappaRicevutaVoce(billingEmail, text);
+        giaPagatoDavvero = esito.pagata || esito.sistemaGiu;
+        if (esito.sistemaGiu) log.error('ricevute non raggiungibili: non addebito per non addebitare due volte:', esito.motivo);
       } catch (e) { log.warn('ricevuta non verificata:', e?.message); }
     }
 

@@ -267,6 +267,64 @@ perche il working tree lo conteneva ancora.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.633** (push #906) — DUE VOLTE «SI» IN UN MINUTO, E LA
+  SECONDA LA PAGAVI DUE VOLTE.
+
+  Terzo e ultimo dei difetti trovati dal revisore indipendente della
+  bonifica. Il piu invisibile dei tre, e quello che tocca piu gente.
+
+  Parlare ed essere tradotti e UN gesto solo, ma passa da due rotte:
+  `/api/transcribe` addebita la voce e lascia una ricevuta, `/api/translate`
+  la strappa e non riaddebita (b.107 — prima lo dichiarava il client, che
+  e come dire traduzioni gratis a vita per chiunque sapesse aprire la
+  console). La ricevuta e legata a chi paga e al testo:
+  `sha256(pagante|testo)`.
+
+  Il difetto: **due frasi identiche fanno la stessa chiave**, e la
+  ricevuta era un interruttore, non un contatore.
+
+      parlo «si» → transcribe addebita la voce, SET ricevuta
+      parlo «si» → transcribe addebita la voce, SET la STESSA ricevuta
+      traduco #1 → DEL: gratis, giusto
+      traduco #2 → DEL torna 0: PAGA il testo, sopra la voce gia pagata
+
+  Due voci e un testo, per due gesti che valevano due voci e basta. E non
+  e un caso di laboratorio: in una conversazione tradotta «si», «ok»,
+  «grazie», «pronto» si ripetono di continuo, e il minuto di vita della
+  ricevuta li copre tutti. Chi parla a raffica paga di piu, e non c'e
+  modo di accorgersene guardando il saldo.
+
+  Adesso la ricevuta e un **contatore**: `INCR` all'emissione, `DECR` al
+  consumo. N trascrizioni pagate = N traduzioni gratis; finite le
+  ricevute si paga, esattamente come prima. La proprieta che b.107
+  difendeva e identica — una ricevuta vale una volta sola — ma adesso
+  vale una volta sola **ciascuna**, invece che una volta sola in tutto.
+
+  **Secondo difetto, stesso file, peggiore.** Le scritture su Redis si
+  rilanciano apposta (b.566: fingere che un messaggio sia salvato quando
+  non lo e, e peggio di un errore). Quindi con Redis irraggiungibile il
+  `DEL` della ricevuta esplodeva, l'errore veniva inghiottito da un
+  `catch` e valeva `false` — cioe «non risulta pagato». Risultato: per
+  tutta la durata del guasto, **ogni messaggio vocale si pagava due
+  volte**, in silenzio. Adesso «non lo so» e distinto da «non pagato»
+  (`{ pagata, sistemaGiu }`) e in caso di guasto non si addebita: si
+  sbaglia dalla parte dell'utente, come gia fa il tetto giornaliero
+  quando Redis cade, e come impone il fatto che il guasto non e suo.
+
+  **COSTO DICHIARATO**: durante un guasto Redis anche le traduzioni di
+  solo testo — che una ricevuta non l'hanno mai avuta — passano senza
+  addebito. E il prezzo, limitato al guasto, per non addebitare due
+  volte chi ha parlato. La strada per non pagarlo esiste ed e nel debito
+  residuo del fascicolo: una ricevuta **firmata dal server** che viaggia
+  nella risposta di transcribe, senza Redis in mezzo.
+
+  Una prova storica si e accorta: `chi-paga` verificava `redis('DEL', k)`.
+  Riportata su `INCR`/`DECR`, non tolta: difende la stessa cosa.
+
+  Prove: `b633-ricevuta-contatore` (10), di cui sei di comportamento —
+  compresa la ricostruzione del doppio addebito e del guasto Redis.
+  Prova del contrario: rimettendo SET/DEL, due diventano rosse.
+
 - Versione: **b.632** (push #905) — I CINQUE CENTESIMI CHE NESSUNO
   RENDEVA: IL TETTO GIORNALIERO SI CONSUMAVA ANCHE SENZA SPENDERE.
 

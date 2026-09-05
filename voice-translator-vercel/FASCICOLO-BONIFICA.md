@@ -168,12 +168,50 @@ questo è il motivo per cui il Protocollo la pretende.
 **Dichiarate, non corrette — vedi §8:** l'affermazione «un solo modo di
 far pagare» non era vera, e `costoConversazione` è rimasta orfana.
 
+## 7-ter. I tre difetti sul denaro, e come sono stati chiusi
+
+Il revisore indipendente (§7-bis) aveva lasciato tre cose sui soldi
+dichiarate ma non corrette. L'ordine è stato: *correggi gli errori*. Tre
+difetti, tre registrazioni separate — mai una sola, mai mescolate ad
+altro (Protocollo, regole 3 e 4).
+
+| | Difetto | Chi lo pagava | Chiuso in |
+|---|---|---|---|
+| 1 | `/api/topics/riassunto` addebitava DOPO il fornitore: finestra di corsa, due richieste concorrenti chiamavano entrambe OpenAI e una sola pagava | la piattaforma | **b.631** |
+| 2 | La riserva di 5+5 centesimi sui tetti giornalieri non veniva mai restituita sulle uscite anticipate, e **mai** in `ponte.js` | l'utente, in *permesso di spendere*: 100 rifiuti = un giorno chiuso fuori | **b.632** |
+| 3 | Due frasi identiche in un minuto condividevano una sola ricevuta: la seconda voce pagava anche il testo. E con Redis giù, ogni voce pagava due volte | l'utente, in denaro | **b.633** |
+
+**Come sono state verificate.** Ognuna con la sua prova del contrario
+(Protocollo, Fase 6, prova 2 — si guasta apposta il codice corretto e si
+controlla che qualcosa diventi rosso): b.631 spostando la riserva dopo
+la chiamata al fornitore (2 rosse), b.632 annullando lo storno e
+togliendo un `finally` (3 rosse), b.633 rimettendo `SET`/`DEL` al posto
+di `INCR`/`DECR` (2 rosse).
+
+**Cinque prove storiche si sono accorte del cambiamento, e nessuna è
+stata indebolita**: `wallet-sicurezza-b159` (riportata dal gate del
+saldo alla riserva vera, che è più stretta), tre finti di `apiAuth` nei
+collaudi della linea dal vivo (da completare con la nuova esportazione),
+`wallet-sicurezza-b161` (due finestre di prossimità allargate: fra le due
+righe c'è ora la nota della seconda riserva), `chi-paga` (riportata da
+`DEL` a `INCR`/`DECR`, difende la stessa proprietà). Una prova che si
+accorge è una prova che funziona: è il motivo per cui si scrivono.
+
+**Due costi dichiarati, non nascosti** — entrambi in §8, voci 5 e 6.
+
+---
+
 ## 8. Il debito residuo
 
 Quello che si è visto e deliberatamente non fatto.
 
-0. **`/api/topics/riassunto` usa ancora il vecchio schema di addebito —
-   e questo rende FALSA l'affermazione fatta in b.627.** Trovato dal
+0. ~~**`/api/topics/riassunto` usa ancora il vecchio schema di
+   addebito.**~~ **CORRETTO in b.631.** Riserva → commit/release, come
+   tutte le altre; l'affermazione «un solo modo di far pagare» adesso è
+   vera. Il testo che segue resta come diagnosi, non come stato.
+
+   **`/api/topics/riassunto` usava ancora il vecchio schema di addebito —
+   e questo rendeva FALSA l'affermazione fatta in b.627.** Trovato dal
    revisore indipendente, verificato di persona: la rotta controlla il
    credito (righe 97-104), chiama OpenAI (112), e addebita **dopo** con
    `addebitaRiassunto` (148) **ignorandone l'esito**. È esattamente la
@@ -205,6 +243,27 @@ Quello che si è visto e deliberatamente non fatto.
    provare a mano.
 4. **Rubrica BizCard** — schede in inglese in interfaccia italiana; altro
    repository, altro giro.
+5. **I compagni non contano nel tetto giornaliero di piattaforma**
+   (aperto da b.632). `app/lib/compagni/ponte.js` non ha **mai** chiamato
+   `trackDailySpend`: le quattro porte (testo, visione, avatar, linea dal
+   vivo) non hanno mai dichiarato la loro spesa. Fino a b.632 i 5
+   centesimi della riserva restavano appesi e facevano da tetto *per
+   sbaglio* — con un numero che non c'entrava col costo vero e che non si
+   azzerava mai. Adesso si rendono, e i compagni sono invisibili a quel
+   tetto. Il controllo vero sul denaro dell'utente resta il portafoglio
+   (riserva/commit, che lì c'è ed è corretto); manca il tetto aggregato
+   di piattaforma. Aggiungerlo è un intervento a sé: **b.632 restituisce,
+   non cambia cosa si misura**.
+6. **Con Redis giù, le traduzioni di solo testo non si addebitano**
+   (aperto da b.633). È il prezzo scelto per non addebitare **due volte**
+   chi ha parlato: «non lo so» non può più valere «non pagato». Vale solo
+   per la durata del guasto e solo per chi paga con credito di
+   piattaforma. La strada per non pagare nemmeno quel prezzo esiste: una
+   ricevuta **firmata dal server** (HMAC, scadenza corta) restituita da
+   `/api/transcribe` e riconsegnata a `/api/translate` — nessun Redis in
+   mezzo, e il client continua a non avere voce in capitolo perché non
+   può falsificare la firma. Cambia il contratto fra due rotte e il
+   client: merita la sua registrazione.
 
 ---
 
