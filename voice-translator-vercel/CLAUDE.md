@@ -267,6 +267,65 @@ perche il working tree lo conteneva ancora.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.640** (push #913) — IL SILENZIO SPIEGATO ANCHE QUANDO LA
+  LINEA NON SI COLLEGA. E IL COLLAUDO A DUE, FINALMENTE FATTO.
+
+  Ordine di Luca: «completa tutto il collaudo». Fatto: due schede, una
+  stanza vera (57F4F782), un ospite entrato col link, due lingue
+  diverse (it / en), microfono e webcam sostituiti da voce e video
+  sintetici per poter provare da soli.
+
+  **COSA HA FUNZIONATO, dimostrato:**
+   · `/api/stt-token` risponde **200 con `fornitore: elevenlabs`** e un
+     gettone `sutkn_…` valido 900 s. Dopo mesi di 503 a chiunque.
+   · **Scribe v2 Realtime trascrive davvero**: 5,26 s di parlato
+     italiano, `session_started` a 0 ms, primo parziale a **532 ms**,
+     `committed_transcript` con la frase intera a **636 ms** — chiusa
+     dal loro rilevatore di voce. Whisper ce ne metteva 2864, e non
+     diceva dove finiva la frase.
+   · Nei registri Vercel dei 40 minuti di collaudo: **6 richieste a
+     `/api/stt-token`, ZERO a `/api/transcribe`**. Il percorso a
+     blocchi non e mai partito: b.637 ha davvero cambiato motore.
+   · Stanza, ingresso dell'ospite, scelta della lingua, videochiamata:
+     il video passa, l'audio passa (Luca ha sentito la frase di prova
+     uscire dagli altoparlanti).
+   · La voce del partner parte a **0,45** quando le lingue sono diverse
+     (b.527) e il cursore la comanda davvero.
+
+  **COSA NON HA FUNZIONATO, ed e il motivo di questa registrazione:**
+
+  Su tre chiamate consecutive, **chi CHIAMA resta su «Connessione...»
+  mentre chi RISPONDE e gia «Collegato»**. Misurato dalle richieste di
+  rete: sulla scheda che chiama **zero** richieste di trascrizione;
+  sulla scheda che risponde, due a `/api/stt-token`. Sul chiamante
+  l'elemento audio del partner non riceve mai nessuno stream.
+
+  La catena e chiara e corretta: l'avvio automatico dell'interprete
+  (RoomView, b.286) aspetta `webrtcConnected`, e l'auto-stop di
+  `useInterpreterMode` lo spegne finche lo stato non e `connected`.
+  Se la linea non si collega, l'interprete NON DEVE partire.
+
+  **Il difetto non e quello. Il difetto e che nessuno lo dice.** A
+  schermo restava scritto «le traduzioni appariranno qui appena
+  parlate», per sempre — e chi legge parla, e non capisce perche non
+  succede niente. E' la stessa classe di guasto chiusa in b.527
+  (traduzione spenta), b.598 (audio non chiaro) e b.352 (voce mancata):
+  il pannello copriva tre casi su quattro. Adesso ne copre quattro.
+
+  **QUELLO CHE NON SO ANCORA, e non fingo di sapere**: perche il
+  chiamante non si colleghi. Le prove sono state fatte con **due schede
+  dello stesso browser**, microfono e webcam finti, e la scheda del
+  chiamante spesso in secondo piano — e Chrome strozza i timer delle
+  schede nascoste (l'ho gia visto falsare una misura di Scribe stasera).
+  Non posso attribuire l'asimmetria al prodotto senza una prova con due
+  dispositivi veri. **E il primo lavoro del prossimo giro**, e serve
+  Luca con una seconda persona.
+
+  Prove: `b640-linea-non-collegata` (6), di cui tre sull'ordine dei rami
+  (il nuovo avviso non deve rubare il posto a «spenta», e deve venire
+  prima del segnaposto muto) e tre sui pacchetti lingua. Prova del
+  contrario: disattivando il ramo, tre diventano rosse.
+
 - Versione: **b.639** (push #912) — UN AUDIO CHE NON SI PUO USARE NON E
   UN GUASTO NOSTRO: IL 500 CHE DOVEVA ESSERE UN 400.
 

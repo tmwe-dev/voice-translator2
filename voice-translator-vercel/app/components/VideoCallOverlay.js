@@ -483,6 +483,26 @@ const VideoCallOverlay = memo(function VideoCallOverlay({
                         }}>
                         <IconGlobe size={14}/> {L('translationOffTap')}
                       </button>
+                    ) : interpreterActive && webrtc?.webrtcState !== 'connected' ? (
+                      // ═══ b.640 — IL SILENZIO SPIEGATO ANCHE QUANDO LA
+                      // LINEA NON SI COLLEGA ═══
+                      // Trovato dal vivo (collaudo 05/09, due schede in
+                      // videochiamata vera): chi CHIAMA puo restare su
+                      // «Connessione...» mentre chi RISPONDE e gia
+                      // collegato. In quel caso l'interprete non parte —
+                      // l'avvio automatico (RoomView, b.286) aspetta
+                      // `webrtcConnected`, e l'auto-stop di
+                      // useInterpreterMode lo spegne comunque — ma a
+                      // schermo restava scritto «le traduzioni
+                      // appariranno appena parlate», per sempre. Chi
+                      // legge parla, e non capisce perche non succede
+                      // niente. Misurato: sulla scheda che chiama, ZERO
+                      // richieste di trascrizione su tre chiamate.
+                      // Questo non corregge la connessione: dice la
+                      // verita mentre non c'e.
+                      <div style={{ fontSize: 12.5, color: '#ffc44d', fontStyle: 'italic' }}>
+                        {L('lineaNonCollegata')}
+                      </div>
                     ) : interpreterActive && interpreter?.erroreAvvio ? (
                       // l'avvio e caduto: lo si dice (e RoomView sta gia
                       // riprovando da solo, vedi b.527 li).
