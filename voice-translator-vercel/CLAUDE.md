@@ -267,6 +267,56 @@ perche il working tree lo conteneva ancora.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.638** (push #911) — «APERTO» E «DENTRO» NON SONO LA
+  STESSA COSA: IL DIFETTO CHE SOLO IL COLLAUDO POTEVA TROVARE.
+
+  Ordine di Luca: «prova a prendere il comando del computer e fare i
+  test che servono. Se trovi errori, correggi tutto». Fatto, dal suo
+  Chrome, contro la produzione vera e contro ElevenLabs vero.
+
+  **Il difetto e in b.637, cioe in codice mio, e non era deducibile
+  leggendo il codice.** Aprendo un socket vero verso
+  `wss://api.elevenlabs.io/v1/speech-to-text/realtime` con un gettone
+  finto di proposito, la risposta e stata questa:
+
+      APERTO
+      {"message_type":"auth_error","error":"You must be authenticated to use this endpoint."}
+      chiuso code=1000
+
+  ElevenLabs **accetta la connessione** e solo DOPO dice se ti fa
+  entrare. Deepgram no: rifiuta la stretta di mano, e il socket non si
+  apre proprio. Su quella differenza `apriAscolto` era costruito male:
+  prendeva `onopen` per «sono dentro» e risolveva con successo.
+
+  Conseguenza, con un gettone scaduto o gia consumato — e quello di
+  ElevenLabs e **monouso**, quindi capitera: l'interprete si dichiara
+  PARTITO, il socket muore un istante dopo, e **non c'e nessun ripiego
+  sui blocchi**, perche chi chiama crede che vada tutto bene. Niente
+  sottotitoli, niente voce, nessuna spiegazione. E' esattamente la
+  classe di guasto che questi giorni di lavoro stanno chiudendo, e
+  l'avrei introdotta io.
+
+  **Adesso si risolve solo su un segnale positivo**: `session_started`
+  per ElevenLabs, l'apertura per Deepgram (dove basta ancora, e non
+  cambia niente). Un messaggio di errore — `auth_error`,
+  `quota_exceeded_error`, qualunque cosa finisca in `error` — fa
+  fallire l'avvio SUBITO, senza aspettare la scadenza, cosi chi chiama
+  ripiega sui blocchi. E se il messaggio d'ingresso non arrivasse ma
+  arrivasse una trascrizione, quella vale come prova di ingresso: due
+  cinture, perche il fornitore non l'ho ancora visto rispondere con un
+  gettone buono.
+
+  In piu: se non si e mai entrati non si aspetta piu il commiato di 400
+  ms prima di chiudere. Non c'e nessun ultimo risultato da raccogliere,
+  e chi chiama deve poter ripiegare subito.
+
+  Prove: quattro nuove di comportamento in
+  `b637-scribe-al-posto-di-deepgram` (auth_error dopo l'apertura = avvio
+  fallito e niente acceso; nessun segnale = scade e fallisce; testo
+  senza `session_started` = si e dentro lo stesso; Deepgram invariato) e
+  `b638-aperto-non-e-dentro` (4). Prova del contrario: rimettendo
+  `concludi(true)` sull'apertura, due diventano rosse.
+
 - Versione: **b.637** (push #910) — LA TRASCRIZIONE DAL VIVO LA FA CHI
   GIA CI PARLA: SCRIBE v2 REALTIME AL POSTO DI DEEPGRAM.
 

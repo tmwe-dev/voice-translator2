@@ -123,6 +123,20 @@ export function leggiMessaggioElevenLabs(grezzo) {
   let d;
   try { d = JSON.parse(grezzo); } catch { return null; }
   const tipo = d?.message_type;
+  // ═══ b.637-bis — IL SOCKET SI APRE ANCHE QUANDO NON SI ENTRA ═══
+  // Trovato dal vivo (collaudo 05/09, Chrome di Luca, gettone finto di
+  // proposito): ElevenLabs ACCETTA la connessione e solo DOPO manda
+  // `{"message_type":"auth_error"}` e chiude. Deepgram invece rifiuta la
+  // stretta di mano e il socket non si apre proprio.
+  // Differenza decisiva: se si prende `onopen` per «sono dentro», con un
+  // gettone scaduto o consumato l'interprete si dichiara PARTITO, poi
+  // muore in silenzio — niente sottotitoli, niente voce, e nessun
+  // ripiego sui blocchi, perche chi chiama crede che vada tutto bene.
+  // E' esattamente la classe di guasto che stiamo chiudendo.
+  if (tipo === 'session_started') return { tipo: 'pronto' };
+  if (typeof tipo === 'string' && tipo.endsWith('error')) {
+    return { tipo: 'guasto', motivo: tipo };
+  }
   if (tipo === 'partial_transcript') {
     const t = d.text || '';
     return t ? { tipo: 'testo', transcript: t, isFinal: false } : null;
@@ -152,11 +166,18 @@ export function leggiMessaggioDeepgram(grezzo) {
 /**
  * Apre la connessione, avvia la cattura e consegna i risultati.
  *
- * Risolve con `{ chiudi }` quando il socket e' aperto e la cattura
- * parte; risolve con null se non si apre entro SCADENZA_APERTURA_MS o
- * se il socket cade prima di aprirsi — e in quel caso ha gia' spento
- * tutto quello che aveva acceso. Dopo l'apertura, `onChiuso` avvisa se
- * il socket cade.
+ * Risolve con `{ chiudi }` quando si e' DENTRO davvero: per Deepgram
+ * all'apertura del socket, per ElevenLabs al suo `session_started` (o
+ * alla prima trascrizione). Risolve con null se non si entra entro
+ * SCADENZA_APERTURA_MS, se il socket cade prima, o se il fornitore
+ * risponde con un errore — e in quel caso ha gia' spento tutto quello
+ * che aveva acceso, cosi chi chiama puo' ripiegare. Dopo l'ingresso,
+ * `onChiuso` avvisa se il socket cade.
+ *
+ * b.637-bis: la distinzione fra «aperto» e «dentro» esiste perche
+ * ElevenLabs accetta la connessione e SOLO DOPO manda `auth_error`
+ * (verificato dal vivo il 05/09). Prendere `onopen` per buono voleva
+ * dire un interprete che si dichiara partito e poi muore in silenzio.
  *
  * @param {object} opz
  * @param {string} opz.chiave — dal server (chiediChiaveSTT)
@@ -182,6 +203,7 @@ export function apriAscolto({
     let ws = null;
     let cattura = null;
     let risolto = false;
+    let entrato = false;   // b.637-bis — risolto CON successo, non solo risolto
     let chiuso = false;
     let timerApertura = null;
 
@@ -195,7 +217,10 @@ export function apriAscolto({
         const s = ws; ws = null;
         try {
           s.onopen = null; s.onmessage = null; s.onerror = null; s.onclose = null;
-          if (s.readyState === 1 /* OPEN */) {
+          // b.637-bis — il commiato ha senso solo se si era entrati: se
+          // il fornitore ci ha respinti non c'e nessun ultimo risultato
+          // da aspettare, e chi chiama deve poter ripiegare SUBITO.
+          if (entrato && s.readyState === 1 /* OPEN */) {
             // Il saluto: Deepgram consegna gli ultimi risultati prima di
             // chiudere se glielo si chiede. b.637 — ElevenLabs chiude la
             // frase in corso da solo quando il socket si chiude, quindi
@@ -216,7 +241,7 @@ export function apriAscolto({
       risolto = true;
       clearTimeout(timerApertura);
       if (!esito) { chiudi(); resolve(null); }
-      else resolve({ chiudi, get aperta() { return !chiuso; } });
+      else { entrato = true; resolve({ chiudi, get aperta() { return !chiuso; } }); }
     };
 
     try {
@@ -231,9 +256,15 @@ export function apriAscolto({
       return;
     }
 
-    ws.onopen = () => {
-      // un'apertura arrivata DOPO la scadenza non deve accendere niente
-      if (risolto) return;
+    // b.637-bis — «aperto» e «dentro» non sono la stessa cosa.
+    // Deepgram: la stretta di mano riuscita E l'ingresso, quindi
+    // `onopen` basta. ElevenLabs: il socket si apre sempre, e solo dopo
+    // dice se ti fa entrare (`session_started`) o no (`auth_error`).
+    // Quindi la cattura parte all'apertura per tutti e due — l'audio
+    // serve perche una risposta arrivi — ma la PROMESSA si risolve solo
+    // su un segnale positivo: chi chiama deve poter ripiegare sui
+    // blocchi se qui non si entra davvero.
+    const avviaCattura = () => {
       try {
         const socket = ws;
         cattura = avviaCatturaPCM16(stream, {
@@ -246,19 +277,41 @@ export function apriAscolto({
             catch { /* il socket e caduto fra un blocco e l'altro: onclose lo dira */ }
           },
         });
+        return true;
       } catch {
         concludi(false);
-        return;
+        return false;
       }
-      concludi(true);
+    };
+
+    ws.onopen = () => {
+      // un'apertura arrivata DOPO la scadenza non deve accendere niente
+      if (risolto) return;
+      if (!avviaCattura()) return;
+      // Con Deepgram si e dentro: si risolve subito, come sempre.
+      // Con ElevenLabs si aspetta `session_started` (o la prima
+      // trascrizione, se quel messaggio non arrivasse): se invece
+      // arriva un errore, si fallisce SUBITO invece di aspettare la
+      // scadenza; e se non arriva niente, la scadenza chiude tutto.
+      if (!eleven) concludi(true);
     };
     ws.onmessage = (ev) => {
       // 3a differenza: come si legge la risposta. Da qui in poi il
       // contratto e identico per tutti e due.
       const m = eleven ? leggiMessaggioElevenLabs(ev.data) : leggiMessaggioDeepgram(ev.data);
       if (!m) return;
+      // b.637-bis — i due segnali che dicono se si e davvero dentro.
+      if (m.tipo === 'pronto') { concludi(true); return; }
+      if (m.tipo === 'guasto') {
+        if (!risolto) { concludi(false); return; }       // non si e mai entrati: chi chiama ripiega
+        if (!chiuso) { chiudi(); try { onChiuso?.(); } catch { /* chi ascolta la chiusura non deve far cadere chi la segnala */ } }
+        return;
+      }
       try {
         if (m.tipo === 'testo') {
+          // Se il messaggio di ingresso non e mai arrivato ma il testo
+          // si', si e dentro lo stesso: si prende atto e si prosegue.
+          if (!risolto) concludi(true);
           onTesto?.(m.transcript, m.isFinal);
           // b.637 — con Scribe la frase chiusa E la fine frase: il loro
           // rilevatore di voce ha gia deciso dove finisce. Deepgram

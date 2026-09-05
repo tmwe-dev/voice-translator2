@@ -95,8 +95,20 @@ describe('b.637 — i messaggi di Scribe, nello stesso contratto di prima', () =
   it('un partial vuoto non e niente; la spazzatura non esplode', () => {
     expect(leggiMessaggioElevenLabs(JSON.stringify({ message_type: 'partial_transcript', text: '' }))).toBeNull();
     expect(leggiMessaggioElevenLabs('non json')).toBeNull();
-    expect(leggiMessaggioElevenLabs(JSON.stringify({ message_type: 'session_started' }))).toBeNull();
-    expect(leggiMessaggioElevenLabs(JSON.stringify({ message_type: 'rate_limited' }))).toBeNull();
+    expect(leggiMessaggioElevenLabs(JSON.stringify({ message_type: 'committed_transcript_entities' }))).toBeNull();
+  });
+
+  // ═══ b.637-bis — trovato dal vivo, non dedotto ═══
+  it('session_started e il segnale che si e DENTRO', () => {
+    expect(leggiMessaggioElevenLabs(JSON.stringify({ message_type: 'session_started', session_id: 'x' })))
+      .toEqual({ tipo: 'pronto' });
+  });
+
+  it('ogni messaggio di errore e un guasto dichiarato, non un silenzio', () => {
+    for (const tipo of ['auth_error', 'quota_exceeded_error', 'rate_limited_error']) {
+      expect(leggiMessaggioElevenLabs(JSON.stringify({ message_type: tipo })), tipo)
+        .toEqual({ tipo: 'guasto', motivo: tipo });
+    }
   });
 });
 
@@ -121,6 +133,8 @@ describe('b.637 — apriAscolto parla la lingua del fornitore giusto', () => {
     audioFinto();
     const p = apriAscolto({ chiave: 'sutkn_X', fornitore: 'elevenlabs', stream: {}, lingua: 'it', WebSocketImpl: SocketFinto });
     SocketFinto.ultimo.apri();
+    // b.637-bis — aprire non basta: si e dentro quando lo dice il fornitore.
+    SocketFinto.ultimo.onmessage({ data: JSON.stringify({ message_type: 'session_started' }) });
     const sessione = await p;
     expect(sessione).toBeTruthy();
     expect(SocketFinto.ultimo.url).toContain('api.elevenlabs.io');
@@ -149,6 +163,68 @@ describe('b.637 — apriAscolto parla la lingua del fornitore giusto', () => {
     const proc = globalThis.AudioContext.ultimo;
     proc.onaudioprocess({ inputBuffer: { getChannelData: () => new Float32Array([0.1, -0.1]) } });
     expect(typeof SocketFinto.ultimo.inviati[0], 'grezzo, non JSON').not.toBe('string');
+    delete globalThis.AudioContext;
+  });
+});
+
+describe('b.637-bis — «aperto» non vuol dire «dentro» (trovato dal vivo)', () => {
+  // Collaudo del 05/09 nel Chrome di Luca, con un gettone finto di
+  // proposito: ElevenLabs ACCETTA la connessione e solo dopo manda
+  //   {"message_type":"auth_error","error":"You must be authenticated..."}
+  // e chiude con code 1000. Deepgram invece rifiuta la stretta di mano.
+  // Prendere `onopen` per «sono dentro» voleva dire: interprete che si
+  // dichiara partito, muore in silenzio, e nessun ripiego sui blocchi.
+  class SocketFinto {
+    constructor(url, protocolli) { this.url = url; this.protocolli = protocolli; this.readyState = 0; this.inviati = []; this.chiuso = false; SocketFinto.ultimo = this; }
+    send(d) { this.inviati.push(d); }
+    close() { this.readyState = 3; this.chiuso = true; }
+    apri() { this.readyState = 1; this.onopen?.(); }
+    di(msg) { this.onmessage?.({ data: JSON.stringify(msg) }); }
+  }
+  const audioFinto = () => {
+    globalThis.AudioContext = class {
+      constructor() { this.state = 'running'; this.destination = { id: 'dest' }; }
+      createMediaStreamSource() { return { connect: vi.fn(), disconnect: vi.fn() }; }
+      createScriptProcessor() { const p = { onaudioprocess: null, connect: vi.fn(), disconnect: vi.fn() }; AudioContext.ultimo = p; return p; }
+      close() { this.state = 'closed'; }
+    };
+  };
+
+  it('un auth_error dopo l\'apertura NON e un avvio riuscito: si torna null', async () => {
+    audioFinto();
+    const p = apriAscolto({ chiave: 'scaduto', fornitore: 'elevenlabs', stream: {}, lingua: 'it', WebSocketImpl: SocketFinto });
+    SocketFinto.ultimo.apri();
+    SocketFinto.ultimo.di({ message_type: 'auth_error', error: 'You must be authenticated to use this endpoint.' });
+    const sessione = await p;
+    expect(sessione, 'chi chiama deve poter ripiegare sui blocchi').toBeNull();
+    expect(SocketFinto.ultimo.chiuso, 'e non deve restare niente acceso').toBe(true);
+    delete globalThis.AudioContext;
+  });
+
+  it('senza nessun segnale non si dichiara partito: scade e torna null', async () => {
+    audioFinto();
+    const p = apriAscolto({ chiave: 'K', fornitore: 'elevenlabs', stream: {}, lingua: 'it', WebSocketImpl: SocketFinto, scadenzaAperturaMs: 30 });
+    SocketFinto.ultimo.apri();
+    expect(await p).toBeNull();
+    delete globalThis.AudioContext;
+  });
+
+  it('se il messaggio d\'ingresso non arriva ma il testo si, si e dentro lo stesso', async () => {
+    audioFinto();
+    const testi = [];
+    const p = apriAscolto({ chiave: 'K', fornitore: 'elevenlabs', stream: {}, lingua: 'it', WebSocketImpl: SocketFinto, onTesto: (t) => testi.push(t) });
+    SocketFinto.ultimo.apri();
+    SocketFinto.ultimo.di({ message_type: 'committed_transcript', text: 'ciao' });
+    expect(await p, 'una trascrizione vale come prova di ingresso').toBeTruthy();
+    expect(testi).toEqual(['ciao']);
+    delete globalThis.AudioContext;
+  });
+
+  it('con Deepgram l\'apertura basta ancora: nessuna regressione', async () => {
+    audioFinto();
+    const p = apriAscolto({ chiave: 'K', fornitore: 'deepgram', stream: {}, lingua: 'it', WebSocketImpl: SocketFinto });
+    SocketFinto.ultimo.apri();
+    expect(await p, 'Deepgram rifiuta la stretta di mano, non serve aspettare altro').toBeTruthy();
     delete globalThis.AudioContext;
   });
 });
